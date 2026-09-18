@@ -1,4 +1,10 @@
 import mongoose from "mongoose"
+import dns from "dns"
+
+try {
+  dns.setDefaultResultOrder("ipv4first")
+  dns.setServers(["8.8.8.8", "1.1.1.1"])
+} catch {}
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/dummy"
 
@@ -23,7 +29,7 @@ async function connectDB() {
       bufferCommands: false,
     }
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log("✅ Database connected successfully to local MongoDB!")
+      console.log("✅ Database connected successfully to MongoDB!")
       return mongoose
     })
   }
@@ -32,7 +38,7 @@ async function connectDB() {
     cached.conn = await cached.promise
   } catch (e) {
     cached.promise = null
-    console.error("❌ MongoDB connection failed. Please check if MongoDB is running locally on port 27017:", e)
+    console.error("❌ MongoDB connection failed:", e)
     throw e
   }
 
