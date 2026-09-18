@@ -1,0 +1,135 @@
+{
+  "title": "Easy DSA Coding Problems",
+  "description": "Collection of easy Data Structures and Algorithms coding problems",
+  "totalProblems": 2,
+  "problems": [
+    {
+      "id": 1,
+      "title": "Two Sum",
+      "difficulty": "Easy",
+      "category": "Hash Maps / Arrays",
+      "timeLimit": 60,
+      "memoryLimit": 256,
+      "description": "Given an array of integers nums and an integer target, return the indices of the two numbers that add up to the target. You may assume each input has exactly one solution, and you cannot use the same element twice.",
+      "constraints": [
+        "2 <= n <= 10^4",
+        "-10^9 <= nums[i] <= 10^9",
+        "-10^9 <= target <= 10^9"
+      ],
+      "inputFormat": "First line: n (size of array)\nSecond line: space-separated integers (the array)\nThird line: target (integer)",
+      "outputFormat": "Two indices (integers) separated by space",
+      "testCases": [
+        {
+          "id": 1,
+          "input": "4\n2 7 11 15\n9",
+          "output": "0 1",
+          "explanation": "nums[0] + nums[1] = 2 + 7 = 9"
+        },
+        {
+          "id": 2,
+          "input": "3\n3 2 4\n6",
+          "output": "1 2",
+          "explanation": "nums[1] + nums[2] = 2 + 4 = 6"
+        },
+        {
+          "id": 3,
+          "input": "2\n3 3\n6",
+          "output": "0 1",
+          "explanation": "nums[0] + nums[1] = 3 + 3 = 6"
+        },
+        {
+          "id": 4,
+          "input": "6\n-1 -2 -3 5 10 15\n5",
+          "output": "1 4",
+          "explanation": "nums[1] + nums[4] = -2 + 10 = 8 (or other valid pairs)"
+        },
+        {
+          "id": 5,
+          "input": "3\n1000000 -1000000 1000000\n0",
+          "output": "0 1",
+          "explanation": "nums[0] + nums[1] = 1000000 + (-1000000) = 0"
+        }
+      ],
+      "hints": [
+        "Use a hash map to store values you've seen",
+        "For each number, check if target - num exists in the map",
+        "Keep track of the index when storing values"
+      ],
+      "pythonTemplate": "def twoSum(nums, target):\n    \"\"\"\n    Find two numbers in array that add up to target.\n    \n    Args:\n        nums: List of integers\n        target: Target sum\n    \n    Returns:\n        List of two indices\n    \"\"\"\n    # TODO: Implement your solution here\n    pass\n\nif __name__ == \"__main__\":\n    n = int(input())\n    nums = list(map(int, input().split()))\n    target = int(input())\n    \n    result = twoSum(nums, target)\n    print(result[0], result[1])",
+      "javascriptTemplate": "function twoSum(nums, target) {\n    /**\n     * Find two numbers in array that add up to target.\n     * \n     * @param {number[]} nums - Array of integers\n     * @param {number} target - Target sum\n     * @returns {number[]} - Array of two indices\n     */\n    // TODO: Implement your solution here\n}\n\nconst readline = require('readline');\nconst rl = readline.createInterface({ input: process.stdin });\n\nlet lines = [];\nrl.on('line', (line) => {\n    lines.push(line);\n    if (lines.length === 3) {\n        rl.close();\n        const n = parseInt(lines[0]);\n        const nums = lines[1].split(' ').map(Number);\n        const target = parseInt(lines[2]);\n        \n        const result = twoSum(nums, target);\n        console.log(result[0], result[1]);\n    }\n});",
+      "solution": "def twoSum(nums, target):\n    seen = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in seen:\n            return [seen[complement], i]\n        seen[num] = i\n    return []",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "relatedTopics": ["Hash Maps", "Arrays", "Two Pointers"]
+    },
+    {
+      "id": 2,
+      "title": "Reverse a String",
+      "difficulty": "Easy",
+      "category": "String Manipulation / Two Pointers",
+      "timeLimit": 30,
+      "memoryLimit": 256,
+      "description": "Given a string s, reverse the string. Do not use built-in reverse functions. Solve it with optimal space complexity.",
+      "constraints": [
+        "1 <= s.length <= 10^5",
+        "s contains only printable ASCII characters"
+      ],
+      "inputFormat": "Single line: a string s",
+      "outputFormat": "Single line: reversed string",
+      "testCases": [
+        {
+          "id": 1,
+          "input": "hello",
+          "output": "olleh",
+          "explanation": "Reverse each character"
+        },
+        {
+          "id": 2,
+          "input": "A man a plan a canal Panama",
+          "output": "amanaP lanac a nalp a nam A",
+          "explanation": "Reverse entire string including spaces"
+        },
+        {
+          "id": 3,
+          "input": "12345",
+          "output": "54321",
+          "explanation": "Reverse numeric string"
+        },
+        {
+          "id": 4,
+          "input": "a",
+          "output": "a",
+          "explanation": "Single character remains same"
+        },
+        {
+          "id": 5,
+          "input": "racecar",
+          "output": "racecar",
+          "explanation": "Palindrome reversed is same"
+        },
+        {
+          "id": 6,
+          "input": "!@#$%^&*()",
+          "output": "()*&^%$#@!",
+          "explanation": "Reverse special characters"
+        }
+      ],
+      "hints": [
+        "Convert string to an array/list for manipulation",
+        "Use two pointers: one at start, one at end",
+        "Swap characters and move pointers toward center",
+        "Alternatively, iterate from end to start and build result"
+      ],
+      "pythonTemplate": "def reverseString(s):\n    \"\"\"\n    Reverse a string without using built-in reverse.\n    \n    Args:\n        s: Input string\n    \n    Returns:\n        Reversed string\n    \"\"\"\n    # TODO: Implement your solution here\n    pass\n\nif __name__ == \"__main__\":\n    s = input()\n    result = reverseString(s)\n    print(result)",
+      "javascriptTemplate": "function reverseString(s) {\n    /**\n     * Reverse a string without using built-in reverse.\n     * \n     * @param {string} s - Input string\n     * @returns {string} - Reversed string\n     */\n    // TODO: Implement your solution here\n}\n\nconst readline = require('readline');\nconst rl = readline.createInterface({ input: process.stdin });\n\nrl.on('line', (s) => {\n    const result = reverseString(s);\n    console.log(result);\n    rl.close();\n});",
+      "solution": "def reverseString(s):\n    s_list = list(s)\n    left, right = 0, len(s_list) - 1\n    while left < right:\n        s_list[left], s_list[right] = s_list[right], s_list[left]\n        left += 1\n        right -= 1\n    return ''.join(s_list)",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1) or O(n) depending on approach"
+      },
+      "relatedTopics": ["Strings", "Two Pointers", "Array Manipulation"]
+    }
+  ]
+}
