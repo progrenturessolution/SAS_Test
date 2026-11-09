@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
-import Image from "next/image"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faUser } from "@fortawesome/free-solid-svg-icons"
 import {
   Building2,
   Shield,
@@ -11,7 +12,7 @@ import {
   BookOpen,
   Clock,
   BarChart2,
-  Eye,
+  ScanFace,
   FileText,
   ArrowRight,
   Menu,
@@ -69,7 +70,6 @@ function ScrollReveal({
 export default function HomePage() {
   const [showLoginDropdown, setShowLoginDropdown] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [hoveredWordmarkLetter, setHoveredWordmarkLetter] = useState<number | null>(null)
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -453,7 +453,7 @@ export default function HomePage() {
               [Sparkles, "AI Question Generation", "Create structured questions and answer sets from topics or learning material."],
               [Laptop, "Coding Assessments", "Evaluate programming knowledge with purpose-built technical question formats."],
               [Shield, "Advanced Exam Proctoring", "Configure controls that promote a focused and fair testing environment."],
-              [Eye, "Face Detection Monitoring", "Monitor candidate presence throughout an online assessment session."],
+              [ScanFace, "Face Detection Monitoring", "Monitor candidate presence throughout an online assessment session."],
               [FileText, "Automatic Result Generation", "Generate organized outcomes instantly for supported question types."],
               [BarChart2, "Performance Analytics", "Turn examination data into clear, actionable student performance insights."],
             ].map(([Icon, title, description], index) => {
@@ -476,29 +476,243 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ─── 4. How It Works (Workflow) ─── */}
-      <section id="workflow" className="relative overflow-hidden border-y border-[#e7ebef] bg-[#f7f9fb] py-16 sm:py-20 lg:py-24">
+      {/* ─── 5. End-to-End Exam Management ─── */}
+      <section id="workflow" className="relative overflow-hidden border-y border-[#e7ebef] bg-white py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "linear-gradient(#e9eef3 1px, transparent 1px), linear-gradient(90deg, #e9eef3 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
+        <div className="relative mx-auto max-w-[1115px] px-5 sm:px-8">
+          <div className="mx-auto max-w-3xl space-y-4 text-center">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">
+              End-to-End Exam Management
+            </span>
+            <h2 className="text-4xl font-bold leading-[1.08] tracking-[-0.035em] text-[#304058] sm:text-5xl">
+              From Exam Creation to Results.
+              <br />
+              All in One Place.
+            </h2>
+            <p className="text-[15px] text-[#718096]">
+              Manage every stage of your examination process through a single centralized dashboard.
+            </p>
+          </div>
+
+          <div className="relative mt-12 grid gap-8 md:grid-cols-4 md:gap-0">
+            <div className="pointer-events-none absolute left-[12%] right-[12%] top-[42px] hidden border-t border-dashed border-[#d6dee6] md:block" />
+            {[
+              [FileText, "Create Exam", "Configure title, duration, marks and instructions."],
+              [Sparkles, "Add Questions", "Generate with AI, upload PDFs or add manually."],
+              [Clock, "Schedule & Share", "Set timing, security and share access links."],
+              [BarChart2, "Evaluate & Analyze", "Evaluate supported answers and access results."],
+            ].map(([Icon, title, description], index) => {
+              const StepIcon = Icon as typeof FileText
+              return (
+                <ScrollReveal key={title as string} direction={index % 2 === 0 ? "left" : "right"} delay={index * 70}>
+                  <article className="relative z-10 flex flex-col items-center text-center">
+                    <span className="mb-1 text-[10px] font-bold text-[#9aa8b6]">0{index + 1}</span>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#dce3e9] bg-white text-[#526982] shadow-[0_5px_15px_rgba(47,64,87,0.06)]">
+                      <StepIcon className="h-5 w-5" />
+                    </div>
+                    <h3 className="mt-5 text-[16px] font-medium text-[#304058]">{title as string}</h3>
+                    <p className="mt-2 max-w-[185px] text-[13px] leading-relaxed text-[#8190a0]">{description as string}</p>
+                  </article>
+                </ScrollReveal>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 6. Exam Security & Proctoring ─── */}
+      <section id="security" className="relative overflow-hidden bg-[#1f2e43] py-16 text-white sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 opacity-20" style={{ backgroundImage: "linear-gradient(rgba(165,188,212,.14) 1px, transparent 1px), linear-gradient(90deg, rgba(165,188,212,.14) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+        <div className="relative mx-auto grid max-w-[1115px] items-center gap-12 px-5 sm:px-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-16">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#c2ccda]">
+              Exam Security &amp; Proctoring
+            </span>
+            <h2 className="mt-5 max-w-[390px] text-4xl font-bold leading-[1.08] tracking-[-0.035em] sm:text-5xl">
+              Examination Security,
+              <br />
+              <span className="font-semibold italic">Built Into Every</span>
+              <br />
+              <span className="font-semibold italic">Assessment.</span>
+            </h2>
+            <p className="mt-5 max-w-[390px] text-[15px] leading-relaxed text-[#c4cedb]">
+              Advanced monitoring tools help institutions conduct more controlled and reliable online examinations.
+            </p>
+
+            <div className="mt-6 max-w-[420px]">
+              {[
+                ["Face Detection Monitoring", "Monitor candidate presence and face positioning during examination sessions."],
+                ["Tab-Switch Prevention", ""],
+                ["Fullscreen Enforcement", ""],
+                ["AI-Assisted Status Analysis", ""],
+              ].map(([title, description], index) => (
+                <div key={title} className={`flex items-center gap-4 border-t border-[#52657b]/50 py-4 ${index === 0 ? "border-l-2 border-l-white bg-[#2c3e55] pl-3" : "pl-3"}`}>
+                  <span className="w-4 text-[9px] text-[#94a8bc]">0{index + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-semibold text-white">{title}</p>
+                    {description && <p className="mt-1 text-[9px] text-[#aebdcb]">{description}</p>}
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 text-[#8fa4b8]" />
+                </div>
+              ))}
+              <div className="flex items-center gap-2 border-t border-[#52657b]/50 pt-4 text-[10px] text-[#aebdcb]">
+                <Shield className="h-3.5 w-3.5" />
+                Configurable security controls. Greater examination integrity.
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
+            {/* Scoped CSS for Face Scanner Animation */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              @keyframes scanning {
+                0% {
+                  transform: translateY(8px);
+                }
+                50% {
+                  transform: translateY(102px);
+                }
+                100% {
+                  transform: translateY(8px);
+                }
+              }
+              .scan-line-anim {
+                position: absolute;
+                left: 5px;
+                right: 5px;
+                height: 1px;
+                top: 0px;
+                background: #b6c4d1;
+                box-shadow: 0 0 6px #dce8ff80;
+                will-change: transform;
+                animation: scanning 2.6s ease-in-out infinite !important;
+              }
+            `}} />
+
+            {/* Outer card */}
+            <div className="w-full rounded-xl border border-[#344151] bg-[#192331] p-[10px] shadow-[0_15px_40px_rgba(0,0,0,0.25)]">
+
+              {/* Top header */}
+              <div className="flex items-center justify-between px-[7px] pb-[16px] pt-[9px] text-[9px]">
+                <div className="flex items-center gap-[7px]">
+                  <span className="h-[6px] w-[6px] rounded-full bg-[#a6b7c8]" style={{ boxShadow: "0 0 8px #a6b7c8" }} />
+                  <strong>Live examination monitoring</strong>
+                </div>
+                <div className="flex items-center gap-3 text-[#8c9bad]">
+                  <span>JEE Mock Test 08</span>
+                  <span className="rounded-full border border-[#344151] px-[9px] py-[5px]">Session protected</span>
+                </div>
+              </div>
+
+              {/* Monitor panel */}
+              <div className="relative overflow-hidden rounded-[9px] border border-[#344151]">
+
+                {/* Monitor header */}
+                <div className="flex h-[33px] items-center justify-between border-b border-[#344151] bg-[#17212e] px-3 text-[9px] font-bold">
+                  <span>● &nbsp; LIVE EXAMINATION MONITORING</span>
+                  <span className="font-normal text-[#8c9bad]">JEE Mock Test 08</span>
+                </div>
+
+                {/* Camera area */}
+                <div
+                  className="relative h-[265px] overflow-hidden bg-[#202c3b]"
+                  style={{
+                    backgroundImage: "linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px)",
+                    backgroundSize: "25px 25px",
+                  }}
+                >
+                  {/* Face detection frame — single box, all 4 corners + scan line */}
+                  <div className="absolute left-1/2 top-[18px] h-[116px] w-[110px] -translate-x-1/2">
+                    <span className="absolute left-0 top-0 h-[19px] w-[19px] border-l-2 border-t-2 border-[#f2f5fa]" />
+                    <span className="absolute right-0 top-0 h-[19px] w-[19px] border-r-2 border-t-2 border-[#f2f5fa]" />
+                    <span className="absolute bottom-0 left-0 h-[19px] w-[19px] border-b-2 border-l-2 border-[#f2f5fa]" />
+                    <span className="absolute bottom-0 right-0 h-[19px] w-[19px] border-b-2 border-r-2 border-[#f2f5fa]" />
+                    
+                    {/* Animated Scanning Line */}
+                    <div className="scan-line-anim" />
+                  </div>
+
+                  {/* Person silhouette — CSS head + shoulders (matches HTML reference) */}
+                  <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col items-center">
+                    <div
+                      className="h-[60px] w-[50px] bg-[#596779]"
+                      style={{ borderRadius: "45% 45% 48% 48%", boxShadow: "inset 0 0 15px #ffffff12" }}
+                    />
+                    <div className="mt-[5px] h-[45px] w-[112px] rounded-t-[65px] bg-[#465467]" />
+                  </div>
+
+                  {/* Face status — bottom left */}
+                  <div
+                    className="absolute bottom-3 left-3 flex items-center gap-[7px] rounded-[7px] border border-[#39485a] px-[10px] py-[7px] text-[9px]"
+                    style={{ background: "rgba(23,33,46,0.92)" }}
+                  >
+                    <ScanFace className="h-3.5 w-3.5 text-[#8aaac8]" />
+                    <span>Face positioned correctly</span>
+                  </div>
+
+                  {/* Camera status — inside camera area, positioned top right */}
+                  <div
+                    className="absolute right-[-1px] top-[30px] w-[92px] rounded-l-[9px] border border-[#3a4858] bg-[#192431] p-[10px] text-[8px]"
+                    style={{ boxShadow: "0 5px 15px #0003" }}
+                  >
+                    <span>● &nbsp; Camera</span>
+                    <strong className="mt-1 block font-bold text-white">Connected</strong>
+                  </div>
+                </div>
+
+                {/* Status grid — 3 columns */}
+                <div className="grid grid-cols-3 gap-[6px] bg-[#17212e] p-2">
+                  {["Candidate|Present", "Session|Active", "Camera|Connected"].map((item) => {
+                    const [label, value] = item.split("|")
+                    return (
+                      <div key={label} className="rounded-[7px] border border-[#3b495a] bg-[#202b3a] px-[7px] py-[9px]">
+                        <p className="mb-[5px] text-[7px] text-[#a6b2c0]">{label}</p>
+                        <p className="text-[9px] font-medium text-white">{value}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center gap-[10px] pb-[7px] pt-[19px] px-1">
+                <span className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] border border-[#435267] text-[#8aaac8]">
+                  <ScanFace className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-[7px] text-[#8b9bae]">Active security control</p>
+                  <h3 className="my-1 text-[14px] font-semibold text-white">Face Detection Monitoring</h3>
+                  <p className="text-[9px] text-[#a3afbd]">Monitor candidate presence and face positioning during examination sessions.</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 7. Competitive Exam Preparation ─── */}
+      <section id="exams" className="relative overflow-hidden border-y border-[#e7ebef] bg-white py-16 sm:py-20 lg:py-24">
         <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "linear-gradient(#e9eef3 1px, transparent 1px), linear-gradient(90deg, #e9eef3 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
         <div className="relative mx-auto grid max-w-[1115px] items-center gap-12 px-5 sm:px-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-16">
           <div>
-            <div className="mb-5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">
-              <span className="h-7 w-7 rounded-full border border-[#aab8c6]" />
-              Intelligent Question Creation
-            </div>
-            <h2 className="max-w-[360px] text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-[#304058] sm:text-5xl">
-              Let AI Do the
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">
+              Specialized Test Creation
+            </span>
+            <h2 className="mt-5 max-w-[390px] text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-[#304058] sm:text-5xl">
+              Built for
               <br />
-              <span className="font-semibold italic">Question</span>
+              Competitive
               <br />
-              <span className="font-semibold italic">Preparation.</span>
+              Exam Preparation.
             </h2>
             <p className="mt-5 max-w-[390px] text-[15px] leading-relaxed text-[#718096]">
-              Simply enter a topic or provide learning material. Generate examination questions, answer options and correct answers with AI, reducing hours of manual preparation.
+              Give coaching institutes a structured way to create practice tests and mock examinations for Class 11th and 12th students.
             </p>
-            <div className="mt-5 grid max-w-[420px] grid-cols-2 gap-x-5 gap-y-3 text-[12px] font-medium text-[#526982]">
-              {["Topic-based generation", "Multiple topics", "Automatic answer options", "Correct-answer identification", "Difficulty selection", "PDF question upload", "Multiple question formats"].map((item) => (
-                <span key={item} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 rounded-full bg-[#e6edf2] text-[#899aaa]" />
+            <div className="mt-6 flex max-w-[420px] flex-wrap gap-2 text-[11px] text-[#718096]">
+              {["Chapter-wise tests", "Subject-wise assessments", "Revision tests", "Practice examinations", "Full-length mock tests"].map((item) => (
+                <span key={item} className="flex items-center gap-2 rounded-md border border-[#dce3e9] bg-white px-3 py-2">
+                  <CheckCircle2 className="h-3 w-3 text-[#718096]" />
                   {item}
                 </span>
               ))}
@@ -506,163 +720,313 @@ export default function HomePage() {
           </div>
 
           <div className="rounded-2xl border border-[#dce3e9] bg-white p-5 shadow-[0_16px_40px_rgba(47,64,87,0.1)] sm:p-6">
-            <div className="flex items-start justify-between border-b border-[#edf0f3] pb-5">
+            <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-[16px] font-bold text-[#304058]">AI Question Generator</h3>
-                <p className="mt-1 text-[9px] text-[#9aa8b6]">Create from topic</p>
+                <h3 className="text-[16px] font-bold text-[#304058]">Create competitive test</h3>
+                <p className="mt-1 text-[9px] text-[#9aa8b6]">Configure examination</p>
               </div>
-              <span className="rounded-full border border-[#dce3e9] px-3 py-1 text-[9px] text-[#718096]">Draft</span>
+              <span className="rounded-full border border-[#dce3e9] px-3 py-1 text-[9px] text-[#718096]">Step 3 of 6</span>
             </div>
-            <div className="grid gap-3 py-5 sm:grid-cols-[1.5fr_0.7fr_0.8fr]">
-              {["Topic|Operating Systems", "Difficulty|Medium⌄", "Question type|MCQ⌄"].map((field) => {
-                const [label, value] = field.split("|")
-                return <div key={label}><p className="mb-1 text-[9px] text-[#899aaa]">{label}</p><div className="rounded-md border border-[#dce3e9] px-3 py-2 text-[10px] text-[#304058]">{value}</div></div>
-              })}
+            <div className="mt-7 flex gap-1">
+              {[1, 2, 3, 4, 5, 6].map((step) => <span key={step} className={`h-[3px] flex-1 rounded-full ${step <= 3 ? "bg-[#526982]" : "bg-[#e2e7ec]"}`} />)}
             </div>
-            <div className="mb-4 flex items-center justify-between text-[9px] font-semibold text-[#526982]">
-              <span>✦　Generation complete</span><span>100%</span>
+            <div className="mt-5 space-y-4 text-[9px] text-[#899aaa]">
+              <div>
+                <p className="mb-1">Select class</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {["Class 11", "Class 12"].map((item, index) => <div key={item} className={`rounded-md border px-3 py-3 text-center text-[10px] ${index === 1 ? "border-[#526982] bg-[#f3f5f7] font-medium text-[#304058]" : "border-[#dce3e9] text-[#526982]"}`}>{item}</div>)}
+                </div>
+              </div>
+              <div>
+                <p className="mb-1">Select course</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {["JEE", "MHT-CET", "NEET"].map((item, index) => <div key={item} className={`rounded-md border px-3 py-3 text-center text-[10px] ${index === 0 ? "border-[#526982] bg-[#f3f5f7] font-medium text-[#304058]" : "border-[#dce3e9] text-[#526982]"}`}>{item}</div>)}
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div><p className="mb-1">Subject</p><div className="rounded-md border border-[#dce3e9] px-3 py-3 text-[10px] text-[#526982]">Physics⌄</div></div>
+                <div><p className="mb-1">Chapters</p><div className="rounded-md border border-[#dce3e9] px-3 py-3 text-[10px] text-[#526982]">3 selected⌄</div></div>
+              </div>
             </div>
-            <div className="mb-4 h-[3px] rounded-full bg-[#304058]" />
-            <div className="rounded-lg border border-[#dce3e9] p-4">
-              <p className="mb-3 text-[9px] uppercase tracking-[0.14em] text-[#a2afbb]">Question 01</p>
-              <p className="mb-3 text-[12px] font-medium text-[#304058]">Which scheduling algorithm may cause starvation in an operating system?</p>
-              {["First-Come, First-Served", "Round Robin", "Priority Scheduling", "Shortest Remaining Time"].map((option, index) => (
-                <div key={option} className={`mb-2 flex items-center gap-2 rounded-md border px-3 py-2 text-[9px] ${index === 2 ? "border-[#aab8c6] bg-[#f4f7f9] text-[#304058]" : "border-[#e8edf1] text-[#526982]"}`}>
-                  <b className="rounded bg-[#f0f3f6] px-1.5 py-1">{String.fromCharCode(65 + index)}</b>{option}{index === 2 && <span className="ml-auto">✓</span>}
+            <div className="mt-5 flex items-center justify-between rounded-lg bg-[#f0f3f6] px-3 py-3">
+              <div className="flex gap-7 text-[#304058]">
+                <span><small className="block text-[8px] text-[#899aaa]">Questions</small><b className="text-[14px]">60</b></span>
+                <span><small className="block text-[8px] text-[#899aaa]">Duration</small><b className="text-[14px]">180 min</b></span>
+              </div>
+              <button type="button" className="rounded-md bg-[#304058] px-4 py-2.5 text-[10px] font-semibold text-white">Continue　→</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 8. Coding Assessments ─── */}
+      <section id="coding" className="relative overflow-hidden bg-[#172335] py-12 text-white sm:py-14 lg:py-16">
+        <div className="pointer-events-none absolute inset-0 opacity-20" style={{ backgroundImage: "linear-gradient(rgba(165,188,212,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(165,188,212,.12) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+        <div className="relative mx-auto max-w-[1115px] px-5 sm:px-8">
+          <div className="max-w-[720px]">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#c2ccda]">
+              Coding Assessments
+            </span>
+            <h2 className="mt-5 text-4xl font-bold leading-[1.08] tracking-[-0.035em] sm:text-5xl">
+              Go Beyond Traditional
+              <br />
+              Multiple-Choice Tests.
+            </h2>
+            <p className="mt-5 max-w-[650px] text-[15px] leading-relaxed text-[#c4cedb]">
+              Assess programming knowledge through dedicated coding question formats and technical assessments.
+            </p>
+          </div>
+
+          <div className="mt-10 overflow-hidden rounded-xl border border-[#52657b] bg-[#1d2b3d] shadow-[0_20px_50px_rgba(7,15,27,0.35)]">
+            <div className="flex items-center justify-between border-b border-[#52657b] bg-[#2b3d55] px-5 py-4 text-[10px]">
+              <div className="flex items-center gap-3 font-semibold"><span className="rounded bg-[#3a4d66] px-2 py-1">T</span> Technical Assessment</div>
+              <div className="flex items-center gap-5 text-[#b8c5d2]">Question 2 of 5 <span className="rounded bg-[#172335] px-3 py-2 font-semibold text-white">42:18 remaining</span></div>
+            </div>
+            <div className="grid lg:grid-cols-[0.68fr_1.32fr]">
+              <div className="border-b border-[#52657b] p-6 sm:p-8 lg:border-b-0 lg:border-r">
+                <p className="text-[9px] uppercase tracking-[0.14em] text-[#9fb1c3]">Problem 02 · 20 marks</p>
+                <h3 className="mt-5 max-w-[310px] text-2xl font-medium leading-tight">Find the first non-repeating character</h3>
+                <p className="mt-5 text-[12px] leading-relaxed text-[#b9c6d3]">
+                  Given a string of lowercase characters, return the first character that does not repeat. Return -1 if no such character exists.
+                </p>
+                <p className="mt-6 text-[9px] font-semibold text-white">Example input</p>
+                <div className="mt-2 rounded bg-[#2b3d55] px-3 py-3 font-mono text-[10px] text-[#d0dbe5]">assessment</div>
+                <p className="mt-5 text-[9px] font-semibold text-white">Expected output</p>
+                <div className="mt-2 rounded bg-[#2b3d55] px-3 py-3 font-mono text-[10px] text-[#d0dbe5]">a</div>
+                <p className="mt-5 text-[9px] font-semibold text-white">Constraints</p>
+                <p className="mt-2 text-[10px] text-[#9fb1c3]">1 ≤ string length ≤ 10⁵</p>
+              </div>
+              <div className="flex flex-col bg-[#121d2c]">
+                <div className="flex items-center justify-between border-b border-[#34465c] px-5 py-4 text-[10px]">
+                  <span className="font-semibold">Solution</span>
+                  <span className="rounded bg-[#2b3d55] px-3 py-2 text-[8px]">JavaScript⌄</span>
+                </div>
+                <div className="flex-1 space-y-2 p-5 font-mono text-[10px] leading-relaxed text-[#c6d4e2]">
+                  <p><span className="mr-5 text-[#71869d]">1</span><span className="text-[#d78cff]">function</span> <span className="text-[#7dd3fc]">firstUniqueChar</span>(<span className="text-[#f6c177]">str</span>) &#123;</p>
+                  <p><span className="mr-5 text-[#71869d]">2</span>  <span className="text-[#d78cff]">const</span> <span className="text-[#7dd3fc]">frequency</span> = &#123;&#125;;</p>
+                  <p><span className="mr-5 text-[#71869d]">3</span>  <span className="text-[#d78cff]">for</span> (<span className="text-[#d78cff]">const</span> <span className="text-[#f6c177]">char</span> <span className="text-[#d78cff]">of</span> <span className="text-[#f6c177]">str</span>) &#123;</p>
+                  <p><span className="mr-5 text-[#71869d]">4</span>    <span className="text-[#7dd3fc]">frequency</span>[<span className="text-[#f6c177]">char</span>] = (<span className="text-[#7dd3fc]">frequency</span>[<span className="text-[#f6c177]">char</span>] || <span className="text-[#f6c177]">0</span>) + <span className="text-[#f6c177]">1</span>;</p>
+                  <p><span className="mr-5 text-[#71869d]">5</span>  &#125;</p>
+                  <p><span className="mr-5 text-[#71869d]">6</span>  <span className="text-[#d78cff]">return</span> <span className="text-[#f6c177]">str</span>.<span className="text-[#7dd3fc]">split</span>(<span className="text-[#9ee493]">&quot;&quot;</span>).<span className="text-[#7dd3fc]">find</span>(<span className="text-[#f6c177]">char</span> =&gt;</p>
+                  <p><span className="mr-5 text-[#71869d]">7</span>    <span className="text-[#7dd3fc]">frequency</span>[<span className="text-[#f6c177]">char</span>] === <span className="text-[#f6c177]">1</span>) || <span className="text-[#f6c177]">-1</span>;</p>
+                  <p><span className="mr-5 text-[#71869d]">8</span>&#125;</p>
+                  <p><span className="mr-5 text-[#71869d]">9</span></p>
+                  <p><span className="mr-5 text-[#71869d]">10</span><span className="text-[#8ea2b6]">// Find the first unique character</span></p>
+                  <p><span className="mr-5 text-[#71869d]">11</span><span className="text-[#d78cff]">const</span> result = <span className="text-[#7dd3fc]">firstUniqueChar</span>(<span className="text-[#9ee493]">&quot;assessment&quot;</span>);</p>
+                  <p><span className="mr-5 text-[#71869d]">12</span><span className="text-[#7dd3fc]">console</span>.<span className="text-[#7dd3fc]">log</span>(result);</p>
+                  <p><span className="mr-5 text-[#71869d]">13</span><span className="text-[#8ea2b6]">// Output: a</span></p>
+                </div>
+                <div className="flex items-center justify-between border-t border-[#34465c] px-5 py-2.5 text-[9px]">
+                  <span className="text-[#8ea2b6]">Saved just now</span>
+                  <button type="button" className="rounded bg-white px-4 py-2 font-semibold text-[#304058]">Submit code　→</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 9. Automated Results & Analytics ─── */}
+      <section id="analytics" className="relative overflow-hidden border-y border-[#e7ebef] bg-[#f7f9fb] py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "linear-gradient(#e9eef3 1px, transparent 1px), linear-gradient(90deg, #e9eef3 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
+        <div className="relative mx-auto max-w-[1115px] px-5 sm:px-8">
+          <div className="mx-auto max-w-3xl space-y-4 text-center">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">Automated Results &amp; Analytics</span>
+            <h2 className="text-4xl font-bold leading-[1.08] tracking-[-0.035em] text-[#304058] sm:text-5xl">
+              Every Result. Every Student.
+              <br />
+              <span className="font-semibold italic">Every Insight.</span>
+            </h2>
+            <p className="text-[15px] leading-relaxed text-[#718096]">
+              Reduce manual evaluation and understand student performance through organized examination
+              <br className="hidden sm:block" /> results and analytics.
+            </p>
+          </div>
+
+          <div className="mt-10 overflow-hidden rounded-2xl border border-[#dce3e9] bg-white shadow-[0_16px_40px_rgba(47,64,87,0.1)]">
+            <div className="flex items-center justify-between border-b border-[#e5eaee] px-6 py-5">
+              <div>
+                <h3 className="text-[15px] font-bold text-[#304058]">JEE Mock Test — Results</h3>
+                <p className="mt-1 text-[9px] text-[#9aa8b6]">Published on 24 May 2025</p>
+              </div>
+              <button type="button" className="rounded border border-[#dce3e9] bg-white px-3 py-2 text-[9px] font-medium text-[#526982]">Export report</button>
+            </div>
+            <div className="grid gap-5 border-b border-[#e5eaee] px-6 py-5 sm:grid-cols-4">
+              {[
+                ["Class average", "76.4%", "82%"],
+                ["Highest score", "94%", "94%"],
+                ["Pass rate", "88.2%", "88%"],
+                ["Students", "152", "65%"],
+              ].map(([label, value, width]) => (
+                <div key={label}>
+                  <div className="flex items-end justify-between gap-2"><p className="text-[9px] text-[#899aaa]">{label}</p><b className="text-2xl text-[#304058]">{value}</b></div>
+                  <div className="mt-2 h-[3px] rounded-full bg-[#e6ebef]"><div className="h-full bg-[#526982]" style={{ width }} /></div>
                 </div>
               ))}
             </div>
-            <div className="mt-3 flex items-center justify-between rounded-md bg-[#f0f3f6] px-3 py-2 text-[9px] text-[#526982]">
-              <span>▣　Review before publishing<br /><small className="pl-5 text-[#9aa8b6]">Edit the question, options, or correct answer anytime.</small></span>
-              <button type="button" className="rounded border border-[#cbd6df] bg-white px-2 py-1 text-[8px]">Edit question</button>
+            <div className="min-w-[700px] overflow-x-auto">
+              <div className="grid grid-cols-[1.6fr_0.7fr_0.7fr_0.8fr_0.8fr_0.7fr_1fr] border-b border-[#e5eaee] px-5 py-3 text-[8px] text-[#899aaa]">
+                <span>Student</span><span>Obtained</span><span>Total</span><span>Percentage</span><span>Result</span><span>Grade</span><span>Exam date</span>
+              </div>
+              {[
+                ["AS", "Aarav Sharma", "282", "94%", "A+", "24 May 2025"],
+                ["IK", "Isha Kulkarni", "264", "88%", "A", "24 May 2025"],
+                ["RP", "Rohan Patil", "231", "77%", "B+", "24 May 2025"],
+                ["MJ", "Meera Joshi", "198", "66%", "B", "24 May 2025"],
+              ].map(([initials, name, obtained, percentage, grade, date]) => (
+                <div key={name} className="grid grid-cols-[1.6fr_0.7fr_0.7fr_0.8fr_0.8fr_0.7fr_1fr] items-center border-b border-[#edf0f3] px-5 py-3 text-[9px] text-[#526982]">
+                  <span className="flex items-center gap-2 font-semibold text-[#304058]"><b className="flex h-6 w-6 items-center justify-center rounded-full bg-[#edf1f4] text-[7px] font-normal">{initials}</b>{name}</span>
+                  <span>{obtained}</span><span>300</span><span>{percentage}</span><span><b className="rounded-md bg-[#e7f5ef] px-2 py-1 text-[8px] font-medium text-[#56977b]">Pass</b></span><span>{grade}</span><span>{date}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 bg-[#f5f7f9] px-6 py-3 text-[9px] text-[#899aaa]">
+              <Clock className="h-3.5 w-3.5" />
+              Instant results are available for supported automatically evaluated question types when enabled.
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── 5. Institutional CTA Section ─── */}
-      <section id="institutes" className="bg-white py-14 sm:py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
-          <div className="space-y-5 rounded-3xl bg-[#2D3A4A] p-6 text-white shadow-xl sm:p-12">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-              Institutional Partnership
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
-              Ready to Upgrade Your Examination Infrastructure?
+      {/* ─── 10. Multiple Educational Needs ─── */}
+      <section id="solutions" className="relative overflow-hidden border-y border-[#e7ebef] bg-white py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "linear-gradient(#e9eef3 1px, transparent 1px), linear-gradient(90deg, #e9eef3 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
+        <div className="relative mx-auto max-w-[1115px] px-5 sm:px-8">
+          <div className="mx-auto max-w-3xl space-y-4 text-center">
+            <h2 className="text-4xl font-bold leading-[1.08] tracking-[-0.035em] text-[#304058] sm:text-5xl">
+              One Platform. Multiple
+              <br />
+              Educational Needs.
             </h2>
-            <p className="text-xs sm:text-sm text-gray-300 max-w-xl mx-auto leading-relaxed">
-              Connect with our team to onboard your coaching academy, configure custom student quotas, and experience the full assessment platform.
+            <p className="text-[15px] leading-relaxed text-[#718096]">
+              Flexible examination capabilities designed for different learning environments and institutional
+              <br className="hidden sm:block" /> requirements.
             </p>
+          </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => window.open("https://wa.me/919309470958", "_blank")}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-white text-[#2D3A4A] text-xs font-bold uppercase tracking-wider hover:bg-gray-100 transition-colors shadow-sm cursor-pointer"
-              >
-                Schedule Demonstration
+          <div className="mt-10 grid gap-3 lg:grid-cols-2">
+            {[
+              ["01", "JEE / CET / NEET Coaching Institutes", "Create chapter-wise practice tests, subject assessments and full-length competitive examination simulations."],
+              ["02", "Schools", "Conduct regular academic assessments, unit tests and structured student evaluations."],
+              ["03", "Colleges & Universities", "Manage technical assessments, aptitude tests, coding examinations and internal evaluations."],
+              ["04", "Training & Assessment Organizations", "Evaluate knowledge, technical capabilities and candidate performance through structured online assessments."],
+            ].map(([number, title, description], index) => (
+              <article key={title} className="relative min-h-[245px] overflow-hidden rounded-xl border border-[#dce3e9] bg-white p-5 shadow-[0_8px_24px_rgba(47,64,87,0.04)]">
+                <span className="absolute left-5 top-0 h-px w-3 bg-[#8da0b3]" />
+                <div className={`${index % 2 === 0 ? "pr-[45%]" : "pr-[45%]"} h-full`}>
+                  <p className="text-[10px] font-bold tracking-[0.14em] text-[#899aaa]">{number}</p>
+                  <h3 className="mt-4 text-[18px] font-medium leading-tight text-[#304058]">{title}</h3>
+                  <p className="mt-3 text-[13px] leading-relaxed text-[#718096]">{description}</p>
+                  <span className="absolute bottom-5 left-5 text-[11px] font-semibold text-[#526982]">Learn more　→</span>
+                </div>
+                <div className="absolute bottom-2 right-2 top-2 w-[43%] rounded-lg border border-[#dce3e9] bg-[#f3f6f8] p-3">
+                  {index === 0 && <><div className="mb-3 h-3 w-24 rounded bg-[#304058]" /><div className="space-y-2">{["Electrostatics", "Current electricity"].map((item) => <div key={item} className="rounded border border-[#dce3e9] bg-white p-2 text-[8px] text-[#718096]">□ {item}</div>)}</div></>}
+                  {index === 1 && <><div className="mb-4 h-3 w-20 rounded bg-[#304058]" /><p className="text-[9px] font-semibold text-[#304058]">Which organelle is known as the powerhouse of the cell?</p><div className="mt-3 space-y-2">{["Nucleus", "Mitochondria", "Ribosome"].map((item) => <div key={item} className="rounded border border-[#cbd6df] bg-white p-2 text-[8px] text-[#718096]">{item}</div>)}</div></>}
+                  {index === 2 && <div className="h-full rounded bg-[#1d2b3d] p-3 font-mono text-[8px] leading-relaxed text-[#9ee493]"><p>1 function findResult(data) &#123;</p><p>2 const values = data.map</p><p>3 item.score();</p><p>4 return Math.max(...values)</p><p>5 &#125;</p></div>}
+                  {index === 3 && <><p className="text-2xl font-bold text-[#304058]">82%</p><p className="text-[8px] text-[#899aaa]">Average score</p><div className="mt-8 flex h-16 items-end gap-1">{[35, 55, 42, 68, 52, 78, 60].map((height, bar) => <span key={bar} className="flex-1 bg-[#718198]" style={{ height: `${height}%` }} />)}</div><p className="mt-2 text-[8px] text-[#899aaa]">Completed　　　　　　 124 candidates</p></>}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 11. Transparent Pricing ─── */}
+      <section id="pricing" className="relative overflow-hidden border-y border-[#e7ebef] bg-[#f7f9fb] py-16 sm:py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "linear-gradient(#e9eef3 1px, transparent 1px), linear-gradient(90deg, #e9eef3 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
+        <div className="relative mx-auto max-w-[1115px] px-5 sm:px-8">
+          <div className="mx-auto max-w-3xl space-y-4 text-center">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">Transparent Pricing</span>
+            <h2 className="text-4xl font-bold leading-[1.08] tracking-[-0.035em] text-[#304058] sm:text-5xl">
+              Simple Plans. Powerful
+              <br />
+              Examination Capabilities.
+            </h2>
+            <p className="text-[15px] text-[#718096]">Choose a plan that supports the way your institution assesses and grows.</p>
+          </div>
+
+          <div className="mt-10 grid items-stretch gap-3 lg:grid-cols-3">
+            {[
+              ["Basic", "₹8,500", "Essential tools for modern examination management.", "View Pricing", ["50 students", "200 exams per year", "General examination management", "AI question generation", "Automatic results", "Proctoring"]],
+              ["Institution", "₹12,000", "Essential tools for modern examination management.", "View Pricing", ["50 students", "200 exams per year", "Everything in Basic", "JEE, MHT-CET & NEET creation", "Class and chapter-based workflow"]],
+              ["Customized Plan", "Custom", "A tailored solution designed around your institution.", "Talk to Our Team", ["Custom student capacity", "Custom examination limits", "Tailored institutional requirements", "Personalized support options"]],
+            ].map(([name, price, description, action, items], index) => (
+              <article key={name as string} className="group relative flex h-full min-h-[405px] box-border flex-col rounded-xl border border-[#dce3e9] bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[#304058] hover:shadow-[0_16px_34px_rgba(47,64,87,0.12)]">
+                <span className="absolute left-5 top-0 h-px w-3 bg-[#8da0b3]" />
+                {index === 1 && <span className="absolute right-5 top-5 rounded-md bg-[#304058] px-3 py-2 text-[8px] font-bold uppercase tracking-wide text-white">Most Popular</span>}
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">{name as string}</p>
+                <div className="mt-7 flex items-baseline gap-2 text-[#304058]">
+                  <span className="text-3xl font-bold">{price as string}</span>
+                  <small className="text-[9px] text-[#899aaa]">{index === 2 ? "pricing" : "/ year"}</small>
+                </div>
+                <p className="mt-4 min-h-[42px] text-[12px] leading-relaxed text-[#718096]">{description as string}</p>
+                <button type="button" className={`mt-5 flex w-full items-center justify-center rounded-lg border px-4 py-3 text-[11px] font-semibold transition-colors ${index === 1 ? "border-[#304058] bg-[#304058] text-white hover:bg-[#243246]" : "border-[#cbd6df] bg-white text-[#526982] hover:bg-[#f4f6f8]"}`}>
+                  {action as string}　→
+                </button>
+                <div className="my-5 border-t border-[#edf0f3]" />
+                <ul className="space-y-3 text-[11px] text-[#718096]">
+                  {(items as string[]).map((item) => <li key={item} className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[#718096]" />{item}</li>)}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 12. Institutional CTA Section ─── */}
+      <section id="institutes" className="relative min-h-[330px] overflow-hidden border-t border-[#e7ebef] bg-white py-10 sm:py-12 lg:h-[334px]">
+        <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "linear-gradient(#e9eef3 1px, transparent 1px), linear-gradient(90deg, #e9eef3 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
+        <div className="relative mx-auto grid max-w-[990px] items-center gap-8 px-5 sm:px-8 lg:h-full lg:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">Start Your Transformation</span>
+            <h2 className="mt-5 max-w-[620px] text-4xl font-bold leading-[1.06] tracking-[-0.04em] text-[#304058] sm:text-[40px]">
+              Ready to Transform the Way
+              <br />
+              You Conduct Examinations?
+            </h2>
+            <p className="mt-5 max-w-[570px] text-[15px] leading-relaxed text-[#718096]">
+              Experience a smarter, more secure and efficient examination management platform built for modern educational institutions.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button type="button" onClick={() => window.open("https://wa.me/919309470958", "_blank")} className="flex items-center justify-center rounded-lg bg-[#304058] px-5 py-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#243246]">
+                Schedule a Free Demo　→
               </button>
-              <Link
-                href="/institute/login"
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-              >
-                Institute Login
+              <Link href="https://progrentures.com/#contact" target="_blank" className="flex items-center justify-center rounded-lg border border-[#cbd6df] bg-white px-5 py-3 text-[12px] font-semibold text-[#526982] transition-colors hover:bg-[#f4f6f8]">
+                Talk to Our Team　→
               </Link>
+            </div>
+          </div>
+          <div className="relative mx-auto h-[205px] w-full max-w-[360px]">
+            <div className="absolute left-1/2 top-3 flex h-[176px] w-[270px] -translate-x-1/2 -rotate-[3deg] overflow-hidden rounded-lg border border-[#e1e6eb] bg-[#fdfefe] shadow-[0_15px_30px_rgba(47,64,87,0.13)]">
+              <aside className="w-[53px] shrink-0 bg-[#dce2e7] px-2 py-3 text-[#7d8b99]">
+                <div className="flex items-center gap-1 text-[5px] font-bold text-[#eef1f3]"><span className="flex h-3 w-3 items-center justify-center rounded-sm bg-white text-[#9aa7b2]">T</span><span>TESTRO</span></div>
+                <div className="mt-5 space-y-3 text-[5px]"><span className="block rounded bg-[#cbd3da] px-1 py-1 text-[#697988]">Dashboard</span><span className="block">Exams</span><span className="block">Questions</span><span className="block">Students</span><span className="block">Analytics</span></div>
+              </aside>
+              <div className="min-w-0 flex-1 bg-[#fafbfc] p-2.5">
+                <div className="flex items-center justify-between border-b border-[#edf0f3] pb-2 text-[6px] text-[#718096]"><b className="text-[#b4bec7]">Dashboard</b><span>Good morning, Admin</span><span className="h-2 w-2 rounded-full bg-[#dce3e9]" /></div>
+                <div className="mt-3 grid grid-cols-4 gap-1">{["248", "12", "4,826", "1,842"].map((item) => <span key={item} className="rounded border border-[#e8ecef] bg-white p-1.5 text-center text-[8px] font-bold text-[#526982]">{item}</span>)}</div>
+                <div className="mt-3 grid grid-cols-[1.45fr_0.8fr] gap-2"><div className="h-[66px] rounded border border-[#e8ecef] bg-white p-2"><span className="block text-[5px] text-[#718096]">Recent examinations</span><span className="mt-2 block h-1 w-full bg-[#dce3e9]" /><span className="mt-3 block h-1 w-[82%] bg-[#edf0f3]" /><span className="mt-3 block h-1 w-[65%] bg-[#edf0f3]" /></div><div className="flex h-[66px] flex-col items-center justify-center rounded border border-[#e8ecef] bg-white"><span className="text-[5px] text-[#718096]">Result overview</span><span className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border-[5px] border-[#526982] text-[7px] font-bold text-[#304058]">84%</span></div></div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="relative overflow-hidden border-t border-gray-100 bg-[#f7f9fc] px-4 pb-16 pt-10 sm:pb-24 sm:pt-14">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-20 opacity-60"
-          style={{
-            background: "linear-gradient(to top, rgba(219,228,238,0.5), transparent)",
-          }}
-        />
-        <p
-          aria-label="Progrentures"
-          onMouseLeave={() => setHoveredWordmarkLetter(null)}
-          className="relative whitespace-nowrap text-center text-[10vw] font-extrabold leading-none tracking-[0.015em] text-[#cbd7e3] sm:text-[16vw] lg:text-[14vw]"
-          style={{
-            WebkitTextStroke: "0.5px rgba(93, 113, 134, 0.32)",
-            textShadow: "0 1px 0 rgba(255,255,255,0.55)",
-          }}
-        >
-          {"Progrentures".split("").map((letter, index) => {
-            const distance = hoveredWordmarkLetter === null ? null : index - hoveredWordmarkLetter
-            const letterColor =
-              distance === 0
-                ? "#1e2a38"
-                : distance === 1
-                  ? "#60758b"
-                  : distance === 2
-                    ? "#9aaaba"
-                    : "#cbd7e3"
-
-            return (
-              <span
-                key={`${letter}-${index}`}
-                aria-hidden="true"
-                onMouseEnter={() => setHoveredWordmarkLetter(index)}
-                className="inline-block cursor-default transform-gpu transition-[color,transform] duration-650 ease-in-out"
-                style={{
-                  color: letterColor,
-                  transform: distance === 0 ? "scale(1.04)" : "scale(1)",
-                }}
-              >
-                {letter}
-              </span>
-            )
-          })}
-        </p>
-      </div>
-
-      {/* ─── 6. Clean Institutional Footer ─── */}
-      <footer className="border-t border-gray-200 bg-gray-50 py-8 text-xs text-gray-500 sm:py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
+      <footer className="min-h-[329px] bg-[#172335] py-11 text-[#c4cedb] sm:py-12 lg:h-[329px]">
+        <div className="mx-auto max-w-[990px] px-5 sm:px-8">
+          <div className="grid gap-8 md:grid-cols-[1.55fr_1fr_1fr_1fr_1.2fr]">
             <div>
-              <Image
-                src="/logo.png"
-                alt="Progrentures Testro Lab"
-                width={140}
-                height={45}
-                priority
-                className="object-contain mb-1"
-              />
-              <p className="text-gray-400 text-xs">
-                Where Skills Are Truly Measured.
-              </p>
+              <div className="flex items-center gap-2 text-white"><span className="flex h-8 w-8 items-center justify-center rounded bg-white font-bold text-[#304058]">T</span><span className="text-[13px] font-bold tracking-widest">TESTRO<small className="block text-[7px] tracking-[0.3em]">LAB</small></span></div>
+              <p className="mt-5 max-w-[220px] text-[11px] leading-relaxed">An integrated AI-powered examination<br />and assessment management platform by<br />Progrentures Solution Pvt. Ltd.</p>
             </div>
-
-            <div className="flex flex-col items-start gap-2.5 font-medium text-gray-600 sm:items-end">
-              <Link href="/institute/login" className="hover:text-[#2D3A4A] transition-colors">
-                Institute Login
-              </Link>
-              <Link href="/admin/login" className="hover:text-[#2D3A4A] transition-colors">
-                Admin Login
-              </Link>
-              <Link
-                href="https://progrentures.com/#contact"
-                target="_blank"
-                className="hover:text-[#2D3A4A] transition-colors"
-              >
-                Contact
-              </Link>
-              <button
-                onClick={() => window.open("https://wa.me/919309470958", "_blank")}
-                className="text-emerald-700 font-bold hover:underline cursor-pointer"
-              >
-                WhatsApp (+91 93094 70958)
-              </button>
-            </div>
+            <div><h3 className="text-[11px] font-bold text-white">Platform</h3><div className="mt-4 space-y-3 text-[10px]"><Link href="#features" className="block hover:text-white">Features</Link><Link href="#workflow" className="block hover:text-white">AI Question Generation</Link><Link href="#workflow" className="block hover:text-white">Exam Management</Link><Link href="#coding" className="block hover:text-white">Online Assessments</Link><Link href="#security" className="block hover:text-white">Proctoring &amp; Security</Link><Link href="#analytics" className="block hover:text-white">Analytics</Link></div></div>
+            <div><h3 className="text-[11px] font-bold text-white">Solutions</h3><div className="mt-4 space-y-3 text-[10px]"><Link href="#exams" className="block hover:text-white">Coaching Institutes</Link><Link href="#solutions" className="block hover:text-white">Schools</Link><Link href="#solutions" className="block hover:text-white">Colleges</Link><Link href="#exams" className="block hover:text-white">JEE / CET / NEET</Link></div></div>
+            <div><h3 className="text-[11px] font-bold text-white">Company</h3><div className="mt-4 space-y-3 text-[10px]"><Link href="#about" className="block hover:text-white">About Us</Link><Link href="#pricing" className="block hover:text-white">Pricing</Link><Link href="https://progrentures.com/#contact" target="_blank" className="block hover:text-white">Contact</Link><button type="button" onClick={() => window.open("https://wa.me/919309470958", "_blank")} className="block hover:text-white">Schedule a Demo</button></div></div>
+            <div><h3 className="text-[11px] font-bold text-white">Contact</h3><div className="mt-4 space-y-3 text-[10px]"><button type="button" onClick={() => window.open("https://wa.me/919309470958", "_blank")} className="block hover:text-white">☎　9309470958</button><a href="mailto:hello@progrentures.com" className="block hover:text-white">✉　hello@progrentures.com</a><a href="https://www.progrentures.com" target="_blank" rel="noreferrer" className="block hover:text-white">www.progrentures.com</a></div></div>
           </div>
-
-          <div className="flex flex-col items-center justify-between gap-2 border-t border-gray-200/80 pt-6 text-center text-[11px] text-gray-400 sm:flex-row sm:text-left">
-            <p>© 2026 Progrentures Solution. All rights reserved.</p>
-            <p>Institutional Online Assessment & Examination Platform.</p>
+          <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-[#405268] pt-5 text-[9px] text-[#9eafbf] sm:flex-row">
+            <p>© 2026 Progrentures Solution Pvt. Ltd. All rights reserved.</p>
+            <div className="flex gap-5"><a href="#" className="hover:text-white">Privacy Policy</a><a href="#" className="hover:text-white">Terms &amp; Conditions</a></div>
           </div>
         </div>
       </footer>

@@ -122,3 +122,28 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Face scanner scan-line animation ── */
+@keyframes scanning {
+  0% {
+    transform: translateY(8px);
+  }
+  50% {
+    transform: translateY(102px);
+  }
+  100% {
+    transform: translateY(8px);
+  }
+}
+
+.scan-line-anim {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  height: 1px;
+  top: 0px;
+  background: #b6c4d1;
+  box-shadow: 0 0 6px #dce8ff80;
+  will-change: transform;
+  animation: scanning 2.6s ease-in-out infinite !important;
+}
