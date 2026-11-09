@@ -9,10 +9,13 @@ import {
 import {
   CheckCircle2, XCircle, BarChart2, ChevronDown,
   Download, Printer, Share2, HelpCircle, Target, FileText,
-  TrendingUp, EyeOff, LayoutDashboard, Mail, Calendar, Check, Bell
+  TrendingUp, EyeOff, LayoutDashboard, Mail, Calendar, Check, Bell, Award
 } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
+import { MathRenderer } from "@/components/exam/MathRenderer"
 import { ResultAnalyticsSkeleton } from "@/components/SkeletonLoaders"
+import katex from "katex"
+import "katex/dist/katex.min.css"
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -20,9 +23,13 @@ interface QuestionData {
   _id: string
   type: "mcq" | "truefalse" | "descriptive" | "fillblanks" | "coding"
   questionText: string
+  questionImage?: string
+  codeSnippet?: string
   options?: string[]
+  optionImages?: string[]
   correctAnswer?: string | string[]
   marks: number
+  negativeMark?: number
   difficulty?: string
   blanks?: { id: number; label: string; answer: string }[]
   explanation?: string
@@ -31,6 +38,8 @@ interface QuestionData {
 interface SectionData {
   name: string
   type: string
+  negativeMarking?: boolean
+  sectionNegativeMark?: number
   questions: QuestionData[]
 }
 
@@ -71,6 +80,9 @@ interface ExamFullData {
   passMarks: number
   duration: number
   sections: SectionData[]
+  settings?: {
+    negativeMarking?: boolean
+  }
   class?: string
 }
 
@@ -285,6 +297,45 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
     fetchMainData()
   }, [attemptId, id, router])
 
+  const answersMatch = (
+    studentAnswer: string | string[],
+    correctAnswer: string | string[] | undefined,
+    options?: string[]
+  ) => {
+    const student = Array.isArray(studentAnswer) ? studentAnswer[0] : studentAnswer
+    const correct = Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer
+    if (student === undefined || correct === undefined) return false
+
+    const normalize = (value: string) => value
+      .trim()
+      .replace(/^[a-z]\s*[\)\.\-:]\s*/i, "")
+      .replace(/\s+/g, " ")
+      .toLowerCase()
+    if (normalize(student) === normalize(correct)) return true
+
+    if (options?.length) {
+      const optionIndex = (value: string) => {
+        const normalized = value.trim()
+        if (/^[a-z]$/i.test(normalized)) {
+          const index = normalized.toUpperCase().charCodeAt(0) - 65
+          return index >= 0 && index < options.length ? index : -1
+        }
+        const numericIndex = Number(normalized)
+        if (Number.isInteger(numericIndex)) {
+          if (numericIndex >= 0 && numericIndex < options.length) return numericIndex
+          if (numericIndex >= 1 && numericIndex <= options.length) return numericIndex - 1
+        }
+        return options.findIndex(option => normalize(option) === normalize(value))
+      }
+
+      const studentIndex = optionIndex(student)
+      const correctIndex = optionIndex(correct)
+      return studentIndex >= 0 && studentIndex === correctIndex
+    }
+
+    return false
+  }
+
   // ─── Computed analytics data ─────────────────────────────────────────────────
 
   const analytics = useMemo(() => {
@@ -315,7 +366,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
           if (q.type === "mcq" || q.type === "truefalse") {
             const correct = Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer
             const studentAnswer = Array.isArray(answerValue) ? answerValue[0] : answerValue
-            if (studentAnswer === correct) {
+            if (answersMatch(studentAnswer, correct, q.type === "mcq" ? q.options : undefined)) {
               isCorrect = true
               marksEarned = q.marks
               sCorrect++
@@ -407,7 +458,21 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
   }
 
   const exam = attempt.examId
-  const passed = attempt.passed
+  const calculatedScore = showResults
+    ? Math.round(analytics.questionAnalyses.reduce((total, qa) => {
+        if (qa.isSkipped) return total
+        if (qa.isCorrect || qa.marksEarned > 0) return total + qa.marksEarned
+
+        const section = examFull.sections.find(section => section.name === qa.sectionName)
+        const negativeMarking = section?.negativeMarking || examFull.settings?.negativeMarking || false
+        if (negativeMarking && (qa.question.type === "mcq" || qa.question.type === "truefalse")) {
+          return total - Math.abs(qa.question.negativeMark ?? section?.sectionNegativeMark ?? 0)
+        }
+        return total
+      }, 0) * 100) / 100
+    : 0
+  const displayScore = showResults ? calculatedScore : attempt.score
+  const passed = showResults ? displayScore >= exam.passMarks : attempt.passed
   const submittedDate = attempt.submittedAt ? new Date(attempt.submittedAt) : null
   const formattedDate = submittedDate
     ? `Completed on ${submittedDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
@@ -415,8 +480,9 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
   const timeTakenMin = Math.floor((attempt.timeSpent || 0) / 60)
   const timeTakenSec = (attempt.timeSpent || 0) % 60
   const timeTakenStr = `${timeTakenMin > 0 ? timeTakenMin + "m " : ""}${timeTakenSec > 0 ? timeTakenSec + "s" : timeTakenMin > 0 ? "" : "0s"}`
-  const passMarksDiff = attempt.score - exam.passMarks
+  const passMarksDiff = displayScore - exam.passMarks
   const isGraded = attempt.status === "graded" || attempt.isGraded === true
+  const totalScore = attempt.maxScore || exam.totalMarks
 
   // Filtered questions for Q&A section
   const filteredQuestions = analytics.questionAnalyses.filter(qa => {
@@ -429,22 +495,63 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
   const displayedQuestions = showAllQuestions ? filteredQuestions : filteredQuestions.slice(0, 5)
 
   // Helper to format answer display
+  const getOptionIndex = (answer: string | null | undefined, options: string[]) => {
+    if (!answer) return -1
+    const normalized = answer.trim()
+    const letterIndex = normalized.match(/^[A-Za-z]$/)
+      ? normalized.toUpperCase().charCodeAt(0) - 65
+      : -1
+    if (letterIndex >= 0 && letterIndex < options.length) return letterIndex
+
+    const numericIndex = Number(normalized)
+    if (Number.isInteger(numericIndex)) {
+      if (numericIndex >= 0 && numericIndex < options.length) return numericIndex
+      if (numericIndex >= 1 && numericIndex <= options.length) return numericIndex - 1
+    }
+
+    return options.findIndex(option => option.trim() === normalized)
+  }
+
   const formatAnswer = (answer: string | string[] | null, q: QuestionData) => {
     if (!answer) return null
     if (q.type === "mcq" && q.options) {
-      const idx = typeof answer === "string" ? answer.charCodeAt(0) - 65 : -1
-      if (idx >= 0 && idx < q.options.length) return `${answer}) ${q.options[idx]}`
+      const value = typeof answer === "string" ? answer : answer[0]
+      const idx = getOptionIndex(value, q.options)
+      if (idx >= 0) return `${String.fromCharCode(65 + idx)}) ${q.options[idx]}`
       return String(answer)
     }
+
     if (Array.isArray(answer)) return answer.join(", ")
     return String(answer)
+  }
+
+  const renderFormattedAnswer = (answer: string | string[] | null, q: QuestionData) => {
+    const formattedAnswer = formatAnswer(answer, q)
+    if (!formattedAnswer) return null
+
+    return (
+      <div className="min-w-0 text-[#45505F]">
+        {q.type === "fillblanks" && Array.isArray(answer) ? (
+          <div className="space-y-1">
+            {answer.map((value, index) => (
+              <div key={`${value}-${index}`} className="flex items-start gap-1.5">
+                <span className="shrink-0 font-semibold">{index + 1}.</span>
+                <MathRenderer content={value || "—"} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <MathRenderer content={formattedAnswer} />
+        )}
+      </div>
+    )
   }
 
   const formatCorrectAnswer = (q: QuestionData) => {
     if (q.type === "mcq" && q.options && q.correctAnswer) {
       const ca = Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer
-      const idx = typeof ca === "string" ? ca.charCodeAt(0) - 65 : -1
-      if (idx >= 0 && idx < q.options.length) return `${ca}) ${q.options[idx]}`
+      const idx = getOptionIndex(ca, q.options)
+      if (idx >= 0) return `${String.fromCharCode(65 + idx)}) ${q.options[idx]}`
       return String(ca)
     }
     if (q.type === "truefalse") return String(q.correctAnswer)
@@ -453,12 +560,48 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
     return "—"
   }
 
+  const escapeHtml = (value: string) => value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+
+  const renderPrintableMath = (value: string) => {
+    const normalized = value
+      .replace(/\\\\/g, "\\")
+      .replace(/\u000c/g, "\\frac")
+      .replace(/\u0008/g, "\\b")
+      .replace(/\u0009/g, " ")
+      .replace(/\\\(/g, "$")
+      .replace(/\\\)/g, "$")
+      .replace(/\\\[/g, "$$")
+      .replace(/\\\]/g, "$$")
+    return normalized.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g).map(part => {
+      if (part.startsWith("$$") && part.endsWith("$$")) {
+        return `<div class="formula display-formula">${katex.renderToString(part.slice(2, -2).trim(), { displayMode: true, throwOnError: false, strict: "ignore" })}</div>`
+      }
+      if (part.startsWith("$") && part.endsWith("$")) {
+        return `<span class="formula">${katex.renderToString(part.slice(1, -1).trim(), { displayMode: false, throwOnError: false, strict: "ignore" })}</span>`
+      }
+      return `<span class="text-content">${escapeHtml(part)}</span>`
+    }).join("")
+  }
+
   const handleDownloadPDF = () => {
     const printWindow = window.open("", "_blank")
     if (!printWindow) return
 
     const qa = analytics.questionAnalyses
     const sections = analytics.sectionAnalyses
+    let pageStyles = ""
+    for (const styleSheet of Array.from(document.styleSheets)) {
+      try {
+        pageStyles += Array.from(styleSheet.cssRules).map(rule => rule.cssText).join("\n")
+      } catch {
+        // Ignore stylesheets that are not readable from this document.
+      }
+    }
 
     // Build question rows HTML
     const questionRows = qa.map((q: any, i: number) => {
@@ -467,23 +610,48 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
       const yourAns = q.isSkipped ? "—" : formatAnswer(q.studentAnswer, q.question) || "—"
       const correctAns = showResults ? ((q.question.type === "mcq" || q.question.type === "truefalse" || q.question.type === "fillblanks")
         ? formatCorrectAnswer(q.question) : "—") : "—"
+      const selectedIndex = q.question.options
+        ? getOptionIndex(Array.isArray(q.studentAnswer) ? q.studentAnswer[0] : q.studentAnswer, q.question.options)
+        : -1
+      const correctIndex = q.question.options
+        ? getOptionIndex(Array.isArray(q.question.correctAnswer) ? q.question.correctAnswer[0] : q.question.correctAnswer, q.question.options)
+        : -1
+      const optionsHtml = q.question.type === "mcq" && q.question.options
+        ? `<div class="options-grid">${q.question.options.map((option: string, optionIndex: number) => {
+            const optionKey = String.fromCharCode(65 + optionIndex)
+            const isSelected = selectedIndex === optionIndex
+            const isCorrect = showResults && correctIndex === optionIndex
+            const optionImage = q.question.optionImages?.[optionIndex]
+            const label = isCorrect ? "Correct" : isSelected ? "Selected" : ""
+            return `<div class="option ${isCorrect ? "option-correct" : isSelected ? "option-selected" : ""}">
+              <span class="option-key">${optionKey}</span>
+              <div class="option-content">${renderPrintableMath(option)}${optionImage ? `<img src="${escapeHtml(optionImage)}" alt="Option ${optionKey}" />` : ""}</div>
+              ${label ? `<span class="option-label">${label}</span>` : ""}
+            </div>`
+          }).join("")}</div>`
+        : ""
+      const questionImage = q.question.questionImage
+        ? `<img class="question-image" src="${escapeHtml(q.question.questionImage)}" alt="Question" />`
+        : ""
+      const codeSnippet = q.question.codeSnippet
+        ? `<pre class="code-snippet">${escapeHtml(q.question.codeSnippet)}</pre>`
+        : ""
 
       return `
-        <tr style="border-bottom:1px solid #f0f0f0">
-          <td style="padding:10px 12px;font-weight:600;color:#1a2535">Q${i + 1}</td>
-          <td style="padding:10px 12px;color:#374151;font-size:13px;max-width:320px">${q.question.questionText}</td>
-          <td style="padding:10px 12px;text-transform:capitalize;font-size:12px">
-            <span style="background:${q.question.type === 'mcq' ? '#dbeafe' : q.question.type === 'truefalse' ? '#ccfbf1' : '#f3e8ff'};color:${q.question.type === 'mcq' ? '#1d4ed8' : q.question.type === 'truefalse' ? '#0f766e' : '#7c3aed'};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">
-              ${q.question.type === 'truefalse' ? 'True/False' : q.question.type === 'fillblanks' ? 'Fill Blanks' : q.question.type.toUpperCase()}
-            </span>
-          </td>
-          <td style="padding:10px 12px;font-size:13px;color:#374151">${yourAns}</td>
-          ${showResults ? `<td style="padding:10px 12px;font-size:13px;color:#45505F;font-weight:500">${correctAns}</td>
-          <td style="padding:10px 12px;text-align:center">
-            <span style="color:${statusColor};font-weight:600;font-size:12px">${status}</span>
-          </td>
-          <td style="padding:10px 12px;text-align:center;font-weight:600;color:#1a2535">${q.marksEarned}/${q.question.marks}</td>` : ''}
-        </tr>`
+        <div class="question-card no-break">
+          <div class="question-header">
+            <strong>Q${i + 1}</strong>
+            <span class="type-badge">${q.question.type === 'truefalse' ? 'True/False' : q.question.type === 'fillblanks' ? 'Fill Blanks' : q.question.type.toUpperCase()}</span>
+            <span class="status" style="color:${statusColor}">${status}</span>
+            ${showResults ? `<span class="marks">${q.marksEarned}/${q.question.marks} marks</span>` : ""}
+          </div>
+          <div class="question-text">${renderPrintableMath(q.question.questionText)}</div>
+          ${questionImage}${codeSnippet}${optionsHtml}
+          <div class="answer-row">
+            <strong>Your Answer:</strong> ${q.isSkipped ? "—" : renderPrintableMath(yourAns)}
+            ${showResults ? `<span><strong>Correct Answer:</strong> ${renderPrintableMath(correctAns)}</span>` : ""}
+          </div>
+        </div>`
     }).join("")
 
     // Build section rows
@@ -504,6 +672,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
     <head>
       <title>Exam Report - ${exam.title}</title>
       <style>
+        ${pageStyles}
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #1a2535; padding: 0; }
         @media print {
@@ -528,6 +697,29 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         .student-info { display: flex; gap: 32px; margin-bottom: 24px; padding: 16px 20px; background: #f8f9fc; border-radius: 12px; }
         .student-info .item .lbl { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
         .student-info .item .val { font-size: 14px; font-weight: 600; color: #1a2535; }
+        .question-card { border: 1px solid #e5e7eb; border-left: 4px solid #45505F; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+        .question-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 12px; }
+        .question-header strong { font-size: 14px; }
+        .type-badge { background: #f3f4f6; color: #4b5563; border-radius: 12px; padding: 3px 8px; font-size: 10px; font-weight: 700; }
+        .status { margin-left: auto; font-weight: 700; }
+        .marks { color: #6b7280; font-weight: 600; }
+        .question-text { color: #1a2535; font-size: 13px; font-weight: 600; line-height: 1.6; margin-bottom: 10px; }
+        .text-content { white-space: pre-wrap; }
+        .formula { display: inline-block; margin: 0 2px; }
+        .display-formula { display: block; overflow-x: auto; text-align: center; margin: 8px 0; }
+        .question-image { display: block; max-width: 100%; max-height: 240px; margin: 8px auto; object-fit: contain; }
+        .code-snippet { overflow-x: auto; background: #1e2a38; color: #e5e7eb; border-radius: 8px; padding: 10px; margin: 8px 0; font: 11px monospace; white-space: pre-wrap; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+        .option { display: flex; align-items: flex-start; gap: 8px; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px; min-height: 36px; }
+        .option-selected { border: 2px solid #3b82f6; background: #eff6ff; }
+        .option-correct { border: 2px solid #10b981; background: #ecfdf5; }
+        .option-key { flex: 0 0 22px; height: 22px; border-radius: 50%; background: #f3f4f6; color: #374151; text-align: center; line-height: 22px; font-size: 11px; font-weight: 700; }
+        .option-content { flex: 1; font-size: 12px; line-height: 1.5; }
+        .option-content img { display: block; max-width: 100%; max-height: 100px; margin-top: 5px; object-fit: contain; }
+        .option-label { color: #047857; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+        .answer-row { display: flex; flex-wrap: wrap; gap: 16px; padding-top: 9px; border-top: 1px solid #f0f0f0; color: #374151; font-size: 12px; line-height: 1.5; }
+        .answer-row > span { color: #45505F; }
+        @media print { .options-grid { break-inside: avoid; } }
       </style>
     </head>
     <body>
@@ -553,8 +745,8 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         <div class="student-info">
           <div class="item"><div class="lbl">Student Name</div><div class="val">${attempt.studentName}</div></div>
           <div class="item"><div class="lbl">Roll Number</div><div class="val">${attempt.rollNumber}</div></div>
-          ${showResults ? `<div class="item"><div class="lbl">Score</div><div class="val">${attempt.score} / ${attempt.maxScore}</div></div>
-          <div class="item"><div class="lbl">Percentage</div><div class="val">${attempt.percentage}%</div></div>` : ''}
+          ${showResults ? `<div class="item"><div class="lbl">Score</div><div class="val">${displayScore} / ${totalScore}</div></div>
+          <div class="item"><div class="lbl">Percentage</div><div class="val">${totalScore > 0 ? Math.round((displayScore / totalScore) * 100) : 0}%</div></div>` : ''}
           <div class="item"><div class="lbl">Time Taken</div><div class="val">${timeTakenStr || 'N/A'}</div></div>
         </div>
 
@@ -578,13 +770,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         </table>
 
         <div class="section-title">Question-wise Analysis</div>
-        <table>
-          <thead>
-            ${showResults ? `<tr><th>Q#</th><th>Question</th><th>Type</th><th>Your Answer</th><th>Correct Answer</th><th style="text-align:center">Status</th><th style="text-align:center">Marks</th></tr>` 
-            : `<tr><th>Q#</th><th>Question</th><th>Type</th><th>Your Answer</th></tr>`}
-          </thead>
-          <tbody>${questionRows}</tbody>
-        </table>
+        <div>${questionRows}</div>
       </div>
 
       <div class="footer">
@@ -672,7 +858,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
                       {showResults ? "Your Score" : "Status"}
                     </p>
                     <p className="text-lg font-extrabold text-[#1a2535]">
-                      {showResults ? "Graded" : "Submitted"}
+                      {showResults ? `${displayScore} / ${totalScore}` : "Submitted"}
                     </p>
                   </div>
                   <div>
@@ -717,6 +903,15 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
                     {showResults ? `${analytics.accuracy}%` : "---"}
                   </span>
                 </div>
+                {showResults && (
+                  <div className="col-span-2 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                    <Award size={16} className="shrink-0 text-[#45505F]" />
+                    <span className="text-sm font-medium text-gray-600">Total Score</span>
+                    <span className="ml-auto text-lg font-extrabold text-[#45505F]">
+                      {displayScore} / {totalScore}
+                    </span>
+                  </div>
+                )}
               </div>
               {/* Pass/Fail Banner */}
               {showResults && (
@@ -979,7 +1174,79 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
                     </div>
                   </div>
 
-                  <p className="text-sm text-[#1a2535] font-medium mb-3 leading-relaxed whitespace-pre-wrap">{qa.question.questionText}</p>
+                  <div className="mb-3 text-sm font-medium text-[#1a2535]">
+                    <MathRenderer content={qa.question.questionText} />
+                  </div>
+                  {qa.question.questionImage && (
+                    <div className="mb-3 flex max-h-100 w-full items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
+                      <img
+                        src={qa.question.questionImage}
+                        alt="Question"
+                        className="max-h-100 max-w-full object-contain"
+                      />
+                    </div>
+                  )}
+                  {qa.question.codeSnippet && (
+                    <pre className="mb-3 overflow-x-auto rounded-xl border border-gray-300 bg-[#1e2a38] px-4 py-3 text-xs text-gray-200">
+                      {qa.question.codeSnippet}
+                    </pre>
+                  )}
+                  {qa.question.type === "mcq" && qa.question.options && (
+                    <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-2">
+                      {qa.question.options.map((option, optionIndex) => {
+                        const optionKey = String.fromCharCode(65 + optionIndex)
+                        const studentAnswer = Array.isArray(qa.studentAnswer)
+                          ? qa.studentAnswer[0]
+                          : qa.studentAnswer
+                        const correctAnswer = Array.isArray(qa.question.correctAnswer)
+                          ? qa.question.correctAnswer[0]
+                          : qa.question.correctAnswer
+                        const isSelected = getOptionIndex(studentAnswer, qa.question.options!) === optionIndex
+                        const isCorrect = showResults && getOptionIndex(correctAnswer, qa.question.options!) === optionIndex
+                        const optionImage = qa.question.optionImages?.[optionIndex]
+
+                        return (
+                          <div
+                            key={`${qa.question._id}-option-${optionKey}`}
+                            className={`flex items-start gap-3 rounded-xl border-2 p-3 ${
+                              isCorrect
+                                ? "border-emerald-500 bg-emerald-50"
+                                : isSelected
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-gray-200 bg-white"
+                            }`}
+                          >
+                            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                              isCorrect
+                                ? "bg-emerald-600 text-white"
+                                : isSelected
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-gray-100 text-gray-600"
+                            }`}>
+                              {optionKey}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <MathRenderer content={option} />
+                              {optionImage && (
+                                <img
+                                  src={optionImage}
+                                  alt={`Option ${optionKey}`}
+                                  className="mt-2 max-h-32 max-w-full rounded-lg object-contain"
+                                />
+                              )}
+                            </div>
+                            {(isCorrect || isSelected) && (
+                              <span className={`shrink-0 text-[10px] font-bold uppercase ${
+                                isCorrect ? "text-emerald-700" : "text-blue-700"
+                              }`}>
+                                {isCorrect ? "Correct" : "Selected"}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
 
                     <div className="flex items-center gap-4 flex-wrap text-xs">
                       <div className="flex items-center gap-1.5">
@@ -987,17 +1254,17 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
                         {qa.isSkipped ? (
                           <span className="px-2.5 py-1 rounded-md bg-gray-100 text-[#2D3A4A] font-semibold">Skipped</span>
                         ) : (
-                          <span className={`px-2.5 py-1 rounded-md font-semibold ${showResults ? (qa.isCorrect ? "bg-gray-100 text-[#45505F]" : "bg-gray-100 text-[#94A7C5]") : "bg-gray-100 text-[#45505F]"}`}>
-                            {formatAnswer(qa.studentAnswer, qa.question)}
-                          </span>
+                          <div className={`rounded-md px-2.5 py-1 font-semibold ${showResults ? (qa.isCorrect ? "bg-gray-100 text-[#45505F]" : "bg-gray-100 text-[#94A7C5]") : "bg-gray-100 text-[#45505F]"}`}>
+                            {renderFormattedAnswer(qa.studentAnswer, qa.question)}
+                          </div>
                         )}
                       </div>
                       {showResults && (qa.question.type === "mcq" || qa.question.type === "truefalse" || qa.question.type === "fillblanks") && (
                         <div className="flex items-center gap-1.5">
                           <span className="text-gray-400">Correct Answer:</span>
-                          <span className="px-2.5 py-1 rounded-md bg-gray-100 text-[#45505F] font-semibold">
-                            {formatCorrectAnswer(qa.question)}
-                          </span>
+                          <div className="rounded-md bg-gray-100 px-2.5 py-1 font-semibold text-[#45505F]">
+                            <MathRenderer content={formatCorrectAnswer(qa.question)} />
+                          </div>
                         </div>
                       )}
                     </div>

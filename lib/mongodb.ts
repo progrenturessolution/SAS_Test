@@ -6,11 +6,49 @@ try {
   dns.setServers(["8.8.8.8", "1.1.1.1"])
 } catch {}
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/dummy"
+const rawMongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://localhost:27017/dummy"
+
+async function getEffectiveMongoUri(uri: string): Promise<string> {
+  if (!uri.startsWith("mongodb+srv://")) return uri
+  try {
+    const customResolver = new dns.promises.Resolver()
+    customResolver.setServers(["8.8.8.8", "1.1.1.1"])
+
+    const parsed = new URL(uri)
+    const hostname = parsed.hostname
+    const srvRecords = await customResolver.resolveSrv(`_mongodb._tcp.${hostname}`)
+    if (!srvRecords || srvRecords.length === 0) return uri
+
+    const hosts = srvRecords.map((r) => `${r.name}:${r.port}`).join(",")
+    let txtParams = ""
+    try {
+      const txtRecords = await customResolver.resolveTxt(hostname)
+      if (txtRecords && txtRecords.length > 0) {
+        txtParams = txtRecords.map((r) => r.join("")).join("&")
+      }
+    } catch {}
+
+    const auth = parsed.username ? `${parsed.username}:${parsed.password}@` : ""
+    const dbPath = parsed.pathname || "/myDatabase"
+    const searchParams = new URLSearchParams(parsed.search)
+    searchParams.set("ssl", "true")
+    if (txtParams) {
+      const txtParsed = new URLSearchParams(txtParams)
+      txtParsed.forEach((v, k) => {
+        if (!searchParams.has(k)) searchParams.set(k, v)
+      })
+    }
+
+    return `mongodb://${auth}${hosts}${dbPath}?${searchParams.toString()}`
+  } catch (e) {
+    console.warn("Could not pre-resolve SRV:", e)
+    return uri
+  }
+}
 
 declare global {
   // eslint-disable-next-line no-var
-  var mongoose: { conn: typeof import("mongoose") | null; promise: Promise<typeof import("mongoose")> | null }
+  var mongoose: { conn: typeof import("mongoose") | null; promise: Promise<any> | null }
 }
 
 let cached = global.mongoose
@@ -28,10 +66,13 @@ async function connectDB() {
     const opts = {
       bufferCommands: false,
     }
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log("✅ Database connected successfully to MongoDB!")
-      return mongoose
-    })
+    cached.promise = (async () => {
+      const uri = await getEffectiveMongoUri(rawMongoUri)
+      return mongoose.connect(uri, opts).then((mongooseInstance) => {
+        console.log("✅ Database connected successfully to MongoDB!")
+        return mongooseInstance
+      })
+    })()
   }
 
   try {

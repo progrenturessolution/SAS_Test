@@ -24,7 +24,7 @@ export default function QuestionsPage() {
   const [filterType, setFilterType] = useState("all")
 
   useEffect(() => {
-    fetch("/api/exams")
+    fetch("/api/exams", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => {
         const qs: QuestionItem[] = []

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
 
-// Judge0 CE via RapidAPI
-const JUDGE0_URL = process.env.JUDGE0_URL || "https://judge0-ce.p.rapidapi.com"
-const JUDGE0_KEY = process.env.JUDGE0_KEY || ""
+// Judge0 CE (self-hosted or RapidAPI)
+const JUDGE0_URL = process.env.JUDGE0_URL || "http://16.192.215.199:2358"
 
 // Judge0 language IDs: https://ce.judge0.com/languages
 const LANG_MAP: Record<string, { id: number; name: string }> = {
@@ -24,10 +23,7 @@ async function pollResult(token: string): Promise<Record<string, unknown>> {
       `${JUDGE0_URL}/submissions/${token}?base64_encoded=true&fields=stdout,stderr,compile_output,status,exit_code,time,memory`,
       {
         method: "GET",
-        headers: {
-          "X-RapidAPI-Key": JUDGE0_KEY,
-          "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
-        },
+        headers: { "Content-Type": "application/json" },
       }
     )
     if (!res.ok) continue
@@ -56,10 +52,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "code and language are required" }, { status: 400 })
     }
 
-    if (!JUDGE0_KEY) {
-      return NextResponse.json({ error: "Judge0 API key is not configured" }, { status: 500 })
-    }
-
     const lang = LANG_MAP[language.toLowerCase()]
     if (!lang) {
       return NextResponse.json(
@@ -71,11 +63,7 @@ export async function POST(req: Request) {
     // Submit to Judge0
     const submitRes = await fetch(`${JUDGE0_URL}/submissions?base64_encoded=true&wait=false`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-RapidAPI-Key": JUDGE0_KEY,
-        "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         language_id: lang.id,
         source_code: Buffer.from(code).toString("base64"),

@@ -106,9 +106,20 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
 }
 
 export async function POST(req: Request) {
-  const session = await getSession()
-  if (!session || session.role !== "admin") {
+  const session = await getSession(req)
+  const canImportQuestions = session && (
+    ["admin", "institute", "super_admin", "coaching_institute"].includes(session.role) ||
+    Boolean(session.instituteId)
+  )
+  if (!canImportQuestions) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  if (session.instituteId) {
+    const Institute = (await import("@/models/Institute")).default
+    const institute = await Institute.findById(session.instituteId).select("limits").lean()
+    if (institute?.limits?.features?.pdfImport === false) {
+      return NextResponse.json({ error: "PDF Paper Import is not enabled for this institute." }, { status: 403 })
+    }
   }
 
   try {

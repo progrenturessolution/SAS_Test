@@ -27,6 +27,7 @@ export interface IQuestion {
 
 export interface IExam extends Document {
   title: string
+  examType: string
   subject: string
   description: string
   instructions: string[]
@@ -66,6 +67,7 @@ export interface IExam extends Document {
     }
   }
   createdBy: string
+  instituteId?: mongoose.Types.ObjectId | string
   sharedWith?: string[]
   createdAt: Date
   updatedAt: Date
@@ -99,6 +101,7 @@ const QuestionSchema = new Schema<IQuestion>({
 const ExamSchema = new Schema<IExam>(
   {
     title: { type: String, required: true },
+    examType: { type: String, default: "CUSTOM" },
     subject: { type: String, default: "" },
     description: { type: String, default: "" },
     instructions: [String],
@@ -141,6 +144,7 @@ const ExamSchema = new Schema<IExam>(
       },
     },
     createdBy: { type: String, required: true },
+    instituteId: { type: Schema.Types.ObjectId, ref: "Institute", index: true },
     sharedWith: [{ type: String }],
   },
   { timestamps: true }

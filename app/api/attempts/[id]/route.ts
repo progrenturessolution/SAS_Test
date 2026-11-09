@@ -4,6 +4,45 @@ import Attempt from "@/models/Attempt"
 import Exam from "@/models/Exam"
 import { IQuestion } from "@/models/Exam"
 
+function answersMatch(
+  studentAnswer: string | string[],
+  correctAnswer: string | string[] | undefined,
+  options?: string[]
+) {
+  const student = Array.isArray(studentAnswer) ? studentAnswer[0] : studentAnswer
+  const correct = Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer
+  if (student === undefined || correct === undefined) return false
+
+  const normalize = (value: string) => value
+    .trim()
+    .replace(/^[a-z]\s*[\)\.\-:]\s*/i, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+  if (normalize(student) === normalize(correct)) return true
+
+  if (options?.length) {
+    const optionIndex = (value: string) => {
+      const normalized = value.trim()
+      if (/^[a-z]$/i.test(normalized)) {
+        const index = normalized.toUpperCase().charCodeAt(0) - 65
+        return index >= 0 && index < options.length ? index : -1
+      }
+      const numericIndex = Number(normalized)
+      if (Number.isInteger(numericIndex)) {
+        if (numericIndex >= 0 && numericIndex < options.length) return numericIndex
+        if (numericIndex >= 1 && numericIndex <= options.length) return numericIndex - 1
+      }
+      return options.findIndex(option => normalize(option) === normalize(value))
+    }
+
+    const studentIndex = optionIndex(student)
+    const correctIndex = optionIndex(correct)
+    return studentIndex >= 0 && studentIndex === correctIndex
+  }
+
+  return false
+}
+
 // GET /api/attempts/[id]
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -95,7 +134,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (exam) {
       for (const section of exam.sections as any[]) {
-        const sectionNegativeMarking = section.negativeMarking ?? exam.settings?.negativeMarking ?? false;
+        const sectionNegativeMarking = section.negativeMarking || exam.settings?.negativeMarking || false;
         const sectionNegativeValue = section.sectionNegativeMark ?? 0;
 
         for (const q of section.questions as IQuestion[]) {
@@ -113,7 +152,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             const correct = Array.isArray(q.correctAnswer)
               ? q.correctAnswer[0]
               : q.correctAnswer
-            if (studentAnswer.answer === correct) {
+            if (answersMatch(studentAnswer.answer, correct, q.type === "mcq" ? q.options : undefined)) {
               isCorrect = true;
               earnedMarks = q.marks;
             }

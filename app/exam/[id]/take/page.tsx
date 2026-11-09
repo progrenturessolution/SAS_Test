@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { getExamStartDateTime, getExamEndDateTime, formatCountdown, formatScheduleDateTime } from "@/lib/examSchedule"
+import { MathRenderer } from "@/components/exam/MathRenderer"
 
 // ─── Micro-toast types ────────────────────────────────────────────────────────
 interface Toast { id: number; message: string; type: "warn" | "info" | "danger" }
@@ -59,13 +61,21 @@ interface ExamData {
   sections: Section[]
   settings?: { 
     randomize?: boolean; 
-    startDate?: string;
+    startDate?: string | Date;
+    startTime?: string;
+    endDate?: string | Date;
+    endTime?: string;
+    showResults?: boolean;
+    allowReview?: boolean;
+    negativeMarking?: boolean;
     proctoring?: {
-      enabled: boolean;
-      faceDetection: boolean;
-      tabSwitch: boolean;
-      fullscreenExit: boolean;
-      maxWarnings: number;
+      enabled?: boolean;
+      faceDetection?: boolean;
+      tabSwitch?: boolean;
+      fullscreenExit?: boolean;
+      fullscreen?: boolean;
+      maxWarnings?: number;
+      aiProctoring?: boolean;
     }
   }
   instructions?: string[]
@@ -129,6 +139,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const [countdownTime, setCountdownTime] = useState<number | null>(null)
   const [showStartModal, setShowStartModal] = useState(false)
   const [scheduleStartReached, setScheduleStartReached] = useState(true) // Default to true so button is enabled if no scheduled start
+  const [isExamEnded, setIsExamEnded] = useState(false)
   const [isStarted, setIsStarted] = useState(false)
   const [camStatus, setCamStatus] = useState<"loading" | "active" | "denied" | "error">("loading")
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
@@ -183,10 +194,14 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       setAnswers(mergedAnswers)
       
       // 2. Restore Timer (Prioritize local state, then server, then full duration)
+      const scheduledEnd = getExamEndDateTime(exam?.settings)
+      const secondsUntilEnd = scheduledEnd ? Math.max(0, Math.floor((scheduledEnd.getTime() - Date.now()) / 1000)) : null
+      const capWithScheduledEnd = (t: number) => (secondsUntilEnd !== null ? Math.min(t, secondsUntilEnd) : t)
+
       if (localState?.timeLeft !== undefined) {
-        setTimeLeft(localState.timeLeft)
+        setTimeLeft(capWithScheduledEnd(localState.timeLeft))
       } else if (serverAttempt?.timeLeft !== undefined) {
-        setTimeLeft(serverAttempt.timeLeft)
+        setTimeLeft(capWithScheduledEnd(serverAttempt.timeLeft))
       }
       
       // 3. Restore Warnings
@@ -319,6 +334,10 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         }
         
         // Restore exam state from localStorage/Server AFTER setting exam
+        const scheduledEnd = getExamEndDateTime(examData.settings)
+        const secondsUntilEnd = scheduledEnd ? Math.max(0, Math.floor((scheduledEnd.getTime() - Date.now()) / 1000)) : null
+        const capWithScheduledEnd = (t: number) => (secondsUntilEnd !== null ? Math.min(t, secondsUntilEnd) : t)
+
         try {
           const lsRaw = localStorage.getItem(`exam-state-${id}`)
           let localState = null
@@ -328,9 +347,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               // Restore from localStorage
               setAnswers(localState.answers || [])
               if (localState.timeLeft !== undefined) {
-                setTimeLeft(localState.timeLeft)
+                setTimeLeft(capWithScheduledEnd(localState.timeLeft))
               } else {
-                setTimeLeft(examData.duration * 60)
+                setTimeLeft(capWithScheduledEnd(examData.duration * 60))
               }
               setCurrentSection(localState.currentSection ?? initialSection)
               setCurrentQ(localState.currentQ ?? 0)
@@ -342,9 +361,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             } else {
               // localStorage state is from different attempt, use server data
               if (attempt?.timeLeft !== undefined) {
-                setTimeLeft(attempt.timeLeft)
+                setTimeLeft(capWithScheduledEnd(attempt.timeLeft))
               } else {
-                setTimeLeft(examData.duration * 60)
+                setTimeLeft(capWithScheduledEnd(examData.duration * 60))
               }
               if (attempt?.answers) setAnswers(attempt.answers)
               setCurrentSection(initialSection)
@@ -352,9 +371,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           } else {
             // No localStorage, use server data
             if (attempt?.timeLeft !== undefined) {
-              setTimeLeft(attempt.timeLeft)
+              setTimeLeft(capWithScheduledEnd(attempt.timeLeft))
             } else {
-              setTimeLeft(examData.duration * 60)
+              setTimeLeft(capWithScheduledEnd(examData.duration * 60))
             }
             if (attempt?.answers) setAnswers(attempt.answers)
             setCurrentSection(initialSection)
@@ -363,9 +382,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           console.error("Failed to restore state:", e)
           // Fallback to server data
           if (attempt?.timeLeft !== undefined) {
-            setTimeLeft(attempt.timeLeft)
+            setTimeLeft(capWithScheduledEnd(attempt.timeLeft))
           } else {
-            setTimeLeft(examData.duration * 60)
+            setTimeLeft(capWithScheduledEnd(examData.duration * 60))
           }
           if (attempt?.answers) setAnswers(attempt.answers)
           setCurrentSection(initialSection)
@@ -431,35 +450,49 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const { state: procState, requestFullscreen, logEvent } = useProctoring({
     attemptId,
     maxWarnings: exam?.settings?.proctoring?.maxWarnings ?? exam?.proctoring?.maxWarnings ?? 3,
-    enableFaceDetection: exam?.settings?.proctoring?.faceDetection ?? exam?.proctoring?.faceDetection ?? false,
-    enableTabSwitch: exam?.settings?.proctoring?.tabSwitch ?? exam?.proctoring?.tabSwitch ?? true,
-    enableFullscreen: exam?.settings?.proctoring?.fullscreenExit ?? exam?.proctoring?.fullscreenExit ?? true,
+    enableFaceDetection: !!(exam?.settings?.proctoring?.faceDetection ?? exam?.proctoring?.faceDetection ?? false),
+    enableTabSwitch: !!(exam?.settings?.proctoring?.tabSwitch ?? exam?.proctoring?.tabSwitch ?? false),
+    enableFullscreen: !!((exam?.settings?.proctoring as any)?.fullscreen ?? exam?.settings?.proctoring?.fullscreenExit ?? exam?.proctoring?.fullscreenExit ?? false),
     onAutoSubmit: handleAutoSubmit,
     onWarning: handleWarning,
     initialWarnings: initialWarnings,
     isActive: isStarted && !examSubmitted,
   })
   useEffect(() => {
-    if (isStarted && (exam?.settings?.proctoring?.fullscreenExit ?? exam?.proctoring?.fullscreenExit)) requestFullscreen()
+    const shouldFullscreen = !!((exam?.settings?.proctoring as any)?.fullscreen ?? exam?.settings?.proctoring?.fullscreenExit ?? exam?.proctoring?.fullscreenExit ?? false)
+    if (isStarted && shouldFullscreen) requestFullscreen()
   }, [isStarted, exam, requestFullscreen])
 
-  // Countdown timer - Start immediately when exam starts
+  // Countdown timer - Enforce duration and scheduled end time with strict AUTO-SUBMIT
   useEffect(() => {
-    if (!exam || !isStarted || timeLeft <= 0) return
+    if (!exam || !isStarted || examSubmitted) return
     
+    const endDateTime = getExamEndDateTime(exam.settings)
+
     const t = setInterval(() => {
+      const now = Date.now()
+
+      // Strict scheduled end time reached -> immediately AUTO-SUBMIT!
+      if (endDateTime && now >= endDateTime.getTime()) {
+        clearInterval(t)
+        setTimeLeft(0)
+        addToast("Scheduled exam end time reached. Submitting your exam automatically...", "danger")
+        handleAutoSubmit()
+        return
+      }
+
       setTimeLeft((p) => {
         if (p <= 1) { 
-          clearInterval(t); 
-          addToast("Time is up! Please submit your exam now.", "danger");
-          setShowSubmitConfirm(true);
-          return 0;
+          clearInterval(t)
+          addToast("Time is up! Submitting your exam automatically...", "danger")
+          handleAutoSubmit()
+          return 0
         }
         return p - 1
       })
     }, 1000)
     return () => clearInterval(t)
-  }, [exam, isStarted, addToast])
+  }, [exam, isStarted, examSubmitted, handleAutoSubmit, addToast])
 
   // Periodically save to localStorage
   useEffect(() => {
@@ -501,44 +534,44 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     }
   }, [addToast])
 
-  // Scheduled exam start timer — only show countdown if admin set a start time
+  // Scheduled exam access timer (Start & End constraints)
   useEffect(() => {
-    // Only enforce scheduled start if startDate is actually set
-    if (!exam?.settings?.startDate || isStarted) {
-      setScheduleStartReached(true) // Allow immediate start if no scheduled time
-      return
-    }
+    if (!exam || isStarted) return
 
-    const startTime = new Date(exam.settings.startDate).getTime()
-    const interval = setInterval(() => {
+    const startDt = getExamStartDateTime(exam.settings)
+    const endDt = getExamEndDateTime(exam.settings)
+
+    const checkSchedule = () => {
       const now = Date.now()
-      const differenceMs = startTime - now
 
-      if (differenceMs <= 0) {
+      // Check if exam already ended
+      if (endDt && now >= endDt.getTime()) {
+        setIsExamEnded(true)
+        setScheduleStartReached(false)
+        setCountdownTime(null)
+        return
+      } else {
+        setIsExamEnded(false)
+      }
+
+      // Check if start time reached
+      if (!startDt || now >= startDt.getTime()) {
         setCountdownTime(null)
         if (!scheduleStartReached) {
           setScheduleStartReached(true)
           setShowStartModal(true)
         }
-        clearInterval(interval)
       } else {
-        setCountdownTime(Math.ceil(differenceMs / 1000))
+        const diffSecs = Math.ceil((startDt.getTime() - now) / 1000)
+        setCountdownTime(diffSecs)
+        setScheduleStartReached(false)
       }
-    }, 1000)
-
-    // Initial calculation
-    const now = Date.now()
-    const initialDiff = startTime - now
-    if (initialDiff <= 0) {
-      setScheduleStartReached(true)
-      setShowStartModal(false) // Do NOT show "Time to Start" if already started
-    } else {
-      setCountdownTime(Math.ceil(initialDiff / 1000))
-      setScheduleStartReached(false) // Disable button until scheduled time reached
     }
 
+    checkSchedule()
+    const interval = setInterval(checkSchedule, 1000)
     return () => clearInterval(interval)
-  }, [exam?.settings?.startDate, isStarted])
+  }, [exam, isStarted, scheduleStartReached])
 
   // Fullscreen lock — re-request fullscreen if user exits via keyboard (ESC blocked via fullscreenchange)
   useEffect(() => {
@@ -738,14 +771,6 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   }
 
   // ── Loading / Error / Instructions ──────────────────────────────────────────
-  
-  // Format countdown time as HH:MM:SS
-  const formatCountdown = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
-  }
 
   if (loading || !exam) {
     return <ExamTakingSkeleton />
@@ -782,6 +807,56 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
           <h1 className="text-4xl font-black text-[#2D3A4A] mb-2 tracking-tight">General Instructions</h1>
           <p className="text-gray-500 font-medium mb-8">Please read all instructions carefully before starting your exam</p>
+
+          {/* Scheduled Status Banner */}
+          {isExamEnded && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-8 flex items-center justify-between gap-4 shadow-sm animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-red-600 uppercase tracking-wider">Examination Window Closed</p>
+                  <p className="text-sm font-bold text-[#2D3A4A]">The scheduled time for this exam has ended. You can no longer start this exam.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!scheduleStartReached && countdownTime !== null && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                  <Clock className="w-6 h-6 animate-pulse" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-amber-600 uppercase tracking-widest">Scheduled Start Time</p>
+                  <p className="text-base font-bold text-[#2D3A4A]">
+                    Exam starts at {formatScheduleDateTime(getExamStartDateTime(exam.settings))}
+                  </p>
+                  <p className="text-xs text-gray-500 font-medium">Please review the rules below. The start button will automatically unlock at the exact start time.</p>
+                </div>
+              </div>
+              <div className="text-center sm:text-right bg-white px-5 py-3 rounded-xl border border-amber-200 shadow-sm shrink-0">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Starts in</span>
+                <span className="text-2xl font-black font-mono text-amber-600">{formatCountdown(countdownTime)}</span>
+              </div>
+            </div>
+          )}
+
+          {scheduleStartReached && !isExamEnded && exam.settings?.endDate && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-8 flex items-center justify-between gap-4 text-xs text-emerald-800 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <Clock className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  Exam is active. Scheduled to close & auto-submit at: <strong className="font-bold text-emerald-950">{formatScheduleDateTime(getExamEndDateTime(exam.settings))}</strong>
+                </span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-0.5 rounded-full shrink-0">
+                Active
+              </span>
+            </div>
+          )}
 
           {/* Info Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -923,11 +998,15 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                     Go Back
                   </Button>
                   <Button 
-                    disabled={!agreed || (isFaceDetectionEnabled && camStatus !== "active") || (scheduleStartReached === false && !!exam.settings?.startDate)}
+                    disabled={!agreed || (isFaceDetectionEnabled && camStatus !== "active") || !scheduleStartReached || isExamEnded}
                     onClick={() => setIsStarted(true)}
-                    className="flex-1 md:flex-none h-12 px-10 rounded-xl font-black uppercase text-xs tracking-widest bg-[#2D3A4A] text-white hover:bg-[#1a2535] shadow-xl shadow-[#2D3A4A]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="flex-1 md:flex-none h-12 px-10 rounded-xl font-black uppercase text-xs tracking-widest bg-[#2D3A4A] text-white hover:bg-[#1a2535] shadow-xl shadow-[#2D3A4A]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {scheduleStartReached === false && exam.settings?.startDate ? "Starts in" : "Start Exam"}
+                    {isExamEnded 
+                      ? "Exam Ended" 
+                      : !scheduleStartReached && countdownTime !== null 
+                        ? `Starts in ${formatCountdown(countdownTime)}` 
+                        : "Start Exam"}
                   </Button>
                 </div>
               </CardContent>
@@ -936,7 +1015,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         </div>
 
         {/* Modal - Modernized */}
-        {showStartModal && scheduleStartReached && exam.settings?.startDate && (
+        {showStartModal && scheduleStartReached && !isExamEnded && exam.settings?.startDate && (
           <div className="fixed inset-0 bg-[#303e52]/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-sm w-full text-center border border-white/20">
               <div className="w-16 h-16 bg-emerald-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
@@ -1040,17 +1119,27 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         autoSubmitted={procState.autoSubmitted}
       />
 
-      <ExamHeader
-        title={exam.title}
-        section={section ? section.name : (currentSection === -2 ? "Coding Problems" : "Questions")}
-        timeLeft={timeLeft}
-        duration={exam.duration * 60}
-        studentName={studentName}
-        rollNo={studentRoll}
-        onSubmit={handleSubmitExam}
-        warningCount={procState.warnings}
-        maxWarnings={exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
-      />
+      {(() => {
+        const scheduledEndDt = getExamEndDateTime(exam.settings)
+        const endTimeLabel = scheduledEndDt
+          ? scheduledEndDt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+          : undefined
+
+        return (
+          <ExamHeader
+            title={exam.title}
+            section={section ? section.name : (currentSection === -2 ? "Coding Problems" : "Questions")}
+            timeLeft={timeLeft}
+            duration={exam.duration * 60}
+            studentName={studentName}
+            rollNo={studentRoll}
+            onSubmit={handleSubmitExam}
+            warningCount={procState.warnings}
+            maxWarnings={exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
+            endTimeLabel={endTimeLabel}
+          />
+        )
+      })()}
 
       {/* Section Tabs: Questions and Coding Problems */}
       <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0 sticky top-0 z-20">
@@ -1155,7 +1244,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           {/* Question text (non-coding) */}
           {question.type !== "coding" && (
             <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-5 space-y-4">
-              <p className="text-foreground font-bold text-base leading-relaxed whitespace-pre-wrap">{question.questionText}</p>
+              <div className="text-foreground font-bold text-base leading-relaxed">
+                <MathRenderer content={question.questionText} />
+              </div>
               {question.questionImage && (
                 <div className="relative w-full max-h-100 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shadow-sm flex items-center justify-center">
                    <img src={question.questionImage} alt="Question" className="max-w-full max-h-100 object-contain" />
@@ -1198,7 +1289,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                        <div className={`w-10 h-10 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center shrink-0 font-bold text-sm ${
                          selected ? "border-primary bg-primary text-white" : "border-gray-300 text-gray-500"
                        }`}>{key}</div>
-                       <span className={`font-bold text-sm sm:text-base ${selected ? "text-foreground" : "text-gray-600"}`}>{opt}</span>
+                       <div className={`font-bold text-sm sm:text-base flex-1 ${selected ? "text-foreground" : "text-gray-600"}`}>
+                         <MathRenderer content={opt} />
+                       </div>
                     </div>
                   </button>
                 )

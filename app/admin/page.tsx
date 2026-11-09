@@ -2,10 +2,21 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Eye, Pencil, Trash2, Link2, BarChart2, UserCheck, FileText, PlayCircle, HelpCircle, Users } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Eye, Pencil, Trash2, Link2, BarChart2, UserCheck, FileText, PlayCircle, HelpCircle, Users, Building2, ShieldAlert } from "lucide-react"
 import { ExamActionMenu } from "@/components/ExamActionMenu"
 
 interface Stats {
+  isSuperAdmin?: boolean
+  institute?: {
+    id: string
+    name: string
+    code: string
+    status: string
+    maxStudents: number
+    maxExams: number
+    features?: any
+  }
   totalExams: number
   activeExams: number
   totalQuestions: number
@@ -26,15 +37,23 @@ interface Exam {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter()
   const [stats, setStats] = useState<Stats | null>(null)
   const [exams, setExams] = useState<Exam[]>([])
   const [search, setSearch] = useState("")
   const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch("/api/admin/stats").then((r) => r.json()).then((d) => setStats(d))
+    fetch("/api/admin/stats")
+      .then((r) => r.json())
+      .then((d) => {
+        setStats(d)
+        if (d.isSuperAdmin) {
+          router.replace("/admin/institutes")
+        }
+      })
     fetch("/api/exams").then((r) => r.json()).then((d) => setExams(d.exams || []))
-  }, [])
+  }, [router])
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === "active" ? "draft" : "active"
@@ -117,6 +136,44 @@ export default function AdminDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Institute Plan & Limits Banner */}
+      {stats?.institute && (
+        <div className="mb-6 p-4 rounded-xl bg-white border border-gray-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#45505F]">
+                {stats.institute.name}
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                {stats.institute.code}
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Active Institute Account
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Your coaching portal is authorized to conduct tests and enroll students within your allocated quotas.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-6 text-xs bg-gray-50/70 p-3 rounded-lg border border-gray-200 shrink-0">
+            <div>
+              <span className="text-gray-500 text-[11px] block">Exams Quota</span>
+              <span className="font-bold text-[#2D3A4A] text-sm">
+                {stats.totalExams} / {stats.institute.maxExams}
+              </span>
+            </div>
+            <div className="w-px h-8 bg-gray-200" />
+            <div>
+              <span className="text-gray-500 text-[11px] block">Students Quota</span>
+              <span className="font-bold text-[#2D3A4A] text-sm">
+                {stats.studentsEnrolled} / {stats.institute.maxStudents}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-5 mb-8">

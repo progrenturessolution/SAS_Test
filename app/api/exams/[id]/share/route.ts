@@ -8,8 +8,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession()
-    if (!session || session.role !== "admin") {
+    const session = await getSession(req)
+    const canShare = session && (
+      ["admin", "institute", "super_admin", "coaching_institute"].includes(session.role) ||
+      Boolean(session.instituteId)
+    )
+    if (!canShare) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -27,9 +31,12 @@ export async function POST(
       return NextResponse.json({ error: "Exam not found" }, { status: 404 })
     }
 
-    // Only creator can share
-    if (exam.createdBy !== session.id) {
-      return NextResponse.json({ error: "Only the creator can share this exam" }, { status: 403 })
+    // Only creator or institute admin can share
+    const isOwner = exam.createdBy === session.id || (
+      session.instituteId && String(exam.instituteId || "") === String(session.instituteId)
+    ) || session.role === "super_admin"
+    if (!isOwner) {
+      return NextResponse.json({ error: "Only the creator or institute admin can share this exam" }, { status: 403 })
     }
 
     if (!exam.sharedWith) {

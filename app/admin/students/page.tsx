@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { User, Mail, Hash, Clock, TrendingUp } from "lucide-react"
+import { User, Mail, Hash, Clock, TrendingUp, Plus, X } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { Toaster } from "@/components/ui/toaster"
 
 interface Student {
   _id: string
+  email?: string
   studentName: string
   rollNumber: string
   totalAttempts: number
@@ -18,12 +19,42 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
+  const [showAddStudent, setShowAddStudent] = useState(false)
+  const [studentForm, setStudentForm] = useState({ name: "", email: "", rollNumber: "", password: "" })
+  const [studentError, setStudentError] = useState("")
+  const [savingStudent, setSavingStudent] = useState(false)
 
-  useEffect(() => {
+  const loadStudents = () => {
+    setLoading(true)
     fetch("/api/admin/students")
       .then((r) => r.json())
       .then((d) => { setStudents(d.students || []); setLoading(false) })
-  }, [])
+      .catch(() => setLoading(false))
+  }
+
+  useEffect(loadStudents, [])
+
+  const handleAddStudent = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setStudentError("")
+    setSavingStudent(true)
+    try {
+      const response = await fetch("/api/admin/students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(studentForm),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || "Failed to add student")
+      setStudentForm({ name: "", email: "", rollNumber: "", password: "" })
+      setShowAddStudent(false)
+      loadStudents()
+    } catch (error) {
+      setStudentError(error instanceof Error ? error.message : "Failed to add student")
+    } finally {
+      setSavingStudent(false)
+    }
+  }
 
   const filtered = students.filter(
     (s) =>
@@ -35,7 +66,13 @@ export default function StudentsPage() {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-primary">Students</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-primary">Students</h1>
+          <p className="mt-1 text-xs text-gray-500">Only registered students can enter your institute exams.</p>
+        </div>
+        <button type="button" onClick={() => setShowAddStudent(true)} className="flex items-center gap-2 rounded-lg bg-[#2D3A4A] px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#1e2a38]">
+          <Plus className="h-4 w-4" /> Add Student
+        </button>
         <div className="relative">
           <input
             className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#10B981] w-64"
@@ -93,7 +130,7 @@ export default function StudentsPage() {
                       <span className="text-sm font-medium text-primary">{s.studentName}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{s._id}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{s.email || s._id}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{s.rollNumber}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{s.totalAttempts}</td>
                   <td className="px-6 py-4">
@@ -115,6 +152,36 @@ export default function StudentsPage() {
           </table>
         )}
       </div>
+      {showAddStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+          <form onSubmit={handleAddStudent} className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+            <div className="mb-5 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-[#2D3A4A]">Add Student</h2>
+                <p className="mt-1 text-xs text-gray-500">This student will be allowed into institute exams.</p>
+              </div>
+              <button type="button" onClick={() => setShowAddStudent(false)} aria-label="Close"><X className="h-5 w-5 text-gray-400" /></button>
+            </div>
+            {studentError && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">{studentError}</p>}
+            <div className="space-y-3">
+              {[
+                ["name", "Student name", "Full name"],
+                ["email", "Email address", "student@example.com"],
+                ["rollNumber", "Roll number", "e.g. STU-001"],
+                ["password", "Exam password", "Minimum 6 characters"],
+              ].map(([key, label, placeholder]) => (
+                <label key={key} className="block text-xs font-semibold text-gray-700">
+                  {label}
+                  <input type={key === "password" ? "password" : key === "email" ? "email" : "text"} required minLength={key === "password" ? 6 : undefined} value={studentForm[key as keyof typeof studentForm]} onChange={(event) => setStudentForm((current) => ({ ...current, [key]: event.target.value }))} placeholder={placeholder} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-normal outline-none focus:border-[#2D3A4A]" />
+                </label>
+              ))}
+            </div>
+            <button type="submit" disabled={savingStudent} className="mt-5 w-full rounded-lg bg-[#2D3A4A] py-2.5 text-sm font-semibold text-white hover:bg-[#1e2a38] disabled:opacity-60">
+              {savingStudent ? "Adding..." : "Add Student"}
+            </button>
+          </form>
+        </div>
+      )}
       <Toaster />
     </div>
   )

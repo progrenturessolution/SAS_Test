@@ -11,7 +11,10 @@ export interface AdminSession {
   id: string
   name: string
   email: string
-  role: string
+  role: "super_admin" | "admin" | "institute" | "student" | string
+  instituteId?: string
+  instituteName?: string
+  instituteCode?: string
 }
 
 export async function createSession(payload: AdminSession): Promise<string> {
@@ -22,10 +25,38 @@ export async function createSession(payload: AdminSession): Promise<string> {
     .sign(SECRET)
 }
 
-export async function getSession(): Promise<AdminSession | null> {
+export async function getSession(req?: Request): Promise<AdminSession | null> {
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get(COOKIE_NAME)?.value
+    let token: string | undefined
+
+    if (req) {
+      // 1. Try Authorization header
+      const authHeader = req.headers.get("authorization")
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7).trim()
+      }
+      // 2. Try raw Cookie header
+      if (!token) {
+        const cookieHeader = req.headers.get("cookie")
+        if (cookieHeader) {
+          const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]*)`))
+          if (match) {
+            token = decodeURIComponent(match[1])
+          }
+        }
+      }
+    }
+
+    // 3. Fallback to Next.js cookies()
+    if (!token) {
+      try {
+        const cookieStore = await cookies()
+        token = cookieStore.get(COOKIE_NAME)?.value
+      } catch {
+        // cookies() may throw if called outside request context
+      }
+    }
+
     if (!token) return null
     const { payload } = await jwtVerify(token, SECRET)
     return payload as unknown as AdminSession

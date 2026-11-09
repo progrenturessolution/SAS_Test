@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Clock, FileText, CheckCircle, Award, User, Mail, Hash, Shield, AlertCircle, Camera, Maximize, AlertTriangle } from "lucide-react"
+import { Clock, FileText, CheckCircle, Award, User, Mail, Hash, LockKeyhole, Shield, AlertCircle, Camera, Maximize, AlertTriangle } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
+import { getScheduleStatus, formatCountdown, formatScheduleDateTime } from "@/lib/examSchedule"
 
 interface ExamData {
   _id: string
@@ -32,6 +33,11 @@ interface ExamData {
   }
 }
 
+interface ExistingAttempt {
+  _id: string
+  status: "in-progress" | "submitted" | "auto-submitted" | "graded"
+}
+
 async function getExam(id: string): Promise<ExamData | null> {
   try {
     const res = await fetch(`/api/exams/${id}`)
@@ -49,10 +55,18 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
   const [exam, setExam] = useState<ExamData | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [form, setForm] = useState({ name: "", email: "", roll: "", agreed: false })
+  const [form, setForm] = useState({ name: "", email: "", roll: "", password: "", agreed: false })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [fetchError, setFetchError] = useState("")
   const [studentStats, setStudentStats] = useState<{ totalExams: number; avgScore: number } | null>(null)
+  const [existingAttempt, setExistingAttempt] = useState<ExistingAttempt | null>(null)
+  const [currentTime, setCurrentTime] = useState(Date.now())
+
+  // Ticker for live scheduled exam countdown
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   // Resolve params then fetch exam
   useEffect(() => {
@@ -86,30 +100,29 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
   }, [form.email, form.roll])
 
   const totalQuestions = exam?.sections?.reduce((s, sec) => s + (sec.questions?.length || 0), 0) || 0
+  const schedule = getScheduleStatus(exam?.settings, currentTime)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Time-Windowed Access Check
-    if (exam?.settings?.startDate && exam.settings.startTime) {
-      const startDateTime = new Date(`${exam.settings.startDate.split('T')[0]}T${exam.settings.startTime}`)
-      if (new Date() < startDateTime) {
-        setErrors({ submit: `This exam has not started yet. It will be available from ${startDateTime.toLocaleString()}.` })
-        return
-      }
+    // Strict Time-Windowed Access Check (allow access within 5-min setup window)
+    if (!schedule.canEnterSetup && schedule.startDt) {
+      const setupTime = new Date(schedule.startDt.getTime() - 5 * 60 * 1000)
+      setErrors({
+        submit: `Camera setup opens 5 minutes prior to the exam (at ${setupTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}). Exam begins at ${formatScheduleDateTime(schedule.startDt)}.`
+      })
+      return
     }
-    if (exam?.settings?.endDate && exam.settings.endTime) {
-      const endDateTime = new Date(`${exam.settings.endDate.split('T')[0]}T${exam.settings.endTime}`)
-      if (new Date() > endDateTime) {
-        setErrors({ submit: `This exam has ended and is no longer available. It ended at ${endDateTime.toLocaleString()}.` })
-        return
-      }
+    if (schedule.isAfterEnd && schedule.endDt) {
+      setErrors({ submit: `This exam has ended and is no longer available. It ended at ${formatScheduleDateTime(schedule.endDt)}.` })
+      return
     }
 
     const newErrors: Record<string, string> = {}
     if (!form.name.trim()) newErrors.name = "Full name is required"
     if (!form.email.trim()) newErrors.email = "Email address is required"
     if (!form.roll.trim()) newErrors.roll = "Roll number is required"
+    if (!form.password) newErrors.password = "Exam password is required"
     if (!form.agreed) newErrors.agreed = "You must agree to the exam rules"
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -126,9 +139,16 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
           studentName: form.name,
           studentEmail: form.email,
           rollNumber: form.roll,
+          password: form.password,
         }),
       })
       const data = await res.json()
+      if (data.alreadySubmitted && data.attempt?._id) {
+        setExistingAttempt(data.attempt)
+        setErrors({})
+        setSubmitting(false)
+        return
+      }
       if (!res.ok) throw new Error(data.error || "Failed to start exam")
       router.push(`/exam/${id}/take?attemptId=${data.attempt._id}`)
     } catch (err) {
@@ -278,6 +298,66 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
           <h2 className="text-xl font-bold text-[#1a2535] mb-1">Student Registration</h2>
           <p className="text-sm text-gray-500 mb-6 font-medium">Please enter your details to start the exam</p>
 
+          {/* Schedule Status Banner */}
+          {/* Schedule Status Banner: More than 5 mins before start */}
+          {schedule.isBeforeStart && !schedule.canEnterSetup && schedule.startDt && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock size={14} className="animate-pulse text-amber-600" /> Exam Not Started Yet
+                </span>
+                <span className="text-xs font-mono font-black text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
+                  Starts in {formatCountdown(schedule.secondsUntilStart)}
+                </span>
+              </div>
+              <p className="text-xs text-amber-700 font-medium">
+                Starts on <strong className="font-semibold text-amber-900">{formatScheduleDateTime(schedule.startDt)}</strong>. Camera setup opens 5 minutes before the exam in <strong className="font-semibold text-amber-900">{formatCountdown(schedule.secondsUntilSetup)}</strong>.
+              </p>
+            </div>
+          )}
+
+          {/* Schedule Status Banner: Within 5-min Early Setup Window */}
+          {schedule.isBeforeStart && schedule.canEnterSetup && schedule.startDt && (
+            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Camera size={14} className="text-emerald-600 animate-pulse" /> Camera Setup Open
+                </span>
+                <span className="text-xs font-mono font-black text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                  Exam in {formatCountdown(schedule.secondsUntilStart)}
+                </span>
+              </div>
+              <p className="text-xs text-emerald-700 font-medium">
+                You can now proceed to test your camera and review proctoring rules. The exam paper unlocks automatically at <strong className="font-semibold text-emerald-950">{formatScheduleDateTime(schedule.startDt)}</strong>.
+              </p>
+            </div>
+          )}
+
+          {schedule.isAfterEnd && schedule.endDt && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-2 text-xs font-bold text-red-800 uppercase tracking-wider mb-1">
+                <AlertCircle size={14} className="text-red-600" /> Examination Closed
+              </div>
+              <p className="text-xs text-red-700 font-medium">
+                This examination closed on <strong className="font-semibold text-red-900">{formatScheduleDateTime(schedule.endDt)}</strong> and is no longer accepting new attempts.
+              </p>
+            </div>
+          )}
+
+          {schedule.canStart && schedule.endDt && (
+            <div className="mb-6 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800">
+              <div className="flex items-center gap-2">
+                <Clock size={13} className="text-emerald-600" />
+                <span>
+                  Closes & auto-submits at: <strong className="font-semibold text-emerald-950">{formatScheduleDateTime(schedule.endDt)}</strong>
+                </span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+                Active
+              </span>
+            </div>
+          )}
+
           {studentStats && studentStats.totalExams > 0 && (
             <div className="mb-6 bg-primary p-5 rounded-xl border border-primary/20 text-white shadow-lg flex items-center justify-between">
               <div>
@@ -305,6 +385,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
               { key: "name", label: "Full Name", icon: User, type: "text", placeholder: "Enter your full name" },
               { key: "email", label: "Email Address", icon: Mail, type: "email", placeholder: "Enter your email address" },
               { key: "roll", label: "Roll Number", icon: Hash, type: "text", placeholder: "Enter your roll number" },
+              { key: "password", label: "Exam Password", icon: LockKeyhole, type: "password", placeholder: "Enter the password given by your institute" },
             ].map(({ key, label, icon: Icon, type, placeholder }) => (
               <div key={key}>
                 <label className="block text-sm font-semibold text-[#1a2535] mb-1.5">
@@ -316,7 +397,11 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
                     type={type}
                     placeholder={placeholder}
                     value={form[key as keyof typeof form] as string}
-                    onChange={(e) => { setForm({ ...form, [key]: e.target.value }); setErrors({ ...errors, [key]: "" }) }}
+                    onChange={(e) => {
+                      setForm({ ...form, [key]: e.target.value })
+                      setErrors({ ...errors, [key]: "" })
+                      setExistingAttempt(null)
+                    }}
                     className={`w-full pl-12 pr-4 py-3.5 bg-gray-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-medium ${errors[key] ? "border-red-300 bg-red-50" : "border-gray-100"}`}
                   />
                 </div>
@@ -335,18 +420,48 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
             {errors.submit && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 font-medium">{errors.submit}</div>
             )}
+            {existingAttempt && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-bold text-amber-800">You have already taken this exam.</p>
+                <p className="mt-1 text-xs text-amber-700">
+                  You cannot take this exam again. View your result and comprehensive analytics below.
+                </p>
+                <Link
+                  href={`/exam/${id}/result/analytics?attemptId=${existingAttempt._id}`}
+                  className="mt-3 inline-flex rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-accent"
+                >
+                  View Comprehensive Analytics
+                </Link>
+              </div>
+            )}
 
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full py-4 bg-primary text-white font-black rounded-xl hover:bg-accent transition-all text-sm uppercase tracking-widest disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-95"
+              disabled={submitting || !!existingAttempt || !schedule.canEnterSetup || schedule.isAfterEnd}
+              className={`w-full py-4 text-white font-black rounded-xl transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 ${
+                !schedule.canEnterSetup || schedule.isAfterEnd
+                  ? "bg-gray-400 cursor-not-allowed opacity-80"
+                  : schedule.isBeforeStart
+                  ? "bg-[#2D3A4A] hover:bg-[#1a2535] hover:shadow-xl hover:scale-[1.01]"
+                  : "bg-primary hover:bg-accent hover:shadow-xl"
+              } disabled:opacity-70`}
             >
               {submitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   INITIALIZING SECURE SESSION...
                 </>
-              ) : "Start Examination"}
+              ) : !schedule.canEnterSetup ? (
+                `Setup Opens in ${formatCountdown(schedule.secondsUntilSetup)}`
+              ) : schedule.isBeforeStart ? (
+                <>
+                  <Camera size={16} /> Proceed to Camera Setup ({formatCountdown(schedule.secondsUntilStart)})
+                </>
+              ) : schedule.isAfterEnd ? (
+                "EXAMINATION CLOSED"
+              ) : (
+                "Start Examination"
+              )}
             </button>
           </form>
 

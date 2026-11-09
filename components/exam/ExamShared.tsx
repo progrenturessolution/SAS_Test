@@ -40,6 +40,7 @@ interface ExamHeaderProps {
   onSubmit: () => void
   warningCount?: number
   maxWarnings?: number
+  endTimeLabel?: string
 }
 
 export function ExamHeader({
@@ -52,9 +53,12 @@ export function ExamHeader({
   onSubmit,
   warningCount = 0,
   maxWarnings = 3,
+  endTimeLabel,
 }: ExamHeaderProps) {
-  const mins = Math.floor(timeLeft / 60).toString().padStart(2, "0")
+  const hours = Math.floor(timeLeft / 3600)
+  const mins = Math.floor((timeLeft % 3600) / 60).toString().padStart(2, "0")
   const secs = (timeLeft % 60).toString().padStart(2, "0")
+  const timeFormatted = hours > 0 ? `${hours}:${mins}:${secs}` : `${mins}:${secs}`
   
   // Dynamic color: Red if 75% time passed (25% remaining), otherwise Black as requested
   // Note: 75% passed means timeLeft <= 0.25 * duration
@@ -81,9 +85,11 @@ export function ExamHeader({
       <div className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl border-2 transition-all duration-500 ${timerBorder} absolute left-1/2 -translate-x-1/2`}>
         <Clock className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${timerIconColor}`} />
         <div className="text-center">
-          <p className="text-[7px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-widest leading-none mb-0.5">Time Left</p>
+          <p className="text-[7px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-widest leading-none mb-0.5">
+            {endTimeLabel ? `Time Left · Closes ${endTimeLabel}` : "Time Left"}
+          </p>
           <p className={`text-base sm:text-2xl font-black tabular-nums leading-none ${timerColor}`}>
-            {mins}:{secs}
+            {timeFormatted}
           </p>
         </div>
       </div>

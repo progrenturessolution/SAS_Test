@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Plus, Share2 } from "lucide-react"
+import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Plus, Share2, GraduationCap } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { ExamActionMenu } from "@/components/ExamActionMenu"
 
@@ -25,7 +25,7 @@ export default function ExamsListPage() {
   const [filter, setFilter] = useState("all")
 
   useEffect(() => {
-    fetch("/api/exams")
+    fetch("/api/exams", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => { setExams(d.exams || []); setLoading(false) })
   }, [])
@@ -37,6 +37,7 @@ export default function ExamsListPage() {
       await fetch(`/api/exams/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status: newStatus }),
       })
     } catch (error) {
@@ -48,7 +49,7 @@ export default function ExamsListPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this exam?")) return
-    await fetch(`/api/exams/${id}`, { method: "DELETE" })
+    await fetch(`/api/exams/${id}`, { method: "DELETE", credentials: "include" })
     setExams((prev) => prev.filter((e) => e._id !== id))
   }
 
@@ -57,6 +58,7 @@ export default function ExamsListPage() {
       const res = await fetch(`/api/exams/${id}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email })
       })
       const data = await res.json()
@@ -84,11 +86,20 @@ export default function ExamsListPage() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-[#45505F]">All Exams</h1>
-        <Link href="/admin/exams/create" className="flex items-center gap-2 px-4 py-2 bg-[#45505F] text-white rounded-lg text-sm font-medium hover:bg-[#1e2a38]">
-          <Plus size={16} /> Create Exam
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/admin/ai-generator"
+            className="flex items-center gap-2 px-4 py-2 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
+          >
+            <GraduationCap size={16} className="text-white" />
+            <span>NEET / JEE / MHT-CET</span>
+          </Link>
+          <Link href="/admin/exams/create" className="flex items-center gap-2 px-4 py-2 bg-[#45505F] text-white rounded-lg text-sm font-medium hover:bg-[#1e2a38]">
+            <Plus size={16} /> Create Exam
+          </Link>
+        </div>
       </div>
 
       {/* Filter Tabs */}

@@ -6,8 +6,12 @@ import Exam from "@/models/Exam"
 
 // GET /api/admin/results
 export async function GET(req: Request) {
-  const session = await getSession()
-  if (!session || session.role !== "admin") {
+  const session = await getSession(req)
+  const canViewResults = session && (
+    ["super_admin", "admin", "institute", "coaching_institute"].includes(session.role) ||
+    Boolean(session.instituteId)
+  )
+  if (!canViewResults) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   try {
@@ -18,7 +22,24 @@ export async function GET(req: Request) {
     const limit = parseInt(searchParams.get("limit") || "50", 10)
     const skip = (page - 1) * limit
 
-    const query = examId ? { examId, status: { $ne: "in-progress" } } : { status: { $ne: "in-progress" } }
+    let query: any = { status: { $ne: "in-progress" } }
+    if (session.instituteId) {
+      const instituteExamQuery = {
+        $or: [{ instituteId: session.instituteId }, { createdBy: session.id }],
+      }
+      if (examId) {
+        const instituteExam = await Exam.findOne({ _id: examId, ...instituteExamQuery }, "_id").lean()
+        if (!instituteExam) {
+          return NextResponse.json({ error: "Exam does not belong to this institute." }, { status: 403 })
+        }
+        query.examId = instituteExam._id
+      } else {
+        const instExams = await Exam.find(instituteExamQuery, "_id").lean()
+        query.examId = { $in: instExams.map((e) => e._id) }
+      }
+    } else if (examId) {
+      query.examId = examId
+    }
 
     const [attempts, total] = await Promise.all([
       Attempt.find(query)

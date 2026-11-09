@@ -8,8 +8,12 @@ import { toast } from "sonner"
 import {
   Check, Plus, X, Trash2, Search, AlertCircle, Info,
   FileText, CheckSquare, List, Code2, AlignLeft, Loader2, Upload, Pencil, MoreVertical,
-  Shield, Camera, Maximize, AlertTriangle
+  Shield, Camera, Maximize, AlertTriangle, Sparkles, Clock, GraduationCap
 } from "lucide-react"
+import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
+import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
+import { CompetitiveExamAIGenerator, GeneratedCompetitiveQuestion } from "@/components/exam/CompetitiveExamAIGenerator"
+import { MathRenderer } from "@/components/exam/MathRenderer"
 
 // ─── Types (same as create page) ─────────────────────────────────────────────
 
@@ -223,22 +227,56 @@ function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<Rea
             <div className="w-1.5 h-6 bg-[#3D4B5C] rounded-full" />
             Schedule & Timeline
           </h3>
-          <div className="grid grid-cols-2 gap-6 bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
-            <div>
-              <label className={labelCls}>Start Date and Time</label>
-              <div className="flex gap-2">
-                <input type="date" value={form.startDate} onChange={e => setForm(f => ({...f, startDate: e.target.value}))} className={inputCls} />
-                <input type="time" value={form.startTime} onChange={e => setForm(f => ({...f, startTime: e.target.value}))} className={inputCls} />
+          {(() => {
+            const startDt = form.startDate ? getExamStartDateTime({ startDate: form.startDate, startTime: form.startTime }) : null
+            const endDt = form.endDate ? getExamEndDateTime({ endDate: form.endDate, endTime: form.endTime }) : null
+            const isInvalid = !!(startDt && endDt && endDt.getTime() <= startDt.getTime())
+
+            return (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <ExamDateTimePicker
+                    label="Start Date & Time"
+                    sublabel="Students can only begin the exam at or after this time"
+                    date={form.startDate}
+                    time={form.startTime}
+                    onDateChange={(d) => setForm(f => ({ ...f, startDate: d }))}
+                    onTimeChange={(t) => setForm(f => ({ ...f, startTime: t }))}
+                  />
+                  <ExamDateTimePicker
+                    label="End Date & Time"
+                    sublabel="Exam automatically submits for all students at this time"
+                    date={form.endDate}
+                    time={form.endTime}
+                    onDateChange={(d) => setForm(f => ({ ...f, endDate: d }))}
+                    onTimeChange={(t) => setForm(f => ({ ...f, endTime: t }))}
+                    referenceStart={{ date: form.startDate, time: form.startTime }}
+                  />
+                </div>
+
+                {isInvalid && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-bold flex items-center gap-2">
+                    <AlertCircle size={14} /> End Date & Time must be after Start Date & Time!
+                  </div>
+                )}
+
+                {startDt && endDt && !isInvalid && (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 flex items-center justify-between shadow-2xs">
+                    <div className="flex items-center gap-2.5">
+                      <Clock size={15} className="text-emerald-600" />
+                      <span>
+                        <strong className="font-bold text-emerald-950">Active Exam Window: </strong>
+                        {formatScheduleDateTime(startDt)} → {formatScheduleDateTime(endDt)}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-0.5 rounded-full">
+                      Strict Timed Access
+                    </span>
+                  </div>
+                )}
               </div>
-            </div>
-            <div>
-              <label className={labelCls}>End Date and Time</label>
-              <div className="flex gap-2">
-                <input type="date" value={form.endDate} onChange={e => setForm(f => ({...f, endDate: e.target.value}))} className={inputCls} />
-                <input type="time" value={form.endTime} onChange={e => setForm(f => ({...f, endTime: e.target.value}))} className={inputCls} />
-              </div>
-            </div>
-          </div>
+            )
+          })()}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -645,6 +683,55 @@ function CodingModal({ onSave, onClose, initial }: {
   const [activeLang, setActiveLang] = useState<string>(q.languages[0]?.toLowerCase() || "python")
   const [error, setError] = useState("")
   const [imageError, setImageError] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [isAiGenerating, setIsAiGenerating] = useState(false)
+  const [aiError, setAiError] = useState("")
+
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) return
+    setIsAiGenerating(true)
+    setAiError("")
+    try {
+      const res = await fetch("/api/admin/generate-coding-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          languages: q.languages.length > 0 ? q.languages : ["Python", "Java", "C++", "JavaScript"]
+        })
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to generate question")
+      }
+      const data = json.data
+      setQ(prev => {
+        const langs = prev.languages.length > 0 ? prev.languages : ["Python", "Java", "C++", "JavaScript"]
+        return {
+          ...prev,
+          questionText: data.questionText || prev.questionText,
+          difficulty: (data.difficulty as Difficulty) || prev.difficulty,
+          constraints: Array.isArray(data.constraints) ? data.constraints : prev.constraints,
+          codeTemplates: {
+            ...prev.codeTemplates,
+            ...(data.codeTemplates || {})
+          },
+          testCases: Array.isArray(data.testCases) && data.testCases.length > 0
+            ? data.testCases
+            : prev.testCases,
+          languages: langs
+        }
+      })
+      if (data.codeTemplates && Object.keys(data.codeTemplates).length > 0) {
+        const firstKey = Object.keys(data.codeTemplates)[0].toLowerCase()
+        setActiveLang(firstKey)
+      }
+    } catch (err: any) {
+      setAiError(err.message || "Failed to generate")
+    } finally {
+      setIsAiGenerating(false)
+    }
+  }
 
   const save = () => {
     if (!q.questionText.trim()) return setError("Problem statement is required")
@@ -655,6 +742,47 @@ function CodingModal({ onSave, onClose, initial }: {
   return (
     <ModalShell title={initial ? "Edit Coding Question" : "Add Coding Question"} icon={<div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center"><Code2 size={18} className="text-red-600"/></div>} onClose={onClose}>
       <div className="space-y-4 pb-4 overflow-y-auto max-h-[85vh] px-1">
+        {/* Gemini AI Auto-Generator */}
+        <div className="p-3.5 bg-gradient-to-r from-indigo-50/90 via-purple-50/60 to-blue-50/90 border border-indigo-200/80 rounded-2xl space-y-2.5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-950">
+              <Sparkles size={14} className="text-indigo-600 animate-pulse" />
+              <span>Smart Question & Template Generator</span>
+            </div>
+            <span className="text-[10px] font-bold text-indigo-700 px-2 py-0.5 bg-indigo-100 rounded-full">
+              Auto-Fill
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="e.g. Check Palindrome / Two Sum / Reverse Linked List / Binary Search..."
+              value={aiPrompt}
+              onChange={e => setAiPrompt(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAiGenerate(); } }}
+              disabled={isAiGenerating}
+              className="flex-1 px-3 py-2 text-xs bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-60 placeholder:text-gray-400"
+            />
+            <button
+              type="button"
+              disabled={isAiGenerating || !aiPrompt.trim()}
+              onClick={handleAiGenerate}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm shrink-0 active:scale-95"
+            >
+              {isAiGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+              <span>{isAiGenerating ? "Generating..." : "Generate"}</span>
+            </button>
+          </div>
+          {aiError && (
+            <p className="text-[11px] text-red-600 font-medium flex items-center gap-1">
+              <AlertCircle size={11} /> {aiError}
+            </p>
+          )}
+          <p className="text-[10px] text-indigo-800/70">
+            Type any problem name or topic to auto-fill description, starter templates for all languages, and test cases instantly!
+          </p>
+        </div>
+
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-[11px] text-blue-700 leading-relaxed">
           <p className="font-bold mb-1 flex items-center gap-1"><Info size={12}/> How to create a LeetCode-style problem:</p>
           <ol className="list-decimal list-inside space-y-0.5 ml-1">
@@ -884,7 +1012,23 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
   const [filterType, setFilterType] = useState<QuestionType | "all">("all")
   const [pdfUploading, setPdfUploading] = useState(false)
   const [pdfError, setPdfError] = useState("")
+  const [showCompetitiveAiModal, setShowCompetitiveAiModal] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleAddCompetitiveQuestions = (newQuestions: GeneratedCompetitiveQuestion[]) => {
+    const mapped: Question[] = newQuestions.map(q => ({
+      id: q.id,
+      type: "mcq",
+      questionText: q.questionText,
+      difficulty: q.difficulty,
+      marks: q.marks,
+      negativeMark: q.negativeMark,
+      options: q.options,
+      correctAnswer: q.correctAnswer,
+      explanation: q.explanation,
+    }))
+    setQuestions(prev => [...prev, ...mapped])
+  }
   
   const openMenu = (qId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -910,7 +1054,7 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
     try {
       const formData = new FormData()
       formData.append("file", file)
-      const res = await fetch("/api/exams/parse-pdf", { method: "POST", body: formData })
+      const res = await fetch("/api/exams/parse-pdf", { method: "POST", body: formData, credentials: "include" })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to parse PDF")
       if (data.questions?.length) {
@@ -948,7 +1092,15 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
             <h2 className="text-xl font-bold text-[#2D3A4A]">Questions</h2>
             <p className="text-xs text-gray-400 mt-0.5">{questions.length} questions selected · Total: {totalMarks} marks</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              type="button"
+              onClick={() => setShowCompetitiveAiModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-sm font-medium shadow-sm transition-colors cursor-pointer"
+            >
+              <GraduationCap size={15} className="text-white" />
+              <span>NEET / JEE / MHT-CET</span>
+            </button>
             <button onClick={() => fileRef.current?.click()} disabled={pdfUploading}
               className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
               <Upload size={15}/>{pdfUploading ? "Uploading..." : "Upload from PDF"}
@@ -1052,6 +1204,11 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
       {modal === "descriptive" && <DescriptiveModal onSave={saveQuestion as (q: DescriptiveQuestion) => void} onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "descriptive" ? editQ : undefined} />}
       {modal === "fillblanks"  && <FillBlanksModal  onSave={saveQuestion as (q: FillBlanksQuestion) => void}  onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "fillblanks" ? editQ : undefined} />}
       {modal === "coding"      && <CodingModal      onSave={saveQuestion as (q: CodingQuestion) => void}      onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "coding" ? editQ : undefined} />}
+      <CompetitiveExamAIGenerator
+        isOpen={showCompetitiveAiModal}
+        onClose={() => setShowCompetitiveAiModal(false)}
+        onAddQuestions={handleAddCompetitiveQuestions}
+      />
     </div>
   )
 }
@@ -1083,7 +1240,7 @@ export default function EditExamPage({ params }: { params: Promise<{ id: string 
 
   // Load existing exam data
   useEffect(() => {
-    fetch(`/api/exams/${id}`)
+    fetch(`/api/exams/${id}`, { credentials: "include" })
       .then(r => r.json())
       .then(data => {
         if (!data.exam) { setNotFound(true); setLoading(false); return }
@@ -1097,11 +1254,41 @@ export default function EditExamPage({ params }: { params: Promise<{ id: string 
           questionsPerMin: exam.questionsPerMin ? String(exam.questionsPerMin) : "",
         })
         
+        let startDateStr = ""
+        let startTimeStr = exam.settings?.startTime || ""
+        if (exam.settings?.startDate) {
+          const d = new Date(exam.settings.startDate)
+          if (!isNaN(d.getTime())) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, "0")
+            const day = String(d.getDate()).padStart(2, "0")
+            startDateStr = `${y}-${m}-${day}`
+            if (!startTimeStr) {
+              startTimeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+            }
+          }
+        }
+
+        let endDateStr = ""
+        let endTimeStr = exam.settings?.endTime || ""
+        if (exam.settings?.endDate) {
+          const d = new Date(exam.settings.endDate)
+          if (!isNaN(d.getTime())) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, "0")
+            const day = String(d.getDate()).padStart(2, "0")
+            endDateStr = `${y}-${m}-${day}`
+            if (!endTimeStr) {
+              endTimeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+            }
+          }
+        }
+
         setStep2({
-          startDate: exam.settings?.startDate ? new Date(exam.settings.startDate).toISOString().split('T')[0] : "",
-          startTime: exam.settings?.startTime || "",
-          endDate: exam.settings?.endDate ? new Date(exam.settings.endDate).toISOString().split('T')[0] : "",
-          endTime: exam.settings?.endTime || "",
+          startDate: startDateStr,
+          startTime: startTimeStr,
+          endDate: endDateStr,
+          endTime: endTimeStr,
           randomize: exam.settings?.randomize ?? true,
           showResults: exam.settings?.showResults ?? true,
           allowReview: exam.settings?.allowReview ?? false,
@@ -1142,15 +1329,34 @@ export default function EditExamPage({ params }: { params: Promise<{ id: string 
     return ""
   }
 
+  const validateStep2 = () => {
+    if (step2.startDate && step2.endDate) {
+      const s = getExamStartDateTime({ startDate: step2.startDate, startTime: step2.startTime })
+      const e = getExamEndDateTime({ endDate: step2.endDate, endTime: step2.endTime })
+      if (s && e && e.getTime() <= s.getTime()) {
+        return "End Date & Time must be after Start Date & Time"
+      }
+    }
+    return ""
+  }
+
   const handleNext = () => {
     setError("")
     if (step === 1) { const err = validateStep1(); if (err) return setError(err) }
+    if (step === 2) { const err = validateStep2(); if (err) return setError(err) }
     setStep(s => s + 1)
   }
 
   const handleSubmit = async (status: "draft" | "active") => {
     setError(""); setSaving(true)
     try {
+      const startDt = step2.startDate ? getExamStartDateTime({ startDate: step2.startDate, startTime: step2.startTime }) : null
+      const endDt = step2.endDate ? getExamEndDateTime({ endDate: step2.endDate, endTime: step2.endTime }) : null
+
+      if (startDt && endDt && endDt.getTime() <= startDt.getTime()) {
+        throw new Error("End Date & Time must be after Start Date & Time")
+      }
+
       const sections = [{
         name: "Questions",
         type: questions[0]?.type || "mcq",
@@ -1180,14 +1386,19 @@ export default function EditExamPage({ params }: { params: Promise<{ id: string 
           showResults: step2.showResults,
           allowReview: step2.allowReview,
           negativeMarking: step2.negativeMarking,
-          startDate: step2.startDate ? new Date(step2.startDate) : undefined,
+          startDate: startDt ? startDt.toISOString() : undefined,
           startTime: step2.startTime || undefined,
-          endDate: step2.endDate ? new Date(step2.endDate) : undefined,
+          endDate: endDt ? endDt.toISOString() : undefined,
           endTime: step2.endTime || undefined,
           proctoring: step2.proctoring,
         }
       }
-      const res = await fetch(`/api/exams/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      const res = await fetch(`/api/exams/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to save exam")
       router.push("/admin/exams")

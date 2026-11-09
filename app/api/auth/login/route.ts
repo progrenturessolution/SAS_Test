@@ -2,17 +2,21 @@ import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import connectDB from "@/lib/mongodb"
 import User from "@/models/User"
+import Institute from "@/models/Institute"
 import { createSession, COOKIE_NAME, COOKIE_MAX_AGE } from "@/lib/auth"
 
 export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json()
+    const { email, password, portalType } = await req.json()
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
     await connectDB()
-    const user = await User.findOne({ email: email.toLowerCase(), role: "admin" })
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      role: { $in: ["super_admin", "admin", "institute", "coaching_institute"] },
+    })
     if (!user) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
@@ -22,23 +26,83 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
+    // Portal type separation checks
+    const isInstituteAccount = Boolean(user.instituteId || user.role === "institute")
+    if (portalType === "admin" && isInstituteAccount) {
+      return NextResponse.json(
+        { error: "This account belongs to a Coaching Institute. Please use the Institute Login portal." },
+        { status: 403 }
+      )
+    }
+
+    if (portalType === "institute" && !isInstituteAccount) {
+      return NextResponse.json(
+        { error: "This is a Super Admin account. Please use the Admin Login portal." },
+        { status: 403 }
+      )
+    }
+
+    let instituteData: any = null
+    if (isInstituteAccount && !user.instituteId) {
+      return NextResponse.json(
+        { error: "This coaching institute account is no longer available. Please contact platform support." },
+        { status: 403 }
+      )
+    }
+    if (user.instituteId) {
+      instituteData = await Institute.findById(user.instituteId).lean()
+      if (!instituteData) {
+        return NextResponse.json(
+          { error: "This coaching institute account is no longer available. Please contact platform support." },
+          { status: 403 }
+        )
+      }
+      if (instituteData.status === "suspended" || instituteData.status === "expired") {
+        return NextResponse.json(
+          { error: `Your coaching institute account is ${instituteData.status}. Please contact platform support.` },
+          { status: 403 }
+        )
+      }
+    }
+
+    const effectiveRole = isInstituteAccount ? "institute" : "super_admin"
+
     const token = await createSession({
       id: user._id.toString(),
       name: user.name,
       email: user.email,
-      role: user.role,
+      role: effectiveRole,
+      instituteId: user.instituteId ? user.instituteId.toString() : undefined,
+      instituteName: instituteData?.name,
+      instituteCode: instituteData?.code,
     })
 
-    const cookieStore = await cookies()
-    cookieStore.set(COOKIE_NAME, token, {
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "lax" as const,
       maxAge: COOKIE_MAX_AGE,
       path: "/",
+    }
+
+    try {
+      const cookieStore = await cookies()
+      cookieStore.set(COOKIE_NAME, token, cookieOptions)
+    } catch {
+      // fallback handled below
+    }
+
+    const response = NextResponse.json({
+      ok: true,
+      name: user.name,
+      email: user.email,
+      role: effectiveRole,
+      instituteName: instituteData?.name,
+      instituteCode: instituteData?.code,
     })
 
-    return NextResponse.json({ ok: true, name: user.name, email: user.email })
+    response.cookies.set(COOKIE_NAME, token, cookieOptions)
+    return response
   } catch (error) {
     console.error("[v0] Login error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

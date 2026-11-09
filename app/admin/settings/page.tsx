@@ -1,18 +1,79 @@
 "use client"
 
-import { useState } from "react"
-import { Settings, Shield, Database, Info } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Settings, Shield, Database, Info, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 
 export default function SettingsPage() {
+  const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState("")
+
+  // Global settings state
+  const [platformName, setPlatformName] = useState("Progrentures Exam Platform")
+  const [supportEmail, setSupportEmail] = useState("support@progrentures.com")
+  const [supportPhone, setSupportPhone] = useState("+91 93094 70958")
+  const [proctoring, setProctoring] = useState({
+    faceDetection: true,
+    tabSwitch: true,
+    fullscreen: true,
+    mobileFaceDetection: false,
+    maxWarnings: 3,
+  })
+
+  // Password state
   const [passForm, setPassForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" })
   const [passwordError, setPasswordError] = useState("")
   const [passwordSuccess, setPasswordSuccess] = useState("")
   const [passwordChanging, setPasswordChanging] = useState(false)
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+  // Fetch settings on mount
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then(r => r.json())
+      .then(data => {
+        if (data.settings) {
+          if (data.settings.platformName) setPlatformName(data.settings.platformName)
+          if (data.settings.supportEmail) setSupportEmail(data.settings.supportEmail)
+          if (data.settings.supportPhone) setSupportPhone(data.settings.supportPhone)
+          if (data.settings.proctoring) {
+            setProctoring({
+              faceDetection: !!data.settings.proctoring.faceDetection,
+              tabSwitch: !!data.settings.proctoring.tabSwitch,
+              fullscreen: !!data.settings.proctoring.fullscreen,
+              mobileFaceDetection: !!data.settings.proctoring.mobileFaceDetection,
+              maxWarnings: data.settings.proctoring.maxWarnings || 3,
+            })
+          }
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaveError("")
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platformName,
+          supportEmail,
+          supportPhone,
+          proctoring,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to save settings")
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err: any) {
+      setSaveError(err.message || "Failed to save settings")
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -57,7 +118,14 @@ export default function SettingsPage() {
 
   return (
     <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-bold text-primary mb-6">Settings</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-primary">Settings</h1>
+        {loading && (
+          <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+            <Loader2 size={14} className="animate-spin text-primary" /> Loading rules...
+          </div>
+        )}
+      </div>
 
       <div className="space-y-6">
         {/* Platform Info */}
@@ -73,56 +141,39 @@ export default function SettingsPage() {
               General
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-            <div className="space-y-1.5">
-              <p className="text-gray-500 font-medium">Platform Name</p>
-              <input
-                defaultValue="Progrentures Testro Lab"
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all font-medium"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-gray-500 font-medium">Tagline</p>
-              <input
-                defaultValue="Where Skills Are Truly Measured."
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all font-medium"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-gray-500 font-medium">Support Email</p>
-              <input
-                defaultValue="support@progrentures.com"
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all font-medium"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-gray-500 font-medium">Contact WhatsApp</p>
-              <input
-                defaultValue="+91 93094 70958"
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all font-medium"
-              />
-            </div>
-          </div>
           
-          <div className="mt-8 pt-6 border-t border-gray-100">
-            <p className="text-sm text-gray-500 font-medium mb-3">Platform Logo</p>
-            <div className="flex items-center gap-6">
-              <div className="w-24 h-24 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 group hover:border-primary hover:text-primary transition-all cursor-pointer">
-                <Settings size={24} className="group-hover:rotate-45 transition-transform" />
-                <span className="text-[10px] mt-1 font-bold">CHANGE</span>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-primary">Upload New Logo</p>
-                <p className="text-xs text-gray-400">Recommend size: 256x256. PNG or SVG preferred.</p>
-                <button className="mt-2 px-4 py-1.5 bg-primary text-white text-[11px] font-bold rounded uppercase tracking-wider hover:bg-accent transition-colors shadow-sm">
-                  Choose File
-                </button>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Platform Name</label>
+              <input
+                type="text"
+                value={platformName}
+                onChange={e => setPlatformName(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all font-medium text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Support Email</label>
+              <input
+                type="email"
+                value={supportEmail}
+                onChange={e => setSupportEmail(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all font-medium text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Support Phone</label>
+              <input
+                type="text"
+                value={supportPhone}
+                onChange={e => setSupportPhone(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all font-medium text-sm"
+              />
             </div>
           </div>
         </div>
 
-        {/* Proctoring Defaults */}
+        {/* Global Proctoring Rules */}
         <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
@@ -131,24 +182,49 @@ export default function SettingsPage() {
               </div>
               <h2 className="font-semibold text-primary">Global Proctoring Rules</h2>
             </div>
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded border border-gray-100">
-              Security
+            <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
+              Active Security
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
               {[
-                { id: "face", label: "Face detection monitoring", defaultChecked: true },
-                { id: "tab", label: "Tab-switch prevention", defaultChecked: true },
-                { id: "full", label: "Enforce fullscreen mode", defaultChecked: true },
-                { id: "mobile", label: "Allow Mobile Face Detection", defaultChecked: false, sub: "Beta feature for optimized mobile proctoring" },
+                { 
+                  id: "face", 
+                  label: "Face detection monitoring", 
+                  checked: proctoring.faceDetection, 
+                  onChange: (checked: boolean) => setProctoring(p => ({ ...p, faceDetection: checked })),
+                  sub: "Requires camera verification & logs face absence/multiple faces during test"
+                },
+                { 
+                  id: "tab", 
+                  label: "Tab-switch prevention", 
+                  checked: proctoring.tabSwitch, 
+                  onChange: (checked: boolean) => setProctoring(p => ({ ...p, tabSwitch: checked })),
+                  sub: "Monitors tab switching, window minimization & browser blur"
+                },
+                { 
+                  id: "full", 
+                  label: "Enforce fullscreen mode", 
+                  checked: proctoring.fullscreen, 
+                  onChange: (checked: boolean) => setProctoring(p => ({ ...p, fullscreen: checked })),
+                  sub: "Enforces fullscreen exam session & logs fullscreen exits"
+                },
+                { 
+                  id: "mobile", 
+                  label: "Allow Mobile Face Detection", 
+                  checked: proctoring.mobileFaceDetection, 
+                  onChange: (checked: boolean) => setProctoring(p => ({ ...p, mobileFaceDetection: checked })),
+                  sub: "Optimized mobile proctoring for mobile exams" 
+                },
               ].map((item) => (
-                <div key={item.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                <div key={item.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
                   <input
                     type="checkbox"
                     id={item.id}
-                    defaultChecked={item.defaultChecked}
-                    className="mt-1 w-4 h-4 rounded border-gray-300 accent-primary"
+                    checked={item.checked}
+                    onChange={e => item.onChange(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded border-gray-300 accent-primary cursor-pointer"
                   />
                   <label htmlFor={item.id} className="cursor-pointer">
                     <p className="text-sm font-semibold text-gray-800">{item.label}</p>
@@ -157,21 +233,23 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
+            
             <div className="bg-gray-50 rounded-xl p-5 border border-gray-100 space-y-4">
               <div className="space-y-1.5">
                 <p className="text-sm font-bold text-primary">Auto-Submit Threshold</p>
                 <p className="text-xs text-gray-500">Number of warnings before session is terminated.</p>
                 <input
                   type="number"
-                  defaultValue={3}
+                  value={proctoring.maxWarnings}
+                  onChange={e => setProctoring(p => ({ ...p, maxWarnings: Math.max(1, parseInt(e.target.value) || 1) }))}
                   min={1}
-                  max={10}
+                  max={20}
                   className="w-full mt-2 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary bg-white font-bold text-primary text-center"
                 />
               </div>
               <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100">
                 <p className="text-[11px] text-blue-700 font-medium leading-relaxed">
-                  Note: These settings are used as defaults for new exams. Individual exams can still override these rules.
+                  Notice: These global rules govern exam proctoring across the entire platform. Unticking a rule disables it immediately for all students.
                 </p>
               </div>
             </div>
@@ -208,13 +286,13 @@ export default function SettingsPage() {
           
           <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
             {passwordError && (
-              <div className="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold">
-                {passwordError}
+              <div className="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold flex items-center gap-2">
+                <AlertCircle size={14} /> {passwordError}
               </div>
             )}
             {passwordSuccess && (
-              <div className="p-3 bg-green-50 text-green-600 rounded-lg text-xs font-semibold">
-                {passwordSuccess}
+              <div className="p-3 bg-green-50 text-green-600 rounded-lg text-xs font-semibold flex items-center gap-2">
+                <CheckCircle2 size={14} /> {passwordSuccess}
               </div>
             )}
             
@@ -260,12 +338,33 @@ export default function SettingsPage() {
         </div>
       </div>
       
+      {saveError && (
+        <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold flex items-center gap-2">
+          <AlertCircle size={14} /> {saveError}
+        </div>
+      )}
+
       <div className="mt-8 flex justify-end">
         <button
           onClick={handleSave}
-          className="px-10 py-3 bg-primary text-white font-bold rounded-xl hover:bg-accent transition-all shadow-lg hover:shadow-xl active:scale-95"
+          disabled={saving}
+          className={`px-10 py-3 font-bold rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center gap-2 ${
+            saved 
+              ? "bg-emerald-600 text-white" 
+              : "bg-primary text-white hover:bg-accent"
+          } disabled:opacity-60`}
         >
-          {saved ? "Configurations Saved!" : "Save All Changes"}
+          {saving ? (
+            <>
+              <Loader2 size={16} className="animate-spin" /> Saving Rules...
+            </>
+          ) : saved ? (
+            <>
+              <CheckCircle2 size={16} /> Global Rules Saved!
+            </>
+          ) : (
+            "Save All Changes"
+          )}
         </button>
       </div>
     </div>
