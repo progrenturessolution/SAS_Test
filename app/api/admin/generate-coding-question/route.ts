@@ -57,7 +57,14 @@ Rules:
 6. Do NOT include markdown code fences (\`\`\`json) in the response. Return raw JSON only.
 `
 
-    const models = ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash"]
+    const models = [
+      "gemini-3.5-flash",
+      "gemini-3-flash-preview",
+      "gemini-3.6-flash",
+      "gemini-3.8-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-flash-latest"
+    ]
     let lastError: any = null
     let responseText = ""
 

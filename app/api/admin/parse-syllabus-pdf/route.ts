@@ -71,7 +71,14 @@ export async function POST(req: Request) {
     let detectedTopics: string[] = []
 
     if (apiKey) {
-      const models = ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash", "gemini-flash-lite-latest"]
+      const models = [
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview",
+        "gemini-3.6-flash",
+        "gemini-3.8-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-flash-latest"
+      ]
       const prompt = `Analyze this extracted syllabus or study material text and identify:
 1. "chapters": list of 1 to 5 main chapter or unit names.
 2. "topics": list of 3 to 10 specific topics or concepts mentioned in this text.
