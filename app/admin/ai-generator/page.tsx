@@ -29,6 +29,7 @@ import {
   Search,
   Sparkles,
   Clock,
+  Calendar,
   Award,
   X,
   FileQuestion,
@@ -154,15 +155,47 @@ export default function AIGeneratorPage() {
     "Formulas and chemical reactions are formatted with scientific standard LaTeX notation.",
   ])
 
-  // Step 5: Settings States
-  const [examSettings, setExamSettings] = useState({
+  // Step 5: Schedule & Settings States
+  const [startDate, setStartDate] = useState<string>("2026-11-12")
+  const [startHour, setStartHour] = useState<string>("10")
+  const [startMinute, setStartMinute] = useState<string>("00")
+  const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM")
+
+  const [endDate, setEndDate] = useState<string>("2026-11-12")
+  const [endHour, setEndHour] = useState<string>("01")
+  const [endMinute, setEndMinute] = useState<string>("00")
+  const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("PM")
+
+  // Evaluation Options
+  const [evalSettings, setEvalSettings] = useState({
     randomizeQuestions: true,
-    shuffleOptions: true,
-    showResults: true,
-    allowReview: true,
-    negativeMarking: false,
-    scientificCalculator: false,
+    showResultsImmediately: true,
+    allowReview: false,
+    enableNegativeMarking: false,
   })
+
+  // Proctoring Security
+  const [proctoringSettings, setProctoringSettings] = useState({
+    faceDetection: false,
+    tabSwitchPrevention: false,
+    enforceFullscreen: false,
+    aiStatusAnalysis: false,
+  })
+
+  const formatDateDisplay = (dateStr: string) => {
+    try {
+      const [y, m, d] = dateStr.split("-").map(Number)
+      if (!y || !m || !d) return dateStr
+      const date = new Date(y, m - 1, d)
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    } catch {
+      return dateStr
+    }
+  }
 
   const parseAssertionReason = (text: string) => {
     if (!text) return null
@@ -749,13 +782,23 @@ export default function AIGeneratorPage() {
               }),
             },
           ],
+          schedule: {
+            startDate,
+            startTime: `${startHour}:${startMinute} ${startPeriod}`,
+            endDate,
+            endTime: `${endHour}:${endMinute} ${endPeriod}`,
+          },
           settings: {
-            randomize: examSettings.randomizeQuestions,
-            shuffleOptions: examSettings.shuffleOptions,
-            showResults: examSettings.showResults,
-            allowReview: examSettings.allowReview,
-            negativeMarking: examSettings.negativeMarking,
-            scientificCalculator: examSettings.scientificCalculator,
+            randomize: evalSettings.randomizeQuestions,
+            showResults: evalSettings.showResultsImmediately,
+            allowReview: evalSettings.allowReview,
+            negativeMarking: evalSettings.enableNegativeMarking,
+            proctoring: {
+              faceDetection: proctoringSettings.faceDetection,
+              tabSwitchPrevention: proctoringSettings.tabSwitchPrevention,
+              enforceFullscreen: proctoringSettings.enforceFullscreen,
+              aiStatusAnalysis: proctoringSettings.aiStatusAnalysis,
+            },
           },
           status: "draft",
         }),
@@ -836,7 +879,7 @@ export default function AIGeneratorPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (s.step <= currentStep || (generatedQuestions.length > 0 && s.step <= 4)) {
+                          if (s.step <= currentStep || (generatedQuestions.length > 0 && s.step <= 6)) {
                             setCurrentStep(s.step)
                             window.scrollTo({ top: 0, behavior: "smooth" })
                           }
@@ -2017,169 +2060,508 @@ export default function AIGeneratorPage() {
             </div>
           )}
 
-          {/* ─── STEP 5: EXAM SETTINGS ─── */}
+          {/* ─── STEP 5: EXAM SETTINGS (SCHEDULE & EVALUATION & PROCTORING) ─── */}
           {currentStep === 5 && (
-            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs">
-              <div className="mb-8">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  STEP 5 · EXAM SETTINGS
-                </p>
-                <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-                  Exam Delivery & Security Settings
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                  Configure candidate permissions, security options, and result display preferences.
-                </p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              {/* Left Card: Exam Schedule */}
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs relative overflow-hidden flex flex-col justify-between">
+                {/* Subtle decorative background wave in top right */}
+                <div className="absolute top-0 right-0 w-48 h-32 bg-gradient-to-bl from-blue-50/70 to-transparent rounded-bl-full pointer-events-none" />
+
+                <div>
+                  <div className="mb-6 relative z-10">
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                      Exam Schedule
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                      Set the exam start and end date with time.
+                    </p>
+                  </div>
+
+                  <div className="space-y-6 relative z-10">
+                    {/* ── Start Date & Time ── */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="w-1.5 h-4.5 bg-[#1E293B] rounded-full inline-block" />
+                        <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                          Start Date &amp; Time
+                        </h3>
+                      </div>
+
+                      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5">
+                        {/* Date Picker Input */}
+                        <div className="relative flex-1 min-w-[140px]">
+                          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-2xs">
+                            <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                              {formatDateDisplay(startDate)}
+                            </span>
+                          </div>
+                          <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                          />
+                        </div>
+
+                        {/* Hour Dropdown */}
+                        <div className="relative w-20 shrink-0">
+                          <select
+                            value={startHour}
+                            onChange={(e) => setStartHour(e.target.value)}
+                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                          >
+                            {["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map((h) => (
+                              <option key={h} value={h}>
+                                {h}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+
+                        {/* Minute Dropdown */}
+                        <div className="relative w-20 shrink-0">
+                          <select
+                            value={startMinute}
+                            onChange={(e) => setStartMinute(e.target.value)}
+                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                          >
+                            {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+
+                        {/* AM / PM Segmented Toggle */}
+                        <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/70 p-1 shadow-2xs shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setStartPeriod("AM")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              startPeriod === "AM"
+                                ? "bg-[#1E293B] text-white shadow-2xs"
+                                : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            AM
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setStartPeriod("PM")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              startPeriod === "PM"
+                                ? "bg-[#1E293B] text-white shadow-2xs"
+                                : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            PM
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── End Date & Time ── */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="w-1.5 h-4.5 bg-rose-500 rounded-full inline-block" />
+                        <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                          End Date &amp; Time
+                        </h3>
+                      </div>
+
+                      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5">
+                        {/* Date Picker Input */}
+                        <div className="relative flex-1 min-w-[140px]">
+                          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-2xs">
+                            <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                              {formatDateDisplay(endDate)}
+                            </span>
+                          </div>
+                          <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                          />
+                        </div>
+
+                        {/* Hour Dropdown */}
+                        <div className="relative w-20 shrink-0">
+                          <select
+                            value={endHour}
+                            onChange={(e) => setEndHour(e.target.value)}
+                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                          >
+                            {["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map((h) => (
+                              <option key={h} value={h}>
+                                {h}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+
+                        {/* Minute Dropdown */}
+                        <div className="relative w-20 shrink-0">
+                          <select
+                            value={endMinute}
+                            onChange={(e) => setEndMinute(e.target.value)}
+                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                          >
+                            {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+
+                        {/* AM / PM Segmented Toggle */}
+                        <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/70 p-1 shadow-2xs shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setEndPeriod("AM")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              endPeriod === "AM"
+                                ? "bg-[#1E293B] text-white shadow-2xs"
+                                : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            AM
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEndPeriod("PM")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              endPeriod === "PM"
+                                ? "bg-[#1E293B] text-white shadow-2xs"
+                                : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            PM
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Setting 1: Randomize Question Order */}
-                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
+              {/* Right Card: Evaluation Options & Proctoring Security */}
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col justify-between">
+                <div>
+                  {/* ── Evaluation Options ── */}
                   <div>
-                    <h4 className="text-sm font-bold text-slate-900 mb-1">Randomize Question Sequence</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Shuffles the order of questions for each student to prevent screen sharing and collusion.
-                    </p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-1.5 h-4.5 bg-[#1E293B] rounded-full inline-block" />
+                      <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                        Evaluation Options
+                      </h3>
+                    </div>
+
+                    <div className="divide-y divide-slate-100">
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                          Randomize Questions
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEvalSettings((prev) => ({
+                              ...prev,
+                              randomizeQuestions: !prev.randomizeQuestions,
+                            }))
+                          }
+                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                            evalSettings.randomizeQuestions ? "bg-[#1E293B]" : "bg-slate-200"
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
+                              evalSettings.randomizeQuestions ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                          Show Results Immediately
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEvalSettings((prev) => ({
+                              ...prev,
+                              showResultsImmediately: !prev.showResultsImmediately,
+                            }))
+                          }
+                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                            evalSettings.showResultsImmediately ? "bg-[#1E293B]" : "bg-slate-200"
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
+                              evalSettings.showResultsImmediately ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                          Allow Review
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEvalSettings((prev) => ({
+                              ...prev,
+                              allowReview: !prev.allowReview,
+                            }))
+                          }
+                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                            evalSettings.allowReview ? "bg-[#1E293B]" : "bg-slate-200"
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
+                              evalSettings.allowReview ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                          Enable Negative Marking
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEvalSettings((prev) => ({
+                              ...prev,
+                              enableNegativeMarking: !prev.enableNegativeMarking,
+                            }))
+                          }
+                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                            evalSettings.enableNegativeMarking ? "bg-[#1E293B]" : "bg-slate-200"
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
+                              evalSettings.enableNegativeMarking ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExamSettings((prev) => ({ ...prev, randomizeQuestions: !prev.randomizeQuestions }))
-                    }
-                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                      examSettings.randomizeQuestions ? "bg-[#1E293B]" : "bg-slate-300"
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        examSettings.randomizeQuestions ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
+
+                  {/* ── Proctoring Security ── */}
+                  <div className="mt-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-1.5 h-4.5 bg-[#1E293B] rounded-full inline-block" />
+                      <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                        Proctoring Security
+                      </h3>
+                    </div>
+
+                    <div className="divide-y divide-slate-100">
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                          Face Detection
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setProctoringSettings((prev) => ({
+                              ...prev,
+                              faceDetection: !prev.faceDetection,
+                            }))
+                          }
+                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                            proctoringSettings.faceDetection ? "bg-[#1E293B]" : "bg-slate-200"
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
+                              proctoringSettings.faceDetection ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                          Tab-Switch Prevention
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setProctoringSettings((prev) => ({
+                              ...prev,
+                              tabSwitchPrevention: !prev.tabSwitchPrevention,
+                            }))
+                          }
+                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                            proctoringSettings.tabSwitchPrevention ? "bg-[#1E293B]" : "bg-slate-200"
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
+                              proctoringSettings.tabSwitchPrevention ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                          Enforce Fullscreen
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setProctoringSettings((prev) => ({
+                              ...prev,
+                              enforceFullscreen: !prev.enforceFullscreen,
+                            }))
+                          }
+                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                            proctoringSettings.enforceFullscreen ? "bg-[#1E293B]" : "bg-slate-200"
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
+                              proctoringSettings.enforceFullscreen ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                          AI Status Analysis
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setProctoringSettings((prev) => ({
+                              ...prev,
+                              aiStatusAnalysis: !prev.aiStatusAnalysis,
+                            }))
+                          }
+                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                            proctoringSettings.aiStatusAnalysis ? "bg-[#1E293B]" : "bg-slate-200"
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
+                              proctoringSettings.aiStatusAnalysis ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Setting 2: Shuffle Option Choices */}
-                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 mb-1">Shuffle Answer Options</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Randomizes the order of choices (A, B, C, D) for every individual question.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExamSettings((prev) => ({ ...prev, shuffleOptions: !prev.shuffleOptions }))
-                    }
-                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                      examSettings.shuffleOptions ? "bg-[#1E293B]" : "bg-slate-300"
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        examSettings.shuffleOptions ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
+                {/* Pro-Tip Note Callout */}
+                <div className="mt-6 rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE]/70 p-3.5 sm:p-4 flex items-center gap-2.5 text-xs text-[#1E40AF]">
+                  <Info className="w-4 h-4 text-[#2563EB] shrink-0" />
+                  <span className="leading-relaxed">
+                    <strong className="font-bold">Pro-Tip:</strong> Face Detection &amp; AI Status Analysis require students to have a working webcam.
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─── STEP 6: PUBLISH & CONFIRMATION ─── */}
+          {currentStep === 6 && (
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-10 shadow-xs">
+              <div className="max-w-3xl mx-auto text-center space-y-6">
+                <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 border border-emerald-200/80 mx-auto flex items-center justify-center shadow-xs">
+                  <CheckCircle2 className="w-8 h-8" />
                 </div>
 
-                {/* Setting 3: Instant Results */}
-                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 mb-1">Immediate Result & Explanations</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Allows candidates to see detailed solutions, marks breakdown, and explanations immediately after submission.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExamSettings((prev) => ({ ...prev, showResults: !prev.showResults }))
-                    }
-                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                      examSettings.showResults ? "bg-[#1E293B]" : "bg-slate-300"
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        examSettings.showResults ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">
+                    STEP 6 · FINAL PUBLISH
+                  </p>
+                  <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+                    Ready to Publish Exam Paper
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-lg mx-auto">
+                    Review the final summary below. Once published, your exam will be ready in draft status and scheduled for candidates.
+                  </p>
                 </div>
 
-                {/* Setting 4: Bookmarking & Review */}
-                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 mb-1">Question Bookmarking & Review</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Enables students to mark questions for review and revisit them before final submission.
+                {/* Summary Card Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left pt-2">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
+                    <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
+                      Paper Details
+                    </span>
+                    <p className="text-sm font-bold text-slate-900 truncate">
+                      {examTitle || getDefaultExamTitle()}
+                    </p>
+                    <p className="text-xs text-slate-600 mt-1">
+                      {examOverviewName} · {classOverviewText}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExamSettings((prev) => ({ ...prev, allowReview: !prev.allowReview }))
-                    }
-                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                      examSettings.allowReview ? "bg-[#1E293B]" : "bg-slate-300"
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        examSettings.allowReview ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
+                    <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
+                      Questions &amp; Marks
+                    </span>
+                    <p className="text-sm font-bold text-slate-900">
+                      {selectedQuestionIds.size > 0 ? selectedQuestionIds.size : totalQuestions} Questions
+                    </p>
+                    <p className="text-xs text-slate-600 mt-1">
+                      {examTotalMarks} Marks · {duration} min
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
+                    <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
+                      Scheduled Window
+                    </span>
+                    <p className="text-sm font-bold text-slate-900">
+                      {formatDateDisplay(startDate)}
+                    </p>
+                    <p className="text-xs text-slate-600 mt-1">
+                      {startHour}:{startMinute} {startPeriod} – {endHour}:{endMinute} {endPeriod}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Setting 5: Negative Marking */}
-                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 mb-1">Enforce Negative Marking</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Deducts marks for incorrect responses according to official {examOverviewName} exam scheme.
-                    </p>
-                  </div>
+                <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
                     type="button"
-                    onClick={() =>
-                      setExamSettings((prev) => ({ ...prev, negativeMarking: !prev.negativeMarking }))
-                    }
-                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                      examSettings.negativeMarking ? "bg-[#1E293B]" : "bg-slate-300"
-                    }`}
+                    onClick={handleSaveAsExam}
+                    disabled={creatingExam || selectedQuestionIds.size === 0}
+                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-bold text-sm shadow-md flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
                   >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        examSettings.negativeMarking ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* Setting 6: Scientific Calculator */}
-                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 mb-1">Built-in Scientific Calculator</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Provides candidates with an on-screen scientific calculator during exam duration.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExamSettings((prev) => ({ ...prev, scientificCalculator: !prev.scientificCalculator }))
-                    }
-                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                      examSettings.scientificCalculator ? "bg-[#1E293B]" : "bg-slate-300"
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        examSettings.scientificCalculator ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
+                    {creatingExam ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                        <span>Publishing Exam...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span>Confirm &amp; Publish Exam Paper</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2272,19 +2654,33 @@ export default function AIGeneratorPage() {
             {currentStep === 5 && (
               <button
                 type="button"
+                onClick={() => {
+                  setCurrentStep(6)
+                  window.scrollTo({ top: 0, behavior: "smooth" })
+                }}
+                className="px-7 py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
+              >
+                <span>Next: Publish</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+
+            {currentStep === 6 && (
+              <button
+                type="button"
                 onClick={handleSaveAsExam}
                 disabled={creatingExam || selectedQuestionIds.size === 0}
-                className="px-7 py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                className="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
               >
                 {creatingExam ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
                     <span>Publishing Exam...</span>
                   </>
                 ) : (
                   <>
+                    <Check className="w-4 h-4 text-white" />
                     <span>Publish Exam Paper</span>
-                    <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
