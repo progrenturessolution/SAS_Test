@@ -10,19 +10,19 @@ interface MathRendererProps {
 }
 
 function normalizeFormulaText(value: string): string {
+  if (!value) return ""
   return value
-    .replace(/\\\\/g, "\\")
     .replace(/\u000c/g, "\\frac")
     .replace(/\u0008/g, "\\b")
     .replace(/\u0009/g, " ")
-    .replace(/\\\(/g, "$")
-    .replace(/\\\)/g, "$")
-    .replace(/\\\[/g, "$$")
-    .replace(/\\\]/g, "$$")
+    .replace(/\\\(|\\\)/g, "$")
+    .replace(/\\\[|\\\]/g, "$$")
 }
 
+const MATH_REGEX = /(\$\$[\s\S]*?\$\$|\$(?!\$)[\s\S]+?\$|\\begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|array)\}[\s\S]*?\\end\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|array)\})/g
+
 function isStandaloneFormula(value: string): boolean {
-  return /^[-+]?\\(?:frac|sqrt|dfrac|tfrac|binom|text|mathrm|mathbf|vec|hat|bar|sin|cos|tan|log|ln|lim|sum|int|prod|left|right|times|cdot|pm|leq?|geq?|neq|approx|infty|alpha|beta|gamma|delta|Delta|theta|lambda|mu|pi|rho|sigma|phi|omega|rightarrow|leftarrow)\b/.test(
+  return /^[-+]?\\(?:frac|sqrt|dfrac|tfrac|binom|text|mathrm|mathbf|vec|hat|bar|sin|cos|tan|log|ln|lim|sum|int|prod|left|right|times|cdot|pm|leq?|geq?|neq|approx|infty|alpha|beta|gamma|delta|Delta|theta|lambda|mu|pi|rho|sigma|phi|omega|rightarrow|leftarrow|begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|cases))\b/.test(
     value.trim()
   )
 }
@@ -48,18 +48,20 @@ function renderFormula(formula: string, displayMode: boolean): string {
 export function MathRenderer({ content, className = "" }: MathRendererProps) {
   if (!content) return null
 
-  const parts = normalizeFormulaText(content).split(
-    /(\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g
-  )
+  const normalized = normalizeFormulaText(content)
+  const parts = normalized.split(MATH_REGEX)
 
   return (
     <div className={`leading-relaxed text-sm ${className}`}>
       {parts.map((part, index) => {
+        if (!part) return null
+
+        // Display math: $$ ... $$
         if (part.startsWith("$$") && part.endsWith("$$")) {
           return (
             <div
               key={index}
-              className="my-2.5 overflow-x-auto rounded-md bg-slate-900/5 px-3 py-1.5 text-center dark:bg-white/5"
+              className="my-3 overflow-x-auto rounded-xl bg-slate-50/80 border border-slate-200/60 px-4 py-2 text-center shadow-2xs dark:bg-white/5"
               dangerouslySetInnerHTML={{
                 __html: renderFormula(part.slice(2, -2), true),
               }}
@@ -67,13 +69,48 @@ export function MathRenderer({ content, className = "" }: MathRendererProps) {
           )
         }
 
+        // Inline math: $ ... $
         if (part.startsWith("$") && part.endsWith("$")) {
+          const innerMath = part.slice(1, -1)
+          const isMatrixOrEnv = /\\begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|array)\}/.test(
+            innerMath
+          )
+
+          if (isMatrixOrEnv) {
+            return (
+              <span
+                key={index}
+                className="mx-1 inline-flex items-center overflow-x-auto max-w-full rounded-lg border border-slate-200/80 bg-slate-50/90 px-2 py-1 text-slate-900 align-middle shadow-2xs dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-100"
+                dangerouslySetInnerHTML={{
+                  __html: renderFormula(innerMath, false),
+                }}
+              />
+            )
+          }
+
           return (
             <span
               key={index}
-              className="mx-0.5 inline-block rounded border border-indigo-100/60 bg-indigo-50 px-1.5 py-0.5 text-[0.9em] text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-200"
+              className="mx-0.5 inline-block rounded border border-indigo-100/60 bg-indigo-50/70 px-1.5 py-0.5 text-[0.9em] text-indigo-950 align-baseline dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-200"
               dangerouslySetInnerHTML={{
-                __html: renderFormula(part.slice(1, -1), false),
+                __html: renderFormula(innerMath, false),
+              }}
+            />
+          )
+        }
+
+        // Raw matrix or environment without dollar signs
+        if (
+          /^\\begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|array)\}/.test(
+            part.trim()
+          )
+        ) {
+          return (
+            <div
+              key={index}
+              className="my-3 overflow-x-auto rounded-xl bg-slate-50/90 border border-slate-200/80 px-4 py-2.5 text-center shadow-2xs dark:border-slate-800 dark:bg-slate-900/60"
+              dangerouslySetInnerHTML={{
+                __html: renderFormula(part, true),
               }}
             />
           )
@@ -83,7 +120,7 @@ export function MathRenderer({ content, className = "" }: MathRendererProps) {
           return (
             <span
               key={index}
-              className="mx-0.5 inline-block rounded border border-indigo-100/60 bg-indigo-50 px-1.5 py-0.5 text-[0.9em] text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-200"
+              className="mx-0.5 inline-block rounded border border-indigo-100/60 bg-indigo-50/70 px-1.5 py-0.5 text-[0.9em] text-indigo-950 align-baseline dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-200"
               dangerouslySetInnerHTML={{
                 __html: renderFormula(part, false),
               }}

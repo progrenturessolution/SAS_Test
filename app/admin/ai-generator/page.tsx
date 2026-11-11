@@ -50,6 +50,7 @@ import { MathRenderer } from "@/components/exam/MathRenderer"
 export interface GeneratedCompetitiveQuestion {
   id: string
   type: "mcq"
+  questionFormat?: "mcq" | "assertion" | "fib" | "true_false" | string
   questionText: string
   difficulty: "easy" | "medium" | "hard"
   marks: number
@@ -76,10 +77,10 @@ export default function AIGeneratorPage() {
   const STEPS = [
     { step: 1, label: "Exam" },
     { step: 2, label: "Content & Blueprint" },
-    { step: 3, label: "Blueprint" },
+    { step: 3, label: "Questions" },
     { step: 4, label: "Exam Details" },
     { step: 5, label: "Settings" },
-    { step: 6, label: "Questions" },
+    { step: 6, label: "Publish" },
   ]
 
   // Step 2: Content & Blueprint States
@@ -137,6 +138,25 @@ export default function AIGeneratorPage() {
   const [examTitle, setExamTitle] = useState("")
   const [creatingExam, setCreatingExam] = useState(false)
   const [editingQuestion, setEditingQuestion] = useState<GeneratedCompetitiveQuestion | null>(null)
+  const [formatFilter, setFormatFilter] = useState<string>("all")
+
+  const filteredGeneratedQuestions = useMemo(() => {
+    if (formatFilter === "all") return generatedQuestions
+    return generatedQuestions.filter((q) => {
+      const fmt = q.questionFormat || q.type || "mcq"
+      return fmt === formatFilter
+    })
+  }, [generatedQuestions, formatFilter])
+
+  const formatCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: generatedQuestions.length, mcq: 0, assertion: 0, fib: 0, true_false: 0 }
+    generatedQuestions.forEach((q) => {
+      const fmt = q.questionFormat || q.type || "mcq"
+      if (counts[fmt] !== undefined) counts[fmt]++
+      else counts.mcq++
+    })
+    return counts
+  }, [generatedQuestions])
 
   // Current Exam Metadata
   const currentExamMeta = useMemo(() => {
@@ -395,6 +415,11 @@ export default function AIGeneratorPage() {
       return
     }
 
+    if (totalQuestions === 0) {
+      setErrorMsg("Please specify at least one question format with count > 0 in the blueprint.")
+      return
+    }
+
     setErrorMsg(null)
     setIsGenerating(true)
     setGenerationStep(1)
@@ -404,6 +429,8 @@ export default function AIGeneratorPage() {
 
     try {
       const existingQuestionTexts = generatedQuestions.map((q) => q.questionText)
+      const targetSubject = activeSubjectTab || selectedSubject
+      const countToGenerate = totalQuestions > 0 ? totalQuestions : questionCount
 
       const res = await fetch("/api/admin/generate-competitive-questions", {
         method: "POST",
@@ -412,13 +439,14 @@ export default function AIGeneratorPage() {
         body: JSON.stringify({
           exam: selectedExam,
           grade: selectedGrade,
-          subject: selectedSubject,
+          subject: targetSubject,
           chapters: selectedChapters,
           topics: selectedTopics,
           syllabusText: uploadedSyllabusText,
           difficulty,
-          questionCount,
+          questionCount: countToGenerate,
           questionPattern: pattern,
+          blueprintFormats: blueprintFormats,
           marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
           negativeMarks: currentExamMeta.defaultNegativeMarks,
           focusPYQ,
@@ -441,8 +469,11 @@ export default function AIGeneratorPage() {
           ? selectedChapters[0]
           : selectedChapters.length > 1
           ? `${selectedChapters[0]} & ${selectedChapters.length - 1} more`
-          : selectedSubject
-      setExamTitle(`${selectedExam} ${selectedSubject} - ${chapterTitle}`)
+          : targetSubject
+      setExamTitle(`${selectedExam} ${targetSubject} - ${chapterTitle}`)
+
+      // Transition to Step 3
+      setCurrentStep(3)
 
       // Scroll smoothly to results
       window.scrollTo({ top: 0, behavior: "smooth" })
@@ -618,202 +649,8 @@ export default function AIGeneratorPage() {
           </div>
         )}
 
-        {/* ─────────────────────────────────────────────────────────────
-            MODE A: QUESTION REVIEW & PUBLISHING WORKSPACE
-        ───────────────────────────────────────────────────────────── */}
-        {generatedQuestions.length > 0 ? (
-          <div className="space-y-6">
-            {/* Action Bar Header */}
-            <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider">
-                    Ready to Publish
-                  </span>
-                  <span className="text-xs text-gray-500 font-medium">
-                    {selectedQuestionIds.size} of {generatedQuestions.length} selected
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <label className="text-xs font-bold text-gray-600 shrink-0">Exam Title:</label>
-                  <input
-                    type="text"
-                    value={examTitle}
-                    onChange={(e) => setExamTitle(e.target.value)}
-                    placeholder="Enter exam paper title..."
-                    className="px-3.5 py-2 text-sm font-semibold rounded-xl border border-gray-200 bg-gray-50/50 text-[#1E293B] w-72 sm:w-96 focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/20 focus:border-[#2D3A4A]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 flex-wrap w-full lg:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGeneratedQuestions([])
-                    setSelectedQuestionIds(new Set())
-                    setCurrentStep(1)
-                  }}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer"
-                >
-                  <RefreshCw className="w-4 h-4 text-gray-500" />
-                  <span>Configure New Batch</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSaveAsExam}
-                  disabled={creatingExam || selectedQuestionIds.size === 0}
-                  className="px-6 py-2.5 rounded-xl bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-xs sm:text-sm font-bold shadow-sm flex items-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
-                >
-                  {creatingExam ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Creating Exam Paper...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Publish as New Exam</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Generated Questions List */}
-            <div className="space-y-4">
-              {generatedQuestions.map((q, idx) => {
-                const isSelected = selectedQuestionIds.has(q.id)
-                const isExpanded = expandedSolutions.has(q.id)
-
-                return (
-                  <div
-                    key={q.id || idx}
-                    className={`bg-white rounded-2xl border transition-all p-6 shadow-xs ${
-                      isSelected
-                        ? "border-2 border-[#2D3A4A]/40 ring-1 ring-[#2D3A4A]/10"
-                        : "border-gray-200 opacity-60"
-                    }`}
-                  >
-                    {/* Question Header */}
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-2.5 flex-wrap">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleQuestionSelection(q.id)}
-                          className="w-4 h-4 rounded text-[#2D3A4A] focus:ring-[#2D3A4A] cursor-pointer"
-                        />
-                        <span className="w-7 h-7 rounded-lg bg-[#2D3A4A] text-white text-xs font-bold flex items-center justify-center">
-                          {idx + 1}
-                        </span>
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-800">
-                          {q.chapter}
-                        </span>
-                        {q.pyqReference && (
-                          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/60 flex items-center gap-1">
-                            <Target className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>{q.pyqReference}</span>
-                          </span>
-                        )}
-                        <span className="text-xs font-medium uppercase tracking-wider px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700">
-                          {q.difficulty}
-                        </span>
-                        <span className="text-xs text-gray-400 font-medium">
-                          +{q.marks} / -{q.negativeMark} marks
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setEditingQuestion(q)}
-                          className="p-2 text-gray-400 hover:text-[#2D3A4A] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-                          title="Edit Question"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteQuestion(q.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                          title="Delete Question"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Question Body */}
-                    <div className="text-sm sm:text-base font-semibold text-[#1E293B] pl-8 mb-5 leading-relaxed">
-                      <MathRenderer content={q.questionText} />
-                    </div>
-
-                    {/* 4 Options Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-8 mb-4">
-                      {q.options.map((opt, oi) => {
-                        const isCorrect = opt === q.correctAnswer
-                        const label = ["A", "B", "C", "D"][oi]
-
-                        return (
-                          <div
-                            key={oi}
-                            className={`p-3.5 rounded-xl border flex items-start gap-3 transition-all ${
-                              isCorrect
-                                ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-medium shadow-xs"
-                                : "bg-gray-50/50 border-gray-200/90 text-gray-700"
-                            }`}
-                          >
-                            <span
-                              className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
-                                isCorrect
-                                  ? "bg-emerald-600 text-white"
-                                  : "bg-white border border-gray-200 text-gray-700"
-                              }`}
-                            >
-                              {isCorrect ? "✓" : label}
-                            </span>
-                            <div className="flex-1 text-xs sm:text-sm pt-0.5">
-                              <MathRenderer content={opt} />
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* Solution Accordion */}
-                    <div className="pl-8 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleSolution(q.id)}
-                        className="text-xs font-bold text-[#2D3A4A] hover:underline flex items-center gap-1.5 cursor-pointer"
-                      >
-                        {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                        <span>{isExpanded ? "Hide Solution" : "View Step-by-Step Solution"}</span>
-                      </button>
-
-                      {isExpanded && (
-                        <div className="mt-3 p-4 rounded-xl bg-gray-50 border border-gray-200/80 text-xs sm:text-sm text-gray-700 leading-relaxed space-y-1.5">
-                          <span className="font-bold text-[#1E293B] block">
-                            Concept & Detailed Solution:
-                          </span>
-                          <MathRenderer content={q.explanation} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        ) : (
-          /* ─────────────────────────────────────────────────────────────
-              MODE B: CLEAN, FULL-PAGE CONFIGURATION STUDIO
-          ───────────────────────────────────────────────────────────── */
-          <>
-          {/* ─── 6-Step Stepper Card ─── */}
-          <div className="mb-6 bg-white rounded-2xl border border-slate-200/80 px-4 py-5 sm:px-8 shadow-xs">
+        {/* ─── 6-Step Stepper Card ─── */}
+        <div className="mb-6 bg-white rounded-2xl border border-slate-200/80 px-4 py-5 sm:px-8 shadow-xs">
             <div className="flex items-center justify-between">
               {STEPS.map((s, index) => {
                 const isCurrent = s.step === currentStep
@@ -1377,481 +1214,321 @@ export default function AIGeneratorPage() {
             </div>
           )}
 
-          <div className={currentStep === 3 ? "grid grid-cols-1 items-start gap-6 xl:grid-cols-3 xl:gap-8" : "hidden"}>
-            {/* Left 2 Columns: Chapters */}
-            <div className={currentStep === 3 ? "hidden" : "w-full space-y-6"}>
-              {/* Step 2: Chapter Selection Grid */}
-              <div className={currentStep === 2 ? "overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_45px_rgba(30,52,75,0.07)]" : "hidden"}>
-                <div className="flex flex-col justify-between gap-4 border-b border-slate-100 px-5 py-6 sm:flex-row sm:items-center sm:px-8">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-                        <Layers className="h-5 w-5" />
+          {/* ─── STEP 3: QUESTIONS REVIEW & PUBLISHING WORKSPACE ─── */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              {generatedQuestions.length === 0 ? (
+                /* Empty state when no questions generated yet */
+                <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center shadow-xs">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center mb-4">
+                    <FileQuestion className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-1">No Questions Generated Yet</h3>
+                  <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mb-6">
+                    Configure your chapter selections and question blueprint in Step 2, then click &ldquo;Create Questions&rdquo; to generate exam questions.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm transition-colors cursor-pointer inline-flex items-center gap-2"
+                  >
+                    <span>Go to Step 2 (Content & Blueprint)</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Action Bar Header Card */}
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col xl:flex-row items-start xl:items-center justify-between gap-5">
+                    <div className="flex-1 w-full xl:w-auto">
+                      <div className="flex items-center gap-2.5 mb-2 flex-wrap">
+                        <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>{generatedQuestions.length} Questions Created</span>
+                        </span>
+                        <span className="text-xs text-slate-500 font-semibold">
+                          {selectedQuestionIds.size} of {generatedQuestions.length} selected for paper
+                        </span>
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                          Total Marks: {generatedQuestions.filter((q) => selectedQuestionIds.has(q.id)).reduce((acc, q) => acc + (q.marks || 4), 0)}
+                        </span>
                       </div>
-                      <div>
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2D3A4A]">Step 2 · Content selection</p>
-                      <span className="mt-1 inline-flex text-xs font-semibold text-emerald-700">
-                        {selectedChapters.length} Selected
-                      </span>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+                        <label className="text-xs font-bold text-slate-600 shrink-0">Exam Title:</label>
+                        <input
+                          type="text"
+                          value={examTitle}
+                          onChange={(e) => setExamTitle(e.target.value)}
+                          placeholder="Enter exam paper title..."
+                          className="px-3.5 py-2 text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 text-slate-900 w-full sm:w-96 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 focus:bg-white"
+                        />
                       </div>
                     </div>
-                    <h2 className="mt-4 text-2xl font-medium tracking-tight text-slate-600">
-                      {currentExamMeta.title} {currentExamMeta.syllabusYear} chapters
-                    </h2>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {selectedSubject} · Class {selectedGrade === "both" ? "11 & 12" : selectedGrade} ·{" "}
-                      {availableChapters.length} chapters in official sequence
-                    </p>
-                    <a
-                      href={currentExamMeta.officialSyllabusUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-2 inline-flex text-[11px] font-semibold text-[#2D3A4A] underline-offset-2 hover:underline"
-                    >
-                      View official {currentExamMeta.syllabusYear} syllabus source
-                    </a>
-                  </div>
 
-                  {/* Select All & Clear Buttons */}
-                  <div className="flex flex-wrap items-center gap-2 sm:pt-8">
-                    <button
-                      type="button"
-                      onClick={handleSelectAllChapters}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 cursor-pointer"
-                    >
-                      Select All ({filteredChapters.length})
-                    </button>
-                    {selectedChapters.length > 0 && (
+                    <div className="flex items-center gap-2.5 flex-wrap w-full xl:w-auto justify-end">
                       <button
                         type="button"
-                        onClick={handleDeselectAllChapters}
-                        className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 cursor-pointer"
+                        onClick={() => {
+                          if (selectedQuestionIds.size === generatedQuestions.length) {
+                            setSelectedQuestionIds(new Set())
+                          } else {
+                            setSelectedQuestionIds(new Set(generatedQuestions.map((q) => q.id)))
+                          }
+                        }}
+                        className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
-                        Clear All
+                        <Check className="w-3.5 h-3.5 text-slate-500" />
+                        <span>
+                          {selectedQuestionIds.size === generatedQuestions.length ? "Deselect All" : "Select All"}
+                        </span>
                       </button>
-                    )}
-                  </div>
-                </div>
 
-                {/* Chapter Search Bar */}
-                <div className="relative mx-5 mt-5 sm:mx-8">
-                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={chapterSearch}
-                    onChange={(e) => setChapterSearch(e.target.value)}
-                    placeholder={`Filter ${selectedSubject} chapters (e.g. Thermodynamics, Optics, Organic)...`}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-xs text-slate-600 placeholder:text-slate-400 focus:border-[#2D3A4A] focus:bg-white focus:outline-none focus:ring-4 focus:ring-slate-100 sm:text-sm"
-                  />
-                  {chapterSearch && (
-                    <button
-                      type="button"
-                      onClick={() => setChapterSearch("")}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
-                    >
-                      <X size={14} />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep(2)}
+                        className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <Sliders className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Tweak Blueprint</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSaveAsExam}
+                        disabled={creatingExam || selectedQuestionIds.size === 0}
+                        className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold shadow-sm flex items-center gap-2 disabled:opacity-40 transition-all cursor-pointer"
+                      >
+                        {creatingExam ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                            <span>Publishing Exam...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Publish Exam ({selectedQuestionIds.size})</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Format Filter Tabs */}
+                  {generatedQuestions.length > 0 && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                      <button
+                        type="button"
+                        onClick={() => setFormatFilter("all")}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          formatFilter === "all"
+                            ? "bg-[#1E293B] text-white shadow-xs"
+                            : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        All Formats ({formatCounts.all})
+                      </button>
+                      {formatCounts.mcq > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFormatFilter("mcq")}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            formatFilter === "mcq"
+                              ? "bg-blue-600 text-white shadow-xs"
+                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          MCQ ({formatCounts.mcq})
+                        </button>
+                      )}
+                      {formatCounts.assertion > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFormatFilter("assertion")}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            formatFilter === "assertion"
+                              ? "bg-amber-600 text-white shadow-xs"
+                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Assertion & Reason ({formatCounts.assertion})
+                        </button>
+                      )}
+                      {formatCounts.fib > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFormatFilter("fib")}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            formatFilter === "fib"
+                              ? "bg-purple-600 text-white shadow-xs"
+                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Fill in the Blanks ({formatCounts.fib})
+                        </button>
+                      )}
+                      {formatCounts.true_false > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFormatFilter("true_false")}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            formatFilter === "true_false"
+                              ? "bg-cyan-600 text-white shadow-xs"
+                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          True / False ({formatCounts.true_false})
+                        </button>
+                      )}
+                    </div>
                   )}
-                </div>
 
-                {/* Chapter Pills Grid */}
-                {filteredChapters.length === 0 ? (
-                  <div className="py-12 text-center text-gray-400 text-xs">
-                    No chapters matching &ldquo;{chapterSearch}&rdquo;.
-                  </div>
-                ) : (
-                  <div className="mx-5 mt-4 grid max-h-[440px] grid-cols-1 gap-2 overflow-y-auto pb-5 sm:mx-8 sm:pb-8">
-                    {filteredChapters.map((ch) => {
-                      const isSelected = selectedChapters.includes(ch.name)
-                      const isInfoOpen = expandedChapterInfo === ch.id
+                  {/* Generated Questions List */}
+                  <div className="space-y-4">
+                    {filteredGeneratedQuestions.map((q, idx) => {
+                      const isSelected = selectedQuestionIds.has(q.id)
+                      const isExpanded = expandedSolutions.has(q.id)
+                      const formatLabel =
+                        q.questionFormat === "assertion" ? "Assertion & Reason" :
+                        q.questionFormat === "fib" ? "Fill in the Blanks" :
+                        q.questionFormat === "true_false" ? "True / False" : "MCQ"
 
                       return (
                         <div
-                          key={ch.id}
-                          className={`rounded-xl border transition-all text-left relative ${
+                          key={q.id || idx}
+                          className={`bg-white rounded-2xl border transition-all p-5 sm:p-6 shadow-xs ${
                             isSelected
-                              ? "border-emerald-300 bg-emerald-50 text-slate-700 shadow-sm"
-                              : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                              ? "border-slate-300 ring-2 ring-slate-900/5 shadow-2xs"
+                              : "border-slate-200 opacity-60 bg-slate-50/40"
                           }`}
                         >
-                          <div
-                            onClick={() => toggleChapter(ch.name)}
-                            className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-3 sm:px-4"
-                          >
-                            <div className="flex items-start gap-2.5">
-                              <div
-                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                                  isSelected
-                                    ? "bg-emerald-500 text-white"
-                                    : "border border-slate-200 bg-slate-50 text-transparent"
-                                }`}
-                              >
-                                {isSelected && <Check size={13} strokeWidth={3} />}
-                              </div>
-                              <div className="min-w-0">
-                                <span
-                                  className={`text-[10px] font-semibold uppercase tracking-wider ${
-                                    isSelected
-                                      ? "text-emerald-700"
-                                      : "text-slate-400"
-                                  }`}
-                                >
-                                  {String(filteredChapters.indexOf(ch) + 1).padStart(2, "0")} · Class {ch.grade}th
+                          {/* Question Header */}
+                          <div className="flex items-start justify-between gap-3 mb-4">
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleQuestionSelection(q.id)}
+                                className="w-4 h-4 rounded text-[#1E293B] focus:ring-[#1E293B] cursor-pointer accent-[#1E293B]"
+                              />
+                              <span className="w-7 h-7 rounded-xl bg-[#1E293B] text-white text-xs font-bold flex items-center justify-center shadow-2xs">
+                                {idx + 1}
+                              </span>
+                              <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800">
+                                {q.chapter}
+                              </span>
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg border ${
+                                q.questionFormat === "assertion"
+                                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                                  : q.questionFormat === "fib"
+                                  ? "bg-purple-50 text-purple-800 border-purple-200"
+                                  : q.questionFormat === "true_false"
+                                  ? "bg-cyan-50 text-cyan-800 border-cyan-200"
+                                  : "bg-blue-50 text-blue-800 border-blue-200"
+                              }`}>
+                                {formatLabel}
+                              </span>
+                              {q.pyqReference && (
+                                <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/60 flex items-center gap-1">
+                                  <Target className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>{q.pyqReference}</span>
                                 </span>
-                                <h4 className="mt-1 truncate text-sm font-medium leading-snug text-slate-700 sm:text-[15px]">
-                                  {ch.name}
-                                </h4>
-                              </div>
+                              )}
+                              <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                                {q.difficulty}
+                              </span>
+                              <span className="text-xs text-slate-500 font-semibold">
+                                +{q.marks} / -{q.negativeMark} marks
+                              </span>
                             </div>
 
-                            {/* Subtopics counter toggle */}
-                            {ch.subtopics && ch.subtopics.length > 0 && (
+                            <div className="flex items-center gap-1">
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setExpandedChapterInfo(isInfoOpen ? null : ch.id)
-                                }}
-                                className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-semibold transition-colors ${
-                                  isSelected
-                                    ? "bg-white text-emerald-700 hover:bg-emerald-100"
-                                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                                }`}
+                                onClick={() => setEditingQuestion(q)}
+                                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                                title="Edit Question"
                               >
-                                {ch.subtopics.length} topics
+                                <Edit3 size={16} />
                               </button>
-                            )}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteQuestion(q.id)}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                                title="Delete Question"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </div>
 
-                          {/* Subtopics expansion preview */}
-                          {isInfoOpen && ch.subtopics && (
-                            <div
-                              className={`px-3.5 pb-3 pt-1 border-t text-xs ${
-                                isSelected
-                                  ? "border-white/20 text-gray-200"
-                                  : "border-gray-100 text-gray-600"
-                              }`}
+                          {/* Question Statement with LaTeX Math & Matrices */}
+                          <div className="text-sm sm:text-base font-semibold text-slate-900 pl-0 sm:pl-9 mb-5 leading-relaxed overflow-x-auto">
+                            <MathRenderer content={q.questionText} />
+                          </div>
+
+                          {/* Options Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-0 sm:pl-9 mb-4">
+                            {q.options.map((opt, oi) => {
+                              const isCorrect = opt === q.correctAnswer
+                              const label = ["A", "B", "C", "D"][oi]
+
+                              return (
+                                <div
+                                  key={oi}
+                                  className={`p-3.5 rounded-xl border flex items-start gap-3 transition-all ${
+                                    isCorrect
+                                      ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-medium shadow-2xs"
+                                      : "bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white"
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
+                                      isCorrect
+                                        ? "bg-emerald-600 text-white shadow-2xs"
+                                        : "bg-white border border-slate-200 text-slate-700"
+                                    }`}
+                                  >
+                                    {isCorrect ? "✓" : label}
+                                  </span>
+                                  <div className="flex-1 text-xs sm:text-sm pt-0.5 overflow-x-auto">
+                                    <MathRenderer content={opt} />
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+
+                          {/* Solution Accordion */}
+                          <div className="pl-0 sm:pl-9 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleSolution(q.id)}
+                              className="text-xs font-bold text-slate-700 hover:text-slate-900 hover:underline flex items-center gap-1.5 cursor-pointer"
                             >
-                              <span className="font-bold block mb-1">Key concepts included:</span>
-                              <ul className="list-disc list-inside space-y-0.5 text-[11px]">
-                                {ch.subtopics.map((s, si) => (
-                                  <li key={si} className="truncate">
-                                    {s}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                              {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                              <span>{isExpanded ? "Hide Solution" : "View Step-by-Step Solution"}</span>
+                            </button>
+
+                            {isExpanded && (
+                              <div className="mt-3 p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed space-y-2 overflow-x-auto">
+                                <span className="font-bold text-slate-900 block text-xs uppercase tracking-wider text-slate-500">
+                                  Concept & Detailed Solution:
+                                </span>
+                                <MathRenderer content={q.explanation} />
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )
                     })}
                   </div>
-                )}
-
-                {/* Optional Collapsible: Custom Topics & Syllabus PDF */}
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvancedInputs(!showAdvancedInputs)}
-                    className="text-xs font-bold text-[#2D3A4A] hover:underline flex items-center gap-1.5 cursor-pointer"
-                  >
-                    {showAdvancedInputs ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    <span>
-                      {showAdvancedInputs
-                        ? "Hide Custom Topics & PDF Upload"
-                        : "➕ Need custom topics or upload coaching syllabus PDF? (Optional)"}
-                    </span>
-                  </button>
-
-                  {showAdvancedInputs && (
-                    <div className="mt-4 p-5 rounded-xl bg-gray-50 border border-gray-200/80 space-y-4">
-                      {/* Custom Topics Input */}
-                      <div>
-                        <label className="text-xs font-bold text-gray-700 block mb-1.5">
-                          Specify Custom Topics or Numerical Models (Optional):
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={manualTopicInput}
-                            onChange={(e) => setManualTopicInput(e.target.value)}
-                            onKeyDown={handleManualTopicKeyDown}
-                            placeholder="e.g. Carnot Engine, Projectile on Incline, SN1 vs SN2..."
-                            className="flex-1 px-3 py-2 text-xs rounded-xl border border-gray-200 bg-white text-[#1E293B] focus:outline-none focus:border-[#2D3A4A]"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddManualTopic}
-                            disabled={!manualTopicInput.trim()}
-                            className="px-3.5 py-2 rounded-xl bg-[#2D3A4A] text-white text-xs font-semibold disabled:opacity-50 cursor-pointer"
-                          >
-                            Add Topic
-                          </button>
-                        </div>
-
-                        {selectedTopics.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2.5">
-                            {selectedTopics.map((topic) => (
-                              <span
-                                key={topic}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#2D3A4A] text-white"
-                              >
-                                <span>{topic}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveTopic(topic)}
-                                  className="hover:bg-white/20 rounded p-0.5"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* PDF Syllabus Upload */}
-                      <div className="pt-2 border-t border-gray-200">
-                        <input
-                          ref={pdfInputRef}
-                          type="file"
-                          accept="application/pdf"
-                          onChange={handlePdfUpload}
-                          className="hidden"
-                        />
-
-                        {uploadedPdf ? (
-                          <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-200">
-                            <div className="flex items-center gap-3">
-                              <FileCheck2 className="w-5 h-5 text-emerald-600" />
-                              <div>
-                                <span className="text-xs font-bold text-gray-800">
-                                  {uploadedPdf.name}
-                                </span>
-                                <span className="text-[11px] text-gray-500 block">
-                                  Extracted ~{uploadedPdf.wordCount} words
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={handleRemovePdf}
-                              className="text-xs text-red-600 hover:underline font-semibold"
-                            >
-                              Remove PDF
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                            <div className="text-xs text-gray-600">
-                              <span className="font-bold block text-gray-800">
-                                Import Coaching Syllabus / Notes PDF
-                              </span>
-                              Upload notes PDF to generate questions strictly aligned with coaching
-                              handouts.
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => pdfInputRef.current?.click()}
-                              disabled={isUploadingPdf}
-                              className="px-4 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-100 text-xs font-bold text-gray-700 flex items-center gap-2 shadow-xs cursor-pointer"
-                            >
-                              {isUploadingPdf ? (
-                                <>
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2D3A4A]" />
-                                  <span>Reading PDF...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="w-3.5 h-3.5 text-[#2D3A4A]" />
-                                  <span>Select Syllabus PDF</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        )}
-
-                        {pdfError && <p className="text-xs text-red-500 mt-2">{pdfError}</p>}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                </>
+              )}
             </div>
-
-            {/* Right Column: Blueprint Settings & Live Summary Card */}
-            <div className={currentStep === 3 ? "w-full space-y-6 xl:col-span-3" : "hidden"}>
-              {/* Exam Blueprint Card */}
-              <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_45px_rgba(30,52,75,0.08)]">
-                <div className="border-b border-slate-100 px-5 py-6 sm:px-8">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
-                      <Sliders className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2D3A4A]">Step 3 · Final blueprint</p>
-                      <h2 className="mt-1 text-2xl font-medium tracking-tight text-slate-600">Design your question paper</h2>
-                      <p className="mt-1 text-sm leading-relaxed text-slate-500">Choose the size, difficulty and format. Your AI-generated paper will follow these settings.</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Number of Questions */}
-                <div className="grid gap-6 p-5 sm:p-8 xl:grid-cols-2 xl:gap-x-10">
-                  <div>
-                    <p className="text-sm font-medium text-slate-600">Number of questions</p>
-                    <p className="mt-1 text-xs text-slate-400">How long should this paper be?</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {[5, 10, 15, 20, 25, 30].map((cnt) => (
-                      <button
-                        key={cnt}
-                        type="button"
-                        onClick={() => setQuestionCount(cnt)}
-                        className={`rounded-2xl border py-3 text-xs font-bold transition-all cursor-pointer ${
-                          questionCount === cnt
-                            ? "border-violet-400 bg-violet-50 text-violet-800 shadow-sm ring-1 ring-violet-200"
-                            : "border-slate-200 bg-slate-50 text-slate-600 hover:border-violet-200 hover:bg-white"
-                        }`}
-                      >
-                        {cnt} Qs
-                      </button>
-                    ))}
-                  </div>
-                
-                {/* Difficulty Distribution */}
-                <div className="px-5 sm:px-8 xl:px-0">
-                  <p className="mb-1 text-sm font-medium text-slate-600">Difficulty level</p>
-                  <p className="mb-2 text-xs text-slate-400">Choose the challenge level for learners.</p>
-                  <select
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value as any)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-800 focus:border-[#2D3A4A] focus:bg-white focus:outline-none sm:text-sm"
-                  >
-                    <option value="balanced">Balanced (NTA Standard 30:50:20)</option>
-                    <option value="easy">Easy (Concept & Formula Foundations)</option>
-                    <option value="medium">Medium (Standard Entrance Level)</option>
-                    <option value="hard">Hard (Rank Booster / High Rigor)</option>
-                  </select>
-                </div>
-
-                {/* Question Pattern */}
-                <div className="px-5 sm:px-8 xl:px-0">
-                  <p className="mb-1 text-sm font-medium text-slate-600">Question format</p>
-                  <p className="mb-2 text-xs text-slate-400">Select how questions should be structured.</p>
-                  <select
-                    value={pattern}
-                    onChange={(e) => setPattern(e.target.value as any)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-800 focus:border-[#2D3A4A] focus:bg-white focus:outline-none sm:text-sm"
-                  >
-                    <option value="mcq_single">Single Choice MCQ (4 Options)</option>
-                    <option value="assertion_reason">Assertion & Reason Pattern</option>
-                    <option value="mixed">Mixed NTA Comprehensive Pattern</option>
-                  </select>
-                </div>
-
-                {/* PYQ Switch */}
-                <div className="mx-5 flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:mx-8 xl:mx-0">
-                  <input
-                    id="pyq-check"
-                    type="checkbox"
-                    checked={focusPYQ}
-                    onChange={(e) => setFocusPYQ(e.target.checked)}
-                    className="w-4 h-4 rounded text-[#2D3A4A] focus:ring-[#2D3A4A] cursor-pointer mt-0.5"
-                  />
-                  <label
-                    htmlFor="pyq-check"
-                    className="text-xs text-gray-600 cursor-pointer select-none leading-snug"
-                  >
-                    <span className="block font-medium text-slate-600">
-                      Prioritize 10-year PYQ models
-                    </span>
-                    Formulate questions modeling real NTA & state entrance past year questions.
-                  </label>
-                </div>
-
-                {/* Live Calculation Summary */}
-                <div className="mx-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs shadow-sm sm:mx-8 xl:mx-0">
-                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Paper summary</p>
-                  <div className="flex justify-between text-slate-500">
-                    <span>Target Exam:</span>
-                    <span className="font-medium text-slate-600">{currentExamMeta.title}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>Subject & Class:</span>
-                    <span className="font-medium text-slate-600">
-                      {selectedSubject} (Class {selectedGrade === "both" ? "11 & 12" : selectedGrade}
-                      )
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>Chapters Selected:</span>
-                    <span className="font-medium text-slate-600">
-                      {selectedChapters.length > 0
-                        ? `${selectedChapters.length} chapter(s)`
-                        : "None selected"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>Marking Scheme:</span>
-                    <span className="font-medium text-slate-600">
-                      +{currentExamMeta.defaultMarksPerQuestion} / -
-                      {currentExamMeta.defaultNegativeMarks} marks
-                    </span>
-                  </div>
-                  <div className="mt-2 flex justify-between border-t border-slate-200 pt-3 text-sm font-medium text-[#2D3A4A]">
-                    <span>Total Paper Marks:</span>
-                    <span>{questionCount * currentExamMeta.defaultMarksPerQuestion} Marks</span>
-                  </div>
-                </div>
-
-                {/* Big Generate Action Button */}
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={
-                    isGenerating ||
-                    (selectedChapters.length === 0 &&
-                      selectedTopics.length === 0 &&
-                      !uploadedSyllabusText)
-                  }
-                  className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#2D3A4A] px-6 py-4 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#1e2a38] disabled:pointer-events-none disabled:opacity-50 cursor-pointer xl:col-span-2"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span className="text-xs">
-                        {generationStep === 1
-                          ? "Analyzing NTA PYQs..."
-                          : generationStep === 2
-                          ? "Formulating LaTeX & Options..."
-                          : "Validating Unique Questions..."}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 text-amber-300" />
-                      <span>
-                        Generate {questionCount} {selectedExam} Questions
-                      </span>
-                    </>
-                  )}
-                </button>
-
-                {selectedChapters.length === 0 &&
-                  selectedTopics.length === 0 &&
-                  !uploadedSyllabusText && (
-                    <p className="text-[11px] text-amber-600 text-center font-medium">
-                      👆 Please select at least one chapter from Step 3 above.
-                    </p>
-                  )}
-              </div>
-            </div>
-          </div>
-
-          </div>
-
-          <div className="mt-6 flex items-center justify-between gap-3">
+          )}
+          {/* ─── Bottom Navigation Actions ─── */}
+          <div className="mt-8 flex items-center justify-between gap-3 pt-2">
             <button
               type="button"
               onClick={() => {
@@ -1865,20 +1542,65 @@ export default function AIGeneratorPage() {
             >
               Back
             </button>
-            {currentStep < 6 && (
+
+            {currentStep === 1 && (
               <button
                 type="button"
-                onClick={() => setCurrentStep((step) => Math.min(6, step + 1))}
-                disabled={!canContinueFromStep(currentStep)}
+                onClick={() => setCurrentStep(2)}
+                disabled={selectedSubjects.length === 0}
                 className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span>Next Step</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             )}
+
+            {currentStep === 2 && (
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={
+                  isGenerating ||
+                  (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
+                  totalQuestions === 0
+                }
+                className="px-7 py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                    <span>Generating Questions...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>Create Questions ({totalQuestions})</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {currentStep === 3 && (
+              <button
+                type="button"
+                onClick={handleSaveAsExam}
+                disabled={creatingExam || selectedQuestionIds.size === 0}
+                className="px-7 py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+              >
+                {creatingExam ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                    <span>Publishing Exam Paper...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Publish Exam Paper</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
-          </>
-        )}
       </div>
     </div>
 

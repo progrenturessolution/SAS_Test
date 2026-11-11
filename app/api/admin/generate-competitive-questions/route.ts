@@ -39,6 +39,7 @@ export async function POST(req: Request) {
       negativeMarks = 1,
       focusPYQ = true,
       existingQuestions = [],
+      blueprintFormats = [],
     } = body
 
     if (session.instituteId) {
@@ -75,6 +76,14 @@ export async function POST(req: Request) {
     if (!apiKey) {
       return NextResponse.json({ error: "GEMINI_API_KEY is not configured in .env" }, { status: 500 })
     }
+
+    const activeBlueprintFormats = Array.isArray(blueprintFormats)
+      ? blueprintFormats.filter((f: any) => f.checked && (Number(f.count) > 0))
+      : []
+
+    const blueprintSummary = activeBlueprintFormats.length > 0
+      ? activeBlueprintFormats.map((f: any) => `- ${f.label} (${f.id}): ${f.count} questions, ${f.marks} marks each`).join("\n")
+      : ""
 
     const count = Math.min(Math.max(Number(questionCount) || 5, 1), 30)
     const chaptersList = chaptersArray.length > 0
@@ -114,17 +123,31 @@ DIFFICULTY LEVEL: ${difficulty.toUpperCase()}
 QUESTION PATTERN: ${questionPattern.toUpperCase()}
 MARKS PER QUESTION: +${marksPerQuestion}, NEGATIVE MARKS: -${negativeMarks}
 
+${blueprintSummary ? `QUESTION FORMAT SPECIFICATION:\nFollow this blueprint format distribution strictly:\n${blueprintSummary}\n` : ""}
+- For "mcq": standard 4 distinct options with single correct choice.
+- For "assertion": formulate Assertion (A) and Reason (R) statements in questionText. The options must be standard Assertion-Reason options:
+  1. Both (A) and (R) are true and (R) is the correct explanation of (A)
+  2. Both (A) and (R) are true but (R) is not the correct explanation of (A)
+  3. (A) is true but (R) is false
+  4. (A) is false but (R) is true
+- For "fib" (Fill in the Blanks): formulate statement with a blank "______" or finding a missing mathematical/physical value. Options are 4 possible values.
+- For "true_false": provide a conceptual statement. Options are ["True", "False"].
+
 MATHEMATICAL & SCIENTIFIC FORMATTING RULES:
 - Put every mathematical, physics, chemistry, and biology formula inside LaTeX delimiters: use $...$ for inline formulas and $$...$$ for displayed formulas.
-- Use standard LaTeX commands for fractions, roots, powers, indices, vectors, units, matrices, cases, limits, derivatives, integrals, summations, trigonometry, and Greek letters. Examples: $\\frac{a}{b}$, $\\sqrt{x}$, $\\vec{v}$, $\\mathbf{F}=m\\mathbf{a}$, $\\lim_{x\\to 0}\\frac{\\sin x}{x}$, $\\int_0^1 f(x)\\,dx$, $\\sum_{i=1}^{n} i$, $\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}$.
-- Physics formulas must preserve vectors, tensors, angles, units, constants, signs, powers, subscripts, and scientific notation: $\\Delta x$, $\\theta$, $\\omega$, $9.8\\,\\mathrm{m\\,s^{-2}}$, $6.02\\times10^{23}$.
+- MATRICES & DETERMINANTS (CRITICAL):
+  - Always write matrices with standard LaTeX matrix environments: $\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}$, $\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$, or $\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}$.
+  - Use double backslashes for row breaks in the matrix (e.g. \\\\).
+  - In the JSON output, escape all backslashes properly so row separation is written as double backslashes in JSON strings.
+  - Never collapse matrix rows into a single row.
+- Physics formulas must preserve vectors, cross/dot products, units, tensors, angles, constants, signs, powers, subscripts, and scientific notation: $\\vec{v}$, $\\vec{\\tau} = \\vec{r} \\times \\vec{F}$, $\\Delta x$, $\\theta$, $\\omega$, $9.8\\,\\mathrm{m\\,s^{-2}}$, $6.02\\times10^{23}$.
 - Chemistry formulas must preserve subscripts, superscript charges, oxidation states, equilibrium arrows, states, and conditions: $2\\mathrm{H_2}+\\mathrm{O_2}\\rightarrow2\\mathrm{H_2O}$, $\\mathrm{SO_4^{2-}}$, $\\mathrm{NH_4^+}$, $\\rightleftharpoons$, $\\xrightarrow{\\Delta}$.
 - Biology formulas and genetics notation must use LaTeX too: $p^2+2pq+q^2=1$, $\\mathrm{Aa}\\times\\mathrm{Aa}$, $\\mathrm{ATP}\\rightarrow\\mathrm{ADP}+\\mathrm{P_i}$.
 - Never write raw Unicode replacement characters or programming escape sequences for formulas. Never remove backslashes from LaTeX commands.
-- Options must be 4 distinct, plausible choices (labeled without "A)" prefixes, just the clear option text).
-- "correctAnswer" must match one of the 4 strings in options EXACTLY.
-- "explanation" must provide a thorough step-by-step solution, the formula used, and derivation.
-- CRITICAL JSON ESCAPING: In the JSON output, escape all LaTeX backslashes properly (e.g. write "\\alpha", "\\frac{a}{b}", "\\vec{v}", "\\theta", "\\Delta" with double backslashes in JSON strings).
+- Options must be distinct, plausible choices (labeled without "A)" prefixes, just the clear option text).
+- "correctAnswer" must match one of the options EXACTLY.
+- "explanation" must provide a thorough step-by-step solution, the formula used, and derivation with full LaTeX formatting.
+- CRITICAL JSON ESCAPING: In the JSON output, escape all LaTeX backslashes properly (e.g. write "\\alpha", "\\frac{a}{b}", "\\vec{v}", "\\theta", "\\Delta", "\\begin{bmatrix}..." with escaped backslashes in JSON strings).
 
 OUTPUT FORMAT:
 Return ONLY a valid JSON array of question objects (no markdown code blocks, no intro, no extra text).
@@ -132,12 +155,13 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
   {
     "id": string (unique identifier like "pyq_1"),
     "type": "mcq",
+    "questionFormat": "mcq" | "assertion" | "fib" | "true_false",
     "questionText": string (clear question statement with proper LaTeX formatting),
     "difficulty": "easy" | "medium" | "hard",
     "marks": number (${marksPerQuestion}),
     "negativeMark": number (${negativeMarks}),
     "options": [string, string, string, string],
-    "correctAnswer": string (MUST EXACTLY match one of the 4 options),
+    "correctAnswer": string (MUST EXACTLY match one of the options),
     "explanation": string (step-by-step solution with formulas in LaTeX/markdown),
     "chapter": string (the specific chapter name),
     "pyqReference": string (e.g. "NEET 2023", "JEE Main 2024 Shift 2", "MHT-CET 2022")
@@ -239,9 +263,16 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
         correctAnswer = options[0]
       }
 
+      const formatType = ["mcq", "assertion", "fib", "true_false"].includes(q.questionFormat)
+        ? q.questionFormat
+        : ["mcq", "assertion", "fib", "true_false"].includes(q.type)
+        ? q.type
+        : "mcq"
+
       formattedQuestions.push({
         id: `pyq_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
         type: "mcq",
+        questionFormat: formatType,
         questionText,
         difficulty: ["easy", "medium", "hard"].includes(q.difficulty) ? q.difficulty : "medium",
         marks: Number(q.marks) || marksPerQuestion,
