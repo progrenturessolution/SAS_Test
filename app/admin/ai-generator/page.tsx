@@ -65,7 +65,19 @@ export default function AIGeneratorPage() {
   const [selectedExam, setSelectedExam] = useState<ExamTarget>("NEET")
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel | "both">("12")
   const [selectedSubject, setSelectedSubject] = useState<CompetitiveSubject>("Physics")
+  const [selectedSubjects, setSelectedSubjects] = useState<CompetitiveSubject[]>(["Physics", "Chemistry", "Biology"])
+  const [examDropdownOpen, setExamDropdownOpen] = useState(false)
+  const [subjectDropdownOpen, setSubjectDropdownOpen] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
+
+  const STEPS = [
+    { step: 1, label: "Exam" },
+    { step: 2, label: "Content" },
+    { step: 3, label: "Blueprint" },
+    { step: 4, label: "Exam Details" },
+    { step: 5, label: "Settings" },
+    { step: 6, label: "Questions" },
+  ]
 
   // Chapter Selection
   const [selectedChapters, setSelectedChapters] = useState<string[]>([])
@@ -137,12 +149,38 @@ export default function AIGeneratorPage() {
   const handleExamChange = (exam: ExamTarget) => {
     setSelectedExam(exam)
     const targetMeta = EXAM_TARGETS.find((e) => e.id === exam)
-    if (targetMeta && !targetMeta.subjects.includes(selectedSubject)) {
-      setSelectedSubject(targetMeta.subjects[0])
+    if (targetMeta) {
+      setSelectedSubjects(targetMeta.subjects)
+      setSelectedSubject(targetMeta.subjects[0] || "Physics")
     }
     // Reset selected chapters when exam changes
     setSelectedChapters([])
     setChapterSearch("")
+    setExamDropdownOpen(false)
+  }
+
+  // Handle multi-select toggle of subjects in Step 1
+  const handleToggleSubject = (sub: CompetitiveSubject) => {
+    if (selectedSubjects.includes(sub)) {
+      if (selectedSubjects.length > 1) {
+        const next = selectedSubjects.filter((s) => s !== sub)
+        setSelectedSubjects(next)
+        if (selectedSubject === sub) setSelectedSubject(next[0])
+      }
+    } else {
+      const next = [...selectedSubjects, sub]
+      setSelectedSubjects(next)
+      if (!selectedSubject) setSelectedSubject(sub)
+    }
+  }
+
+  const handleRemoveSubject = (e: React.MouseEvent, sub: CompetitiveSubject) => {
+    e.stopPropagation()
+    if (selectedSubjects.length > 1) {
+      const next = selectedSubjects.filter((s) => s !== sub)
+      setSelectedSubjects(next)
+      if (selectedSubject === sub) setSelectedSubject(next[0])
+    }
   }
 
   // Handle grade change
@@ -155,12 +193,18 @@ export default function AIGeneratorPage() {
   // Handle subject change
   const handleSubjectChange = (subject: CompetitiveSubject) => {
     setSelectedSubject(subject)
+    if (!selectedSubjects.includes(subject)) {
+      setSelectedSubjects([subject])
+    }
     setSelectedChapters([])
     setChapterSearch("")
   }
 
   const canContinueFromStep = (step: number) => {
-    if (step === 3) {
+    if (step === 1) {
+      return selectedSubjects.length > 0
+    }
+    if (step === 2) {
       return selectedChapters.length > 0 || selectedTopics.length > 0 || Boolean(uploadedSyllabusText)
     }
     return true
@@ -447,49 +491,40 @@ export default function AIGeneratorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB] pb-16">
-      {/* ─── Top Studio Banner ─── */}
-      <div className="border-b border-slate-200 bg-white px-4 py-5 sm:px-8 lg:px-10">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-5 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
-              <Link href="/admin/exams" className="hover:text-[#2D3A4A] transition-colors">
-                Exams
-              </Link>
-              <span>/</span>
-              <span className="text-[#2D3A4A]">Competitive Test Studio</span>
-            </div>
-            <h1 className="flex items-center gap-3 text-2xl font-medium tracking-tight text-slate-600 sm:text-3xl">
-              <span className="rounded-2xl bg-[#2D3A4A] p-2.5 text-white shadow-sm">
-                <GraduationCap className="w-6 h-6" />
-              </span>
-              <span>Competitive Exam Studio</span>
-            </h1>
-            <p className="mt-2 max-w-2xl text-xs leading-relaxed text-slate-500 sm:text-sm">
-              Create authentic, curriculum-aligned entrance examination papers for NEET, JEE Main,
-              JEE Advanced, and MHT-CET with verified formulas and step-by-step solutions.
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#F8FAFC] pb-16 pt-6 sm:pt-8">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-8 lg:px-10">
+        {/* ─── Breadcrumbs ─── */}
+        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-2">
+          <Link href="/admin/exams" className="hover:text-slate-900 transition-colors">
+            Exams
+          </Link>
+          <span>/</span>
+          <span className="text-slate-900 font-semibold">Competitive Test</span>
+        </div>
 
-          {/* Quick Badges */}
-          <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/60 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+        {/* ─── Studio Title & Badges Header ─── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            Competitive Test Studio
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0] text-xs font-semibold">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#059669]" />
               <span>NCERT Aligned</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200/60 font-medium">
-              <Zap className="w-3.5 h-3.5 text-blue-600" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] text-xs font-semibold">
+              <Zap className="w-3.5 h-3.5 text-[#2563EB]" />
               <span>10-Yr PYQ Bank</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5 text-slate-700" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold">
+              <Layers className="w-3.5 h-3.5 text-slate-600" />
               <span>Zero Repetition</span>
             </span>
           </div>
         </div>
-      </div>
 
-      <div className="mx-auto mt-6 max-w-[1440px] space-y-6 px-4 sm:px-8 lg:mt-8 lg:px-10">
+        <div className="space-y-6">
         {/* Error Notification */}
         {errorMsg && (
           <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm flex items-center justify-between shadow-xs">
@@ -700,231 +735,198 @@ export default function AIGeneratorPage() {
               MODE B: CLEAN, FULL-PAGE CONFIGURATION STUDIO
           ───────────────────────────────────────────────────────────── */
           <>
-          <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_12px_35px_rgba(30,52,75,0.07)] sm:p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#2D3A4A] text-white shadow-sm">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-medium tracking-tight text-slate-600">AI Question Studio</p>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                      Draft setup
-                    </span>
-                  </div>
-                  <p className="mt-0.5 truncate text-xs text-slate-500">
-                    {currentStep === 1 ? "Choose your target exam" : currentStep === 2 ? "Set class and subject" : currentStep === 3 ? "Pick chapters and topics" : "Define your paper blueprint"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <span className="text-[11px] font-semibold text-slate-400">Step</span>
-                <span className="rounded-lg bg-[#2D3A4A] px-2.5 py-1.5 text-xs font-extrabold text-white">
-                  {currentStep} <span className="font-medium text-slate-300">/ 4</span>
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-4 gap-1 sm:gap-2">
-              {[1, 2, 3, 4].map((step) => {
-                const isCurrent = step === currentStep
-                const isComplete = step < currentStep
-                const label = step === 1 ? "Exam" : step === 2 ? "Profile" : step === 3 ? "Content" : "Blueprint"
+          {/* ─── 6-Step Stepper Card ─── */}
+          <div className="mb-6 bg-white rounded-2xl border border-slate-200/80 px-4 py-5 sm:px-8 shadow-xs">
+            <div className="flex items-center justify-between">
+              {STEPS.map((s, index) => {
+                const isCurrent = s.step === currentStep
+                const isComplete = s.step < currentStep
 
                 return (
-                  <div key={step} className="relative">
-                    {step < 4 && (
-                      <span className={`absolute left-[calc(50%+18px)] right-[calc(-50%+18px)] top-4 h-px ${
-                        step < currentStep ? "bg-emerald-400" : "bg-slate-200"
-                      }`} />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => step <= currentStep && setCurrentStep(step)}
-                      className="group relative z-10 flex w-full flex-col items-center gap-1.5"
-                      aria-label={`Go to step ${step}`}
-                    >
-                      <span className={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-extrabold transition-all ${
-                        isCurrent
-                          ? "bg-[#2D3A4A] text-white ring-4 ring-slate-100"
-                          : isComplete
+                  <div key={s.step} className="flex-1 flex items-center">
+                    <div className="flex flex-col items-center flex-1">
+                      <button
+                        type="button"
+                        onClick={() => s.step <= currentStep && setCurrentStep(s.step)}
+                        className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                          isCurrent
+                            ? "bg-[#1E293B] text-white shadow-sm"
+                            : isComplete
                             ? "bg-emerald-500 text-white"
-                            : "bg-white text-slate-400 ring-1 ring-slate-200"
-                      }`}>
-                        {isComplete ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : step}
+                            : "bg-white text-slate-400 border border-slate-300"
+                        }`}
+                      >
+                        {isComplete ? <Check className="w-4 h-4 stroke-[2.5]" /> : s.step}
+                      </button>
+                      <span
+                        className={`mt-2 text-xs font-semibold transition-colors ${
+                          isCurrent ? "text-slate-900" : isComplete ? "text-emerald-700" : "text-slate-400"
+                        }`}
+                      >
+                        {s.label}
                       </span>
-                      <span className={`text-[10px] font-bold sm:text-[11px] ${
-                        isCurrent ? "text-[#2D3A4A]" : isComplete ? "text-emerald-600" : "text-slate-400"
-                      }`}>
-                        {label}
-                      </span>
-                    </button>
+                    </div>
+                    {index < STEPS.length - 1 && (
+                      <div
+                        className={`h-[1.5px] w-full max-w-[120px] -mt-5 transition-colors ${
+                          s.step < currentStep ? "bg-emerald-400" : "bg-slate-200"
+                        }`}
+                      />
+                    )}
                   </div>
                 )
               })}
             </div>
           </div>
 
-          <div className={currentStep === 4 ? "grid grid-cols-1 items-start gap-6 xl:grid-cols-3 xl:gap-8" : "grid grid-cols-1 items-start gap-6"}>
-            {/* Left 2 Columns: Exam, Class, Subject & Chapters */}
-            <div className={currentStep === 4 ? "hidden" : "w-full space-y-6"}>
-              {/* Step 1: Target Entrance Exam */}
-              <div className={currentStep === 1 ? "overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_45px_rgba(30,52,75,0.07)]" : "hidden"}>
-                <div className="border-b border-slate-100 px-5 py-6 sm:px-8">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#2D3A4A] text-white shadow-lg shadow-slate-300">
-                      <GraduationCap className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2D3A4A]">Step 1 · Target exam</p>
-                      <h2 className="mt-1 text-2xl font-medium tracking-tight text-slate-600">Choose your exam</h2>
-                      <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-500">Select the exam you are building this paper for. We will automatically tailor subjects, marks and syllabus.</p>
-                    </div>
-                  </div>
-                </div>
+          {/* ─── STEP 1: EXAM DETAILS ─── */}
+          {currentStep === 1 && (
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs">
+              <div className="mb-8">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  STEP 1 · EXAM DETAILS
+                </p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+                  Choose Exam, Class and Subjects
+                </h2>
+              </div>
 
-                <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2 sm:p-8">
-                  {EXAM_TARGETS.map((exam) => {
-                    const isSelected = selectedExam === exam.id
-                    return (
-                      <button
-                        key={exam.id}
-                        type="button"
-                        onClick={() => handleExamChange(exam.id)}
-                        className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 cursor-pointer ${
-                          isSelected
-                            ? "border-[#2D3A4A] bg-[#f4f7fa] shadow-md ring-1 ring-[#2D3A4A]"
-                            : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold ${
-                              exam.id === "NEET" ? "bg-emerald-100 text-emerald-700" :
-                              exam.id === "JEE_MAIN" ? "bg-blue-100 text-blue-700" :
-                              exam.id === "JEE_ADVANCED" ? "bg-violet-100 text-violet-700" :
-                              exam.id === "MHT_CET" ? "bg-amber-100 text-amber-700" :
-                              "bg-cyan-100 text-cyan-700"
-                            }`}>
-                              {exam.id === "NEET" ? "N" : exam.id === "JEE_MAIN" ? "M" : exam.id === "JEE_ADVANCED" ? "A" : exam.id === "MHT_CET" ? "C" : "B"}
-                            </span>
-                            <div className="min-w-0">
-                              <h3 className="truncate text-base font-medium text-slate-600">{exam.title}</h3>
-                              <p className="mt-0.5 truncate text-[11px] font-medium text-slate-400">{exam.badge} · {exam.syllabusYear} syllabus</p>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+                {/* Column 1: Exam */}
+                <div className="lg:col-span-3 lg:pr-6 relative">
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    Exam
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setExamDropdownOpen(!examDropdownOpen)}
+                    className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 flex items-center justify-between text-sm font-semibold text-slate-900 transition-colors shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
+                  >
+                    <span>{currentExamMeta.title}</span>
+                    <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${examDropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {examDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setExamDropdownOpen(false)} />
+                      <div className="absolute top-[calc(100%+6px)] left-0 right-0 z-30 bg-white rounded-xl border border-slate-200 shadow-xl py-1.5 animate-in fade-in-50 zoom-in-95">
+                        {EXAM_TARGETS.map((exam) => (
+                          <button
+                            key={exam.id}
+                            type="button"
+                            onClick={() => handleExamChange(exam.id)}
+                            className={`w-full px-4 py-2.5 text-left text-sm flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${
+                              selectedExam === exam.id ? "bg-slate-50 font-bold text-[#1E293B]" : "text-slate-700"
+                            }`}
+                          >
+                            <div>
+                              <p className="font-semibold">{exam.title}</p>
+                              <p className="text-[11px] text-slate-400 font-normal">{exam.badge}</p>
                             </div>
-                          </div>
+                            {selectedExam === exam.id && <Check className="w-4 h-4 text-[#1E293B]" />}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Column 2: Class / Standard */}
+                <div className="lg:col-span-4 lg:px-6 pt-5 lg:pt-0">
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    Class / Standard
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {[
+                      { id: "11", label: "Class 11th" },
+                      { id: "12", label: "Class 12th" },
+                      { id: "both", label: "11th + 12th" },
+                    ].map((cls) => {
+                      const isSelected = selectedGrade === cls.id
+                      return (
+                        <button
+                          key={cls.id}
+                          type="button"
+                          onClick={() => handleGradeChange(cls.id as any)}
+                          className={`flex-1 h-12 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
+                            isSelected
+                              ? "border-2 border-slate-900 bg-white text-slate-900 shadow-xs"
+                              : "border border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 text-slate-600"
+                          }`}
+                        >
+                          {cls.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Column 3: Subjects */}
+                <div className="lg:col-span-5 lg:pl-6 pt-5 lg:pt-0 relative">
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    Subjects
+                  </label>
+                  <div
+                    onClick={() => setSubjectDropdownOpen(!subjectDropdownOpen)}
+                    className="w-full min-h-[48px] px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 flex items-center justify-between gap-2 transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {selectedSubjects.map((sub) => (
+                        <span
+                          key={sub}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 text-blue-900 text-xs font-semibold border border-blue-200/60"
+                        >
+                          <span>{sub}</span>
                           <span
-                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-                              isSelected ? "border-[#2D3A4A] bg-[#2D3A4A] text-white" : "border-slate-200 text-transparent"
-                            }`}
+                            onClick={(e) => handleRemoveSubject(e, sub)}
+                            className="hover:bg-blue-100 rounded-sm p-0.5 text-blue-700 cursor-pointer transition-colors"
                           >
-                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                            <X className="w-3 h-3" />
                           </span>
-                        </div>
-                        <p className="mt-3 line-clamp-1 text-xs leading-relaxed text-slate-500">{exam.subtitle}</p>
-                        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-[11px] text-slate-500">
-                          <span>
-                            +{exam.defaultMarksPerQuestion} / -{exam.defaultNegativeMarks} marks
-                          </span>
-                          <span className="font-semibold text-slate-600">
-                            {exam.subjects.length} subjects
-                          </span>
-                        </div>
-                      </button>
-                    )
-                  })}
+                        </span>
+                      ))}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 ml-auto transition-transform duration-200 ${subjectDropdownOpen ? "rotate-180" : ""}`} />
+                  </div>
+
+                  {subjectDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setSubjectDropdownOpen(false)} />
+                      <div className="absolute top-[calc(100%+6px)] left-0 right-0 z-30 bg-white rounded-xl border border-slate-200 shadow-xl py-2 px-1 animate-in fade-in-50 zoom-in-95">
+                        <p className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                          Select subjects
+                        </p>
+                        {availableSubjects.map((sub) => {
+                          const isChecked = selectedSubjects.includes(sub)
+                          return (
+                            <button
+                              key={sub}
+                              type="button"
+                              onClick={() => handleToggleSubject(sub)}
+                              className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center justify-between transition-colors cursor-pointer"
+                            >
+                              <span>{sub}</span>
+                              <span className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                isChecked ? "bg-[#1E293B] border-[#1E293B] text-white" : "border-slate-300 bg-white"
+                              }`}>
+                                {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Step 2: Class & Subject Segmented Row */}
+          <div className={currentStep === 3 ? "grid grid-cols-1 items-start gap-6 xl:grid-cols-3 xl:gap-8" : "grid grid-cols-1 items-start gap-6"}>
+            {/* Left 2 Columns: Chapters */}
+            <div className={currentStep === 3 ? "hidden" : "w-full space-y-6"}>
+              {/* Step 2: Chapter Selection Grid */}
               <div className={currentStep === 2 ? "overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_45px_rgba(30,52,75,0.07)]" : "hidden"}>
-                <div className="border-b border-slate-100 px-5 py-6 sm:px-8">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                      <BookOpen className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2D3A4A]">Step 2 · Learner profile</p>
-                      <h2 className="mt-1 text-2xl font-medium tracking-tight text-slate-600">Set your class and subject</h2>
-                      <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-500">Choose the academic level and subject you want the AI to use for your chapter recommendations.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-5 p-5 sm:p-8 md:grid-cols-2">
-                  {/* Class Level */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                        <GraduationCap className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Class / Standard</p>
-                        <p className="mt-0.5 text-xs text-slate-400">Select your study level</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                      {[
-                        { id: "11", label: "Class 11th" },
-                        { id: "12", label: "Class 12th" },
-                        { id: "both", label: "11th + 12th" },
-                      ].map((g) => {
-                        const isSelected = selectedGrade === g.id
-                        return (
-                          <button
-                            key={g.id}
-                            type="button"
-                            onClick={() => handleGradeChange(g.id as any)}
-                            className={`rounded-xl border px-3 py-3 text-xs font-semibold text-center transition-all cursor-pointer ${
-                              isSelected
-                                ? "border-amber-400 bg-amber-50 text-amber-800 shadow-sm ring-1 ring-amber-200"
-                                : "border-slate-200 bg-slate-50 text-slate-600 hover:border-amber-200 hover:bg-white"
-                            }`}
-                          >
-                            {g.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Subject */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                        <BookOpen className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Subject</p>
-                        <p className="mt-0.5 text-xs text-slate-400">Choose your focus area</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {availableSubjects.map((sub) => {
-                        const isSelected = selectedSubject === sub
-                        return (
-                          <button
-                            key={sub}
-                            type="button"
-                            onClick={() => handleSubjectChange(sub)}
-                            className={`rounded-xl border px-4 py-3 text-xs font-semibold transition-all cursor-pointer ${
-                              isSelected
-                                ? "border-blue-400 bg-blue-50 text-blue-800 shadow-sm ring-1 ring-blue-200"
-                                : "border-slate-200 bg-slate-50 text-slate-600 hover:border-blue-200 hover:bg-white"
-                            }`}
-                          >
-                            {sub}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 3: Chapter Selection Grid */}
-              <div className={currentStep === 3 ? "overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_45px_rgba(30,52,75,0.07)]" : "hidden"}>
                 <div className="flex flex-col justify-between gap-4 border-b border-slate-100 px-5 py-6 sm:flex-row sm:items-center sm:px-8">
                   <div>
                     <div className="flex items-center gap-2">
@@ -932,7 +934,7 @@ export default function AIGeneratorPage() {
                         <Layers className="h-5 w-5" />
                       </div>
                       <div>
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2D3A4A]">Step 3 · Content selection</p>
+                      <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2D3A4A]">Step 2 · Content selection</p>
                       <span className="mt-1 inline-flex text-xs font-semibold text-emerald-700">
                         {selectedChapters.length} Selected
                       </span>
@@ -1223,7 +1225,7 @@ export default function AIGeneratorPage() {
             </div>
 
             {/* Right Column: Blueprint Settings & Live Summary Card */}
-            <div className={currentStep === 4 ? "w-full space-y-6 xl:col-span-3" : "hidden"}>
+            <div className={currentStep === 3 ? "w-full space-y-6 xl:col-span-3" : "hidden"}>
               {/* Exam Blueprint Card */}
               <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_45px_rgba(30,52,75,0.08)]">
                 <div className="border-b border-slate-100 px-5 py-6 sm:px-8">
@@ -1232,7 +1234,7 @@ export default function AIGeneratorPage() {
                       <Sliders className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2D3A4A]">Step 4 · Final blueprint</p>
+                      <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2D3A4A]">Step 3 · Final blueprint</p>
                       <h2 className="mt-1 text-2xl font-medium tracking-tight text-slate-600">Design your question paper</h2>
                       <p className="mt-1 text-sm leading-relaxed text-slate-500">Choose the size, difficulty and format. Your AI-generated paper will follow these settings.</p>
                     </div>
@@ -1397,27 +1399,33 @@ export default function AIGeneratorPage() {
           <div className="mt-6 flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setCurrentStep((step) => Math.max(1, step - 1))}
-              disabled={currentStep === 1}
-              className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => {
+                if (currentStep > 1) {
+                  setCurrentStep((step) => step - 1)
+                } else {
+                  router.push("/admin/exams")
+                }
+              }}
+              className="px-6 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
             >
               Back
             </button>
-            {currentStep < 4 && (
+            {currentStep < 6 && (
               <button
                 type="button"
-                onClick={() => setCurrentStep((step) => Math.min(4, step + 1))}
+                onClick={() => setCurrentStep((step) => Math.min(6, step + 1))}
                 disabled={!canContinueFromStep(currentStep)}
-                className="rounded-xl bg-[#2D3A4A] px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1e2a38] disabled:cursor-not-allowed disabled:opacity-40"
+                className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Next step
-                <ArrowRight className="ml-2 inline-block h-4 w-4" />
+                <span>Next Step</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             )}
           </div>
           </>
         )}
       </div>
+    </div>
 
       {/* ─── Inline Edit Question Modal ─── */}
       {editingQuestion && (
