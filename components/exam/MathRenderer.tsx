@@ -91,7 +91,7 @@ export function MathRenderer({ content, className = "" }: MathRendererProps) {
           return (
             <span
               key={index}
-              className="mx-0.5 inline-block rounded border border-indigo-100/60 bg-indigo-50/70 px-1.5 py-0.5 text-[0.9em] text-indigo-950 align-baseline dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-200"
+              className="inline text-slate-900 dark:text-slate-100 align-baseline"
               dangerouslySetInnerHTML={{
                 __html: renderFormula(innerMath, false),
               }}
@@ -120,7 +120,7 @@ export function MathRenderer({ content, className = "" }: MathRendererProps) {
           return (
             <span
               key={index}
-              className="mx-0.5 inline-block rounded border border-indigo-100/60 bg-indigo-50/70 px-1.5 py-0.5 text-[0.9em] text-indigo-950 align-baseline dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-200"
+              className="inline text-slate-900 dark:text-slate-100 align-baseline"
               dangerouslySetInnerHTML={{
                 __html: renderFormula(part, false),
               }}

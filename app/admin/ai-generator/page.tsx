@@ -140,6 +140,20 @@ export default function AIGeneratorPage() {
   const [editingQuestion, setEditingQuestion] = useState<GeneratedCompetitiveQuestion | null>(null)
   const [formatFilter, setFormatFilter] = useState<string>("all")
 
+  const parseAssertionReason = (text: string) => {
+    if (!text) return null
+    const match = text.match(
+      /(?:Assertion|Statement\s*1)\s*(?:\([Aa1]\))?\s*:\s*([\s\S]*?)(?:Reason|Statement\s*2)\s*(?:\([Rr2]\))?\s*:\s*([\s\S]*)$/i
+    )
+    if (match && match[1]?.trim() && match[2]?.trim()) {
+      return {
+        assertion: match[1].trim(),
+        reason: match[2].trim(),
+      }
+    }
+    return null
+  }
+
   const getQuestionFormat = (q: GeneratedCompetitiveQuestion): string => {
     if (
       q.questionFormat === "true_false" ||
@@ -148,6 +162,12 @@ export default function AIGeneratorPage() {
       (Array.isArray(q.options) && q.options.length === 2 && q.options.includes("True"))
     ) {
       return "true_false"
+    }
+    if (
+      q.questionFormat === "assertion" ||
+      Boolean(parseAssertionReason(q.questionText || ""))
+    ) {
+      return "assertion"
     }
     return q.questionFormat || q.type || "mcq"
   }
@@ -1407,6 +1427,8 @@ export default function AIGeneratorPage() {
                       const isExpanded = expandedSolutions.has(q.id)
                       const qFormat = getQuestionFormat(q)
                       const isTF = qFormat === "true_false"
+                      const parsedAR = parseAssertionReason(q.questionText)
+                      const isAR = qFormat === "assertion" || Boolean(parsedAR)
 
                       const displayOptions = isTF ? ["True", "False"] : q.options
                       const displayCorrectAnswer = isTF
@@ -1415,7 +1437,7 @@ export default function AIGeneratorPage() {
 
                       const formatLabel =
                         isTF ? "True / False" :
-                        qFormat === "assertion" ? "Assertion & Reason" :
+                        isAR ? "Assertion & Reason" :
                         qFormat === "fib" ? "Fill in the Blanks" : "MCQ"
 
                       return (
@@ -1488,9 +1510,35 @@ export default function AIGeneratorPage() {
                           </div>
 
                           {/* Question Statement with LaTeX Math & Matrices */}
-                          <div className="text-sm sm:text-base font-semibold text-slate-900 pl-0 sm:pl-9 mb-5 leading-relaxed overflow-x-auto">
-                            <MathRenderer content={q.questionText} />
-                          </div>
+                          {parsedAR ? (
+                            <div className="space-y-3 pl-0 sm:pl-9 mb-5">
+                              <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-200/70 text-slate-900 shadow-2xs">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-900 bg-amber-100/90 border border-amber-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                                    Assertion (A)
+                                  </span>
+                                </div>
+                                <div className="text-sm sm:text-base font-semibold leading-relaxed overflow-x-auto overflow-y-hidden">
+                                  <MathRenderer content={parsedAR.assertion} />
+                                </div>
+                              </div>
+
+                              <div className="p-4 rounded-2xl bg-purple-50/40 border border-purple-200/70 text-slate-900 shadow-2xs">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-900 bg-purple-100/90 border border-purple-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                                    Reason (R)
+                                  </span>
+                                </div>
+                                <div className="text-sm sm:text-base font-semibold leading-relaxed overflow-x-auto overflow-y-hidden">
+                                  <MathRenderer content={parsedAR.reason} />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm sm:text-base font-semibold text-slate-900 pl-0 sm:pl-9 mb-5 leading-relaxed overflow-x-auto overflow-y-hidden">
+                              <MathRenderer content={q.questionText} />
+                            </div>
+                          )}
 
                           {/* Options Grid */}
                           <div className={`grid gap-3 pl-0 sm:pl-9 mb-4 ${isTF ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
@@ -1501,30 +1549,30 @@ export default function AIGeneratorPage() {
                               return (
                                 <div
                                   key={oi}
-                                  className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+                                  className={`p-3.5 rounded-xl border flex items-start gap-3 transition-all ${
                                     isCorrect
                                       ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-semibold shadow-2xs"
                                       : "bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white"
                                   }`}
                                 >
-                                  <div className="flex items-center gap-3">
-                                    <span
-                                      className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
-                                        isCorrect
-                                          ? "bg-emerald-600 text-white shadow-2xs"
-                                          : isTF
-                                          ? "bg-slate-200 text-slate-700"
-                                          : "bg-white border border-slate-200 text-slate-700"
-                                      }`}
-                                    >
-                                      {isCorrect ? "✓" : label}
-                                    </span>
-                                    <div className="text-sm font-semibold pt-0.5 overflow-x-auto">
-                                      <MathRenderer content={opt} />
-                                    </div>
+                                  <span
+                                    className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 ${
+                                      isCorrect
+                                        ? "bg-emerald-600 text-white shadow-2xs"
+                                        : isTF
+                                        ? "bg-slate-200 text-slate-700"
+                                        : "bg-white border border-slate-200 text-slate-700"
+                                    }`}
+                                  >
+                                    {isCorrect ? "✓" : label}
+                                  </span>
+
+                                  <div className="flex-1 text-xs sm:text-sm font-semibold pt-1 leading-relaxed overflow-x-auto overflow-y-hidden">
+                                    <MathRenderer content={opt} />
                                   </div>
+
                                   {isCorrect && (
-                                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-md shrink-0">
+                                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-2 py-0.5 rounded-md shrink-0 self-start mt-1">
                                       Correct
                                     </span>
                                   )}
