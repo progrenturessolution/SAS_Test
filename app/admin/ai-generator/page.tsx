@@ -140,6 +140,30 @@ export default function AIGeneratorPage() {
   const [editingQuestion, setEditingQuestion] = useState<GeneratedCompetitiveQuestion | null>(null)
   const [formatFilter, setFormatFilter] = useState<string>("all")
 
+  // Step 4: Exam Details States
+  const [duration, setDuration] = useState<number>(30)
+  const [examTotalMarks, setExamTotalMarks] = useState<number>(200)
+  const [passMarks, setPassMarks] = useState<number>(80)
+  const [questionsPerMinute, setQuestionsPerMinute] = useState<string>("")
+  const [minDurationHours, setMinDurationHours] = useState<string>("02")
+  const [minDurationMinutes, setMinDurationMinutes] = useState<string>("00")
+  const [instructions, setInstructions] = useState<string[]>([
+    "Read each question carefully before submitting your answer.",
+    "Each question carries 2 marks.",
+    "No negative marking applicable.",
+    "Formulas and chemical reactions are formatted with scientific standard LaTeX notation.",
+  ])
+
+  // Step 5: Settings States
+  const [examSettings, setExamSettings] = useState({
+    randomizeQuestions: true,
+    shuffleOptions: true,
+    showResults: true,
+    allowReview: true,
+    negativeMarking: false,
+    scientificCalculator: false,
+  })
+
   const parseAssertionReason = (text: string) => {
     if (!text) return null
     const match = text.match(
@@ -186,6 +210,109 @@ export default function AIGeneratorPage() {
     })
     return counts
   }, [generatedQuestions])
+
+  const getDefaultExamTitle = () => {
+    const examCode = selectedExam.replace("-", "_")
+    const subjectName = activeSubjectTab || selectedSubject || "Mathematics"
+    let chapterPart = ""
+    if (selectedChapters.length === 1) {
+      chapterPart = ` - ${selectedChapters[0]}`
+    } else if (selectedChapters.length > 1) {
+      chapterPart = ` - ${selectedChapters[0]} & ${selectedChapters.length - 1} more`
+    } else {
+      chapterPart = " - Mock Exam"
+    }
+    return `${examCode} ${subjectName}${chapterPart}`
+  }
+
+  // Step 4: Overview Computations
+  const { class11SelectedCount, class12SelectedCount } = useMemo(() => {
+    const all11Names = new Set(getChapters(selectedExam, "11").map((c) => c.name))
+    const all12Names = new Set(getChapters(selectedExam, "12").map((c) => c.name))
+    let c11 = 0
+    let c12 = 0
+    selectedChapters.forEach((chName) => {
+      if (all11Names.has(chName)) c11++
+      else if (all12Names.has(chName)) c12++
+    })
+    return { class11SelectedCount: c11, class12SelectedCount: c12 }
+  }, [selectedExam, selectedChapters])
+
+  const chaptersOverviewText = useMemo(() => {
+    if (selectedChapters.length === 0) {
+      return `${generatedQuestions.length > 0 ? generatedQuestions.length : 0} Questions (${selectedGrade === "both" ? "Class 11 + 12" : `Class ${selectedGrade}th`})`
+    }
+    if (class11SelectedCount > 0 && class12SelectedCount > 0) {
+      return `${selectedChapters.length} (Class 11: ${class11SelectedCount} | Class 12: ${class12SelectedCount})`
+    }
+    if (class11SelectedCount > 0) {
+      return `${selectedChapters.length} (Class 11: ${class11SelectedCount})`
+    }
+    if (class12SelectedCount > 0) {
+      return `${selectedChapters.length} (Class 12: ${class12SelectedCount})`
+    }
+    return `${selectedChapters.length} Chapters`
+  }, [selectedChapters, class11SelectedCount, class12SelectedCount, generatedQuestions.length, selectedGrade])
+
+  const questionFormatOverview = useMemo(() => {
+    const parts: string[] = []
+    if (formatCounts.mcq > 0) parts.push(`MCQ: ${formatCounts.mcq}`)
+    if (formatCounts.assertion > 0) parts.push(`Assertion: ${formatCounts.assertion}`)
+    if (formatCounts.fib > 0) parts.push(`Fill in the Blanks: ${formatCounts.fib}`)
+    if (formatCounts.true_false > 0) parts.push(`True / False: ${formatCounts.true_false}`)
+
+    if (parts.length > 0) return parts.join(" | ")
+
+    const blueprintParts = blueprintFormats
+      .filter((f) => f.checked && f.count > 0)
+      .map((f) => `${f.label}: ${f.count}`)
+
+    if (blueprintParts.length > 0) return blueprintParts.join(" | ")
+    return "MCQ: 30 | Assertion: 10 | Fill in the Blanks: 5"
+  }, [formatCounts, blueprintFormats])
+
+  const difficultyOverview = useMemo(() => {
+    switch (difficulty) {
+      case "easy":
+        return "Easy (Concept & Formula Foundations)"
+      case "medium":
+        return "Medium (Application & Numerical Reasoning)"
+      case "hard":
+        return "Hard (Advanced Problem Solving)"
+      case "balanced":
+        return "Balanced (Standard Exam Mix)"
+      default:
+        return "Easy (Concept & Formula Foundations)"
+    }
+  }, [difficulty])
+
+  const examOverviewName = useMemo(() => {
+    switch (selectedExam) {
+      case "MHT_CET":
+        return "MHT-CET"
+      case "JEE_MAIN":
+        return "JEE Main"
+      case "JEE_ADVANCED":
+        return "JEE Advanced"
+      case "NEET":
+        return "NEET (UG)"
+      case "CBSE_BOARD":
+        return "CBSE 12th Board"
+      default:
+        return String(selectedExam).replace("_", "-")
+    }
+  }, [selectedExam])
+
+  const classOverviewText = useMemo(() => {
+    if (selectedGrade === "both") return "11th + 12th"
+    return `${selectedGrade}th`
+  }, [selectedGrade])
+
+  const subjectsOverviewText = useMemo(() => {
+    if (selectedSubjects.length === 0) return "Physics"
+    if (selectedSubjects.length <= 3) return selectedSubjects.join(", ")
+    return `${selectedSubjects.slice(0, 3).join(", ")} +${selectedSubjects.length - 3} more`
+  }, [selectedSubjects])
 
   // Current Exam Metadata
   const currentExamMeta = useMemo(() => {
@@ -499,7 +626,15 @@ export default function AIGeneratorPage() {
           : selectedChapters.length > 1
           ? `${selectedChapters[0]} & ${selectedChapters.length - 1} more`
           : targetSubject
-      setExamTitle(`${selectedExam} ${targetSubject} - ${chapterTitle}`)
+      const examCode = selectedExam.replace("-", "_")
+      setExamTitle(`${examCode} ${targetSubject} - ${chapterTitle}`)
+
+      // Initialize Step 4 Exam Details
+      const calculatedTotal =
+        data.questions.reduce((sum: number, q: any) => sum + (q.marks || 4), 0) || totalMarks || 200
+      setExamTotalMarks(calculatedTotal)
+      setPassMarks(Math.round(calculatedTotal * 0.4))
+      setDuration(30)
 
       // Transition to Step 3
       setCurrentStep(3)
@@ -573,13 +708,13 @@ export default function AIGeneratorPage() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          title: examTitle.trim() || `${selectedExam} ${selectedSubject} Entrance Test`,
+          title: examTitle.trim() || getDefaultExamTitle(),
           examType: selectedExam,
-          subject: selectedSubject,
-          duration: Math.max(toSave.length * 2, 30),
-          totalMarks: totalMarks,
-          passMarks: Math.floor(totalMarks * 0.4),
-          instructions: [
+          subject: activeSubjectTab || selectedSubject,
+          duration: duration || Math.max(toSave.length * 2, 30),
+          totalMarks: examTotalMarks || totalMarks,
+          passMarks: passMarks || Math.floor((examTotalMarks || totalMarks) * 0.4),
+          instructions: instructions && instructions.length > 0 ? instructions : [
             "Read each question carefully before submitting your answer.",
             `Each question carries ${currentExamMeta.defaultMarksPerQuestion} marks.`,
             currentExamMeta.defaultNegativeMarks > 0
@@ -589,7 +724,7 @@ export default function AIGeneratorPage() {
           ],
           sections: [
             {
-              title: `${selectedSubject} - Section 1`,
+              title: `${activeSubjectTab || selectedSubject} - Section 1`,
               type: "mcq",
               questions: toSave.map((q) => {
                 const isTF = getQuestionFormat(q) === "true_false"
@@ -615,10 +750,12 @@ export default function AIGeneratorPage() {
             },
           ],
           settings: {
-            randomize: true,
-            showResults: true,
-            allowReview: true,
-            negativeMarking: currentExamMeta.defaultNegativeMarks > 0,
+            randomize: examSettings.randomizeQuestions,
+            shuffleOptions: examSettings.shuffleOptions,
+            showResults: examSettings.showResults,
+            allowReview: examSettings.allowReview,
+            negativeMarking: examSettings.negativeMarking,
+            scientificCalculator: examSettings.scientificCalculator,
           },
           status: "draft",
         }),
@@ -698,7 +835,12 @@ export default function AIGeneratorPage() {
                     <div className="flex flex-col items-center flex-1">
                       <button
                         type="button"
-                        onClick={() => s.step <= currentStep && setCurrentStep(s.step)}
+                        onClick={() => {
+                          if (s.step <= currentStep || (generatedQuestions.length > 0 && s.step <= 4)) {
+                            setCurrentStep(s.step)
+                            window.scrollTo({ top: 0, behavior: "smooth" })
+                          }
+                        }}
                         className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all cursor-pointer ${
                           isCurrent
                             ? "bg-[#1E293B] text-white shadow-sm"
@@ -1332,21 +1474,15 @@ export default function AIGeneratorPage() {
 
                       <button
                         type="button"
-                        onClick={handleSaveAsExam}
-                        disabled={creatingExam || selectedQuestionIds.size === 0}
+                        onClick={() => {
+                          setCurrentStep(4)
+                          window.scrollTo({ top: 0, behavior: "smooth" })
+                        }}
+                        disabled={selectedQuestionIds.size === 0}
                         className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold shadow-sm flex items-center gap-2 disabled:opacity-40 transition-all cursor-pointer"
                       >
-                        {creatingExam ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
-                            <span>Publishing Exam...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Publish Exam ({selectedQuestionIds.size})</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
+                        <span>Proceed to Exam Details</span>
+                        <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -1609,6 +1745,447 @@ export default function AIGeneratorPage() {
               )}
             </div>
           )}
+          {/* ─── STEP 4: EXAM DETAILS & OVERVIEW ─── */}
+          {currentStep === 4 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              {/* Left Card: Exam Details */}
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="mb-6">
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                      Exam Details
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                      Set the key details for your exam.
+                    </p>
+                  </div>
+
+                  <div className="space-y-5">
+                    {/* Exam Title */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-2">
+                        Exam Title <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={examTitle || getDefaultExamTitle()}
+                        onChange={(e) => setExamTitle(e.target.value)}
+                        placeholder="e.g. MHT_CET Mathematics - Continuity and Differentiability & 3 more"
+                        className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
+                      />
+                    </div>
+
+                    {/* Row 1: Duration, Total Marks, Pass Marks */}
+                    <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-800 mb-2 truncate">
+                          Duration (minutes) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={5}
+                          value={duration}
+                          onChange={(e) => setDuration(Number(e.target.value) || 0)}
+                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-800 mb-2 truncate">
+                          Total Marks <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={examTotalMarks}
+                          onChange={(e) => setExamTotalMarks(Number(e.target.value) || 0)}
+                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-800 mb-2 truncate">
+                          Pass Marks <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={passMarks}
+                          onChange={(e) => setPassMarks(Number(e.target.value) || 0)}
+                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 2: Questions Per Minute & Minimum Exam Duration */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-800 mb-2">
+                          Questions Per Minute <span className="text-slate-400 font-normal">(Optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={questionsPerMinute}
+                          onChange={(e) => setQuestionsPerMinute(e.target.value)}
+                          placeholder="e.g., 1.5"
+                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-800 mb-2">
+                          Minimum Exam Duration <span className="text-red-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="relative">
+                            <select
+                              value={minDurationHours}
+                              onChange={(e) => setMinDurationHours(e.target.value)}
+                              className="w-full appearance-none px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-8"
+                            >
+                              <option value="00">00 Hr</option>
+                              <option value="01">01 Hr</option>
+                              <option value="02">02 Hr</option>
+                              <option value="03">03 Hr</option>
+                            </select>
+                            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          </div>
+
+                          <div className="relative">
+                            <select
+                              value={minDurationMinutes}
+                              onChange={(e) => setMinDurationMinutes(e.target.value)}
+                              className="w-full appearance-none px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-8"
+                            >
+                              <option value="00">00 Min</option>
+                              <option value="15">15 Min</option>
+                              <option value="30">30 Min</option>
+                              <option value="45">45 Min</option>
+                            </select>
+                            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Instructions Section */}
+                    <div className="pt-2">
+                      <h3 className="text-sm font-bold text-slate-900">
+                        Instructions
+                      </h3>
+                      <p className="text-xs text-slate-500 mb-2.5">
+                        Add important guidelines for learners.
+                      </p>
+
+                      <div className="rounded-2xl border border-slate-200/90 bg-white p-4 space-y-2">
+                        {instructions.map((inst, idx) => (
+                          <div key={idx} className="flex items-start gap-2.5 group">
+                            <span className="text-xs sm:text-sm font-bold text-slate-800 shrink-0 mt-0.5">
+                              {idx + 1}.
+                            </span>
+                            <input
+                              type="text"
+                              value={inst}
+                              onChange={(e) => {
+                                const next = [...instructions]
+                                next[idx] = e.target.value
+                                setInstructions(next)
+                              }}
+                              className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-200 focus:border-slate-400 px-1 py-0.5 text-xs sm:text-sm font-medium text-slate-700 focus:outline-none transition-colors"
+                            />
+                            {instructions.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setInstructions((prev) => prev.filter((_, i) => i !== idx))}
+                                className="text-slate-300 hover:text-red-500 p-0.5 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                                title="Remove guideline"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          onClick={() => setInstructions((prev) => [...prev, "New guideline for learners."])}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 pt-1 cursor-pointer"
+                        >
+                          <Plus size={14} />
+                          <span>Add Instruction</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Card: Exam Overview */}
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="mb-6">
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                      Exam Overview
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                      Review your exam configuration.
+                    </p>
+                  </div>
+
+                  {/* Configuration Key-Value Rows */}
+                  <div className="space-y-4">
+                    <div className="flex items-baseline justify-between py-1 border-b border-slate-100/80">
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                        Exam
+                      </span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                        {examOverviewName}
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between py-1 border-b border-slate-100/80">
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                        Class
+                      </span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                        {classOverviewText}
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between py-1 border-b border-slate-100/80">
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                        Subjects
+                      </span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                        {subjectsOverviewText}
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between py-1 border-b border-slate-100/80">
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                        Chapters
+                      </span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                        {chaptersOverviewText}
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between py-1 border-b border-slate-100/80">
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                        Question Format
+                      </span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                        {questionFormatOverview}
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between py-1">
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                        Difficulty Level
+                      </span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                        {difficultyOverview}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Summary Stats Strip */}
+                <div className="mt-8 rounded-2xl bg-slate-50 border border-slate-200/80 p-5 grid grid-cols-3 divide-x divide-slate-200">
+                  <div className="text-center px-2">
+                    <p className="text-xs font-semibold text-slate-500 mb-1">Duration</p>
+                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {duration} <span className="text-xs sm:text-sm font-semibold text-slate-600">min</span>
+                    </p>
+                  </div>
+
+                  <div className="text-center px-2">
+                    <p className="text-xs font-semibold text-slate-500 mb-1">Total Questions</p>
+                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {selectedQuestionIds.size > 0 ? selectedQuestionIds.size : totalQuestions}
+                    </p>
+                  </div>
+
+                  <div className="text-center px-2">
+                    <p className="text-xs font-semibold text-slate-500 mb-1">Total Marks</p>
+                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {examTotalMarks}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─── STEP 5: EXAM SETTINGS ─── */}
+          {currentStep === 5 && (
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs">
+              <div className="mb-8">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  STEP 5 · EXAM SETTINGS
+                </p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+                  Exam Delivery & Security Settings
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                  Configure candidate permissions, security options, and result display preferences.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Setting 1: Randomize Question Order */}
+                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 mb-1">Randomize Question Sequence</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Shuffles the order of questions for each student to prevent screen sharing and collusion.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExamSettings((prev) => ({ ...prev, randomizeQuestions: !prev.randomizeQuestions }))
+                    }
+                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                      examSettings.randomizeQuestions ? "bg-[#1E293B]" : "bg-slate-300"
+                    }`}
+                  >
+                    <div
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                        examSettings.randomizeQuestions ? "translate-x-6" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Setting 2: Shuffle Option Choices */}
+                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 mb-1">Shuffle Answer Options</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Randomizes the order of choices (A, B, C, D) for every individual question.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExamSettings((prev) => ({ ...prev, shuffleOptions: !prev.shuffleOptions }))
+                    }
+                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                      examSettings.shuffleOptions ? "bg-[#1E293B]" : "bg-slate-300"
+                    }`}
+                  >
+                    <div
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                        examSettings.shuffleOptions ? "translate-x-6" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Setting 3: Instant Results */}
+                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 mb-1">Immediate Result & Explanations</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Allows candidates to see detailed solutions, marks breakdown, and explanations immediately after submission.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExamSettings((prev) => ({ ...prev, showResults: !prev.showResults }))
+                    }
+                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                      examSettings.showResults ? "bg-[#1E293B]" : "bg-slate-300"
+                    }`}
+                  >
+                    <div
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                        examSettings.showResults ? "translate-x-6" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Setting 4: Bookmarking & Review */}
+                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 mb-1">Question Bookmarking & Review</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Enables students to mark questions for review and revisit them before final submission.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExamSettings((prev) => ({ ...prev, allowReview: !prev.allowReview }))
+                    }
+                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                      examSettings.allowReview ? "bg-[#1E293B]" : "bg-slate-300"
+                    }`}
+                  >
+                    <div
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                        examSettings.allowReview ? "translate-x-6" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Setting 5: Negative Marking */}
+                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 mb-1">Enforce Negative Marking</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Deducts marks for incorrect responses according to official {examOverviewName} exam scheme.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExamSettings((prev) => ({ ...prev, negativeMarking: !prev.negativeMarking }))
+                    }
+                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                      examSettings.negativeMarking ? "bg-[#1E293B]" : "bg-slate-300"
+                    }`}
+                  >
+                    <div
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                        examSettings.negativeMarking ? "translate-x-6" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Setting 6: Scientific Calculator */}
+                <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 mb-1">Built-in Scientific Calculator</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Provides candidates with an on-screen scientific calculator during exam duration.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExamSettings((prev) => ({ ...prev, scientificCalculator: !prev.scientificCalculator }))
+                    }
+                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                      examSettings.scientificCalculator ? "bg-[#1E293B]" : "bg-slate-300"
+                    }`}
+                  >
+                    <div
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                        examSettings.scientificCalculator ? "translate-x-6" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ─── Bottom Navigation Actions ─── */}
           <div className="mt-8 flex items-center justify-between gap-3 pt-2">
             <button
@@ -1616,6 +2193,7 @@ export default function AIGeneratorPage() {
               onClick={() => {
                 if (currentStep > 1) {
                   setCurrentStep((step) => step - 1)
+                  window.scrollTo({ top: 0, behavior: "smooth" })
                 } else {
                   router.push("/admin/exams")
                 }
@@ -1665,14 +2243,43 @@ export default function AIGeneratorPage() {
             {currentStep === 3 && (
               <button
                 type="button"
+                onClick={() => {
+                  setCurrentStep(4)
+                  window.scrollTo({ top: 0, behavior: "smooth" })
+                }}
+                disabled={selectedQuestionIds.size === 0}
+                className="px-7 py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+              >
+                <span>Next: Exam Details</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+
+            {currentStep === 4 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentStep(5)
+                  window.scrollTo({ top: 0, behavior: "smooth" })
+                }}
+                className="px-7 py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
+              >
+                <span>Next: Settings</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+
+            {currentStep === 5 && (
+              <button
+                type="button"
                 onClick={handleSaveAsExam}
                 disabled={creatingExam || selectedQuestionIds.size === 0}
-                className="px-7 py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                className="px-7 py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
               >
                 {creatingExam ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
-                    <span>Publishing Exam Paper...</span>
+                    <span>Publishing Exam...</span>
                   </>
                 ) : (
                   <>
