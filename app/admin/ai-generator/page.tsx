@@ -33,6 +33,9 @@ import {
   X,
   FileQuestion,
   Filter,
+  Info,
+  ChevronRight,
+  BarChart2,
 } from "lucide-react"
 import {
   EXAM_TARGETS,
@@ -72,12 +75,28 @@ export default function AIGeneratorPage() {
 
   const STEPS = [
     { step: 1, label: "Exam" },
-    { step: 2, label: "Content" },
+    { step: 2, label: "Content & Blueprint" },
     { step: 3, label: "Blueprint" },
     { step: 4, label: "Exam Details" },
     { step: 5, label: "Settings" },
     { step: 6, label: "Questions" },
   ]
+
+  // Step 2: Content & Blueprint States
+  const [activeSubjectTab, setActiveSubjectTab] = useState<CompetitiveSubject>("Physics")
+  const [classFilter, setClassFilter] = useState<"all" | "11" | "12">("all")
+  const [expandedClasses, setExpandedClasses] = useState<{ "11": boolean; "12": boolean }>({
+    "11": false,
+    "12": false,
+  })
+
+  // Blueprint Format Matrix
+  const [blueprintFormats, setBlueprintFormats] = useState([
+    { id: "mcq", label: "MCQ", checked: true, count: 30, marks: 4 },
+    { id: "assertion", label: "Assertion", checked: true, count: 10, marks: 4 },
+    { id: "fib", label: "Fill in the Blanks", checked: true, count: 5, marks: 2 },
+    { id: "true_false", label: "True / False", checked: false, count: 0, marks: 0 },
+  ])
 
   // Chapter Selection
   const [selectedChapters, setSelectedChapters] = useState<string[]>([])
@@ -101,9 +120,9 @@ export default function AIGeneratorPage() {
   const pdfInputRef = useRef<HTMLInputElement>(null)
 
   // Blueprint Settings
-  const [questionCount, setQuestionCount] = useState<number>(10)
-  const [difficulty, setDifficulty] = useState<"balanced" | "easy" | "medium" | "hard">("balanced")
-  const [pattern, setPattern] = useState<"mcq_single" | "assertion_reason" | "mixed">("mcq_single")
+  const [questionCount, setQuestionCount] = useState<number>(45)
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "balanced" | "hard">("easy")
+  const [pattern, setPattern] = useState<"mcq_single" | "assertion_reason" | "mixed">("mixed")
   const [focusPYQ, setFocusPYQ] = useState(true)
 
   // Generation & Status
@@ -152,6 +171,7 @@ export default function AIGeneratorPage() {
     if (targetMeta) {
       setSelectedSubjects(targetMeta.subjects)
       setSelectedSubject(targetMeta.subjects[0] || "Physics")
+      setActiveSubjectTab(targetMeta.subjects[0] || "Physics")
     }
     // Reset selected chapters when exam changes
     setSelectedChapters([])
@@ -166,6 +186,7 @@ export default function AIGeneratorPage() {
         const next = selectedSubjects.filter((s) => s !== sub)
         setSelectedSubjects(next)
         if (selectedSubject === sub) setSelectedSubject(next[0])
+        if (activeSubjectTab === sub) setActiveSubjectTab(next[0])
       }
     } else {
       const next = [...selectedSubjects, sub]
@@ -180,6 +201,7 @@ export default function AIGeneratorPage() {
       const next = selectedSubjects.filter((s) => s !== sub)
       setSelectedSubjects(next)
       if (selectedSubject === sub) setSelectedSubject(next[0])
+      if (activeSubjectTab === sub) setActiveSubjectTab(next[0])
     }
   }
 
@@ -193,11 +215,66 @@ export default function AIGeneratorPage() {
   // Handle subject change
   const handleSubjectChange = (subject: CompetitiveSubject) => {
     setSelectedSubject(subject)
+    setActiveSubjectTab(subject)
     if (!selectedSubjects.includes(subject)) {
       setSelectedSubjects([subject])
     }
     setSelectedChapters([])
     setChapterSearch("")
+  }
+
+  // Step 2: Format calculations
+  const totalQuestions = useMemo(() => {
+    return blueprintFormats.reduce((acc, f) => acc + (f.checked ? f.count : 0), 0)
+  }, [blueprintFormats])
+
+  const totalMarks = useMemo(() => {
+    return blueprintFormats.reduce((acc, f) => acc + (f.checked ? f.count * f.marks : 0), 0)
+  }, [blueprintFormats])
+
+  const toggleFormatCheck = (id: string) => {
+    setBlueprintFormats((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, checked: !f.checked } : f))
+    )
+  }
+
+  const updateFormatCount = (id: string, count: number) => {
+    setBlueprintFormats((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, count } : f))
+    )
+  }
+
+  const updateFormatMarks = (id: string, marks: number) => {
+    setBlueprintFormats((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, marks } : f))
+    )
+  }
+
+  // Step 2: Chapters by subject & grade
+  const currentSubjectChapters = useMemo(() => {
+    return getChapters(selectedExam, selectedGrade, activeSubjectTab)
+  }, [selectedExam, selectedGrade, activeSubjectTab])
+
+  const class11Chapters = useMemo(() => {
+    return currentSubjectChapters.filter((c) => c.grade === "11")
+  }, [currentSubjectChapters])
+
+  const class12Chapters = useMemo(() => {
+    return currentSubjectChapters.filter((c) => c.grade === "12")
+  }, [currentSubjectChapters])
+
+  const toggleAllClass = (grade: "11" | "12") => {
+    const targetChapters = grade === "11" ? class11Chapters : class12Chapters
+    const targetNames = targetChapters.map((c) => c.name)
+    const allSelected =
+      targetNames.length > 0 &&
+      targetNames.every((name) => selectedChapters.includes(name))
+
+    if (allSelected) {
+      setSelectedChapters((prev) => prev.filter((name) => !targetNames.includes(name)))
+    } else {
+      setSelectedChapters((prev) => Array.from(new Set([...prev, ...targetNames])))
+    }
   }
 
   const canContinueFromStep = (step: number) => {
@@ -932,7 +1009,375 @@ export default function AIGeneratorPage() {
             </div>
           )}
 
-          <div className={currentStep === 3 ? "grid grid-cols-1 items-start gap-6 xl:grid-cols-3 xl:gap-8" : "grid grid-cols-1 items-start gap-6"}>
+          {/* ─── STEP 2: CONTENT & BLUEPRINT (MIRO DESIGN) ─── */}
+          {currentStep === 2 && (
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs">
+              {/* Top Header inside card */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700 shadow-2xs">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                      Content & Blueprint
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Select chapters and set question format, marks and difficulty level.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Selected Summary Badges & Edit Icon */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-3.5 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-semibold text-slate-700">
+                    Class:{" "}
+                    <span className="font-bold text-slate-900">
+                      {selectedGrade === "both"
+                        ? "11th + 12th"
+                        : selectedGrade === "11"
+                        ? "Class 11th"
+                        : "Class 12th"}
+                    </span>
+                  </span>
+                  <span className="px-3.5 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-semibold text-slate-700">
+                    Subjects:{" "}
+                    <span className="font-bold text-slate-900">
+                      {selectedSubjects.slice(0, 3).join(", ") +
+                        (selectedSubjects.length > 3
+                          ? ` +${selectedSubjects.length - 3} more`
+                          : "")}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    title="Edit Exam, Class or Subjects"
+                    className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Two-Column Grid: Chapter Selection & Question Blueprint */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-6">
+                {/* Left Column: Chapter Selection */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-1 h-4 bg-slate-900 rounded-full" />
+                    <h3 className="text-base font-bold text-slate-900">Chapter Selection</h3>
+                  </div>
+
+                  {/* Subject Filter Pills */}
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {selectedSubjects.map((sub) => {
+                      const count = getChapters(selectedExam, selectedGrade, sub).length
+                      const isActive = activeSubjectTab === sub
+                      return (
+                        <button
+                          key={sub}
+                          type="button"
+                          onClick={() => {
+                            setActiveSubjectTab(sub)
+                            setSelectedSubject(sub)
+                          }}
+                          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                            isActive
+                              ? "bg-[#1E293B] text-white shadow-xs"
+                              : "bg-white border border-slate-200 text-slate-700 hover:border-slate-300"
+                          }`}
+                        >
+                          {sub} ({count})
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Class Filter Chips */}
+                  <div className="flex items-center gap-2 mb-4">
+                    {[
+                      { id: "all", label: `All (${currentSubjectChapters.length})` },
+                      { id: "11", label: `Class 11 (${class11Chapters.length})` },
+                      { id: "12", label: `Class 12 (${class12Chapters.length})` },
+                    ].map((cf) => (
+                      <button
+                        key={cf.id}
+                        type="button"
+                        onClick={() => setClassFilter(cf.id as any)}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                          classFilter === cf.id
+                            ? "bg-blue-100 text-blue-700 font-bold"
+                            : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        {cf.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Accordion Rows for Class 11 and Class 12 */}
+                  <div className="space-y-3">
+                    {/* Class 11 Row */}
+                    {(classFilter === "all" || classFilter === "11") && class11Chapters.length > 0 && (
+                      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden transition-all shadow-2xs">
+                        <div className="p-3.5 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedClasses((prev) => ({ ...prev, "11": !prev["11"] }))
+                              }
+                              className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5"
+                            >
+                              <ChevronDown
+                                className={`w-4 h-4 transition-transform duration-200 ${
+                                  expandedClasses["11"] ? "rotate-180" : ""
+                                }`}
+                              />
+                            </button>
+                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  class11Chapters.length > 0 &&
+                                  class11Chapters.every((c) => selectedChapters.includes(c.name))
+                                }
+                                onChange={() => toggleAllClass("11")}
+                                className="w-4 h-4 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                              />
+                              <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                                Class 11 ({class11Chapters.length} chapters)
+                              </span>
+                            </label>
+                          </div>
+                          <ChevronRight
+                            onClick={() =>
+                              setExpandedClasses((prev) => ({ ...prev, "11": !prev["11"] }))
+                            }
+                            className="w-4 h-4 text-slate-400 cursor-pointer"
+                          />
+                        </div>
+
+                        {expandedClasses["11"] && (
+                          <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 max-h-56 overflow-y-auto space-y-2">
+                            {class11Chapters.map((ch, idx) => {
+                              const isChecked = selectedChapters.includes(ch.name)
+                              return (
+                                <label
+                                  key={ch.id || ch.name}
+                                  className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer hover:text-slate-900 py-1"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => toggleChapter(ch.name)}
+                                    className="mt-0.5 w-3.5 h-3.5 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                                  />
+                                  <span className="font-medium">
+                                    <span className="text-slate-400 mr-1.5">{idx + 1}.</span>
+                                    {ch.name}
+                                  </span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Class 12 Row */}
+                    {(classFilter === "all" || classFilter === "12") && class12Chapters.length > 0 && (
+                      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden transition-all shadow-2xs">
+                        <div className="p-3.5 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedClasses((prev) => ({ ...prev, "12": !prev["12"] }))
+                              }
+                              className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5"
+                            >
+                              <ChevronDown
+                                className={`w-4 h-4 transition-transform duration-200 ${
+                                  expandedClasses["12"] ? "rotate-180" : ""
+                                }`}
+                              />
+                            </button>
+                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  class12Chapters.length > 0 &&
+                                  class12Chapters.every((c) => selectedChapters.includes(c.name))
+                                }
+                                onChange={() => toggleAllClass("12")}
+                                className="w-4 h-4 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                              />
+                              <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                                Class 12 ({class12Chapters.length} chapters)
+                              </span>
+                            </label>
+                          </div>
+                          <ChevronRight
+                            onClick={() =>
+                              setExpandedClasses((prev) => ({ ...prev, "12": !prev["12"] }))
+                            }
+                            className="w-4 h-4 text-slate-400 cursor-pointer"
+                          />
+                        </div>
+
+                        {expandedClasses["12"] && (
+                          <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 max-h-56 overflow-y-auto space-y-2">
+                            {class12Chapters.map((ch, idx) => {
+                              const isChecked = selectedChapters.includes(ch.name)
+                              return (
+                                <label
+                                  key={ch.id || ch.name}
+                                  className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer hover:text-slate-900 py-1"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => toggleChapter(ch.name)}
+                                    className="mt-0.5 w-3.5 h-3.5 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                                  />
+                                  <span className="font-medium">
+                                    <span className="text-slate-400 mr-1.5">{idx + 1}.</span>
+                                    {ch.name}
+                                  </span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selected Status Bar */}
+                  <div className="mt-4 px-4 py-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-2 text-xs font-semibold text-blue-900">
+                    <Check className="w-4 h-4 text-blue-600 stroke-[2.5]" />
+                    <span>Selected: {selectedChapters.length} Chapters</span>
+                  </div>
+                </div>
+
+                {/* Right Column: Question Blueprint */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-1 h-4 bg-slate-900 rounded-full" />
+                    <h3 className="text-base font-bold text-slate-900">Question Blueprint</h3>
+                  </div>
+
+                  {/* Blueprint Matrix Table */}
+                  <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
+                    <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-slate-50/80 border-b border-slate-100 text-xs font-bold text-slate-700">
+                      <span className="col-span-6">Question Format</span>
+                      <span className="col-span-3 text-center">No. of Questions</span>
+                      <span className="col-span-3 text-center">Marks per Question</span>
+                    </div>
+
+                    <div className="divide-y divide-slate-100">
+                      {blueprintFormats.map((f) => (
+                        <div
+                          key={f.id}
+                          className={`grid grid-cols-12 gap-2 px-4 py-3 items-center transition-colors ${
+                            f.checked ? "bg-white" : "bg-slate-50/40 opacity-75"
+                          }`}
+                        >
+                          <label className="col-span-6 flex items-center gap-2.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={f.checked}
+                              onChange={() => toggleFormatCheck(f.id)}
+                              className="w-4 h-4 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                            />
+                            <span className="font-semibold text-slate-800 text-xs sm:text-sm">
+                              {f.label}
+                            </span>
+                          </label>
+
+                          <div className="col-span-3 flex justify-center">
+                            <select
+                              disabled={!f.checked}
+                              value={f.count}
+                              onChange={(e) => updateFormatCount(f.id, Number(e.target.value))}
+                              className="w-20 h-9 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
+                            >
+                              {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((num) => (
+                                <option key={num} value={num}>
+                                  {num}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="col-span-3 flex justify-center">
+                            <select
+                              disabled={!f.checked}
+                              value={f.marks}
+                              onChange={(e) => updateFormatMarks(f.id, Number(e.target.value))}
+                              className="w-16 h-9 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
+                            >
+                              {[0, 1, 2, 3, 4, 5].map((m) => (
+                                <option key={m} value={m}>
+                                  {m}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Info Summary: Total Questions & Marks */}
+                  <div className="mt-4 px-4 py-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-3 text-xs text-blue-950 font-medium">
+                    <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                    <div className="flex items-center gap-3">
+                      <span>
+                        Total Questions:{" "}
+                        <strong className="font-bold text-slate-900">{totalQuestions}</strong>
+                      </span>
+                      <span className="text-blue-200">|</span>
+                      <span>
+                        Total Marks:{" "}
+                        <strong className="font-bold text-slate-900">{totalMarks}</strong>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Section: Difficulty Level */}
+              <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+                    <BarChart2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">Difficulty Level</p>
+                    <p className="text-xs text-slate-400">Choose the challenge level for learners.</p>
+                  </div>
+                </div>
+
+                <div className="md:w-80">
+                  <select
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value as any)}
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
+                  >
+                    <option value="easy">Easy (Concept & Formula Foundations)</option>
+                    <option value="medium">Medium (Standard Entrance Level)</option>
+                    <option value="balanced">Balanced (NTA Standard 30:50:20)</option>
+                    <option value="hard">Hard (Rank Booster / High Rigor)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className={currentStep === 3 ? "grid grid-cols-1 items-start gap-6 xl:grid-cols-3 xl:gap-8" : "hidden"}>
             {/* Left 2 Columns: Chapters */}
             <div className={currentStep === 3 ? "hidden" : "w-full space-y-6"}>
               {/* Step 2: Chapter Selection Grid */}
