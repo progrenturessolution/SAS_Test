@@ -736,6 +736,31 @@ export default function AIGeneratorPage() {
         0
       )
 
+      // Convert 12-hour AM/PM to 24-hour "HH:mm"
+      const to24HourTime = (hourStr: string, minStr: string, period: "AM" | "PM") => {
+        let h = parseInt(hourStr, 10)
+        if (isNaN(h)) h = 10
+        if (period === "PM" && h < 12) h += 12
+        if (period === "AM" && h === 12) h = 0
+        const m = minStr ? minStr.padStart(2, "0") : "00"
+        return `${String(h).padStart(2, "0")}:${m}`
+      }
+
+      const formattedStartTime = to24HourTime(startHour, startMinute, startPeriod)
+      const formattedEndTime = to24HourTime(endHour, endMinute, endPeriod)
+
+      const finalInstructions = instructions && instructions.length > 0 ? instructions : [
+        "Read each question carefully before submitting your answer.",
+        `Each question carries ${currentExamMeta.defaultMarksPerQuestion} marks.`,
+        currentExamMeta.defaultNegativeMarks > 0
+          ? `Negative marking: -${currentExamMeta.defaultNegativeMarks} marks will be deducted for each incorrect response.`
+          : "No negative marking applicable.",
+        "Formulas and chemical reactions are formatted with scientific standard LaTeX notation.",
+      ]
+
+      const isNegativeEnabled = evalSettings.enableNegativeMarking
+      const defaultNegMark = isNegativeEnabled ? (currentExamMeta.defaultNegativeMarks || 1) : 0
+
       const res = await fetch("/api/exams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -744,21 +769,21 @@ export default function AIGeneratorPage() {
           title: examTitle.trim() || getDefaultExamTitle(),
           examType: selectedExam,
           subject: activeSubjectTab || selectedSubject,
+          class: selectedGrade === "both" ? "11th + 12th" : `${selectedGrade}th`,
           duration: duration || Math.max(toSave.length * 2, 30),
           totalMarks: examTotalMarks || totalMarks,
           passMarks: passMarks || Math.floor((examTotalMarks || totalMarks) * 0.4),
-          instructions: instructions && instructions.length > 0 ? instructions : [
-            "Read each question carefully before submitting your answer.",
-            `Each question carries ${currentExamMeta.defaultMarksPerQuestion} marks.`,
-            currentExamMeta.defaultNegativeMarks > 0
-              ? `Negative marking: -${currentExamMeta.defaultNegativeMarks} marks will be deducted for each incorrect response.`
-              : "No negative marking applicable.",
-            "Formulas and chemical reactions are formatted with scientific standard LaTeX notation.",
-          ],
+          questionsPerMin: questionsPerMinute ? Number(questionsPerMinute) : undefined,
+          description: finalInstructions.join("\n"),
+          instructions: finalInstructions,
           sections: [
             {
+              name: "Questions",
               title: `${activeSubjectTab || selectedSubject} - Section 1`,
               type: "mcq",
+              negativeMarking: isNegativeEnabled,
+              sectionNegativeMark: defaultNegMark,
+              questionRange: `1-${toSave.length}`,
               questions: toSave.map((q) => {
                 const isTF = getQuestionFormat(q) === "true_false"
                 const options = isTF ? ["True", "False"] : q.options
@@ -767,14 +792,14 @@ export default function AIGeneratorPage() {
                   : q.correctAnswer
 
                 return {
-                  type: "mcq",
+                  type: isTF ? "truefalse" : "mcq",
                   questionText: q.questionText,
                   difficulty: q.difficulty,
                   marks: q.marks || currentExamMeta.defaultMarksPerQuestion,
                   negativeMark:
                     q.negativeMark !== undefined
                       ? q.negativeMark
-                      : currentExamMeta.defaultNegativeMarks,
+                      : defaultNegMark,
                   options,
                   correctAnswer,
                   explanation: q.explanation,
@@ -782,21 +807,35 @@ export default function AIGeneratorPage() {
               }),
             },
           ],
+          proctoring: {
+            enabled: proctoringSettings.faceDetection || proctoringSettings.tabSwitchPrevention || proctoringSettings.enforceFullscreen || proctoringSettings.aiStatusAnalysis,
+            faceDetection: proctoringSettings.faceDetection,
+            tabSwitch: proctoringSettings.tabSwitchPrevention,
+            fullscreenExit: proctoringSettings.enforceFullscreen,
+            maxWarnings: 3,
+          },
           schedule: {
             startDate,
-            startTime: `${startHour}:${startMinute} ${startPeriod}`,
+            startTime: formattedStartTime,
             endDate,
-            endTime: `${endHour}:${endMinute} ${endPeriod}`,
+            endTime: formattedEndTime,
           },
           settings: {
             randomize: evalSettings.randomizeQuestions,
             showResults: evalSettings.showResultsImmediately,
             allowReview: evalSettings.allowReview,
-            negativeMarking: evalSettings.enableNegativeMarking,
+            negativeMarking: isNegativeEnabled,
+            startDate: startDate,
+            startTime: formattedStartTime,
+            endDate: endDate,
+            endTime: formattedEndTime,
             proctoring: {
               faceDetection: proctoringSettings.faceDetection,
+              tabSwitch: proctoringSettings.tabSwitchPrevention,
               tabSwitchPrevention: proctoringSettings.tabSwitchPrevention,
+              fullscreen: proctoringSettings.enforceFullscreen,
               enforceFullscreen: proctoringSettings.enforceFullscreen,
+              aiProctoring: proctoringSettings.aiStatusAnalysis,
               aiStatusAnalysis: proctoringSettings.aiStatusAnalysis,
             },
           },
@@ -807,7 +846,8 @@ export default function AIGeneratorPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to create exam")
 
-      router.push(`/admin/exams/${data.exam?._id || data.id}/edit`)
+      const createdId = data.exam?._id || data.id
+      router.push(`/admin/exams/${createdId}/edit?step=3`)
     } catch (err: any) {
       setErrorMsg("Error creating exam: " + err.message)
     } finally {

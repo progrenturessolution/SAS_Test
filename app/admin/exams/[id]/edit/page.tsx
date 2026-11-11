@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useRef, useEffect, use, ReactNode } from "react"
+import { useState, useRef, useEffect, use, Suspense, ReactNode } from "react"
 import { createPortal } from "react-dom"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
 import {
@@ -119,24 +119,28 @@ const TYPE_META: Record<QuestionType, { label: string; color: string; icon: Reac
 
 // ─── Stepper ──────────────────────────────────────────────────────────────────
 
-function Stepper({ step }: { step: number }) {
+function Stepper({ step, onStepClick }: { step: number; onStepClick?: (step: number) => void }) {
   const steps = [{ n: 1, label: "Exam Details" }, { n: 2, label: "Settings" }, { n: 3, label: "Questions" }]
   return (
     <div className="flex items-center justify-center gap-0">
       {steps.map((s, i) => (
         <div key={s.n} className="flex items-center">
-          <div className="flex flex-col items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onStepClick?.(s.n)}
+            className="flex flex-col items-center gap-1 cursor-pointer focus:outline-none"
+          >
             <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all
               ${step > s.n ? "bg-primary border-primary text-white"
                 : step === s.n ? "bg-[#2D3A4A] border-[#2D3A4A] text-white"
-                : "bg-white border-gray-200 text-gray-400"}`}>
+                : "bg-white border-gray-200 text-gray-400 hover:border-gray-300"}`}>
               {step > s.n ? <Check size={16}/> : s.n}
             </div>
             <div className="text-center">
               <p className={`text-[10px] uppercase tracking-wide font-semibold ${step >= s.n ? "text-[#2D3A4A]" : "text-gray-400"}`}>STEP {s.n}</p>
               <p className={`text-xs font-medium ${step >= s.n ? "text-primary" : "text-gray-400"}`}>{s.label}</p>
             </div>
-          </div>
+          </button>
           {i < steps.length - 1 && (
             <div className={`w-24 h-0.5 mx-3 mb-5 transition-colors ${step > s.n ? "bg-primary" : "bg-gray-200"}`} />
           )}
@@ -1215,14 +1219,27 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
 
 // ─── Main Edit Page ───────────────────────────────────────────────────────────
 
-export default function EditExamPage({ params }: { params: Promise<{ id: string }> }) {
+function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const [step, setStep] = useState(1)
+  const searchParams = useSearchParams()
+  const stepParam = searchParams.get("step")
+  const initialStep = stepParam ? Math.min(3, Math.max(1, parseInt(stepParam, 10) || 1)) : 1
+  const [step, setStep] = useState(initialStep)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    const s = searchParams.get("step")
+    if (s) {
+      const parsed = parseInt(s, 10)
+      if (parsed >= 1 && parsed <= 3) {
+        setStep(parsed)
+      }
+    }
+  }, [searchParams])
 
   const [step1, setStep1] = useState<Step1Form>({ title: "", duration: "", passMarks: "", totalMarks: "", instructions: "", questionsPerMin: "" })
   const [step2, setStep2] = useState<Step2Form>({ 
@@ -1230,9 +1247,9 @@ export default function EditExamPage({ params }: { params: Promise<{ id: string 
     randomize: true, showResults: true, allowReview: false, negativeMarking: false,
     sectionNegativeMark: 0,
     proctoring: {
-      faceDetection: true,
-      tabSwitch: true,
-      fullscreen: true,
+      faceDetection: false,
+      tabSwitch: false,
+      fullscreen: false,
       aiProctoring: false
     }
   })
@@ -1289,16 +1306,22 @@ export default function EditExamPage({ params }: { params: Promise<{ id: string 
           startTime: startTimeStr,
           endDate: endDateStr,
           endTime: endTimeStr,
-          randomize: exam.settings?.randomize ?? true,
-          showResults: exam.settings?.showResults ?? true,
-          allowReview: exam.settings?.allowReview ?? false,
-          negativeMarking: exam.settings?.negativeMarking ?? false,
+          randomize: exam.settings?.randomize !== undefined ? Boolean(exam.settings.randomize) : true,
+          showResults: exam.settings?.showResults !== undefined ? Boolean(exam.settings.showResults) : true,
+          allowReview: Boolean(exam.settings?.allowReview),
+          negativeMarking: Boolean(exam.settings?.negativeMarking),
           sectionNegativeMark: exam.sections?.[0]?.sectionNegativeMark || 0,
           proctoring: {
-            faceDetection: exam.settings?.proctoring?.faceDetection ?? true,
-            tabSwitch: exam.settings?.proctoring?.tabSwitch ?? true,
-            fullscreen: exam.settings?.proctoring?.fullscreen ?? true,
-            aiProctoring: exam.settings?.proctoring?.aiProctoring ?? false,
+            faceDetection: exam.settings?.proctoring?.faceDetection !== undefined 
+              ? Boolean(exam.settings.proctoring.faceDetection)
+              : (exam.proctoring?.faceDetection !== undefined ? Boolean(exam.proctoring.faceDetection) : false),
+            tabSwitch: (exam.settings?.proctoring?.tabSwitch !== undefined ? exam.settings.proctoring.tabSwitch : exam.settings?.proctoring?.tabSwitchPrevention) !== undefined
+              ? Boolean(exam.settings?.proctoring?.tabSwitch ?? exam.settings?.proctoring?.tabSwitchPrevention)
+              : (exam.proctoring?.tabSwitch !== undefined ? Boolean(exam.proctoring.tabSwitch) : false),
+            fullscreen: (exam.settings?.proctoring?.fullscreen !== undefined ? exam.settings.proctoring.fullscreen : exam.settings?.proctoring?.enforceFullscreen) !== undefined
+              ? Boolean(exam.settings?.proctoring?.fullscreen ?? exam.settings?.proctoring?.enforceFullscreen)
+              : (exam.proctoring?.fullscreenExit !== undefined ? Boolean(exam.proctoring.fullscreenExit) : false),
+            aiProctoring: Boolean(exam.settings?.proctoring?.aiProctoring ?? exam.settings?.proctoring?.aiStatusAnalysis),
           }
         })
         const allQ = (exam.sections || []).flatMap((sec: any) =>
@@ -1442,7 +1465,9 @@ export default function EditExamPage({ params }: { params: Promise<{ id: string 
         </div>
       </div>
 
-      <div className="sticky top-16 z-30 bg-white border-b border-gray-100 px-8 py-6"><Stepper step={step} /></div>
+      <div className="sticky top-16 z-30 bg-white border-b border-gray-100 px-8 py-6">
+        <Stepper step={step} onStepClick={(targetStep) => setStep(targetStep)} />
+      </div>
 
       <div className="max-w-4xl mx-auto px-8 py-8">
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2"><AlertCircle size={14}/>{error}</div>}
@@ -1464,5 +1489,19 @@ export default function EditExamPage({ params }: { params: Promise<{ id: string 
         </div>
       </div>
     </div>
+  )
+}
+
+export default function EditExamPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-500">
+          <Loader2 className="animate-spin" size={20}/><span className="text-sm">Loading exam...</span>
+        </div>
+      </div>
+    }>
+      <EditExamContent params={params} />
+    </Suspense>
   )
 }

@@ -25,20 +25,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       if (globalSettings?.proctoring) {
         const gp = globalSettings.proctoring
         exam.proctoring = {
-          ...exam.proctoring,
           faceDetection: gp.faceDetection,
           tabSwitch: gp.tabSwitch,
           fullscreenExit: gp.fullscreen,
           maxWarnings: gp.maxWarnings,
+          ...exam.proctoring,
         }
         if (exam.settings) {
           exam.settings.proctoring = {
-            ...exam.settings.proctoring,
             faceDetection: gp.faceDetection,
             tabSwitch: gp.tabSwitch,
             fullscreen: gp.fullscreen,
             fullscreenExit: gp.fullscreen,
             maxWarnings: gp.maxWarnings,
+            ...exam.settings.proctoring,
           }
         }
       }

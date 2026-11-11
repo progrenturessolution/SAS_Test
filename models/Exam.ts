@@ -72,6 +72,7 @@ export interface IExam extends Document {
   createdAt: Date
   updatedAt: Date
   class?: string
+  questionsPerMin?: number
 }
 
 const QuestionSchema = new Schema<IQuestion>({
@@ -110,6 +111,7 @@ const ExamSchema = new Schema<IExam>(
     passMarks: { type: Number, required: true },
     status: { type: String, enum: ["draft", "active", "closed"], default: "draft" },
     class: String,
+    questionsPerMin: { type: Number },
     sections: [
       {
         name: String,
