@@ -131,7 +131,8 @@ ${blueprintSummary ? `QUESTION FORMAT SPECIFICATION:\nFollow this blueprint form
   3. (A) is true but (R) is false
   4. (A) is false but (R) is true
 - For "fib" (Fill in the Blanks): formulate statement with a blank "______" or finding a missing mathematical/physical value. Options are 4 possible values.
-- For "true_false": provide a conceptual statement. Options are ["True", "False"].
+- For "true_false": provide a clear conceptual statement (e.g. starting with "True or False: ...").
+  CRITICAL: For "true_false" questions, "options" MUST be exactly ["True", "False"] (an array of 2 elements). NEVER return Option A, Option B, Option C, Option D. "correctAnswer" MUST be either "True" or "False".
 
 MATHEMATICAL & SCIENTIFIC FORMATTING RULES:
 - Put every mathematical, physics, chemistry, and biology formula inside LaTeX delimiters: use $...$ for inline formulas and $$...$$ for displayed formulas.
@@ -254,20 +255,47 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
       }
       seenTexts.add(normalizedText)
 
-      const options = Array.isArray(q.options) && q.options.length >= 4
-        ? q.options.slice(0, 4).map(normalizeGeneratedText)
-        : ["Option A", "Option B", "Option C", "Option D"]
+      const rawFormat = String(q.questionFormat || q.type || "").toLowerCase().trim()
+      const isTF =
+        rawFormat === "true_false" ||
+        rawFormat === "truefalse" ||
+        rawFormat === "tf" ||
+        questionText.toLowerCase().startsWith("true or false") ||
+        questionText.toLowerCase().startsWith("true/false")
 
-      let correctAnswer = normalizeGeneratedText(q.correctAnswer || options[0])
-      if (!options.includes(correctAnswer)) {
-        correctAnswer = options[0]
-      }
-
-      const formatType = ["mcq", "assertion", "fib", "true_false"].includes(q.questionFormat)
-        ? q.questionFormat
-        : ["mcq", "assertion", "fib", "true_false"].includes(q.type)
-        ? q.type
+      const formatType = isTF
+        ? "true_false"
+        : ["mcq", "assertion", "fib"].includes(rawFormat)
+        ? rawFormat
         : "mcq"
+
+      let options: string[] = []
+      let correctAnswer = ""
+
+      if (formatType === "true_false") {
+        options = ["True", "False"]
+        const rawAns = String(q.correctAnswer || "").toLowerCase().trim()
+        if (rawAns === "false" || rawAns === "f" || rawAns === "option b" || rawAns.includes("false")) {
+          correctAnswer = "False"
+        } else {
+          correctAnswer = "True"
+        }
+      } else {
+        options = Array.isArray(q.options) && q.options.length >= 4
+          ? q.options.slice(0, 4).map(normalizeGeneratedText)
+          : Array.isArray(q.options) && q.options.length > 0
+          ? q.options.map(normalizeGeneratedText)
+          : ["Option A", "Option B", "Option C", "Option D"]
+
+        while (options.length < 4) {
+          options.push(`Option ${String.fromCharCode(65 + options.length)}`)
+        }
+
+        correctAnswer = normalizeGeneratedText(q.correctAnswer || options[0])
+        if (!options.includes(correctAnswer)) {
+          correctAnswer = options[0]
+        }
+      }
 
       formattedQuestions.push({
         id: `pyq_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,

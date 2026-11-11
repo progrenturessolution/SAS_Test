@@ -140,18 +140,27 @@ export default function AIGeneratorPage() {
   const [editingQuestion, setEditingQuestion] = useState<GeneratedCompetitiveQuestion | null>(null)
   const [formatFilter, setFormatFilter] = useState<string>("all")
 
+  const getQuestionFormat = (q: GeneratedCompetitiveQuestion): string => {
+    if (
+      q.questionFormat === "true_false" ||
+      q.questionText?.toLowerCase().startsWith("true or false") ||
+      q.questionText?.toLowerCase().startsWith("true/false") ||
+      (Array.isArray(q.options) && q.options.length === 2 && q.options.includes("True"))
+    ) {
+      return "true_false"
+    }
+    return q.questionFormat || q.type || "mcq"
+  }
+
   const filteredGeneratedQuestions = useMemo(() => {
     if (formatFilter === "all") return generatedQuestions
-    return generatedQuestions.filter((q) => {
-      const fmt = q.questionFormat || q.type || "mcq"
-      return fmt === formatFilter
-    })
+    return generatedQuestions.filter((q) => getQuestionFormat(q) === formatFilter)
   }, [generatedQuestions, formatFilter])
 
   const formatCounts = useMemo(() => {
     const counts: Record<string, number> = { all: generatedQuestions.length, mcq: 0, assertion: 0, fib: 0, true_false: 0 }
     generatedQuestions.forEach((q) => {
-      const fmt = q.questionFormat || q.type || "mcq"
+      const fmt = getQuestionFormat(q)
       if (counts[fmt] !== undefined) counts[fmt]++
       else counts.mcq++
     })
@@ -562,19 +571,27 @@ export default function AIGeneratorPage() {
             {
               title: `${selectedSubject} - Section 1`,
               type: "mcq",
-              questions: toSave.map((q) => ({
-                type: "mcq",
-                questionText: q.questionText,
-                difficulty: q.difficulty,
-                marks: q.marks || currentExamMeta.defaultMarksPerQuestion,
-                negativeMark:
-                  q.negativeMark !== undefined
-                    ? q.negativeMark
-                    : currentExamMeta.defaultNegativeMarks,
-                options: q.options,
-                correctAnswer: q.correctAnswer,
-                explanation: q.explanation,
-              })),
+              questions: toSave.map((q) => {
+                const isTF = getQuestionFormat(q) === "true_false"
+                const options = isTF ? ["True", "False"] : q.options
+                const correctAnswer = isTF
+                  ? (String(q.correctAnswer).toLowerCase().includes("false") || q.correctAnswer === "Option B" ? "False" : "True")
+                  : q.correctAnswer
+
+                return {
+                  type: "mcq",
+                  questionText: q.questionText,
+                  difficulty: q.difficulty,
+                  marks: q.marks || currentExamMeta.defaultMarksPerQuestion,
+                  negativeMark:
+                    q.negativeMark !== undefined
+                      ? q.negativeMark
+                      : currentExamMeta.defaultNegativeMarks,
+                  options,
+                  correctAnswer,
+                  explanation: q.explanation,
+                }
+              }),
             },
           ],
           settings: {
@@ -1388,10 +1405,18 @@ export default function AIGeneratorPage() {
                     {filteredGeneratedQuestions.map((q, idx) => {
                       const isSelected = selectedQuestionIds.has(q.id)
                       const isExpanded = expandedSolutions.has(q.id)
+                      const qFormat = getQuestionFormat(q)
+                      const isTF = qFormat === "true_false"
+
+                      const displayOptions = isTF ? ["True", "False"] : q.options
+                      const displayCorrectAnswer = isTF
+                        ? (String(q.correctAnswer).toLowerCase().includes("false") || q.correctAnswer === "Option B" ? "False" : "True")
+                        : q.correctAnswer
+
                       const formatLabel =
-                        q.questionFormat === "assertion" ? "Assertion & Reason" :
-                        q.questionFormat === "fib" ? "Fill in the Blanks" :
-                        q.questionFormat === "true_false" ? "True / False" : "MCQ"
+                        isTF ? "True / False" :
+                        qFormat === "assertion" ? "Assertion & Reason" :
+                        qFormat === "fib" ? "Fill in the Blanks" : "MCQ"
 
                       return (
                         <div
@@ -1418,11 +1443,11 @@ export default function AIGeneratorPage() {
                                 {q.chapter}
                               </span>
                               <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg border ${
-                                q.questionFormat === "assertion"
+                                qFormat === "assertion"
                                   ? "bg-amber-50 text-amber-800 border-amber-200"
-                                  : q.questionFormat === "fib"
+                                  : qFormat === "fib"
                                   ? "bg-purple-50 text-purple-800 border-purple-200"
-                                  : q.questionFormat === "true_false"
+                                  : isTF
                                   ? "bg-cyan-50 text-cyan-800 border-cyan-200"
                                   : "bg-blue-50 text-blue-800 border-blue-200"
                               }`}>
@@ -1468,32 +1493,41 @@ export default function AIGeneratorPage() {
                           </div>
 
                           {/* Options Grid */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-0 sm:pl-9 mb-4">
-                            {q.options.map((opt, oi) => {
-                              const isCorrect = opt === q.correctAnswer
-                              const label = ["A", "B", "C", "D"][oi]
+                          <div className={`grid gap-3 pl-0 sm:pl-9 mb-4 ${isTF ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
+                            {displayOptions.map((opt, oi) => {
+                              const isCorrect = opt === displayCorrectAnswer
+                              const label = isTF ? (opt === "True" ? "T" : "F") : ["A", "B", "C", "D"][oi]
 
                               return (
                                 <div
                                   key={oi}
-                                  className={`p-3.5 rounded-xl border flex items-start gap-3 transition-all ${
+                                  className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 transition-all ${
                                     isCorrect
-                                      ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-medium shadow-2xs"
+                                      ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-semibold shadow-2xs"
                                       : "bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white"
                                   }`}
                                 >
-                                  <span
-                                    className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
-                                      isCorrect
-                                        ? "bg-emerald-600 text-white shadow-2xs"
-                                        : "bg-white border border-slate-200 text-slate-700"
-                                    }`}
-                                  >
-                                    {isCorrect ? "✓" : label}
-                                  </span>
-                                  <div className="flex-1 text-xs sm:text-sm pt-0.5 overflow-x-auto">
-                                    <MathRenderer content={opt} />
+                                  <div className="flex items-center gap-3">
+                                    <span
+                                      className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
+                                        isCorrect
+                                          ? "bg-emerald-600 text-white shadow-2xs"
+                                          : isTF
+                                          ? "bg-slate-200 text-slate-700"
+                                          : "bg-white border border-slate-200 text-slate-700"
+                                      }`}
+                                    >
+                                      {isCorrect ? "✓" : label}
+                                    </span>
+                                    <div className="text-sm font-semibold pt-0.5 overflow-x-auto">
+                                      <MathRenderer content={opt} />
+                                    </div>
                                   </div>
+                                  {isCorrect && (
+                                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-md shrink-0">
+                                      Correct
+                                    </span>
+                                  )}
                                 </div>
                               )
                             })}
