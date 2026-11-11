@@ -781,7 +781,7 @@ export default function AIGeneratorPage() {
 
           {/* ─── STEP 1: EXAM DETAILS ─── */}
           {currentStep === 1 && (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs">
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 pb-10 shadow-xs relative z-20">
               <div className="mb-8">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   STEP 1 · EXAM DETAILS
@@ -793,13 +793,16 @@ export default function AIGeneratorPage() {
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
                 {/* Column 1: Exam */}
-                <div className="lg:col-span-3 lg:pr-6 relative">
+                <div className={`lg:col-span-3 lg:pr-6 relative ${examDropdownOpen ? "z-50" : "z-20"}`}>
                   <label className="block text-xs font-bold text-slate-700 mb-2">
                     Exam
                   </label>
                   <button
                     type="button"
-                    onClick={() => setExamDropdownOpen(!examDropdownOpen)}
+                    onClick={() => {
+                      setExamDropdownOpen(!examDropdownOpen)
+                      setSubjectDropdownOpen(false)
+                    }}
                     className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 flex items-center justify-between text-sm font-semibold text-slate-900 transition-colors shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
                   >
                     <span>{currentExamMeta.title}</span>
@@ -808,22 +811,22 @@ export default function AIGeneratorPage() {
 
                   {examDropdownOpen && (
                     <>
-                      <div className="fixed inset-0 z-20" onClick={() => setExamDropdownOpen(false)} />
-                      <div className="absolute top-[calc(100%+6px)] left-0 right-0 z-30 bg-white rounded-xl border border-slate-200 shadow-xl py-1.5 animate-in fade-in-50 zoom-in-95">
+                      <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setExamDropdownOpen(false)} />
+                      <div className="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white rounded-2xl border border-slate-200 shadow-2xl py-2 max-h-72 overflow-y-auto animate-in fade-in-50 zoom-in-95">
                         {EXAM_TARGETS.map((exam) => (
                           <button
                             key={exam.id}
                             type="button"
                             onClick={() => handleExamChange(exam.id)}
-                            className={`w-full px-4 py-2.5 text-left text-sm flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${
-                              selectedExam === exam.id ? "bg-slate-50 font-bold text-[#1E293B]" : "text-slate-700"
+                            className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between transition-colors cursor-pointer border-b border-slate-50 last:border-0 ${
+                              selectedExam === exam.id ? "bg-slate-50 font-bold text-[#1E293B]" : "text-slate-700 hover:bg-slate-50/80"
                             }`}
                           >
                             <div>
-                              <p className="font-semibold">{exam.title}</p>
-                              <p className="text-[11px] text-slate-400 font-normal">{exam.badge}</p>
+                              <p className="font-semibold text-slate-800 text-sm">{exam.title}</p>
+                              <p className="text-[11px] text-slate-400 font-normal mt-0.5">{exam.badge} · {exam.syllabusYear} syllabus</p>
                             </div>
-                            {selectedExam === exam.id && <Check className="w-4 h-4 text-[#1E293B]" />}
+                            {selectedExam === exam.id && <Check className="w-4 h-4 text-[#1E293B] shrink-0 ml-2" />}
                           </button>
                         ))}
                       </div>
@@ -832,7 +835,7 @@ export default function AIGeneratorPage() {
                 </div>
 
                 {/* Column 2: Class / Standard */}
-                <div className="lg:col-span-4 lg:px-6 pt-5 lg:pt-0">
+                <div className="lg:col-span-4 lg:px-6 pt-5 lg:pt-0 relative z-10">
                   <label className="block text-xs font-bold text-slate-700 mb-2">
                     Class / Standard
                   </label>
@@ -862,12 +865,15 @@ export default function AIGeneratorPage() {
                 </div>
 
                 {/* Column 3: Subjects */}
-                <div className="lg:col-span-5 lg:pl-6 pt-5 lg:pt-0 relative">
+                <div className={`lg:col-span-5 lg:pl-6 pt-5 lg:pt-0 relative ${subjectDropdownOpen ? "z-50" : "z-20"}`}>
                   <label className="block text-xs font-bold text-slate-700 mb-2">
                     Subjects
                   </label>
                   <div
-                    onClick={() => setSubjectDropdownOpen(!subjectDropdownOpen)}
+                    onClick={() => {
+                      setSubjectDropdownOpen(!subjectDropdownOpen)
+                      setExamDropdownOpen(false)
+                    }}
                     className="w-full min-h-[48px] px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 flex items-center justify-between gap-2 transition-colors cursor-pointer shadow-2xs"
                   >
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -891,9 +897,9 @@ export default function AIGeneratorPage() {
 
                   {subjectDropdownOpen && (
                     <>
-                      <div className="fixed inset-0 z-20" onClick={() => setSubjectDropdownOpen(false)} />
-                      <div className="absolute top-[calc(100%+6px)] left-0 right-0 z-30 bg-white rounded-xl border border-slate-200 shadow-xl py-2 px-1 animate-in fade-in-50 zoom-in-95">
-                        <p className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setSubjectDropdownOpen(false)} />
+                      <div className="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white rounded-2xl border border-slate-200 shadow-2xl py-2 max-h-72 overflow-y-auto animate-in fade-in-50 zoom-in-95">
+                        <p className="px-4 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                           Select subjects
                         </p>
                         {availableSubjects.map((sub) => {
@@ -903,7 +909,7 @@ export default function AIGeneratorPage() {
                               key={sub}
                               type="button"
                               onClick={() => handleToggleSubject(sub)}
-                              className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center justify-between transition-colors cursor-pointer"
+                              className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center justify-between transition-colors cursor-pointer"
                             >
                               <span>{sub}</span>
                               <span className={`w-4 h-4 rounded border flex items-center justify-center ${
