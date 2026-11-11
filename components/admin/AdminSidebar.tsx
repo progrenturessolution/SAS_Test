@@ -40,7 +40,7 @@ export default function AdminSidebar({
   const isSuperAdmin = role === "super_admin" || (role === "admin" && !instituteName)
 
   const superAdminNavItems = [
-    { label: "Coaching Institutes", href: "/admin/institutes", icon: Building2 },
+    { label: "Organizations", href: "/admin/institutes", icon: Building2 },
     { label: "Platform Overview", href: "/admin/overview", icon: LayoutDashboard },
   ]
 
@@ -107,7 +107,7 @@ export default function AdminSidebar({
               <div className="flex items-center gap-1.5">
                 <Building2 className="w-3.5 h-3.5 text-[#2D3A4A]" />
                 <span className="text-xs font-bold text-[#45505F] truncate">
-                  {instituteName || "Coaching Institute"}
+                  {instituteName || "Organization"}
                 </span>
               </div>
               {instituteCode && (
@@ -123,7 +123,7 @@ export default function AdminSidebar({
       {/* Main Navigation */}
       <nav className="flex flex-1 gap-1 overflow-x-auto px-3 py-3 lg:block lg:space-y-1 lg:overflow-y-auto lg:overflow-x-hidden lg:py-4">
         <p className="hidden px-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 lg:mb-2 lg:block">
-          {isSuperAdmin ? "Management" : "Institute Navigation"}
+          {isSuperAdmin ? "Management" : "Organization Navigation"}
         </p>
 
         {navItems.map((item) => {

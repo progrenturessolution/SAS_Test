@@ -385,7 +385,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
               { key: "name", label: "Full Name", icon: User, type: "text", placeholder: "Enter your full name" },
               { key: "email", label: "Email Address", icon: Mail, type: "email", placeholder: "Enter your email address" },
               { key: "roll", label: "Roll Number", icon: Hash, type: "text", placeholder: "Enter your roll number" },
-              { key: "password", label: "Exam Password", icon: LockKeyhole, type: "password", placeholder: "Enter the password given by your institute" },
+              { key: "password", label: "Exam Password", icon: LockKeyhole, type: "password", placeholder: "Enter the password given by your organization" },
             ].map(({ key, label, icon: Icon, type, placeholder }) => (
               <div key={key}>
                 <label className="block text-sm font-semibold text-[#1a2535] mb-1.5">

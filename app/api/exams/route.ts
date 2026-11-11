@@ -30,7 +30,12 @@ export async function GET(req: Request) {
       }
     }
 
-    const exams = await Exam.find(query).sort({ createdAt: -1 }).lean()
+    const exams = await Exam.find(
+      query,
+      "title subject class duration status createdAt sections.name sections.title sections.questions._id sections.questions.title"
+    )
+      .sort({ createdAt: -1 })
+      .lean()
     return NextResponse.json({ exams })
   } catch (error) {
     console.error("Get exams error:", error)

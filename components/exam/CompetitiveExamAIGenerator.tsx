@@ -767,7 +767,7 @@ export function CompetitiveExamAIGenerator({
                             Import Syllabus or Chapter Notes (PDF Upload)
                           </h4>
                           <p className="text-[11px] text-gray-500 leading-snug">
-                            Upload your institute coaching module, official syllabus, or notes PDF. AI will extract topics and build questions from it.
+                            Upload your organization study module, official syllabus, or notes PDF. AI will extract topics and build questions from it.
                           </p>
                         </div>
                       </div>

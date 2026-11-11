@@ -366,10 +366,10 @@ export default function InstitutesManagementPage() {
           </div>
           <h1 className="text-2xl font-bold text-[#45505F] flex items-center gap-2.5">
             <Building2 className="w-6 h-6 text-[#2D3A4A]" />
-            <span>Coaching Institutes & Academies</span>
+            <span>Organizations</span>
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Register coaching centers, allocate student & exam quotas, and configure access permissions.
+            Register organizations, allocate student & exam quotas, and configure access permissions.
           </p>
         </div>
 
@@ -379,7 +379,7 @@ export default function InstitutesManagementPage() {
           className="px-4 py-2.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-xs font-semibold shadow-sm flex items-center gap-2 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Register New Coaching</span>
+          <span>Register New Organization</span>
         </button>
       </div>
 
@@ -387,7 +387,7 @@ export default function InstitutesManagementPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-xs">
           <div className="flex items-center justify-between text-gray-500 text-xs font-medium mb-1">
-            <span>Registered Coachings</span>
+            <span>Registered Organizations</span>
             <Building2 className="w-4 h-4 text-[#2D3A4A]" />
           </div>
           <div className="text-2xl font-bold text-[#2D3A4A]">{totalInstitutesCount}</div>
@@ -398,7 +398,7 @@ export default function InstitutesManagementPage() {
 
         <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-xs">
           <div className="flex items-center justify-between text-gray-500 text-xs font-medium mb-1">
-            <span>Active Institutes</span>
+            <span>Active Organizations</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-bold text-[#2D3A4A]">{activeInstitutesCount}</div>
@@ -413,7 +413,7 @@ export default function InstitutesManagementPage() {
             <Users className="w-4 h-4 text-[#2D3A4A]" />
           </div>
           <div className="text-2xl font-bold text-[#2D3A4A]">{totalPlatformStudents}</div>
-          <span className="text-[11px] text-gray-400">Across all coaching batches</span>
+          <span className="text-[11px] text-gray-400">Across all organization batches</span>
         </div>
 
         <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-xs">
@@ -432,7 +432,7 @@ export default function InstitutesManagementPage() {
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search by institute name, code, email, or city..."
+            placeholder="Search by organization name, code, email, or city..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-1.5 text-xs rounded-lg border border-gray-200 bg-gray-50/50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#2D3A4A] focus:bg-white"
@@ -467,22 +467,22 @@ export default function InstitutesManagementPage() {
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center text-gray-400">
           <Loader2 className="w-6 h-6 animate-spin mb-2 text-[#2D3A4A]" />
-          <span className="text-xs">Loading coaching institutes...</span>
+          <span className="text-xs">Loading organizations...</span>
         </div>
       ) : filteredInstitutes.length === 0 ? (
         <div className="py-16 text-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 flex flex-col items-center justify-center">
           <Building2 className="w-10 h-10 text-gray-300 mb-3" />
-          <h3 className="text-sm font-bold text-[#45505F] mb-1">No Coaching Institutes Found</h3>
+          <h3 className="text-sm font-bold text-[#45505F] mb-1">No Organizations Found</h3>
           <p className="text-xs text-gray-400 max-w-sm mb-4">
             {search || statusFilter !== "all"
               ? "Try adjusting your search query or status filter."
-              : "Get started by registering your first coaching institute or academy."}
+              : "Get started by registering your first organization."}
           </p>
           <button
             onClick={() => setShowRegisterModal(true)}
             className="px-4 py-2 rounded-lg bg-[#2D3A4A] text-white text-xs font-semibold hover:bg-[#1e2a38] transition-all cursor-pointer"
           >
-            + Register Coaching Institute
+            + Register Organization
           </button>
         </div>
       ) : (

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     const isInstituteAccount = Boolean(user.instituteId || user.role === "institute")
     if (portalType === "admin" && isInstituteAccount) {
       return NextResponse.json(
-        { error: "This account belongs to a Coaching Institute. Please use the Institute Login portal." },
+        { error: "This account belongs to an Organization. Please use the Organization Login portal." },
         { status: 403 }
       )
     }
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     let instituteData: any = null
     if (isInstituteAccount && !user.instituteId) {
       return NextResponse.json(
-        { error: "This coaching institute account is no longer available. Please contact platform support." },
+        { error: "This organization account is no longer available. Please contact platform support." },
         { status: 403 }
       )
     }
@@ -53,13 +53,13 @@ export async function POST(req: Request) {
       instituteData = await Institute.findById(user.instituteId).lean()
       if (!instituteData) {
         return NextResponse.json(
-          { error: "This coaching institute account is no longer available. Please contact platform support." },
+          { error: "This organization account is no longer available. Please contact platform support." },
           { status: 403 }
         )
       }
       if (instituteData.status === "suspended" || instituteData.status === "expired") {
         return NextResponse.json(
-          { error: `Your coaching institute account is ${instituteData.status}. Please contact platform support.` },
+          { error: `Your organization account is ${instituteData.status}. Please contact platform support.` },
           { status: 403 }
         )
       }

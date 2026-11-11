@@ -7,6 +7,16 @@ const nextConfig = {
   turbopack: {
     root: path.dirname(fileURLToPath(import.meta.url)),
   },
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      'recharts',
+      '@fortawesome/react-fontawesome',
+      '@fortawesome/free-solid-svg-icons',
+    ],
+  },
+  devIndicators: false,
   typescript: {
     ignoreBuildErrors: false,
   },

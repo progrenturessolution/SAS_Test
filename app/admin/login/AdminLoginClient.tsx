@@ -2,18 +2,17 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
+import { useRouter } from "next/navigation"
 import {
-  ArrowLeft,
-  ArrowRight,
-  Building2,
-  Check,
+  Mail,
+  Lock,
   Eye,
   EyeOff,
+  Layers,
+  Users,
+  BarChart2,
   Home,
-  LockKeyhole,
-  Mail,
-  Shield,
+  ArrowRight,
   Loader2,
 } from "lucide-react"
 
@@ -22,6 +21,7 @@ interface AdminLoginClientProps {
 }
 
 export default function AdminLoginClient({ portalType }: AdminLoginClientProps) {
+  const router = useRouter()
   const isInstitute = portalType === "institute"
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -48,7 +48,9 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
         return
       }
 
-      window.location.href = data.role === "super_admin" ? "/admin/institutes" : "/admin"
+      const targetUrl = data.role === "super_admin" ? "/admin/institutes" : "/admin"
+      router.push(targetUrl)
+      router.refresh()
     } catch {
       setError("Network connection error. Please try again.")
     } finally {
@@ -57,117 +59,212 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f7fafc] px-3 py-4 text-[#1e2d42] selection:bg-[#27394d] selection:text-white sm:px-6 lg:flex lg:items-center lg:justify-center lg:py-5">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-60"
-        style={{
-          backgroundImage: "radial-gradient(#cbd7e3 1px, transparent 1px)",
-          backgroundSize: "24px 24px",
-        }}
-      />
-      <div className="pointer-events-none absolute -left-32 top-20 h-80 w-80 rounded-full bg-white/80 blur-3xl" />
-      <div className="pointer-events-none absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-[#e6edf5]/80 blur-3xl" />
+    <div className="relative flex min-h-screen flex-col justify-between overflow-hidden bg-[#fafbfc] text-[#0f172a] selection:bg-[#0f172a] selection:text-white">
+      {/* Background Soft Wave (matches uploaded Figma design) */}
+      <div className="pointer-events-none absolute bottom-0 left-0 h-[240px] w-full max-w-[680px] overflow-hidden opacity-40">
+        <svg
+          viewBox="0 0 500 150"
+          preserveAspectRatio="none"
+          className="h-full w-full"
+        >
+          <path
+            d="M0.00,49.98 C149.99,150.00 349.81,-49.98 500.00,49.98 L500.00,150.00 L0.00,150.00 Z"
+            fill="#e2e8f0"
+            opacity="0.45"
+          />
+          <path
+            d="M0.00,75.00 C170.00,165.00 330.00,15.00 500.00,75.00 L500.00,150.00 L0.00,150.00 Z"
+            fill="#cbd5e1"
+            opacity="0.35"
+          />
+        </svg>
+      </div>
 
-      <section className="relative z-10 box-border flex w-full max-w-[1290px] flex-col overflow-hidden rounded-[22px] border border-[#cbd7e3] bg-white shadow-[0_24px_60px_-24px_rgba(30,52,75,0.42)] lg:h-[603px] lg:flex-row">
-        <div className="relative box-border flex min-h-[430px] flex-1 flex-col overflow-hidden bg-[#fbfcfe] px-7 pb-0 pt-5 sm:px-10 sm:pt-6 lg:min-h-0 lg:w-[56%] lg:px-16 lg:pt-5">
-          <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-[#eaf2f8] opacity-80 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-28 -left-24 h-72 w-72 rounded-full bg-[#e5eef6] opacity-70 blur-2xl" />
-          <div className="pointer-events-none absolute -right-10 -top-16 h-72 w-72 rotate-[22deg] bg-[#edf3f8]" style={{ clipPath: "polygon(38% 0, 100% 0, 100% 100%)" }} />
-          <div className="pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 bg-[#e8f0f7]" style={{ clipPath: "polygon(0 42%, 100% 100%, 0 100%)" }} />
-          <div className="pointer-events-none absolute bottom-[-5%] left-[30%] h-60 w-80 rotate-[20deg] bg-[#f0f4f8]" style={{ clipPath: "polygon(0 0, 100% 0, 72% 100%, 25% 100%)" }} />
-          <div className="pointer-events-none absolute right-[8%] top-[8%] h-24 w-28 opacity-70" style={{ backgroundImage: "radial-gradient(#9fb3c7 1px, transparent 1px)", backgroundSize: "11px 11px" }} />
-          <div className="relative z-10">
-            <Link href="/" aria-label="Go to home" className="inline-flex">
-              <Image src="/logo.png" alt="Progrentures Solution" width={180} height={94} priority className="h-auto w-[145px] object-contain sm:w-[170px]" />
-            </Link>
-            <div className="mt-4 max-w-[570px] sm:mt-7 lg:mt-2">
-              <h1 className="max-w-[475px] text-[2.2rem] font-extrabold leading-[1.06] tracking-[-0.045em] text-[#12243a] sm:text-5xl lg:text-[2.7rem]">
-                Conduct Secure
-                <br />
-                Competitive &amp; Board
-                <br />
-                <span className="text-[#273c54]">Mock Exams</span>
-              </h1>
-              <div className="mt-4 h-[3px] w-16 rounded-full bg-[#66788b]" />
-              <p className="mt-3 max-w-[505px] text-xs font-medium leading-[1.55] text-[#52657b] sm:text-[13px]">
-                Access question creation studios, live AI camera proctoring,
-                <br className="hidden sm:block" /> automated percentile scorecards for NEET, JEE &amp; MHT-CET.
-              </p>
-            </div>
-          </div>
-          <div className="relative mt-auto min-h-[205px] sm:min-h-[225px] lg:min-h-[235px]">
-            <Image src="/login-laptop-cropped.png" alt="Assessment analytics laptop" width={920} height={700} className="absolute bottom-5 -right-8 z-10 h-auto max-h-[245px] w-[min(60%,410px)] object-contain object-bottom mix-blend-multiply sm:bottom-6 lg:-right-10 lg:bottom-7 lg:w-[min(60%,420px)]" />
-          </div>
-          <div className="pointer-events-none absolute bottom-4 left-12 h-16 w-16 opacity-60" style={{ backgroundImage: "radial-gradient(#9fb3c7 1px, transparent 1px)", backgroundSize: "10px 10px" }} />
-        </div>
-
-        <div className="box-border flex w-full flex-col justify-between border-t border-[#d9e2eb] bg-white px-7 py-8 sm:px-10 lg:w-[44%] lg:border-l lg:border-t-0 lg:px-12 lg:py-10">
+      {/* Main Content Showcase */}
+      <main className="relative z-10 mx-auto flex w-full max-w-[1140px] flex-1 items-center justify-center px-6 py-12 sm:px-10 lg:py-16">
+        <div className="grid w-full grid-cols-1 items-center gap-12 lg:grid-cols-[1.12fr_0.88fr] lg:gap-16">
+          {/* Left Column: Brand & Platform Value Proposition */}
           <div>
-            <div className="flex items-start justify-between gap-5">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-xl bg-[#eef2f6] px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-[#34475d]">
-                  {isInstitute ? <Building2 className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
-                  {isInstitute ? "Institute access" : "Admin access"}
-                </div>
-                <h2 className="mt-3 text-4xl font-extrabold tracking-[-0.04em] text-[#12243a]">Sign In</h2>
-                <p className="mt-1 text-[15px] text-[#64758a]">
-                  {isInstitute ? "Enter your coaching admin credentials" : "Enter your platform admin credentials"}
-                </p>
+            {/* Logo: Lab Flask + Testro Lab */}
+            <Link href="/" className="inline-flex items-center gap-3 group">
+              <svg
+                className="h-8 w-8 text-[#0f172a] transition-transform group-hover:scale-105"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M10 2v7.31L4.75 18.1A2 2 0 0 0 6.46 21h11.08a2 2 0 0 0 1.71-2.9L14 9.31V2" />
+                <line x1="8.5" y1="2" x2="15.5" y2="2" />
+                <path d="M8.5 14h7" />
+              </svg>
+              <span className="text-[26px] font-bold tracking-tight text-[#0f172a]">
+                Testro Lab
+              </span>
+            </Link>
+
+            {/* Horizontal Dark Accent Line */}
+            <div className="my-8 h-[3.5px] w-12 rounded-full bg-[#0f172a]" />
+
+            {/* Platform Headline */}
+            <h1 className="text-4xl font-extrabold tracking-[-0.035em] text-[#0f172a] sm:text-[44px] sm:leading-[1.12]">
+              Testro Lab Platform
+            </h1>
+
+            {/* Sub-description */}
+            <p className="mt-4 max-w-[460px] text-[15px] font-normal leading-relaxed text-[#64748b] sm:text-base">
+              Create secure competitive and board mock exams, manage questions, and track student performance with a simple and reliable system.
+            </p>
+
+            {/* 3 Feature Pills */}
+            <div className="mt-9 flex flex-wrap items-center gap-3.5 text-xs font-semibold text-[#1e293b] sm:text-[13px]">
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-[#475569]" />
+                <span>Create Exams</span>
               </div>
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#25374b] text-white shadow-sm">
-                {isInstitute ? <Building2 className="h-7 w-7" /> : <Shield className="h-7 w-7 text-[#f4c66b]" />}
+              <span className="text-gray-300">|</span>
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-[#475569]" />
+                <span>Manage Students</span>
+              </div>
+              <span className="text-gray-300">|</span>
+              <div className="flex items-center gap-2">
+                <BarChart2 className="h-4 w-4 text-[#475569]" />
+                <span>Track Performance</span>
               </div>
             </div>
+          </div>
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              {error && <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-600">{error}</div>}
-              <div>
-                <label htmlFor="login-email" className="mb-2 block text-sm font-bold text-[#27394d]">
-                  {isInstitute ? "Institute Admin Email" : "Super Admin Email"}
+          {/* Right Column: Clean White Login Card */}
+          <div className="w-full max-w-[430px] rounded-2xl border border-gray-100 bg-white p-7 shadow-[0_15px_40px_-12px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.03)] sm:p-9">
+            {/* Card Header */}
+            <h2 className="text-[24px] font-bold tracking-tight text-[#0f172a]">
+              {isInstitute ? "Organization Login" : "Platform Admin Login"}
+            </h2>
+            <p className="mt-1 text-sm text-[#64748b] mb-6">
+              Sign in to continue to Testro Lab
+            </p>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs font-semibold text-red-600">
+                {error}
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-3.5">
+              {/* Email Input */}
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  id="login-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={isInstitute ? "Organization Email" : "Admin Email"}
+                  required
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-[#0f172a] placeholder:text-gray-400 outline-none transition focus:border-[#0f172a] focus:ring-1 focus:ring-[#0f172a]"
+                />
+              </div>
+
+              {/* Password Input */}
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  required
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-10 text-sm text-[#0f172a] placeholder:text-gray-400 outline-none transition focus:border-[#0f172a] focus:ring-1 focus:ring-[#0f172a]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
+              {/* Keep Me Signed In Checkbox */}
+              <div className="pt-0.5 pb-1">
+                <label className="flex items-center gap-2 text-xs text-[#64748b] cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-[#0f172a] focus:ring-[#0f172a] cursor-pointer"
+                  />
+                  <span>Keep me signed in</span>
                 </label>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#71839a]" />
-                  <input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder={isInstitute ? "admin@coachingacademy.com" : "admin@progrentures.com"} required className="h-[50px] w-full rounded-xl border border-[#d6e0e9] bg-[#f8fafc] pl-12 pr-4 text-sm font-medium text-[#1e2d42] outline-none transition focus:border-[#536a82] focus:bg-white focus:ring-4 focus:ring-[#dce6ef]" />
-                </div>
               </div>
-              <div>
-                <div className="mb-2">
-                  <label htmlFor="login-password" className="text-sm font-bold text-[#27394d]">Password</label>
-                </div>
-                <div className="relative">
-                  <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#71839a]" />
-                  <input id="login-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••••••" required className="h-[50px] w-full rounded-xl border border-[#d6e0e9] bg-[#f8fafc] pl-12 pr-12 text-sm font-medium text-[#1e2d42] outline-none transition focus:border-[#536a82] focus:bg-white focus:ring-4 focus:ring-[#dce6ef]" />
-                  <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((visible) => !visible)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#71839a] hover:text-[#25374b]">
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-[#53657a]">
-                  <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="peer sr-only" />
-                  <span className={`flex h-5 w-5 items-center justify-center rounded border transition ${rememberMe ? "border-[#26384c] bg-[#26384c] text-white" : "border-[#b8c5d2] bg-white"}`}><Check className="h-3.5 w-3.5" /></span>
-                  Stay signed in
-                </label>
-              </div>
-              <button type="submit" disabled={loading} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-xl bg-[#25374b] text-sm font-extrabold uppercase tracking-wide text-white shadow-[0_8px_18px_rgba(37,55,75,0.2)] transition hover:bg-[#1d2c3d] disabled:cursor-not-allowed disabled:opacity-70">
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>{isInstitute ? "Sign in to institute portal" : "Sign in as super admin"}<ArrowRight className="h-5 w-5" /></>}
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111c2e] hover:bg-[#0b1320] text-sm font-semibold text-white shadow-xs transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </button>
             </form>
 
-          </div>
-          <div className="mt-8 border-t border-[#e1e7ed] pt-5 text-center text-xs text-[#68798d]">
-            {isInstitute ? "Want to register a new coaching institute?" : "Need help managing your institutes?"}{" "}
-            <button type="button" onClick={() => window.open("https://wa.me/919309470958?text=Hello%20Progrentures,%20we%20want%20to%20onboard%20our%20coaching%20institute%20on%20Testro%20Lab.", "_blank")} className="font-bold text-[#25374b] hover:underline">Contact Platform Admin <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></button>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
-            <Link href={isInstitute ? "/admin/login" : "/institute/login"} className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-[#68798d] hover:text-[#25374b]"><ArrowLeft className="h-3.5 w-3.5" /> Switch to {isInstitute ? "Admin" : "Institute"} login</Link>
-            <Link href="/" className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#d6e0e9] px-3 py-1.5 text-xs font-bold text-[#40536a] transition hover:border-[#c2cfdb] hover:bg-[#eef2f6] hover:text-[#25374b]">
-              <Home className="h-3.5 w-3.5" />
-              Home
-            </Link>
+            {/* Bottom Register Contact Link */}
+            <div className="mt-7 border-t border-gray-100 pt-4 text-center sm:text-left text-[11.5px] text-[#64748b]">
+              <span>
+                {isInstitute
+                  ? "Want to register a new organization? "
+                  : "Need help managing your organization access? "}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  window.open(
+                    "https://wa.me/919309470958?text=Hello%20Progrentures,%20we%20want%20to%20onboard%20our%20organization%20on%20Testro%20Lab.",
+                    "_blank"
+                  )
+                }
+                className="font-bold text-[#0f172a] hover:underline cursor-pointer inline-flex items-center gap-1"
+              >
+                <span>Contact Platform Admin</span>
+                <ArrowRight className="h-3 w-3 inline" />
+              </button>
+            </div>
           </div>
         </div>
-      </section>
-    </main>
+      </main>
+
+      {/* Footer Bar */}
+      <footer className="relative z-10 w-full border-t border-gray-100/90 bg-white/70 px-6 py-4.5 text-xs text-gray-500 backdrop-blur-xs sm:px-12">
+        <div className="mx-auto flex max-w-[1140px] flex-col items-center justify-between gap-3 sm:flex-row">
+          <div className="flex items-center gap-2 text-[#64748b]">
+            <span>© 2026 Testro Lab</span>
+            <span className="text-gray-300">|</span>
+            <span>Exam &amp; Assessment Platform</span>
+          </div>
+
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-[#475569] shadow-2xs hover:bg-gray-50 hover:text-[#0f172a] transition-colors"
+          >
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
+        </div>
+      </footer>
+    </div>
   )
 }

@@ -25,13 +25,23 @@ export async function GET(req: Request) {
 
     // Case 1: Super Admin (Platform Admin)
     if ((session.role === "super_admin" || session.role === "admin") && !session.instituteId) {
-      const totalInstitutes = await Institute.countDocuments()
-      const activeInstitutes = await Institute.countDocuments({ status: "active" })
-      const totalExams = await Exam.countDocuments()
-      const activeExams = await Exam.countDocuments({ status: "active" })
-      const totalAttempts = await Attempt.countDocuments()
-      const distinctStudents = (await Attempt.distinct("studentEmail")).length
-      const examsThisMonth = await Exam.countDocuments({ createdAt: { $gte: thisMonth } })
+      const [
+        totalInstitutes,
+        activeInstitutes,
+        totalExams,
+        activeExams,
+        totalAttempts,
+        distinctEmails,
+        examsThisMonth,
+      ] = await Promise.all([
+        Institute.countDocuments(),
+        Institute.countDocuments({ status: "active" }),
+        Exam.countDocuments(),
+        Exam.countDocuments({ status: "active" }),
+        Attempt.countDocuments(),
+        Attempt.distinct("studentEmail"),
+        Exam.countDocuments({ createdAt: { $gte: thisMonth } }),
+      ])
 
       return NextResponse.json({
         isSuperAdmin: true,
@@ -40,22 +50,23 @@ export async function GET(req: Request) {
         totalExams,
         activeExams,
         totalAttempts,
-        studentsEnrolled: distinctStudents,
+        studentsEnrolled: distinctEmails.length,
         examsThisMonth,
       })
     }
 
-    // Case 2: Coaching Institute Admin
+    // Case 2: Coaching Organization Admin
     let institute: any = null
-    if (session.instituteId) {
-      institute = await Institute.findById(session.instituteId).lean()
-    }
-
     const query: any = session.instituteId
       ? { $or: [{ instituteId: session.instituteId }, { createdBy: session.id }] }
       : { $or: [{ createdBy: session.id }, { sharedWith: session.email }] }
 
-    const accessibleExams = await Exam.find(query, "_id sections status createdAt").lean()
+    const [instituteDoc, accessibleExams] = await Promise.all([
+      session.instituteId ? Institute.findById(session.instituteId).lean() : Promise.resolve(null),
+      Exam.find(query, "_id sections status createdAt").lean(),
+    ])
+    institute = instituteDoc
+
     const examIds = accessibleExams.map((ex) => ex._id)
 
     const totalExams = accessibleExams.length
@@ -75,15 +86,20 @@ export async function GET(req: Request) {
       (e) => e.createdAt && new Date(e.createdAt) >= thisMonth
     ).length
 
-    const distinctStudents = examIds.length > 0
-      ? (await Attempt.distinct("studentEmail", { examId: { $in: examIds } })).length
-      : 0
-    const attemptsCount = examIds.length > 0
-      ? await Attempt.countDocuments({ examId: { $in: examIds } })
-      : 0
-    const studentsThisMonth = examIds.length > 0
-      ? (await Attempt.distinct("studentEmail", { examId: { $in: examIds }, startedAt: { $gte: thisMonth } })).length
-      : 0
+    let distinctStudents = 0
+    let attemptsCount = 0
+    let studentsThisMonth = 0
+
+    if (examIds.length > 0) {
+      const [emails, count, monthEmails] = await Promise.all([
+        Attempt.distinct("studentEmail", { examId: { $in: examIds } }),
+        Attempt.countDocuments({ examId: { $in: examIds } }),
+        Attempt.distinct("studentEmail", { examId: { $in: examIds }, startedAt: { $gte: thisMonth } }),
+      ])
+      distinctStudents = emails.length
+      attemptsCount = count
+      studentsThisMonth = monthEmails.length
+    }
 
     return NextResponse.json({
       isSuperAdmin: false,

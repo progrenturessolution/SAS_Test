@@ -1568,7 +1568,7 @@ export default function CreateExamPage() {
       })
       const data = await res.json()
       if (res.status === 401) {
-        throw new Error("Your institute session has expired. Please sign in again from the Institute Login page.")
+        throw new Error("Your organization session has expired. Please sign in again from the Organization Login page.")
       }
       if (!res.ok) throw new Error(data.error || "Failed to save exam")
       router.push("/admin/exams")
