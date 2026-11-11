@@ -869,20 +869,20 @@ export default function AIGeneratorPage() {
 
         {/* ─── Studio Title & Badges Header ─── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
             Competitive Test Studio
           </h1>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0] text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0] text-xs font-medium">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#059669]" />
               <span>NCERT Aligned</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] text-xs font-medium">
               <Zap className="w-3.5 h-3.5 text-[#2563EB]" />
               <span>10-Yr PYQ Bank</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium">
               <Layers className="w-3.5 h-3.5 text-slate-600" />
               <span>Zero Repetition</span>
             </span>
@@ -899,7 +899,7 @@ export default function AIGeneratorPage() {
             </div>
             <button
               onClick={() => setErrorMsg(null)}
-              className="text-red-500 hover:text-red-800 font-bold p-1"
+              className="text-red-500 hover:text-red-800 font-medium p-1 cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -924,7 +924,7 @@ export default function AIGeneratorPage() {
                             window.scrollTo({ top: 0, behavior: "smooth" })
                           }
                         }}
-                        className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                        className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-all cursor-pointer ${
                           isCurrent
                             ? "bg-[#1E293B] text-white shadow-sm"
                             : isComplete
@@ -935,7 +935,7 @@ export default function AIGeneratorPage() {
                         {isComplete ? <Check className="w-4 h-4 stroke-[2.5]" /> : s.step}
                       </button>
                       <span
-                        className={`mt-2 text-xs font-semibold transition-colors ${
+                        className={`mt-2 text-xs font-medium transition-colors ${
                           isCurrent ? "text-slate-900" : isComplete ? "text-emerald-700" : "text-slate-400"
                         }`}
                       >
@@ -959,10 +959,10 @@ export default function AIGeneratorPage() {
           {currentStep === 1 && (
             <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 pb-10 shadow-xs relative z-20">
               <div className="mb-8">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
                   STEP 1 · EXAM DETAILS
                 </p>
-                <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
                   Choose Exam, Class and Subjects
                 </h2>
               </div>
@@ -970,7 +970,7 @@ export default function AIGeneratorPage() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
                 {/* Column 1: Exam */}
                 <div className={`lg:col-span-3 lg:pr-6 relative ${examDropdownOpen ? "z-50" : "z-20"}`}>
-                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                  <label className="block text-xs font-medium text-slate-600 mb-2">
                     Exam
                   </label>
                   <button
@@ -979,7 +979,7 @@ export default function AIGeneratorPage() {
                       setExamDropdownOpen(!examDropdownOpen)
                       setSubjectDropdownOpen(false)
                     }}
-                    className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 flex items-center justify-between text-sm font-semibold text-slate-900 transition-colors shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
+                    className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 flex items-center justify-between text-sm font-normal text-slate-800 transition-colors shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
                   >
                     <span>{currentExamMeta.title}</span>
                     <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${examDropdownOpen ? "rotate-180" : ""}`} />
@@ -994,9 +994,9 @@ export default function AIGeneratorPage() {
                             key={exam.id}
                             type="button"
                             onClick={() => handleExamChange(exam.id)}
-                            className={`w-full px-3 py-2 rounded-lg text-left text-xs sm:text-sm font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                            className={`w-full px-3 py-2 rounded-lg text-left text-xs sm:text-sm font-normal flex items-center justify-between transition-colors cursor-pointer ${
                               selectedExam === exam.id
-                                ? "bg-slate-100 text-[#1E293B] font-bold"
+                                ? "bg-slate-100 text-[#1E293B] font-medium"
                                 : "text-slate-700 hover:bg-slate-50"
                             }`}
                           >
@@ -1016,7 +1016,7 @@ export default function AIGeneratorPage() {
 
                 {/* Column 2: Class / Standard */}
                 <div className="lg:col-span-4 lg:px-6 pt-5 lg:pt-0 relative z-10">
-                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                  <label className="block text-xs font-medium text-slate-600 mb-2">
                     Class / Standard
                   </label>
                   <div className="flex items-center gap-2">
@@ -1031,7 +1031,7 @@ export default function AIGeneratorPage() {
                           key={cls.id}
                           type="button"
                           onClick={() => handleGradeChange(cls.id as any)}
-                          className={`flex-1 h-12 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
+                          className={`flex-1 h-12 px-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 cursor-pointer ${
                             isSelected
                               ? "border-2 border-slate-900 bg-white text-slate-900 shadow-xs"
                               : "border border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 text-slate-600"
@@ -1046,7 +1046,7 @@ export default function AIGeneratorPage() {
 
                 {/* Column 3: Subjects */}
                 <div className={`lg:col-span-5 lg:pl-6 pt-5 lg:pt-0 relative ${subjectDropdownOpen ? "z-50" : "z-20"}`}>
-                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                  <label className="block text-xs font-medium text-slate-600 mb-2">
                     Subjects
                   </label>
                   <div
@@ -1060,7 +1060,7 @@ export default function AIGeneratorPage() {
                       {selectedSubjects.map((sub) => (
                         <span
                           key={sub}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 text-blue-900 text-xs font-semibold border border-blue-200/60"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 text-blue-900 text-xs font-normal border border-blue-200/60"
                         >
                           <span>{sub}</span>
                           <span
@@ -1079,7 +1079,7 @@ export default function AIGeneratorPage() {
                     <>
                       <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setSubjectDropdownOpen(false)} />
                       <div className="absolute top-[calc(100%+6px)] left-0 right-0 z-50 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 animate-in fade-in-50 zoom-in-95">
-                        <p className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <p className="px-3 py-1 text-[10px] font-medium text-slate-400 uppercase tracking-wider">
                           Select subjects
                         </p>
                         {availableSubjects.map((sub) => {
@@ -1089,7 +1089,7 @@ export default function AIGeneratorPage() {
                               key={sub}
                               type="button"
                               onClick={() => handleToggleSubject(sub)}
-                              className="w-full px-3 py-1.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center justify-between transition-colors cursor-pointer"
+                              className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-700 hover:bg-slate-50 rounded-lg flex items-center justify-between transition-colors cursor-pointer"
                             >
                               <span>{sub}</span>
                               <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
@@ -1118,7 +1118,7 @@ export default function AIGeneratorPage() {
                     <Layers className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                    <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
                       Content & Blueprint
                     </h2>
                     <p className="text-xs text-slate-500 mt-0.5">
@@ -1129,9 +1129,9 @@ export default function AIGeneratorPage() {
 
                 {/* Selected Summary Badges & Edit Icon */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-3.5 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-semibold text-slate-700">
+                  <span className="px-3.5 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-normal text-slate-600">
                     Class:{" "}
-                    <span className="font-bold text-slate-900">
+                    <span className="font-medium text-slate-800">
                       {selectedGrade === "both"
                         ? "11th + 12th"
                         : selectedGrade === "11"
@@ -1139,9 +1139,9 @@ export default function AIGeneratorPage() {
                         : "Class 12th"}
                     </span>
                   </span>
-                  <span className="px-3.5 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-semibold text-slate-700">
+                  <span className="px-3.5 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-normal text-slate-600">
                     Subjects:{" "}
-                    <span className="font-bold text-slate-900">
+                    <span className="font-medium text-slate-800">
                       {selectedSubjects.slice(0, 3).join(", ") +
                         (selectedSubjects.length > 3
                           ? ` +${selectedSubjects.length - 3} more`
@@ -1165,7 +1165,7 @@ export default function AIGeneratorPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <span className="w-1 h-4 bg-slate-900 rounded-full" />
-                    <h3 className="text-base font-bold text-slate-900">Chapter Selection</h3>
+                    <h3 className="text-base font-semibold text-slate-800">Chapter Selection</h3>
                   </div>
 
                   {/* Subject Filter Pills */}
@@ -1181,9 +1181,9 @@ export default function AIGeneratorPage() {
                             setActiveSubjectTab(sub)
                             setSelectedSubject(sub)
                           }}
-                          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-normal transition-all cursor-pointer ${
                             isActive
-                              ? "bg-[#1E293B] text-white shadow-xs"
+                              ? "bg-[#1E293B] text-white shadow-xs font-medium"
                               : "bg-white border border-slate-200 text-slate-700 hover:border-slate-300"
                           }`}
                         >
@@ -1204,9 +1204,9 @@ export default function AIGeneratorPage() {
                         key={cf.id}
                         type="button"
                         onClick={() => setClassFilter(cf.id as any)}
-                        className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                        className={`px-3 py-1 rounded-full text-xs font-normal transition-colors cursor-pointer ${
                           classFilter === cf.id
-                            ? "bg-blue-100 text-blue-700 font-bold"
+                            ? "bg-blue-100 text-blue-800 font-medium"
                             : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300"
                         }`}
                       >
@@ -1245,7 +1245,7 @@ export default function AIGeneratorPage() {
                                 onChange={() => toggleAllClass("11")}
                                 className="w-4 h-4 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
                               />
-                              <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                              <span className="font-medium text-slate-800 text-xs sm:text-sm">
                                 Class 11 ({class11Chapters.length} chapters)
                               </span>
                             </label>
@@ -1273,7 +1273,7 @@ export default function AIGeneratorPage() {
                                     onChange={() => toggleChapter(ch.name)}
                                     className="mt-0.5 w-3.5 h-3.5 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
                                   />
-                                  <span className="font-medium">
+                                  <span className="font-normal text-slate-700">
                                     <span className="text-slate-400 mr-1.5">{idx + 1}.</span>
                                     {ch.name}
                                   </span>
@@ -1313,7 +1313,7 @@ export default function AIGeneratorPage() {
                                 onChange={() => toggleAllClass("12")}
                                 className="w-4 h-4 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
                               />
-                              <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                              <span className="font-medium text-slate-800 text-xs sm:text-sm">
                                 Class 12 ({class12Chapters.length} chapters)
                               </span>
                             </label>
@@ -1341,7 +1341,7 @@ export default function AIGeneratorPage() {
                                     onChange={() => toggleChapter(ch.name)}
                                     className="mt-0.5 w-3.5 h-3.5 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
                                   />
-                                  <span className="font-medium">
+                                  <span className="font-normal text-slate-700">
                                     <span className="text-slate-400 mr-1.5">{idx + 1}.</span>
                                     {ch.name}
                                   </span>
@@ -1355,7 +1355,7 @@ export default function AIGeneratorPage() {
                   </div>
 
                   {/* Selected Status Bar */}
-                  <div className="mt-4 px-4 py-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-2 text-xs font-semibold text-blue-900">
+                  <div className="mt-4 px-4 py-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-2 text-xs font-medium text-blue-900">
                     <Check className="w-4 h-4 text-blue-600 stroke-[2.5]" />
                     <span>Selected: {selectedChapters.length} Chapters</span>
                   </div>
@@ -1365,12 +1365,12 @@ export default function AIGeneratorPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <span className="w-1 h-4 bg-slate-900 rounded-full" />
-                    <h3 className="text-base font-bold text-slate-900">Question Blueprint</h3>
+                    <h3 className="text-base font-semibold text-slate-800">Question Blueprint</h3>
                   </div>
 
                   {/* Blueprint Matrix Table */}
                   <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
-                    <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-slate-50/80 border-b border-slate-100 text-xs font-bold text-slate-700">
+                    <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-slate-50/80 border-b border-slate-100 text-xs font-medium text-slate-500">
                       <span className="col-span-6">Question Format</span>
                       <span className="col-span-3 text-center">No. of Questions</span>
                       <span className="col-span-3 text-center">Marks per Question</span>
@@ -1391,7 +1391,7 @@ export default function AIGeneratorPage() {
                               onChange={() => toggleFormatCheck(f.id)}
                               className="w-4 h-4 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
                             />
-                            <span className="font-semibold text-slate-800 text-xs sm:text-sm">
+                            <span className="font-normal text-slate-800 text-xs sm:text-sm">
                               {f.label}
                             </span>
                           </label>
@@ -1401,7 +1401,7 @@ export default function AIGeneratorPage() {
                               disabled={!f.checked}
                               value={f.count}
                               onChange={(e) => updateFormatCount(f.id, Number(e.target.value))}
-                              className="w-20 h-9 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
+                              className="w-20 h-9 px-2 rounded-lg border border-slate-200 bg-white text-xs font-normal text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
                             >
                               {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((num) => (
                                 <option key={num} value={num}>
@@ -1416,7 +1416,7 @@ export default function AIGeneratorPage() {
                               disabled={!f.checked}
                               value={f.marks}
                               onChange={(e) => updateFormatMarks(f.id, Number(e.target.value))}
-                              className="w-16 h-9 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
+                              className="w-16 h-9 px-2 rounded-lg border border-slate-200 bg-white text-xs font-normal text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
                             >
                               {[0, 1, 2, 3, 4, 5].map((m) => (
                                 <option key={m} value={m}>
@@ -1431,17 +1431,17 @@ export default function AIGeneratorPage() {
                   </div>
 
                   {/* Info Summary: Total Questions & Marks */}
-                  <div className="mt-4 px-4 py-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-3 text-xs text-blue-950 font-medium">
+                  <div className="mt-4 px-4 py-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-3 text-xs text-blue-950 font-normal">
                     <Info className="w-4 h-4 text-blue-600 shrink-0" />
                     <div className="flex items-center gap-3">
                       <span>
                         Total Questions:{" "}
-                        <strong className="font-bold text-slate-900">{totalQuestions}</strong>
+                        <span className="font-semibold text-slate-900">{totalQuestions}</span>
                       </span>
                       <span className="text-blue-200">|</span>
                       <span>
                         Total Marks:{" "}
-                        <strong className="font-bold text-slate-900">{totalMarks}</strong>
+                        <span className="font-semibold text-slate-900">{totalMarks}</span>
                       </span>
                     </div>
                   </div>
@@ -1455,7 +1455,7 @@ export default function AIGeneratorPage() {
                     <BarChart2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-900">Difficulty Level</p>
+                    <p className="text-sm font-semibold text-slate-900">Difficulty Level</p>
                     <p className="text-xs text-slate-400">Choose the challenge level for learners.</p>
                   </div>
                 </div>
@@ -1464,7 +1464,7 @@ export default function AIGeneratorPage() {
                   <select
                     value={difficulty}
                     onChange={(e) => setDifficulty(e.target.value as any)}
-                    className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-normal text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
                   >
                     <option value="easy">Easy (Concept & Formula Foundations)</option>
                     <option value="medium">Medium (Standard Entrance Level)</option>
@@ -1485,14 +1485,14 @@ export default function AIGeneratorPage() {
                   <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center mb-4">
                     <FileQuestion className="w-7 h-7" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-1">No Questions Generated Yet</h3>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-1">No Questions Generated Yet</h3>
                   <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mb-6">
                     Configure your chapter selections and question blueprint in Step 2, then click &ldquo;Create Questions&rdquo; to generate exam questions.
                   </p>
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm transition-colors cursor-pointer inline-flex items-center gap-2"
+                    className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-sm transition-colors cursor-pointer inline-flex items-center gap-2"
                   >
                     <span>Go to Step 2 (Content & Blueprint)</span>
                     <ArrowRight className="w-4 h-4" />
@@ -1504,26 +1504,26 @@ export default function AIGeneratorPage() {
                   <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col xl:flex-row items-start xl:items-center justify-between gap-5">
                     <div className="flex-1 w-full xl:w-auto">
                       <div className="flex items-center gap-2.5 mb-2 flex-wrap">
-                        <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium uppercase tracking-wider flex items-center gap-1.5">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                           <span>{generatedQuestions.length} Questions Created</span>
                         </span>
-                        <span className="text-xs text-slate-500 font-semibold">
+                        <span className="text-xs text-slate-500 font-normal">
                           {selectedQuestionIds.size} of {generatedQuestions.length} selected for paper
                         </span>
-                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                        <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
                           Total Marks: {generatedQuestions.filter((q) => selectedQuestionIds.has(q.id)).reduce((acc, q) => acc + (q.marks || 4), 0)}
                         </span>
                       </div>
 
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
-                        <label className="text-xs font-bold text-slate-600 shrink-0">Exam Title:</label>
+                        <label className="text-xs font-medium text-slate-600 shrink-0">Exam Title:</label>
                         <input
                           type="text"
                           value={examTitle}
                           onChange={(e) => setExamTitle(e.target.value)}
                           placeholder="Enter exam paper title..."
-                          className="px-3.5 py-2 text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 text-slate-900 w-full sm:w-96 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 focus:bg-white"
+                          className="px-3.5 py-2 text-sm font-normal rounded-xl border border-slate-200 bg-slate-50 text-slate-900 w-full sm:w-96 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 focus:bg-white"
                         />
                       </div>
                     </div>
@@ -1538,7 +1538,7 @@ export default function AIGeneratorPage() {
                             setSelectedQuestionIds(new Set(generatedQuestions.map((q) => q.id)))
                           }
                         }}
-                        className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <Check className="w-3.5 h-3.5 text-slate-500" />
                         <span>
@@ -1549,7 +1549,7 @@ export default function AIGeneratorPage() {
                       <button
                         type="button"
                         onClick={() => setCurrentStep(2)}
-                        className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer"
+                        className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer"
                       >
                         <Sliders className="w-3.5 h-3.5 text-slate-500" />
                         <span>Tweak Blueprint</span>
@@ -1562,7 +1562,7 @@ export default function AIGeneratorPage() {
                           window.scrollTo({ top: 0, behavior: "smooth" })
                         }}
                         disabled={selectedQuestionIds.size === 0}
-                        className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold shadow-sm flex items-center gap-2 disabled:opacity-40 transition-all cursor-pointer"
+                        className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-medium shadow-sm flex items-center gap-2 disabled:opacity-40 transition-all cursor-pointer"
                       >
                         <span>Proceed to Exam Details</span>
                         <ArrowRight className="w-4 h-4" />
@@ -1576,7 +1576,7 @@ export default function AIGeneratorPage() {
                       <button
                         type="button"
                         onClick={() => setFormatFilter("all")}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                           formatFilter === "all"
                             ? "bg-[#1E293B] text-white shadow-xs"
                             : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -1588,7 +1588,7 @@ export default function AIGeneratorPage() {
                         <button
                           type="button"
                           onClick={() => setFormatFilter("mcq")}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                             formatFilter === "mcq"
                               ? "bg-blue-600 text-white shadow-xs"
                               : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -1601,7 +1601,7 @@ export default function AIGeneratorPage() {
                         <button
                           type="button"
                           onClick={() => setFormatFilter("assertion")}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                             formatFilter === "assertion"
                               ? "bg-amber-600 text-white shadow-xs"
                               : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -1614,7 +1614,7 @@ export default function AIGeneratorPage() {
                         <button
                           type="button"
                           onClick={() => setFormatFilter("fib")}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                             formatFilter === "fib"
                               ? "bg-purple-600 text-white shadow-xs"
                               : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -1627,7 +1627,7 @@ export default function AIGeneratorPage() {
                         <button
                           type="button"
                           onClick={() => setFormatFilter("true_false")}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                             formatFilter === "true_false"
                               ? "bg-cyan-600 text-white shadow-xs"
                               : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -1677,33 +1677,33 @@ export default function AIGeneratorPage() {
                                 onChange={() => toggleQuestionSelection(q.id)}
                                 className="w-4 h-4 rounded text-[#1E293B] focus:ring-[#1E293B] cursor-pointer accent-[#1E293B]"
                               />
-                              <span className="w-7 h-7 rounded-xl bg-[#1E293B] text-white text-xs font-bold flex items-center justify-center shadow-2xs">
+                              <span className="w-7 h-7 rounded-xl bg-[#1E293B] text-white text-xs font-medium flex items-center justify-center shadow-2xs">
                                 {idx + 1}
                               </span>
-                              <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800">
+                              <span className="text-xs font-normal px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800">
                                 {q.chapter}
                               </span>
-                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg border ${
+                              <span className={`text-xs font-normal px-2.5 py-1 rounded-lg border ${
                                 qFormat === "assertion"
-                                  ? "bg-amber-50 text-amber-800 border-amber-200"
-                                  : qFormat === "fib"
-                                  ? "bg-purple-50 text-purple-800 border-purple-200"
-                                  : isTF
-                                  ? "bg-cyan-50 text-cyan-800 border-cyan-200"
-                                  : "bg-blue-50 text-blue-800 border-blue-200"
+                                    ? "bg-amber-50 text-amber-800 border-amber-200"
+                                    : qFormat === "fib"
+                                    ? "bg-purple-50 text-purple-800 border-purple-200"
+                                    : isTF
+                                    ? "bg-cyan-50 text-cyan-800 border-cyan-200"
+                                    : "bg-blue-50 text-blue-800 border-blue-200"
                               }`}>
                                 {formatLabel}
                               </span>
                               {q.pyqReference && (
-                                <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/60 flex items-center gap-1">
+                                <span className="text-xs font-normal px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/60 flex items-center gap-1">
                                   <Target className="w-3.5 h-3.5 text-emerald-600" />
                                   <span>{q.pyqReference}</span>
                                 </span>
                               )}
-                              <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                              <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
                                 {q.difficulty}
                               </span>
-                              <span className="text-xs text-slate-500 font-semibold">
+                              <span className="text-xs text-slate-500 font-normal">
                                 +{q.marks} / -{q.negativeMark} marks
                               </span>
                             </div>
@@ -1733,28 +1733,28 @@ export default function AIGeneratorPage() {
                             <div className="space-y-3 pl-0 sm:pl-9 mb-5">
                               <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-200/70 text-slate-900 shadow-2xs">
                                 <div className="flex items-center gap-2 mb-1.5">
-                                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-900 bg-amber-100/90 border border-amber-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                                  <span className="text-[11px] font-medium uppercase tracking-wider text-amber-900 bg-amber-100/90 border border-amber-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
                                     Assertion (A)
                                   </span>
                                 </div>
-                                <div className="text-sm sm:text-base font-semibold leading-relaxed overflow-x-auto overflow-y-hidden">
+                                <div className="text-sm sm:text-base font-normal leading-relaxed text-slate-800 overflow-x-auto overflow-y-hidden">
                                   <MathRenderer content={parsedAR.assertion} />
                                 </div>
                               </div>
 
                               <div className="p-4 rounded-2xl bg-purple-50/40 border border-purple-200/70 text-slate-900 shadow-2xs">
                                 <div className="flex items-center gap-2 mb-1.5">
-                                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-900 bg-purple-100/90 border border-purple-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                                  <span className="text-[11px] font-medium uppercase tracking-wider text-purple-900 bg-purple-100/90 border border-purple-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
                                     Reason (R)
                                   </span>
                                 </div>
-                                <div className="text-sm sm:text-base font-semibold leading-relaxed overflow-x-auto overflow-y-hidden">
+                                <div className="text-sm sm:text-base font-normal leading-relaxed text-slate-800 overflow-x-auto overflow-y-hidden">
                                   <MathRenderer content={parsedAR.reason} />
                                 </div>
                               </div>
                             </div>
                           ) : (
-                            <div className="text-sm sm:text-base font-semibold text-slate-900 pl-0 sm:pl-9 mb-5 leading-relaxed overflow-x-auto overflow-y-hidden">
+                            <div className="text-sm sm:text-base font-normal text-slate-800 pl-0 sm:pl-9 mb-5 leading-relaxed overflow-x-auto overflow-y-hidden">
                               <MathRenderer content={q.questionText} />
                             </div>
                           )}
@@ -1770,12 +1770,12 @@ export default function AIGeneratorPage() {
                                   key={oi}
                                   className={`p-3.5 rounded-xl border flex items-start gap-3 transition-all ${
                                     isCorrect
-                                      ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-semibold shadow-2xs"
+                                      ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-normal shadow-2xs"
                                       : "bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white"
                                   }`}
                                 >
                                   <span
-                                    className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 ${
+                                    className={`w-7 h-7 rounded-lg text-xs font-medium flex items-center justify-center shrink-0 mt-0.5 ${
                                       isCorrect
                                         ? "bg-emerald-600 text-white shadow-2xs"
                                         : isTF
@@ -1786,12 +1786,12 @@ export default function AIGeneratorPage() {
                                     {isCorrect ? "✓" : label}
                                   </span>
 
-                                  <div className="flex-1 text-xs sm:text-sm font-semibold pt-1 leading-relaxed overflow-x-auto overflow-y-hidden">
+                                  <div className="flex-1 text-xs sm:text-sm font-normal pt-1 leading-relaxed overflow-x-auto overflow-y-hidden">
                                     <MathRenderer content={opt} />
                                   </div>
 
                                   {isCorrect && (
-                                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-2 py-0.5 rounded-md shrink-0 self-start mt-1">
+                                    <span className="text-[10px] font-medium text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-2 py-0.5 rounded-md shrink-0 self-start mt-1">
                                       Correct
                                     </span>
                                   )}
@@ -1805,7 +1805,7 @@ export default function AIGeneratorPage() {
                             <button
                               type="button"
                               onClick={() => toggleSolution(q.id)}
-                              className="text-xs font-bold text-slate-700 hover:text-slate-900 hover:underline flex items-center gap-1.5 cursor-pointer"
+                              className="text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline flex items-center gap-1.5 cursor-pointer"
                             >
                               {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                               <span>{isExpanded ? "Hide Solution" : "View Step-by-Step Solution"}</span>
@@ -1813,7 +1813,7 @@ export default function AIGeneratorPage() {
 
                             {isExpanded && (
                               <div className="mt-3 p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed space-y-2 overflow-x-auto">
-                                <span className="font-bold text-slate-900 block text-xs uppercase tracking-wider text-slate-500">
+                                <span className="font-medium text-slate-600 block text-xs uppercase tracking-wider">
                                   Concept & Detailed Solution:
                                 </span>
                                 <MathRenderer content={q.explanation} />
@@ -1835,7 +1835,7 @@ export default function AIGeneratorPage() {
               <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="mb-6">
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                    <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
                       Exam Details
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -1846,7 +1846,7 @@ export default function AIGeneratorPage() {
                   <div className="space-y-5">
                     {/* Exam Title */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-800 mb-2">
+                      <label className="block text-xs font-medium text-slate-600 mb-2">
                         Exam Title <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1854,14 +1854,14 @@ export default function AIGeneratorPage() {
                         value={examTitle || getDefaultExamTitle()}
                         onChange={(e) => setExamTitle(e.target.value)}
                         placeholder="e.g. MHT_CET Mathematics - Continuity and Differentiability & 3 more"
-                        className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
+                        className="w-full px-4 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
                       />
                     </div>
 
                     {/* Row 1: Duration, Total Marks, Pass Marks */}
                     <div className="grid grid-cols-3 gap-3 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-800 mb-2 truncate">
+                        <label className="block text-xs font-medium text-slate-600 mb-2 truncate">
                           Duration (minutes) <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -1869,12 +1869,12 @@ export default function AIGeneratorPage() {
                           min={5}
                           value={duration}
                           onChange={(e) => setDuration(Number(e.target.value) || 0)}
-                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
+                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-800 mb-2 truncate">
+                        <label className="block text-xs font-medium text-slate-600 mb-2 truncate">
                           Total Marks <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -1882,12 +1882,12 @@ export default function AIGeneratorPage() {
                           min={1}
                           value={examTotalMarks}
                           onChange={(e) => setExamTotalMarks(Number(e.target.value) || 0)}
-                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
+                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-800 mb-2 truncate">
+                        <label className="block text-xs font-medium text-slate-600 mb-2 truncate">
                           Pass Marks <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -1895,7 +1895,7 @@ export default function AIGeneratorPage() {
                           min={0}
                           value={passMarks}
                           onChange={(e) => setPassMarks(Number(e.target.value) || 0)}
-                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
+                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
                         />
                       </div>
                     </div>
@@ -1903,7 +1903,7 @@ export default function AIGeneratorPage() {
                     {/* Row 2: Questions Per Minute & Minimum Exam Duration */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-800 mb-2">
+                        <label className="block text-xs font-medium text-slate-600 mb-2">
                           Questions Per Minute <span className="text-slate-400 font-normal">(Optional)</span>
                         </label>
                         <input
@@ -1911,12 +1911,12 @@ export default function AIGeneratorPage() {
                           value={questionsPerMinute}
                           onChange={(e) => setQuestionsPerMinute(e.target.value)}
                           placeholder="e.g., 1.5"
-                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
+                          className="w-full px-4 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-800 mb-2">
+                        <label className="block text-xs font-medium text-slate-600 mb-2">
                           Minimum Exam Duration <span className="text-red-500">*</span>
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -1924,7 +1924,7 @@ export default function AIGeneratorPage() {
                             <select
                               value={minDurationHours}
                               onChange={(e) => setMinDurationHours(e.target.value)}
-                              className="w-full appearance-none px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-8"
+                              className="w-full appearance-none px-4 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-8"
                             >
                               <option value="00">00 Hr</option>
                               <option value="01">01 Hr</option>
@@ -1938,7 +1938,7 @@ export default function AIGeneratorPage() {
                             <select
                               value={minDurationMinutes}
                               onChange={(e) => setMinDurationMinutes(e.target.value)}
-                              className="w-full appearance-none px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-8"
+                              className="w-full appearance-none px-4 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-8"
                             >
                               <option value="00">00 Min</option>
                               <option value="15">15 Min</option>
@@ -1953,7 +1953,7 @@ export default function AIGeneratorPage() {
 
                     {/* Instructions Section */}
                     <div className="pt-2">
-                      <h3 className="text-sm font-bold text-slate-900">
+                      <h3 className="text-sm font-semibold text-slate-800">
                         Instructions
                       </h3>
                       <p className="text-xs text-slate-500 mb-2.5">
@@ -1963,7 +1963,7 @@ export default function AIGeneratorPage() {
                       <div className="rounded-2xl border border-slate-200/90 bg-white p-4 space-y-2">
                         {instructions.map((inst, idx) => (
                           <div key={idx} className="flex items-start gap-2.5 group">
-                            <span className="text-xs sm:text-sm font-bold text-slate-800 shrink-0 mt-0.5">
+                            <span className="text-xs sm:text-sm font-normal text-slate-500 shrink-0 mt-0.5">
                               {idx + 1}.
                             </span>
                             <input
@@ -1974,7 +1974,7 @@ export default function AIGeneratorPage() {
                                 next[idx] = e.target.value
                                 setInstructions(next)
                               }}
-                              className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-200 focus:border-slate-400 px-1 py-0.5 text-xs sm:text-sm font-medium text-slate-700 focus:outline-none transition-colors"
+                              className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-200 focus:border-slate-400 px-1 py-0.5 text-xs sm:text-sm font-normal text-slate-700 focus:outline-none transition-colors"
                             />
                             {instructions.length > 1 && (
                               <button
@@ -1992,7 +1992,7 @@ export default function AIGeneratorPage() {
                         <button
                           type="button"
                           onClick={() => setInstructions((prev) => [...prev, "New guideline for learners."])}
-                          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 pt-1 cursor-pointer"
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 pt-1 cursor-pointer"
                         >
                           <Plus size={14} />
                           <span>Add Instruction</span>
@@ -2007,7 +2007,7 @@ export default function AIGeneratorPage() {
               <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="mb-6">
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                    <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
                       Exam Overview
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -2018,55 +2018,55 @@ export default function AIGeneratorPage() {
                   {/* Configuration Key-Value Rows */}
                   <div className="space-y-4">
                     <div className="flex items-baseline justify-between py-1 border-b border-slate-100/80">
-                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                      <span className="text-xs sm:text-sm font-normal text-slate-500 w-36 shrink-0">
                         Exam
                       </span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                      <span className="text-xs sm:text-sm font-normal text-slate-800 text-right">
                         {examOverviewName}
                       </span>
                     </div>
 
                     <div className="flex items-baseline justify-between py-1 border-b border-slate-100/80">
-                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                      <span className="text-xs sm:text-sm font-normal text-slate-500 w-36 shrink-0">
                         Class
                       </span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                      <span className="text-xs sm:text-sm font-normal text-slate-800 text-right">
                         {classOverviewText}
                       </span>
                     </div>
 
                     <div className="flex items-baseline justify-between py-1 border-b border-slate-100/80">
-                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                      <span className="text-xs sm:text-sm font-normal text-slate-500 w-36 shrink-0">
                         Subjects
                       </span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                      <span className="text-xs sm:text-sm font-normal text-slate-800 text-right">
                         {subjectsOverviewText}
                       </span>
                     </div>
 
                     <div className="flex items-baseline justify-between py-1 border-b border-slate-100/80">
-                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                      <span className="text-xs sm:text-sm font-normal text-slate-500 w-36 shrink-0">
                         Chapters
                       </span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                      <span className="text-xs sm:text-sm font-normal text-slate-800 text-right">
                         {chaptersOverviewText}
                       </span>
                     </div>
 
                     <div className="flex items-baseline justify-between py-1 border-b border-slate-100/80">
-                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                      <span className="text-xs sm:text-sm font-normal text-slate-500 w-36 shrink-0">
                         Question Format
                       </span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                      <span className="text-xs sm:text-sm font-normal text-slate-800 text-right">
                         {questionFormatOverview}
                       </span>
                     </div>
 
                     <div className="flex items-baseline justify-between py-1">
-                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-36 shrink-0">
+                      <span className="text-xs sm:text-sm font-normal text-slate-500 w-36 shrink-0">
                         Difficulty Level
                       </span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 text-right">
+                      <span className="text-xs sm:text-sm font-normal text-slate-800 text-right">
                         {difficultyOverview}
                       </span>
                     </div>
@@ -2076,22 +2076,22 @@ export default function AIGeneratorPage() {
                 {/* Bottom Summary Stats Strip */}
                 <div className="mt-8 rounded-2xl bg-slate-50 border border-slate-200/80 p-5 grid grid-cols-3 divide-x divide-slate-200">
                   <div className="text-center px-2">
-                    <p className="text-xs font-semibold text-slate-500 mb-1">Duration</p>
-                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {duration} <span className="text-xs sm:text-sm font-semibold text-slate-600">min</span>
+                    <p className="text-xs font-normal text-slate-500 mb-1">Duration</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-slate-800">
+                      {duration} <span className="text-xs sm:text-sm font-normal text-slate-500">min</span>
                     </p>
                   </div>
 
                   <div className="text-center px-2">
-                    <p className="text-xs font-semibold text-slate-500 mb-1">Total Questions</p>
-                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                    <p className="text-xs font-normal text-slate-500 mb-1">Total Questions</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-slate-800">
                       {selectedQuestionIds.size > 0 ? selectedQuestionIds.size : totalQuestions}
                     </p>
                   </div>
 
                   <div className="text-center px-2">
-                    <p className="text-xs font-semibold text-slate-500 mb-1">Total Marks</p>
-                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                    <p className="text-xs font-normal text-slate-500 mb-1">Total Marks</p>
+                    <p className="text-xl sm:text-2xl font-semibold text-slate-800">
                       {examTotalMarks}
                     </p>
                   </div>
@@ -2110,7 +2110,7 @@ export default function AIGeneratorPage() {
 
                 <div>
                   <div className="mb-6 relative z-10">
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                    <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
                       Exam Schedule
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -2123,7 +2123,7 @@ export default function AIGeneratorPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="w-1.5 h-4.5 bg-[#1E293B] rounded-full inline-block" />
-                        <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                        <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
                           Start Date &amp; Time
                         </h3>
                       </div>
@@ -2133,7 +2133,7 @@ export default function AIGeneratorPage() {
                         <div className="relative flex-1 min-w-[140px]">
                           <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-2xs">
                             <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                            <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                            <span className="text-xs sm:text-sm font-normal text-slate-800">
                               {formatDateDisplay(startDate)}
                             </span>
                           </div>
@@ -2150,7 +2150,7 @@ export default function AIGeneratorPage() {
                           <select
                             value={startHour}
                             onChange={(e) => setStartHour(e.target.value)}
-                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
                           >
                             {["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map((h) => (
                               <option key={h} value={h}>
@@ -2166,7 +2166,7 @@ export default function AIGeneratorPage() {
                           <select
                             value={startMinute}
                             onChange={(e) => setStartMinute(e.target.value)}
-                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
                           >
                             {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map((m) => (
                               <option key={m} value={m}>
@@ -2182,7 +2182,7 @@ export default function AIGeneratorPage() {
                           <button
                             type="button"
                             onClick={() => setStartPeriod("AM")}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                               startPeriod === "AM"
                                 ? "bg-[#1E293B] text-white shadow-2xs"
                                 : "text-slate-500 hover:text-slate-800"
@@ -2193,7 +2193,7 @@ export default function AIGeneratorPage() {
                           <button
                             type="button"
                             onClick={() => setStartPeriod("PM")}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                               startPeriod === "PM"
                                 ? "bg-[#1E293B] text-white shadow-2xs"
                                 : "text-slate-500 hover:text-slate-800"
@@ -2209,7 +2209,7 @@ export default function AIGeneratorPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="w-1.5 h-4.5 bg-rose-500 rounded-full inline-block" />
-                        <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                        <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
                           End Date &amp; Time
                         </h3>
                       </div>
@@ -2219,7 +2219,7 @@ export default function AIGeneratorPage() {
                         <div className="relative flex-1 min-w-[140px]">
                           <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-2xs">
                             <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                            <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                            <span className="text-xs sm:text-sm font-normal text-slate-800">
                               {formatDateDisplay(endDate)}
                             </span>
                           </div>
@@ -2236,7 +2236,7 @@ export default function AIGeneratorPage() {
                           <select
                             value={endHour}
                             onChange={(e) => setEndHour(e.target.value)}
-                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
                           >
                             {["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map((h) => (
                               <option key={h} value={h}>
@@ -2252,7 +2252,7 @@ export default function AIGeneratorPage() {
                           <select
                             value={endMinute}
                             onChange={(e) => setEndMinute(e.target.value)}
-                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                            className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
                           >
                             {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map((m) => (
                               <option key={m} value={m}>
@@ -2268,7 +2268,7 @@ export default function AIGeneratorPage() {
                           <button
                             type="button"
                             onClick={() => setEndPeriod("AM")}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                               endPeriod === "AM"
                                 ? "bg-[#1E293B] text-white shadow-2xs"
                                 : "text-slate-500 hover:text-slate-800"
@@ -2279,7 +2279,7 @@ export default function AIGeneratorPage() {
                           <button
                             type="button"
                             onClick={() => setEndPeriod("PM")}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                               endPeriod === "PM"
                                 ? "bg-[#1E293B] text-white shadow-2xs"
                                 : "text-slate-500 hover:text-slate-800"
@@ -2301,14 +2301,14 @@ export default function AIGeneratorPage() {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="w-1.5 h-4.5 bg-[#1E293B] rounded-full inline-block" />
-                      <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                      <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
                         Evaluation Options
                       </h3>
                     </div>
 
                     <div className="divide-y divide-slate-100">
                       <div className="flex items-center justify-between py-2.5">
-                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                        <span className="text-xs sm:text-sm font-normal text-slate-700">
                           Randomize Questions
                         </span>
                         <button
@@ -2332,7 +2332,7 @@ export default function AIGeneratorPage() {
                       </div>
 
                       <div className="flex items-center justify-between py-2.5">
-                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                        <span className="text-xs sm:text-sm font-normal text-slate-700">
                           Show Results Immediately
                         </span>
                         <button
@@ -2356,7 +2356,7 @@ export default function AIGeneratorPage() {
                       </div>
 
                       <div className="flex items-center justify-between py-2.5">
-                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                        <span className="text-xs sm:text-sm font-normal text-slate-700">
                           Allow Review
                         </span>
                         <button
@@ -2380,7 +2380,7 @@ export default function AIGeneratorPage() {
                       </div>
 
                       <div className="flex items-center justify-between py-2.5">
-                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                        <span className="text-xs sm:text-sm font-normal text-slate-700">
                           Enable Negative Marking
                         </span>
                         <button
@@ -2409,14 +2409,14 @@ export default function AIGeneratorPage() {
                   <div className="mt-5">
                     <div className="flex items-center gap-2 mb-3">
                       <span className="w-1.5 h-4.5 bg-[#1E293B] rounded-full inline-block" />
-                      <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                      <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
                         Proctoring Security
                       </h3>
                     </div>
 
                     <div className="divide-y divide-slate-100">
                       <div className="flex items-center justify-between py-2.5">
-                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                        <span className="text-xs sm:text-sm font-normal text-slate-700">
                           Face Detection
                         </span>
                         <button
@@ -2440,7 +2440,7 @@ export default function AIGeneratorPage() {
                       </div>
 
                       <div className="flex items-center justify-between py-2.5">
-                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                        <span className="text-xs sm:text-sm font-normal text-slate-700">
                           Tab-Switch Prevention
                         </span>
                         <button
@@ -2464,7 +2464,7 @@ export default function AIGeneratorPage() {
                       </div>
 
                       <div className="flex items-center justify-between py-2.5">
-                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                        <span className="text-xs sm:text-sm font-normal text-slate-700">
                           Enforce Fullscreen
                         </span>
                         <button
@@ -2488,7 +2488,7 @@ export default function AIGeneratorPage() {
                       </div>
 
                       <div className="flex items-center justify-between py-2.5">
-                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                        <span className="text-xs sm:text-sm font-normal text-slate-700">
                           AI Status Analysis
                         </span>
                         <button
@@ -2518,7 +2518,7 @@ export default function AIGeneratorPage() {
                 <div className="mt-6 rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE]/70 p-3.5 sm:p-4 flex items-center gap-2.5 text-xs text-[#1E40AF]">
                   <Info className="w-4 h-4 text-[#2563EB] shrink-0" />
                   <span className="leading-relaxed">
-                    <strong className="font-bold">Pro-Tip:</strong> Face Detection &amp; AI Status Analysis require students to have a working webcam.
+                    <strong className="font-medium text-[#1E40AF]">Pro-Tip:</strong> Face Detection &amp; AI Status Analysis require students to have a working webcam.
                   </span>
                 </div>
               </div>
@@ -2534,13 +2534,13 @@ export default function AIGeneratorPage() {
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-emerald-600">
                     STEP 6 · FINAL PUBLISH
                   </p>
-                  <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+                  <h2 className="mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
                     Ready to Publish Exam Paper
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-lg mx-auto">
+                  <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-lg mx-auto font-normal">
                     Review the final summary below. Once published, your exam will be ready in draft status and scheduled for candidates.
                   </p>
                 </div>
@@ -2548,37 +2548,37 @@ export default function AIGeneratorPage() {
                 {/* Summary Card Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left pt-2">
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                    <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
+                    <span className="text-[11px] font-medium uppercase text-slate-400 block mb-1">
                       Paper Details
                     </span>
-                    <p className="text-sm font-bold text-slate-900 truncate">
+                    <p className="text-sm font-medium text-slate-800 truncate">
                       {examTitle || getDefaultExamTitle()}
                     </p>
-                    <p className="text-xs text-slate-600 mt-1">
+                    <p className="text-xs text-slate-500 mt-1 font-normal">
                       {examOverviewName} · {classOverviewText}
                     </p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                    <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
+                    <span className="text-[11px] font-medium uppercase text-slate-400 block mb-1">
                       Questions &amp; Marks
                     </span>
-                    <p className="text-sm font-bold text-slate-900">
+                    <p className="text-sm font-medium text-slate-800">
                       {selectedQuestionIds.size > 0 ? selectedQuestionIds.size : totalQuestions} Questions
                     </p>
-                    <p className="text-xs text-slate-600 mt-1">
+                    <p className="text-xs text-slate-500 mt-1 font-normal">
                       {examTotalMarks} Marks · {duration} min
                     </p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                    <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
+                    <span className="text-[11px] font-medium uppercase text-slate-400 block mb-1">
                       Scheduled Window
                     </span>
-                    <p className="text-sm font-bold text-slate-900">
+                    <p className="text-sm font-medium text-slate-800">
                       {formatDateDisplay(startDate)}
                     </p>
-                    <p className="text-xs text-slate-600 mt-1">
+                    <p className="text-xs text-slate-500 mt-1 font-normal">
                       {startHour}:{startMinute} {startPeriod} – {endHour}:{endMinute} {endPeriod}
                     </p>
                   </div>
@@ -2589,7 +2589,7 @@ export default function AIGeneratorPage() {
                     type="button"
                     onClick={handleSaveAsExam}
                     disabled={creatingExam || selectedQuestionIds.size === 0}
-                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-bold text-sm shadow-md flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-sm shadow-md flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
                   >
                     {creatingExam ? (
                       <>
@@ -2620,7 +2620,7 @@ export default function AIGeneratorPage() {
                   router.push("/admin/exams")
                 }
               }}
-              className="px-6 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+              className="px-6 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium text-sm hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
             >
               Back
             </button>
@@ -2630,7 +2630,7 @@ export default function AIGeneratorPage() {
                 type="button"
                 onClick={() => setCurrentStep(2)}
                 disabled={selectedSubjects.length === 0}
-                className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-sm flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span>Next Step</span>
                 <ArrowRight className="w-4 h-4" />
@@ -2646,7 +2646,7 @@ export default function AIGeneratorPage() {
                   (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
                   totalQuestions === 0
                 }
-                className="px-7 py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                className="px-7 py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
               >
                 {isGenerating ? (
                   <>
@@ -2670,7 +2670,7 @@ export default function AIGeneratorPage() {
                   window.scrollTo({ top: 0, behavior: "smooth" })
                 }}
                 disabled={selectedQuestionIds.size === 0}
-                className="px-7 py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                className="px-7 py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
               >
                 <span>Next: Exam Details</span>
                 <ArrowRight className="w-4 h-4" />
@@ -2684,7 +2684,7 @@ export default function AIGeneratorPage() {
                   setCurrentStep(5)
                   window.scrollTo({ top: 0, behavior: "smooth" })
                 }}
-                className="px-7 py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
+                className="px-7 py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
               >
                 <span>Next: Settings</span>
                 <ArrowRight className="w-4 h-4" />
@@ -2698,7 +2698,7 @@ export default function AIGeneratorPage() {
                   setCurrentStep(6)
                   window.scrollTo({ top: 0, behavior: "smooth" })
                 }}
-                className="px-7 py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-semibold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
+                className="px-7 py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
               >
                 <span>Next: Publish</span>
                 <ArrowRight className="w-4 h-4" />
@@ -2710,7 +2710,7 @@ export default function AIGeneratorPage() {
                 type="button"
                 onClick={handleSaveAsExam}
                 disabled={creatingExam || selectedQuestionIds.size === 0}
-                className="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                className="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
               >
                 {creatingExam ? (
                   <>
@@ -2734,7 +2734,7 @@ export default function AIGeneratorPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-2xl bg-white rounded-2xl p-6 shadow-2xl border border-gray-200 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <h3 className="text-sm font-bold text-[#1E293B]">Edit Question Details</h3>
+              <h3 className="text-sm font-semibold text-[#1E293B]">Edit Question Details</h3>
               <button
                 onClick={() => setEditingQuestion(null)}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -2744,7 +2744,7 @@ export default function AIGeneratorPage() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1">
+              <label className="text-xs font-medium text-gray-700 block mb-1">
                 Question Statement (LaTeX supported with $...$):
               </label>
               <textarea
@@ -2758,12 +2758,12 @@ export default function AIGeneratorPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 block">
+              <label className="text-xs font-medium text-gray-700 block">
                 Options & Correct Answer:
               </label>
               {editingQuestion.options.map((opt, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <span className="w-6 text-xs font-bold text-gray-500">
+                  <span className="w-6 text-xs font-medium text-gray-500">
                     {["A", "B", "C", "D"][i]}:
                   </span>
                   <input
@@ -2788,7 +2788,7 @@ export default function AIGeneratorPage() {
                     onClick={() =>
                       setEditingQuestion({ ...editingQuestion, correctAnswer: opt })
                     }
-                    className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-colors cursor-pointer ${
+                    className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
                       editingQuestion.correctAnswer === opt
                         ? "bg-emerald-600 text-white"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -2801,7 +2801,7 @@ export default function AIGeneratorPage() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1">
+              <label className="text-xs font-medium text-gray-700 block mb-1">
                 Step-by-Step Solution / Explanation:
               </label>
               <textarea
@@ -2818,14 +2818,14 @@ export default function AIGeneratorPage() {
               <button
                 type="button"
                 onClick={() => setEditingQuestion(null)}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => handleSaveEdit(editingQuestion)}
-                className="px-5 py-2 rounded-xl bg-[#2D3A4A] text-white text-xs font-bold hover:bg-[#1e2a38] cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-[#2D3A4A] text-white text-xs font-medium hover:bg-[#1e2a38] cursor-pointer"
               >
                 Save Changes
               </button>
