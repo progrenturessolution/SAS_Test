@@ -1233,7 +1233,7 @@ function Step3({
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-sm font-medium shadow-sm transition-colors cursor-pointer"
           >
             <GraduationCap size={15} className="text-white" />
-            <span>{canUseQuestionStudio ? "NEET / JEE / MHT-CET" : "Question Studio (Unavailable)"}</span>
+            <span>{canUseQuestionStudio ? "Competitive Test" : "Question Studio (Unavailable)"}</span>
           </button>
           <input ref={fileRef} type="file" accept="application/pdf" onChange={handlePdfUpload} className="hidden" />
           <button onClick={() => canUsePdfImport && fileRef.current?.click()} disabled={pdfUploading || !canUsePdfImport}

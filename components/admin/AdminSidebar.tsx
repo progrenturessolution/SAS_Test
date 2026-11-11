@@ -47,7 +47,7 @@ export default function AdminSidebar({
   const instituteNavItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Exams", href: "/admin/exams", icon: FileText },
-    { label: "NEET / JEE / MHT-CET", href: "/admin/ai-generator", icon: GraduationCap },
+    { label: "Competitive Test", href: "/admin/ai-generator", icon: GraduationCap },
     { label: "Question Bank", href: "/admin/questions", icon: BookOpen },
     { label: "Students", href: "/admin/students", icon: Users },
     { label: "Results", href: "/admin/results", icon: BarChart2 },

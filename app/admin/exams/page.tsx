@@ -94,7 +94,7 @@ export default function ExamsListPage() {
             className="flex items-center gap-2 px-4 py-2 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
           >
             <GraduationCap size={16} className="text-white" />
-            <span>NEET / JEE / MHT-CET</span>
+            <span>Competitive Test</span>
           </Link>
           <Link href="/admin/exams/create" className="flex items-center gap-2 px-4 py-2 bg-[#45505F] text-white rounded-lg text-sm font-medium hover:bg-[#1e2a38]">
             <Plus size={16} /> Create Exam

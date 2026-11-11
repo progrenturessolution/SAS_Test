@@ -457,7 +457,7 @@ export default function AIGeneratorPage() {
                 Exams
               </Link>
               <span>/</span>
-              <span className="text-[#2D3A4A]">NEET / JEE / MHT-CET Studio</span>
+              <span className="text-[#2D3A4A]">Competitive Test Studio</span>
             </div>
             <h1 className="flex items-center gap-3 text-2xl font-medium tracking-tight text-slate-600 sm:text-3xl">
               <span className="rounded-2xl bg-[#2D3A4A] p-2.5 text-white shadow-sm">
