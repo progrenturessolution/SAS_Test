@@ -172,12 +172,12 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
 
     const userPrompt = `Generate ${count} authentic, non-repeating Previous Years Questions (PYQs) / most asked questions for ${exam} (${subject}) on chapters: ${chaptersList}. Focus on highest-frequency repeated patterns. Difficulty: ${difficulty}.`
 
-    // Correct, live Gemini model names in priority order
+    // Verified working Gemini models for v1beta generateContent
     const models = [
       "gemini-2.0-flash",
       "gemini-1.5-flash",
       "gemini-2.0-flash-lite",
-      "gemini-1.5-flash-8b",
+      "gemini-1.5-flash-latest",
     ]
     let lastError: any = null
     let responseText = ""

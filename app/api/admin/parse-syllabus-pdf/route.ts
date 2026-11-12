@@ -71,12 +71,12 @@ export async function POST(req: Request) {
     let detectedTopics: string[] = []
 
     if (apiKey) {
-      // Correct, live Gemini model names in priority order
+      // Verified working Gemini models for v1beta generateContent
       const models = [
         "gemini-2.0-flash",
         "gemini-1.5-flash",
         "gemini-2.0-flash-lite",
-        "gemini-1.5-flash-8b",
+        "gemini-1.5-flash-latest",
       ]
       const prompt = `Analyze this extracted syllabus or study material text and identify:
 1. "chapters": list of 1 to 5 main chapter or unit names.
