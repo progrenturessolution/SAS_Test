@@ -85,25 +85,28 @@ export default function ExamsListPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-[#45505F]">All Exams</h1>
-        <div className="flex items-center gap-2.5">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#45505F] tracking-tight">All Exams</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">View and manage all exams generated in your organization</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
           <Link
             href="/admin/ai-generator"
-            className="flex items-center gap-2 px-4 py-2 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
+            className="flex items-center gap-2 px-3.5 py-2 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
           >
             <GraduationCap size={16} className="text-white" />
             <span>Competitive Test</span>
           </Link>
-          <Link href="/admin/exams/create" className="flex items-center gap-2 px-4 py-2 bg-[#45505F] text-white rounded-lg text-sm font-medium hover:bg-[#1e2a38]">
+          <Link href="/admin/exams/create" className="flex items-center gap-2 px-3.5 py-2 bg-[#45505F] text-white rounded-lg text-sm font-medium hover:bg-[#1e2a38]">
             <Plus size={16} /> Create Exam
           </Link>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-2 mb-5">
+      <div className="flex flex-wrap gap-2">
         {["all", "active", "draft", "closed"].map((f) => (
           <button
             key={f}
@@ -118,16 +121,16 @@ export default function ExamsListPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
         {loading ? (
           <AdminListSkeleton />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-200">
+            <table className="w-full min-w-[760px] text-left">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-100 bg-gray-50/50">
                   {["Exam Name", "Subject", "Questions", "Duration", "Proctoring", "Status", "Created", "Actions"].map((h) => (
-                    <th key={h} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">{h}</th>
+                    <th key={h} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 sm:px-5 py-3">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -136,28 +139,28 @@ export default function ExamsListPage() {
                   <tr><td colSpan={8} className="text-center py-12 text-gray-400 text-sm">No exams found.</td></tr>
                 )}
                 {filtered.map((exam) => (
-                  <tr key={exam._id} className="border-b border-gray-50 hover:bg-gray-50 last:border-0 transition-colors">
-                    <td className="px-5 py-4">
-                      <p className="font-medium text-[#45505F] text-sm">{exam.title}</p>
-                      {exam.class && <p className="text-xs text-gray-400">{exam.class}</p>}
+                  <tr key={exam._id} className="border-b border-gray-50 hover:bg-gray-50/80 last:border-0 transition-colors">
+                    <td className="px-4 sm:px-5 py-3.5 sm:py-4">
+                      <p className="font-medium text-[#45505F] text-sm line-clamp-1">{exam.title}</p>
+                      {exam.class && <p className="text-xs text-gray-400 mt-0.5">{exam.class}</p>}
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-600">{exam.subject}</td>
-                    <td className="px-5 py-4 text-sm text-gray-600">{totalQ(exam)}</td>
-                    <td className="px-5 py-4 text-sm text-gray-600">{exam.duration} mins</td>
-                    <td className="px-5 py-4">
+                    <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-sm text-gray-600">{exam.subject}</td>
+                    <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-sm text-gray-600 font-medium">{totalQ(exam)}</td>
+                    <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-sm text-gray-600">{exam.duration} mins</td>
+                    <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                       {exam.proctoring?.enabled ? (
-                        <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">On · {exam.proctoring.maxWarnings}w</span>
+                        <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">On · {exam.proctoring.maxWarnings}w</span>
                       ) : (
-                        <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">Off</span>
+                        <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Off</span>
                       )}
                     </td>
-                    <td className="px-5 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColor(exam.status)}`}>{exam.status}</span>
+                    <td className="px-4 sm:px-5 py-3.5 sm:py-4">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColor(exam.status)}`}>{exam.status}</span>
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-500">
+                    <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-sm text-gray-500 whitespace-nowrap">
                       {new Date(exam.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                       <ExamActionMenu
                         exam={exam}
                         onToggleStatus={handleToggleStatus}
