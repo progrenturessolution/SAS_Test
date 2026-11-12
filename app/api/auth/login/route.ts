@@ -13,6 +13,8 @@ export async function POST(req: Request) {
     }
 
     await connectDB()
+
+    // Run user lookup — do NOT use .lean() here as we need comparePassword() method
     const user = await User.findOne({
       email: email.toLowerCase(),
       role: { $in: ["super_admin", "admin", "institute", "coaching_institute"] },

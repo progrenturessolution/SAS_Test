@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
@@ -44,20 +44,31 @@ export function ExamActionMenu({
         setOpen(false)
       }
     }
+    // Reposition menu on scroll instead of closing it
+    function handleScroll() {
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect()
+        setMenuPos({
+          top: rect.bottom + 8,
+          left: rect.right - 192,
+        })
+      }
+    }
     if (open) {
       document.addEventListener("mousedown", handleClickOutside)
-      window.addEventListener("scroll", () => setOpen(false), { once: true })
+      window.addEventListener("scroll", handleScroll, { passive: true })
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
+      window.removeEventListener("scroll", handleScroll)
     }
   }, [open])
 
   const handleOpen = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect()
     setMenuPos({
-      top: rect.bottom + window.scrollY + 8,
-      left: rect.right - 192 // width of menu
+      top: rect.bottom + 8,
+      left: rect.right - 192, // width of menu
     })
     setOpen(!open)
   }
@@ -125,7 +136,7 @@ export function ExamActionMenu({
       {open && mounted && createPortal(
         <div 
           ref={menuRef}
-          style={{ position: "absolute", top: menuPos.top, left: menuPos.left }}
+          style={{ position: "fixed", top: menuPos.top, left: menuPos.left }}
           className="w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] overflow-hidden"
         >
           {/* Status Toggle */}

@@ -207,7 +207,7 @@ export default function AdminDashboardClient() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-100">
+      <div className="bg-white rounded-xl border border-gray-100 overflow-visible">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-primary">Recent Exams</h2>
           <div className="flex gap-2">

@@ -8,8 +8,14 @@ try {
 
 const rawMongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://localhost:27017/dummy"
 
+// Cache the resolved URI so DNS lookup only happens ONCE per process lifetime
+let resolvedUriCache: string | null = null
+
 async function getEffectiveMongoUri(uri: string): Promise<string> {
   if (!uri.startsWith("mongodb+srv://")) return uri
+  // Return cached URI if already resolved — skips DNS on every cold start
+  if (resolvedUriCache) return resolvedUriCache
+
   try {
     const customResolver = new dns.promises.Resolver()
     customResolver.setServers(["8.8.8.8", "1.1.1.1"])
@@ -17,7 +23,10 @@ async function getEffectiveMongoUri(uri: string): Promise<string> {
     const parsed = new URL(uri)
     const hostname = parsed.hostname
     const srvRecords = await customResolver.resolveSrv(`_mongodb._tcp.${hostname}`)
-    if (!srvRecords || srvRecords.length === 0) return uri
+    if (!srvRecords || srvRecords.length === 0) {
+      resolvedUriCache = uri
+      return uri
+    }
 
     const hosts = srvRecords.map((r) => `${r.name}:${r.port}`).join(",")
     let txtParams = ""
@@ -39,9 +48,11 @@ async function getEffectiveMongoUri(uri: string): Promise<string> {
       })
     }
 
-    return `mongodb://${auth}${hosts}${dbPath}?${searchParams.toString()}`
+    resolvedUriCache = `mongodb://${auth}${hosts}${dbPath}?${searchParams.toString()}`
+    return resolvedUriCache
   } catch (e) {
     console.warn("Could not pre-resolve SRV:", e)
+    resolvedUriCache = uri
     return uri
   }
 }
@@ -65,6 +76,11 @@ async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      // Connection pool — reduces per-request overhead
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 8000,
+      socketTimeoutMS: 30000,
+      connectTimeoutMS: 10000,
     }
     cached.promise = (async () => {
       const uri = await getEffectiveMongoUri(rawMongoUri)
