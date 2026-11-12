@@ -166,6 +166,18 @@ export default function AIGeneratorPage() {
   const [endMinute, setEndMinute] = useState<string>("00")
   const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("PM")
 
+  const startDateInputRef = useRef<HTMLInputElement>(null)
+  const endDateInputRef = useRef<HTMLInputElement>(null)
+
+  const openDatePicker = (inputRef: React.RefObject<HTMLInputElement | null>) => {
+    if (!inputRef.current) return
+    try {
+      inputRef.current.showPicker?.()
+    } catch {
+      inputRef.current.focus()
+    }
+  }
+
   // Evaluation Options
   const [evalSettings, setEvalSettings] = useState({
     randomizeQuestions: true,
@@ -911,9 +923,66 @@ export default function AIGeneratorPage() {
           </div>
         )}
 
-        {/* ─── 6-Step Stepper Card ─── */}
-        <div className="mb-6 bg-white rounded-2xl border border-slate-200/80 px-3 py-4 sm:px-8 sm:py-5 shadow-xs overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            <div className="flex items-center justify-between min-w-[560px] sm:min-w-0">
+        {/* ─── Mobile Dedicated Stepper (sm:hidden) ─── */}
+        <div className="sm:hidden mb-5 bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-xs space-y-3">
+          {/* Step Info Row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="w-6 h-6 rounded-lg bg-[#1E293B] text-white text-xs font-semibold flex items-center justify-center shadow-2xs">
+                {currentStep}
+              </span>
+              <div>
+                <p className="text-xs font-semibold text-slate-900 leading-none">
+                  {STEPS.find((s) => s.step === currentStep)?.label}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Step {currentStep} of {STEPS.length}
+                </p>
+              </div>
+            </div>
+
+            <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+              {Math.round((currentStep / STEPS.length) * 100)}% Done
+            </span>
+          </div>
+
+          {/* 6-Step Quick Action Touch Buttons */}
+          <div className="grid grid-cols-6 gap-1.5 pt-0.5">
+            {STEPS.map((s) => {
+              const isCurrent = s.step === currentStep
+              const isComplete = s.step < currentStep
+              const isClickable = s.step <= currentStep || (generatedQuestions.length > 0 && s.step <= 6)
+
+              return (
+                <button
+                  key={s.step}
+                  type="button"
+                  disabled={!isClickable}
+                  onClick={() => {
+                    if (isClickable) {
+                      setCurrentStep(s.step)
+                      window.scrollTo({ top: 0, behavior: "smooth" })
+                    }
+                  }}
+                  className={`h-9 rounded-xl flex items-center justify-center text-xs font-medium transition-all cursor-pointer ${
+                    isCurrent
+                      ? "bg-[#1E293B] text-white shadow-xs font-semibold ring-2 ring-slate-900/15"
+                      : isComplete
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                      : "bg-slate-50 text-slate-400 border border-slate-200/60 disabled:opacity-40 disabled:cursor-not-allowed"
+                  }`}
+                  title={s.label}
+                >
+                  {isComplete ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : s.step}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ─── Desktop 6-Step Stepper (hidden sm:block) ─── */}
+        <div className="hidden sm:block mb-6 bg-white rounded-2xl border border-slate-200/80 px-4 py-5 sm:px-8 shadow-xs">
+            <div className="flex items-center justify-between">
               {STEPS.map((s, index) => {
                 const isCurrent = s.step === currentStep
                 const isComplete = s.step < currentStep
@@ -2140,7 +2209,7 @@ export default function AIGeneratorPage() {
           {currentStep === 5 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               {/* Left Card: Exam Schedule */}
-              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs relative overflow-hidden flex flex-col justify-between">
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-8 shadow-xs relative overflow-hidden flex flex-col justify-between">
                 {/* Subtle decorative background wave in top right */}
                 <div className="absolute top-0 right-0 w-48 h-32 bg-gradient-to-bl from-blue-50/70 to-transparent rounded-bl-full pointer-events-none" />
 
@@ -2165,15 +2234,24 @@ export default function AIGeneratorPage() {
                       </div>
 
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
-                        {/* Date Picker Input */}
-                        <div className="relative flex-1 min-w-[140px]">
-                          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-2xs">
-                            <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                            <span className="text-xs sm:text-sm font-normal text-slate-800">
-                              {formatDateDisplay(startDate)}
+                        {/* Interactive Active Date Picker */}
+                        <div
+                          onClick={() => openDatePicker(startDateInputRef)}
+                          className="relative flex-1 min-w-[140px] cursor-pointer group"
+                        >
+                          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 group-hover:bg-slate-50/80 transition-all shadow-2xs">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
+                              <span className="text-xs sm:text-sm font-medium text-slate-800 truncate">
+                                {formatDateDisplay(startDate)}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 shrink-0">
+                              Select Date
                             </span>
                           </div>
                           <input
+                            ref={startDateInputRef}
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
@@ -2254,15 +2332,24 @@ export default function AIGeneratorPage() {
                       </div>
 
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
-                        {/* Date Picker Input */}
-                        <div className="relative flex-1 min-w-[140px]">
-                          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-2xs">
-                            <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                            <span className="text-xs sm:text-sm font-normal text-slate-800">
-                              {formatDateDisplay(endDate)}
+                        {/* Interactive Active Date Picker */}
+                        <div
+                          onClick={() => openDatePicker(endDateInputRef)}
+                          className="relative flex-1 min-w-[140px] cursor-pointer group"
+                        >
+                          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-rose-400 group-hover:bg-slate-50/80 transition-all shadow-2xs">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Calendar className="w-4 h-4 text-rose-600 shrink-0" />
+                              <span className="text-xs sm:text-sm font-medium text-slate-800 truncate">
+                                {formatDateDisplay(endDate)}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 shrink-0">
+                              Select Date
                             </span>
                           </div>
                           <input
+                            ref={endDateInputRef}
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
@@ -2337,7 +2424,7 @@ export default function AIGeneratorPage() {
               </div>
 
               {/* Right Card: Evaluation Options & Proctoring Security */}
-              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col justify-between">
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-8 shadow-xs flex flex-col justify-between">
                 <div>
                   {/* ── Evaluation Options ── */}
                   <div>
