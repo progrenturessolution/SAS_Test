@@ -122,31 +122,72 @@ const TYPE_META: Record<QuestionType, { label: string; color: string; icon: Reac
 function Stepper({ step, onStepClick }: { step: number; onStepClick?: (step: number) => void }) {
   const steps = [{ n: 1, label: "Exam Details" }, { n: 2, label: "Settings" }, { n: 3, label: "Questions" }]
   return (
-    <div className="flex items-center justify-center gap-0">
-      {steps.map((s, i) => (
-        <div key={s.n} className="flex items-center">
-          <button
-            type="button"
-            onClick={() => onStepClick?.(s.n)}
-            className="flex flex-col items-center gap-1 cursor-pointer focus:outline-none"
-          >
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all
-              ${step > s.n ? "bg-primary border-primary text-white"
-                : step === s.n ? "bg-[#2D3A4A] border-[#2D3A4A] text-white"
-                : "bg-white border-gray-200 text-gray-400 hover:border-gray-300"}`}>
-              {step > s.n ? <Check size={16}/> : s.n}
-            </div>
-            <div className="text-center">
-              <p className={`text-[10px] uppercase tracking-wide font-semibold ${step >= s.n ? "text-[#2D3A4A]" : "text-gray-400"}`}>STEP {s.n}</p>
-              <p className={`text-xs font-medium ${step >= s.n ? "text-primary" : "text-gray-400"}`}>{s.label}</p>
-            </div>
-          </button>
-          {i < steps.length - 1 && (
-            <div className={`w-24 h-0.5 mx-3 mb-5 transition-colors ${step > s.n ? "bg-primary" : "bg-gray-200"}`} />
-          )}
+    <>
+      {/* Mobile Stepper */}
+      <div className="flex sm:hidden flex-col gap-2.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold uppercase tracking-wider text-primary">
+            Step {step} of 3
+          </span>
+          <span className="text-gray-500 font-medium">
+            {steps[step - 1]?.label}
+          </span>
         </div>
-      ))}
-    </div>
+        {/* Progress Bar */}
+        <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+          <div
+            className="bg-[#2D3A4A] h-full transition-all duration-300 rounded-full"
+            style={{ width: `${(step / 3) * 100}%` }}
+          />
+        </div>
+        {/* Step Indicator Pills */}
+        <div className="grid grid-cols-3 gap-1.5 pt-1">
+          {steps.map((s) => (
+            <button
+              key={s.n}
+              type="button"
+              onClick={() => onStepClick?.(s.n)}
+              className={`py-1.5 px-2 rounded-lg text-center text-[11px] font-semibold transition-all ${
+                step === s.n
+                  ? "bg-[#2D3A4A] text-white shadow-xs"
+                  : step > s.n
+                  ? "bg-primary/10 text-primary"
+                  : "bg-gray-100 text-gray-400"
+              }`}
+            >
+              {s.n}. {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop Stepper */}
+      <div className="hidden sm:flex items-center justify-center gap-0">
+        {steps.map((s, i) => (
+          <div key={s.n} className="flex items-center">
+            <button
+              type="button"
+              onClick={() => onStepClick?.(s.n)}
+              className="flex flex-col items-center gap-1 cursor-pointer focus:outline-none"
+            >
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all
+                ${step > s.n ? "bg-primary border-primary text-white"
+                  : step === s.n ? "bg-[#2D3A4A] border-[#2D3A4A] text-white"
+                  : "bg-white border-gray-200 text-gray-400 hover:border-gray-300"}`}>
+                {step > s.n ? <Check size={16}/> : s.n}
+              </div>
+              <div className="text-center">
+                <p className={`text-[10px] uppercase tracking-wide font-semibold ${step >= s.n ? "text-[#2D3A4A]" : "text-gray-400"}`}>STEP {s.n}</p>
+                <p className={`text-xs font-medium ${step >= s.n ? "text-primary" : "text-gray-400"}`}>{s.label}</p>
+              </div>
+            </button>
+            {i < steps.length - 1 && (
+              <div className={`w-16 md:w-24 h-0.5 mx-3 mb-5 transition-colors ${step > s.n ? "bg-primary" : "bg-gray-200"}`} />
+            )}
+          </div>
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -163,15 +204,15 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
 
 function Step1({ form, setForm }: { form: Step1Form; setForm: React.Dispatch<React.SetStateAction<Step1Form>> }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-8">
-      <h2 className="text-xl font-bold text-[#2D3A4A] mb-6">Basic Information</h2>
-      <div className="space-y-5">
+    <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 lg:p-8 shadow-xs">
+      <h2 className="text-lg sm:text-xl font-bold text-[#2D3A4A] mb-5 sm:mb-6">Basic Information</h2>
+      <div className="space-y-4 sm:space-y-5">
         <div>
           <label className={labelCls}>Exam Title <span className="text-red-500">*</span></label>
           <input value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))}
             placeholder="Enter exam title..." className={inputCls} />
         </div>
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
           <div>
             <label className={labelCls}>Duration (minutes) <span className="text-red-500">*</span></label>
             <input type="number" value={form.duration} onChange={e => setForm(f => ({...f, duration: e.target.value}))}
@@ -183,7 +224,7 @@ function Step1({ form, setForm }: { form: Step1Form; setForm: React.Dispatch<Rea
               placeholder="e.g., 1.5" min="0.1" step="0.1" className={inputCls} />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
           <div>
             <label className={labelCls}>Pass Marks <span className="text-red-500">*</span></label>
             <input type="number" value={form.passMarks} onChange={e => setForm(f => ({...f, passMarks: e.target.value}))}
@@ -223,11 +264,11 @@ function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<Rea
   ] as const
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">
-      <h2 className="text-xl font-bold text-[#2D3A4A] mb-6">Exam Settings</h2>
-      <div className="space-y-8">
+    <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 lg:p-8 shadow-xs">
+      <h2 className="text-lg sm:text-xl font-bold text-[#2D3A4A] mb-5 sm:mb-6">Exam Settings</h2>
+      <div className="space-y-6 sm:space-y-8">
         <div>
-          <h3 className="text-base font-bold text-[#2D3A4A] mb-4 flex items-center gap-2">
+          <h3 className="text-base font-bold text-[#2D3A4A] mb-3 sm:mb-4 flex items-center gap-2">
             <div className="w-1.5 h-6 bg-[#3D4B5C] rounded-full" />
             Schedule & Timeline
           </h3>
@@ -238,7 +279,7 @@ function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<Rea
 
             return (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   <ExamDateTimePicker
                     label="Start Date & Time"
                     sublabel="Students can only begin the exam at or after this time"
@@ -265,15 +306,15 @@ function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<Rea
                 )}
 
                 {startDt && endDt && !isInvalid && (
-                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 flex items-center justify-between shadow-2xs">
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 shadow-2xs">
                     <div className="flex items-center gap-2.5">
-                      <Clock size={15} className="text-emerald-600" />
-                      <span>
+                      <Clock size={15} className="text-emerald-600 shrink-0" />
+                      <span className="leading-snug">
                         <strong className="font-bold text-emerald-950">Active Exam Window: </strong>
                         {formatScheduleDateTime(startDt)} → {formatScheduleDateTime(endDt)}
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-0.5 rounded-full shrink-0 self-start sm:self-auto">
                       Strict Timed Access
                     </span>
                   </div>
@@ -283,21 +324,23 @@ function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<Rea
           })()}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           <div>
-            <h3 className="text-base font-bold text-[#2D3A4A] mb-4 flex items-center gap-2">
+            <h3 className="text-base font-bold text-[#2D3A4A] mb-3 sm:mb-4 flex items-center gap-2">
               <div className="w-1.5 h-6 bg-[#3D4B5C] rounded-full" />
               Evaluation Options
             </h3>
             <div className="space-y-3">
               {toggles.map(t => (
                 <div key={t.key} className="flex flex-col border border-transparent rounded-xl hover:border-gray-200 transition-all">
-                  <div className="flex items-center justify-between p-3">
-                    <div className="flex-1 pr-4">
+                  <div className="flex items-center justify-between p-3 gap-2">
+                    <div className="flex-1 pr-2 sm:pr-4">
                       <p className="text-sm font-bold text-[#2D3A4A]">{t.label}</p>
                       <p className="text-[11px] text-gray-500 font-medium leading-relaxed mt-0.5">{t.desc}</p>
                     </div>
-                    <Toggle checked={form[t.key] as boolean} onChange={() => setForm(f => ({...f, [t.key]: !f[t.key]}))} />
+                    <div className="shrink-0">
+                      <Toggle checked={form[t.key] as boolean} onChange={() => setForm(f => ({...f, [t.key]: !f[t.key]}))} />
+                    </div>
                   </div>
                   {t.key === "negativeMarking" && form.negativeMarking && (
                     <div className="pb-4 px-4">
@@ -321,29 +364,31 @@ function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<Rea
           </div>
 
           <div>
-            <h3 className="text-base font-bold text-[#2D3A4A] mb-4 flex items-center gap-2">
+            <h3 className="text-base font-bold text-[#2D3A4A] mb-3 sm:mb-4 flex items-center gap-2">
               <div className="w-1.5 h-6 bg-red-400 rounded-full" />
               Proctoring Security
             </h3>
             <div className="space-y-3">
               {proctoringToggles.map(pt => (
-                <div key={pt.key} className="flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-gray-200 hover:bg-white transition-all bg-gray-50/50">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${form.proctoring[pt.key] ? 'bg-primary/10 text-primary' : 'bg-gray-200 text-gray-400'}`}>
+                <div key={pt.key} className="flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-gray-200 hover:bg-white transition-all bg-gray-50/50 gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 rounded-lg shrink-0 ${form.proctoring[pt.key] ? 'bg-primary/10 text-primary' : 'bg-gray-200 text-gray-400'}`}>
                       {pt.icon}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-bold text-[#2D3A4A]">{pt.label}</p>
                       <p className="text-[11px] text-gray-500 font-medium mt-0.5">{pt.desc}</p>
                     </div>
                   </div>
-                  <Toggle 
-                    checked={form.proctoring[pt.key]} 
-                    onChange={() => setForm(f => ({
-                      ...f, 
-                      proctoring: { ...f.proctoring, [pt.key]: !f.proctoring[pt.key] }
-                    }))} 
-                  />
+                  <div className="shrink-0">
+                    <Toggle 
+                      checked={form.proctoring[pt.key]} 
+                      onChange={() => setForm(f => ({
+                        ...f, 
+                        proctoring: { ...f.proctoring, [pt.key]: !f.proctoring[pt.key] }
+                      }))} 
+                    />
+                  </div>
                 </div>
               ))}
               <div className="mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100/50 border-dashed">
@@ -967,40 +1012,53 @@ function QuestionMenu({ q, onEdit, onDelete, onClose, anchorRect }: { q: Questio
   useEffect(() => setMounted(true), [])
   
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose()
       }
     }
     if (mounted) {
       const timer = setTimeout(() => {
-        document.addEventListener("click", handleClickOutside)
+        document.addEventListener("mousedown", handleClickOutside)
+        document.addEventListener("touchstart", handleClickOutside)
       }, 10)
       return () => {
         clearTimeout(timer)
-        document.removeEventListener("click", handleClickOutside)
+        document.removeEventListener("mousedown", handleClickOutside)
+        document.removeEventListener("touchstart", handleClickOutside)
       }
     }
   }, [mounted, onClose])
   
   if (!mounted || !anchorRect) return null
 
-  const top = anchorRect.bottom + window.scrollY + 5
-  const left = anchorRect.right - 160
+  const menuWidth = 160
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+
+  let left = anchorRect.right - menuWidth
+  if (left < 8) left = 8
+  if (left + menuWidth > viewportWidth - 8) left = viewportWidth - menuWidth - 8
+
+  const spaceBelow = viewportHeight - anchorRect.bottom
+  const openUp = spaceBelow < 120 && anchorRect.top > 120
+  const top = openUp ? anchorRect.top - 86 : anchorRect.bottom + 4
   
   return createPortal(
-    <>
-      <div ref={menuRef} style={{ top, left }} className="fixed z-100 bg-white border border-gray-100 rounded-lg shadow-xl overflow-hidden min-w-40 animate-in fade-in zoom-in duration-100">
-        <button onClick={() => { onEdit(q); onClose() }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left border-b border-gray-50">
-          <Pencil size={14} className="text-blue-500" />
-          <span className="flex-1">Edit Question</span>
-        </button>
-        <button onClick={() => { onDelete(q.id); onClose() }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 text-left">
-          <Trash2 size={14}/> 
-          <span className="flex-1">Delete</span>
-        </button>
-      </div>
-    </>,
+    <div 
+      ref={menuRef} 
+      style={{ position: "fixed", top, left }} 
+      className="z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden min-w-40 animate-in fade-in zoom-in-95 duration-100"
+    >
+      <button onClick={() => { onEdit(q); onClose() }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left border-b border-gray-100 font-medium transition-colors">
+        <Pencil size={14} className="text-blue-500" />
+        <span className="flex-1">Edit Question</span>
+      </button>
+      <button onClick={() => { onDelete(q.id); onClose() }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 text-left font-medium transition-colors">
+        <Trash2 size={14}/> 
+        <span className="flex-1">Delete</span>
+      </button>
+    </div>,
     document.body
   )
 }
@@ -1090,29 +1148,31 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-5">
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
           <div>
-            <h2 className="text-xl font-bold text-[#2D3A4A]">Questions</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-[#2D3A4A]">Questions</h2>
             <p className="text-xs text-gray-400 mt-0.5">{questions.length} questions selected · Total: {totalMarks} marks</p>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
             <button
               type="button"
               onClick={() => setShowCompetitiveAiModal(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-sm font-medium shadow-sm transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-xs sm:text-sm font-medium shadow-xs transition-colors cursor-pointer"
             >
-              <GraduationCap size={15} className="text-white" />
-              <span>NEET / JEE / MHT-CET</span>
+              <GraduationCap size={15} className="text-white shrink-0" />
+              <span>Competitive Test</span>
             </button>
             <button onClick={() => fileRef.current?.click()} disabled={pdfUploading}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
-              <Upload size={15}/>{pdfUploading ? "Uploading..." : "Upload from PDF"}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 transition-colors">
+              <Upload size={15} className="shrink-0" />
+              <span>{pdfUploading ? "Uploading..." : "Upload from PDF"}</span>
             </button>
             <input ref={fileRef} type="file" accept="application/pdf" onChange={handlePdfUpload} className="hidden" />
             <div className="relative group">
-              <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2D3A4A] text-white text-sm font-medium hover:bg-[#1e2a38] transition-colors">
-                <Plus size={15}/> Add Question
+              <button className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#2D3A4A] text-white text-xs sm:text-sm font-medium hover:bg-[#1e2a38] transition-colors">
+                <Plus size={15} className="shrink-0" />
+                <span>Add Question</span>
               </button>
               <div className="absolute right-0 top-full pt-1.5 w-44 z-30 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
                 <div className="bg-white border border-gray-100 rounded-xl shadow-lg">
@@ -1128,26 +1188,26 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
           </div>
         </div>
         
-        {pdfError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2"><AlertCircle size={14}/>{pdfError}</div>}
+        {pdfError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 flex items-center gap-2"><AlertCircle size={14}/>{pdfError}</div>}
 
-        <div className="flex items-center gap-4 mb-4 flex-wrap">
-          <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">QUESTION TYPES:</span>
+        <div className="flex items-center gap-2 sm:gap-4 mb-4 flex-wrap">
+          <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">TYPES:</span>
           {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
             <button 
               key={t} 
               onClick={() => { setEditQ(null); setModal(t); }}
-              className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${TYPE_META[t].color} border border-current/20 hover:scale-105 hover:shadow-sm active:scale-95 transition-all duration-200 cursor-pointer uppercase tracking-tight`}
+              className={`flex items-center gap-1.5 text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full ${TYPE_META[t].color} border border-current/20 hover:scale-105 hover:shadow-xs active:scale-95 transition-all duration-200 cursor-pointer uppercase tracking-tight`}
             >
               {TYPE_META[t].icon} {TYPE_META[t].label}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-4 mb-4">
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search questions..."
-            className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/30 focus:border-[#2D3A4A]" />
+            className="flex-1 px-3.5 py-2 sm:py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/20 focus:border-[#2D3A4A]" />
           <select value={filterType} onChange={e => setFilterType(e.target.value as QuestionType | "all")}
-            className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#2D3A4A]">
+            className="px-3.5 py-2 sm:py-2.5 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#2D3A4A] cursor-pointer">
             <option value="all">All Types</option>
             {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
               <option key={t} value={t}>{TYPE_META[t].label}</option>
@@ -1451,38 +1511,38 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="min-h-screen bg-[#F5F6FA]">
-      <div className="sticky top-0 z-40 bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between">
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-100 px-4 sm:px-8 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-sm text-gray-400 mb-1">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-400 mb-0.5 sm:mb-1">
             <button onClick={() => { toast.info("Changes discarded. Redirecting..."); setTimeout(() => router.push("/admin/exams"), 500) }} className="hover:text-[#10B981] bg-none border-none cursor-pointer font-inherit">Exams</button>
             <span>/</span><span className="text-[#2D3A4A] font-medium">Edit Exam</span>
           </div>
-          <h1 className="text-xl font-bold text-[#2D3A4A]">Edit: {step1.title}</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-[#2D3A4A]">Edit: {step1.title}</h1>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => { toast.info("Changes discarded. Redirecting..."); setTimeout(() => router.push("/admin/exams"), 500) }} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-          <button onClick={() => handleSubmit("draft")} disabled={saving} className="px-4 py-2 rounded-lg border border-[#2D3A4A] text-[#2D3A4A] text-sm font-medium hover:bg-gray-50 disabled:opacity-60">Save Draft</button>
+        <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-auto">
+          <button onClick={() => { toast.info("Changes discarded. Redirecting..."); setTimeout(() => router.push("/admin/exams"), 500) }} className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+          <button onClick={() => handleSubmit("draft")} disabled={saving} className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-[#2D3A4A] text-[#2D3A4A] text-xs sm:text-sm font-medium hover:bg-gray-50 disabled:opacity-60 transition-colors">Save Draft</button>
         </div>
       </div>
 
-      <div className="sticky top-16 z-30 bg-white border-b border-gray-100 px-8 py-6">
+      <div className="sticky top-16 z-30 bg-white border-b border-gray-100 px-4 sm:px-8 py-4 sm:py-6">
         <Stepper step={step} onStepClick={(targetStep) => setStep(targetStep)} />
       </div>
 
-      <div className="max-w-4xl mx-auto px-8 py-8">
-        {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2"><AlertCircle size={14}/>{error}</div>}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
+        {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 flex items-center gap-2"><AlertCircle size={14} className="shrink-0"/>{error}</div>}
         {step === 1 && <Step1 form={step1} setForm={setStep1} />}
         {step === 2 && <Step2 form={step2} setForm={setStep2} />}
         {step === 3 && <Step3 questions={questions} setQuestions={setQuestions} />}
 
-        <div className="flex items-center justify-between mt-6">
-          {step > 1 ? <button onClick={() => setStep(s => s - 1)} className="px-6 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Back</button> : <div />}
+        <div className="flex items-center justify-between gap-3 mt-5 sm:mt-6">
+          {step > 1 ? <button onClick={() => setStep(s => s - 1)} className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Back</button> : <div />}
           {step < 3 ? (
-            <button onClick={handleNext} className="px-6 py-2.5 rounded-lg bg-[#2D3A4A] text-white text-sm font-medium hover:bg-[#1e2a38]">
+            <button onClick={handleNext} className="px-5 sm:px-6 py-2 sm:py-2.5 rounded-lg bg-[#2D3A4A] text-white text-xs sm:text-sm font-medium hover:bg-[#1e2a38] transition-colors">
               {step === 1 ? "Next: Settings" : "Next: Questions"}
             </button>
           ) : (
-            <button onClick={() => handleSubmit("active")} disabled={saving} className="px-6 py-2.5 rounded-lg bg-[#2D3A4A] text-white text-sm font-medium hover:bg-[#1e2a38] disabled:opacity-60">
+            <button onClick={() => handleSubmit("active")} disabled={saving} className="px-5 sm:px-6 py-2 sm:py-2.5 rounded-lg bg-[#2D3A4A] text-white text-xs sm:text-sm font-medium hover:bg-[#1e2a38] disabled:opacity-60 transition-colors">
               {saving ? "Saving..." : "Save Changes"}
             </button>
           )}

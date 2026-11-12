@@ -225,7 +225,97 @@ export default function AdminDashboardClient() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile View: Dedicated Touch-Friendly Cards */}
+        <div className="block sm:hidden divide-y divide-gray-100">
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-gray-400 text-sm">
+              No exams found.{" "}
+              <Link href="/admin/exams/create" className="text-[#10B981] underline font-medium block mt-1">
+                Create your first exam
+              </Link>
+            </div>
+          ) : (
+            filtered.map((exam) => (
+              <div key={exam._id} className="p-4 hover:bg-gray-50/50 transition-colors">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-primary text-sm leading-snug line-clamp-2">{exam.title}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      <span className="text-[11px] font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                        {exam.subject}
+                      </span>
+                      {exam.class && (
+                        <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
+                          {exam.class}
+                        </span>
+                      )}
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${statusColor(exam.status)}`}>
+                        {exam.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="shrink-0 pt-0.5">
+                    <ExamActionMenu
+                      exam={exam}
+                      onToggleStatus={handleToggleStatus}
+                      onDelete={handleDelete}
+                      onShare={handleShare}
+                      onCopy={handleCopyLink}
+                      copied={copied === exam._id}
+                    />
+                  </div>
+                </div>
+
+                {/* Metrics Pill Grid */}
+                <div className="grid grid-cols-3 gap-2 py-2 px-3 bg-gray-50/80 rounded-lg text-xs mt-3">
+                  <div>
+                    <span className="text-gray-400 text-[10px] uppercase font-semibold block">Questions</span>
+                    <span className="font-bold text-gray-800">{totalQuestions(exam)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-[10px] uppercase font-semibold block">Duration</span>
+                    <span className="font-bold text-gray-800">{exam.duration}m</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-[10px] uppercase font-semibold block">Created</span>
+                    <span className="font-medium text-gray-700 text-[11px]">
+                      {new Date(exam.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick 1-Tap Action Links */}
+                <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyLink(exam._id)}
+                    className="flex-1 py-1.5 px-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Link2 size={13} className="text-gray-400 shrink-0" />
+                    <span className="truncate">{copied === exam._id ? "Copied!" : "Copy Link"}</span>
+                  </button>
+                  <Link
+                    href={`/admin/exams/${exam._id}/edit`}
+                    className="flex-1 py-1.5 px-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1.5 transition-colors text-center"
+                  >
+                    <Pencil size={13} className="text-emerald-500 shrink-0" />
+                    <span>Edit</span>
+                  </Link>
+                  <Link
+                    href={`/admin/results?examId=${exam._id}`}
+                    className="flex-1 py-1.5 px-2 rounded-lg bg-primary/5 border border-primary/20 text-xs font-medium text-primary hover:bg-primary/10 flex items-center justify-center gap-1.5 transition-colors text-center"
+                  >
+                    <BarChart2 size={13} className="text-primary shrink-0" />
+                    <span>Results</span>
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View: Wide Table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full min-w-[700px] text-left">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
