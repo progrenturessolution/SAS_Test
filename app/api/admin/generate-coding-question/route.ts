@@ -57,22 +57,25 @@ Rules:
 6. Do NOT include markdown code fences (\`\`\`json) in the response. Return raw JSON only.
 `
 
+    // Correct, live Gemini model names in priority order
     const models = [
-      "gemini-3.5-flash",
-      "gemini-3-flash-preview",
-      "gemini-3.6-flash",
-      "gemini-3.8-flash",
-      "gemini-3.5-flash-lite",
-      "gemini-flash-latest"
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-1.5-flash-8b",
     ]
     let lastError: any = null
     let responseText = ""
 
     for (const model of models) {
       try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 25000)
+
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             contents: [{
               parts: [{ text: `${systemInstruction}\n\nProblem Request: ${prompt}` }]
@@ -83,6 +86,7 @@ Rules:
             }
           })
         })
+        clearTimeout(timeoutId)
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))

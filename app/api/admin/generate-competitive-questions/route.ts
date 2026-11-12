@@ -172,22 +172,26 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
 
     const userPrompt = `Generate ${count} authentic, non-repeating Previous Years Questions (PYQs) / most asked questions for ${exam} (${subject}) on chapters: ${chaptersList}. Focus on highest-frequency repeated patterns. Difficulty: ${difficulty}.`
 
+    // Correct, live Gemini model names in priority order
     const models = [
-      "gemini-3.5-flash",
-      "gemini-3-flash-preview",
-      "gemini-3.6-flash",
-      "gemini-3.8-flash",
-      "gemini-3.5-flash-lite",
-      "gemini-flash-latest"
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-1.5-flash-8b",
     ]
     let lastError: any = null
     let responseText = ""
 
     for (const model of models) {
       try {
+        // 25-second timeout per model so we never hang
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 25000)
+
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             contents: [
               {
@@ -202,6 +206,7 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
             }
           })
         })
+        clearTimeout(timeoutId)
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
