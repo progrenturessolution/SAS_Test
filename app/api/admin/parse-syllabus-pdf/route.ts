@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { robustJsonParse } from "@/lib/jsonRepair"
+import { generateContentWithKeyRotation, getGeminiApiKeys } from "@/lib/gemini"
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   // Method 1: unpdf
@@ -66,16 +67,11 @@ export async function POST(req: Request) {
     const snippet = cleanedText.substring(0, 6000)
 
     // Analyze extracted text using Gemini to find chapters and key topics
-    const apiKey = process.env.GEMINI_API_KEY
+    const keys = getGeminiApiKeys()
     let detectedChapters: string[] = []
     let detectedTopics: string[] = []
 
-    if (apiKey) {
-      // Current live Gemini models (Nov 2026)
-      const models = [
-        "gemini-3.8-flash",
-        "gemini-3.5-flash-lite",
-      ]
+    if (keys.length > 0) {
       const prompt = `Analyze this extracted syllabus or study material text and identify:
 1. "chapters": list of 1 to 5 main chapter or unit names.
 2. "topics": list of 3 to 10 specific topics or concepts mentioned in this text.
@@ -89,33 +85,22 @@ Return ONLY raw JSON with format:
 TEXT:
 ${snippet.substring(0, 3000)}`
 
-      for (const model of models) {
-        try {
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 20000)
+      try {
+        const result = await generateContentWithKeyRotation({
+          payload: {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
+          },
+          timeoutMs: 20000
+        })
 
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            signal: controller.signal,
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
-            })
-          })
-          clearTimeout(timeoutId)
-
-          if (res.ok) {
-            const data = await res.json()
-            const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text
-            if (textResponse) {
-              const parsed = robustJsonParse(textResponse)
-              if (parsed && Array.isArray(parsed.chapters)) detectedChapters = parsed.chapters
-              if (parsed && Array.isArray(parsed.topics)) detectedTopics = parsed.topics
-              break
-            }
-          }
-        } catch {}
+        if (result.text) {
+          const parsed = robustJsonParse(result.text)
+          if (parsed && Array.isArray(parsed.chapters)) detectedChapters = parsed.chapters
+          if (parsed && Array.isArray(parsed.topics)) detectedTopics = parsed.topics
+        }
+      } catch (err: any) {
+        console.warn("[ParseSyllabusPdf] Gemini key pool warning:", err?.message)
       }
     }
 

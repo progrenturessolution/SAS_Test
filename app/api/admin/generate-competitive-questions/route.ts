@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { robustJsonParse } from "@/lib/jsonRepair"
+import { generateContentWithKeyRotation, getGeminiApiKeys } from "@/lib/gemini"
 
 export async function POST(req: Request) {
   try {
@@ -72,9 +73,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Please enter at least one chapter, topic, or upload a syllabus PDF" }, { status: 400 })
     }
 
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: "GEMINI_API_KEY is not configured in .env" }, { status: 500 })
+    const keys = getGeminiApiKeys()
+    if (keys.length === 0) {
+      return NextResponse.json({ error: "No Gemini API keys configured in .env" }, { status: 500 })
     }
 
     const activeBlueprintFormats = Array.isArray(blueprintFormats)
@@ -172,57 +173,32 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
 
     const userPrompt = `Generate ${count} authentic, non-repeating Previous Years Questions (PYQs) / most asked questions for ${exam} (${subject}) on chapters: ${chaptersList}. Focus on highest-frequency repeated patterns. Difficulty: ${difficulty}.`
 
-    // Current live Gemini models (Nov 2026)
-    const models = [
-      "gemini-3.8-flash",
-      "gemini-3.5-flash-lite",
-    ]
-    let lastError: any = null
     let responseText = ""
-
-    for (const model of models) {
-      try {
-        // 25-second timeout per model so we never hang
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 25000)
-
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: `${systemInstruction}\n\nTask: ${userPrompt}` }
-                ]
-              }
-            ],
-            generationConfig: {
-              temperature: 0.35,
-              responseMimeType: "application/json",
+    try {
+      const result = await generateContentWithKeyRotation({
+        payload: {
+          contents: [
+            {
+              parts: [
+                { text: `${systemInstruction}\n\nTask: ${userPrompt}` }
+              ]
             }
-          })
-        })
-        clearTimeout(timeoutId)
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}))
-          lastError = errData?.error?.message || `HTTP ${res.status}`
-          console.warn(`[CompetitiveAI] Model ${model} failed:`, lastError)
-          continue
-        }
-
-        const data = await res.json()
-        responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || ""
-        if (responseText) break
-      } catch (err: any) {
-        lastError = err?.message || "Fetch error"
-      }
+          ],
+          generationConfig: {
+            temperature: 0.35,
+            responseMimeType: "application/json",
+          }
+        },
+        timeoutMs: 25000
+      })
+      responseText = result.text
+    } catch (aiErr: any) {
+      console.error("[CompetitiveAI] Generation error across Gemini key pool:", aiErr)
+      return NextResponse.json({ error: aiErr?.message || "Failed to generate questions from AI model" }, { status: 502 })
     }
 
     if (!responseText) {
-      return NextResponse.json({ error: lastError || "Failed to generate questions from AI model" }, { status: 502 })
+      return NextResponse.json({ error: "Empty response received from Gemini AI" }, { status: 502 })
     }
 
     let questions: any[]

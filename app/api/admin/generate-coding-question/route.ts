@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { robustJsonParse } from "@/lib/jsonRepair"
+import { generateContentWithKeyRotation, getGeminiApiKeys } from "@/lib/gemini"
 
 export async function POST(req: Request) {
   try {
@@ -18,9 +19,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Problem description or title is required" }, { status: 400 })
     }
 
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: "GEMINI_API_KEY is not configured in .env" }, { status: 500 })
+    const keys = getGeminiApiKeys()
+    if (keys.length === 0) {
+      return NextResponse.json({ error: "No Gemini API keys configured in .env" }, { status: 500 })
     }
 
     const langsList = Array.isArray(languages) && languages.length > 0 
@@ -57,51 +58,28 @@ Rules:
 6. Do NOT include markdown code fences (\`\`\`json) in the response. Return raw JSON only.
 `
 
-    // Current live Gemini models (Nov 2026)
-    const models = [
-      "gemini-3.8-flash",
-      "gemini-3.5-flash-lite",
-    ]
-    let lastError: any = null
     let responseText = ""
-
-    for (const model of models) {
-      try {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 25000)
-
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents: [{
-              parts: [{ text: `${systemInstruction}\n\nProblem Request: ${prompt}` }]
-            }],
-            generationConfig: {
-              temperature: 0.2,
-              responseMimeType: "application/json"
-            }
-          })
-        })
-        clearTimeout(timeoutId)
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}))
-          lastError = errData?.error?.message || `HTTP ${res.status}`
-          continue
-        }
-
-        const data = await res.json()
-        responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || ""
-        if (responseText) break
-      } catch (err: any) {
-        lastError = err?.message || "Fetch error"
-      }
+    try {
+      const result = await generateContentWithKeyRotation({
+        payload: {
+          contents: [{
+            parts: [{ text: `${systemInstruction}\n\nProblem Request: ${prompt}` }]
+          }],
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: "application/json"
+          }
+        },
+        timeoutMs: 25000
+      })
+      responseText = result.text
+    } catch (aiErr: any) {
+      console.error("[GenerateCodingQuestion] Gemini pool error:", aiErr)
+      return NextResponse.json({ error: aiErr?.message || "Failed to generate from Gemini AI" }, { status: 502 })
     }
 
     if (!responseText) {
-      return NextResponse.json({ error: lastError || "Failed to generate from Gemini AI" }, { status: 502 })
+      return NextResponse.json({ error: "Empty response received from Gemini AI" }, { status: 502 })
     }
 
     const parsed = robustJsonParse(responseText)
