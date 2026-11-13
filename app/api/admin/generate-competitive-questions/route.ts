@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       ? activeBlueprintFormats.map((f: any) => `- ${f.label} (${f.id}): ${f.count} questions, ${f.marks} marks each`).join("\n")
       : ""
 
-    const count = Math.min(Math.max(Number(questionCount) || 5, 1), 30)
+    const count = Math.min(Math.max(Number(questionCount) || 5, 1), 45)
     const chaptersList = chaptersArray.length > 0
       ? chaptersArray.join(", ")
       : topicsList ? topicsList : "Uploaded Syllabus Material"
@@ -171,50 +171,92 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
 ]
 `
 
-    const userPrompt = `Generate ${count} authentic, non-repeating Previous Years Questions (PYQs) / most asked questions for ${exam} (${subject}) on chapters: ${chaptersList}. Focus on highest-frequency repeated patterns. Difficulty: ${difficulty}.`
+    // Decide number of parallel chunks based on count and number of keys in pool
+    const numChunks = count <= 6 
+      ? 1 
+      : Math.min(Math.max(Math.ceil(count / 9), 2), keys.length, 4)
 
-    let responseText = ""
-    try {
+    // Calculate question counts per chunk (e.g. 30 -> [10, 10, 10]; 25 -> [9, 8, 8])
+    const baseCount = Math.floor(count / numChunks)
+    const remainder = count % numChunks
+    const chunkCounts = Array.from({ length: numChunks }, (_, i) => baseCount + (i < remainder ? 1 : 0))
+
+    const chunkFoci = [
+      "Core definitions, fundamental formula application, direct laws, and introductory PYQ patterns",
+      "Numerical calculation problems, variable relationships, graphical analysis, and standard entrance examination models",
+      "Conceptual derivations, Assertion-Reason statements, fill-in-the-blanks, and multi-concept PYQ problems",
+      "Advanced analytical synthesis, tricky edge cases, and high-yield repeat questions from recent entrance exams",
+    ]
+
+    console.log(`[CompetitiveAI] Generating ${count} questions across ${numChunks} parallel chunks using ${keys.length} API keys in pool...`)
+
+    // Dispatch all chunks simultaneously across the key pool
+    const chunkPromises = chunkCounts.map(async (chunkSize, chunkIdx) => {
+      const focusText = chunkFoci[chunkIdx % chunkFoci.length]
+      
+      // If multiple chapters were selected, distribute them across chunks for comprehensive coverage
+      let chunkChapters = chaptersList
+      if (chaptersArray.length > 1) {
+        const assigned = chaptersArray.filter((_, idx) => idx % numChunks === chunkIdx)
+        if (assigned.length > 0) {
+          chunkChapters = assigned.join(", ")
+        }
+      }
+
+      const chunkPrompt = `Generate exactly ${chunkSize} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chunkChapters}.
+Batch Focus (${chunkIdx + 1}/${numChunks}): ${focusText}.
+Ensure all ${chunkSize} questions are completely unique and test different concepts. Return raw JSON array ONLY.`
+
       const result = await generateContentWithKeyRotation({
         payload: {
           contents: [
             {
               parts: [
-                { text: `${systemInstruction}\n\nTask: ${userPrompt}` }
+                { text: `${systemInstruction}\n\nTask: ${chunkPrompt}` }
               ]
             }
           ],
           generationConfig: {
-            temperature: 0.35,
+            temperature: 0.35 + (chunkIdx * 0.05), // Slight temperature variation for diversity
             responseMimeType: "application/json",
           }
         },
-        timeoutMs: 25000
+        timeoutMs: 40000
       })
-      responseText = result.text
-    } catch (aiErr: any) {
-      console.error("[CompetitiveAI] Generation error across Gemini key pool:", aiErr)
-      return NextResponse.json({ error: aiErr?.message || "Failed to generate questions from AI model" }, { status: 502 })
+
+      return result.text
+    })
+
+    const settledChunks = await Promise.allSettled(chunkPromises)
+    const parsedQuestions: any[] = []
+    let lastError: string | null = null
+
+    for (let i = 0; i < settledChunks.length; i++) {
+      const res = settledChunks[i]
+      if (res.status === "fulfilled") {
+        try {
+          const parsed = robustJsonParse(res.value)
+          if (Array.isArray(parsed)) {
+            parsedQuestions.push(...parsed)
+          }
+        } catch (pErr: any) {
+          console.warn(`[CompetitiveAI] Chunk ${i + 1} JSON parse warning:`, pErr.message)
+        }
+      } else {
+        lastError = res.reason?.message || "Chunk generation failed"
+        console.warn(`[CompetitiveAI] Chunk ${i + 1} failed:`, lastError)
+      }
     }
 
-    if (!responseText) {
-      return NextResponse.json({ error: "Empty response received from Gemini AI" }, { status: 502 })
-    }
-
-    let questions: any[]
-    try {
-      questions = robustJsonParse(responseText)
-    } catch (parseErr: any) {
-      console.error("[CompetitiveAI] JSON parse failed:", parseErr.message, "Response preview:", responseText.slice(0, 300))
+    if (parsedQuestions.length === 0) {
+      console.error("[CompetitiveAI] All parallel generation chunks failed. Last error:", lastError)
       return NextResponse.json(
-        { error: `Failed to parse AI response: ${parseErr.message}. Please click Generate again.` },
-        { status: 500 }
+        { error: lastError || "Failed to generate questions. Please verify your internet or click Generate again." },
+        { status: 502 }
       )
     }
 
-    if (!Array.isArray(questions)) {
-      return NextResponse.json({ error: "Invalid response format received from AI" }, { status: 500 })
-    }
+    const questions: any[] = parsedQuestions
 
     // Set of seen texts to prevent duplicate questions within the batch and existing
     const seenTexts = new Set(

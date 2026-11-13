@@ -84,6 +84,7 @@ export function CompetitiveExamAIGenerator({
   const [isUploadingPdf, setIsUploadingPdf] = useState(false)
   const [pdfError, setPdfError] = useState<string | null>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
+  const modalBodyRef = useRef<HTMLDivElement>(null)
 
   const [customInstructions, setCustomInstructions] = useState("")
   const [focusPYQ, setFocusPYQ] = useState(true)
@@ -327,8 +328,10 @@ export function CompetitiveExamAIGenerator({
       setGeneratedList(data.questions)
       // Auto-select all generated questions
       setSelectedQuestionIds(new Set(data.questions.map((q: GeneratedCompetitiveQuestion) => q.id)))
+      modalBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" })
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred while generating.")
+      modalBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" })
     } finally {
       clearTimeout(timer1)
       clearTimeout(timer2)
@@ -419,7 +422,7 @@ export function CompetitiveExamAIGenerator({
         </div>
 
         {/* ─── Main Body ─── */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div ref={modalBodyRef} className="flex-1 overflow-y-auto p-6 space-y-6">
           {errorMsg && (
             <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -900,22 +903,27 @@ export function CompetitiveExamAIGenerator({
               </div>
 
               {/* Generate Button */}
-              <div className="pt-2 flex justify-end">
+              <div className="pt-2 flex flex-col sm:flex-row items-end sm:items-center justify-between gap-3">
+                {errorMsg && (
+                  <span className="text-xs text-red-600 font-medium bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg max-w-sm truncate">
+                    {errorMsg}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={handleGenerate}
                   disabled={isGenerating || (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText)}
-                  className="px-6 py-2.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-sm font-medium shadow-sm flex items-center gap-2 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                  className="px-6 py-2.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-sm font-medium shadow-sm flex items-center gap-2 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0"
                 >
                   {isGenerating ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
                       <span>
                         {generationStep === 1
                           ? "Analyzing PYQ Papers & Syllabus Material..."
                           : generationStep === 2
-                          ? "Formulating Physics/Math/Bio LaTeX equations & Options..."
-                          : "Validating non-repetition & building step-by-step solutions..."}
+                          ? "Parallel Generation across 5 API Keys..."
+                          : "Validating non-repetition & building LaTeX solutions..."}
                       </span>
                     </>
                   ) : (

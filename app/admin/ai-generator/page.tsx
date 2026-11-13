@@ -663,6 +663,7 @@ export default function AIGeneratorPage() {
 
       setGeneratedQuestions(data.questions)
       setSelectedQuestionIds(new Set(data.questions.map((q: GeneratedCompetitiveQuestion) => q.id)))
+      setFormatFilter("all") // Reset filter to all formats so new questions always render
 
       // Set default exam title
       const chapterTitle =
@@ -688,6 +689,7 @@ export default function AIGeneratorPage() {
       window.scrollTo({ top: 0, behavior: "smooth" })
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred while generating.")
+      window.scrollTo({ top: 0, behavior: "smooth" })
     } finally {
       clearTimeout(timer1)
       clearTimeout(timer2)
@@ -2767,28 +2769,41 @@ export default function AIGeneratorPage() {
             )}
 
             {currentStep === 2 && (
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={
-                  isGenerating ||
-                  (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
-                  totalQuestions === 0
-                }
-                className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
-                    <span>Generating...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>Create Questions ({totalQuestions})</span>
-                  </>
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                {errorMsg && (
+                  <span className="text-xs text-red-600 font-medium bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg max-w-xs truncate">
+                    {errorMsg}
+                  </span>
                 )}
-              </button>
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={
+                    isGenerating ||
+                    (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
+                    totalQuestions === 0
+                  }
+                  className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                      <span>
+                        {generationStep === 1
+                          ? "Analyzing PYQs..."
+                          : generationStep === 2
+                          ? "Generating Parallel Batches (Fast AI)..."
+                          : "Validating Questions & LaTeX..."}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>Create Questions ({totalQuestions})</span>
+                    </>
+                  )}
+                </button>
+              </div>
             )}
 
             {currentStep === 3 && (

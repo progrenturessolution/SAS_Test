@@ -19,8 +19,8 @@
 // Live verified Gemini models (no 2.5 models per user request)
 export const DEFAULT_GEMINI_MODELS = [
   "gemini-3.5-flash-lite",
-  "gemini-3.8-flash",
   "gemini-flash-latest",
+  "gemini-3.8-flash",
 ]
 
 /**
@@ -97,7 +97,7 @@ export async function generateContentWithKeyRotation(
   }
 
   const models = options.models && options.models.length > 0 ? options.models : DEFAULT_GEMINI_MODELS
-  const timeoutMs = options.timeoutMs || 25000
+  const timeoutMs = options.timeoutMs || 45000
 
   // Determine starting key using round-robin pointer
   const startIndex = currentKeyPointer % keys.length
@@ -166,10 +166,17 @@ export async function generateContentWithKeyRotation(
           }
         }
       } catch (err: any) {
-        lastErrorMessage = err?.name === "AbortError" 
+        const isTimeout = err?.name === "AbortError"
+        lastErrorMessage = isTimeout 
           ? `Timeout after ${timeoutMs}ms` 
           : (err?.message || "Network request failed")
         console.warn(`[GeminiPool] Key ${keyIndex + 1}/${keys.length} (${model}) threw error: ${lastErrorMessage}`)
+        
+        // On timeout, aborting all remaining models for this key to prevent long cascading delays
+        if (isTimeout) {
+          console.warn(`[GeminiPool] Key ${keyIndex + 1} timed out. Skipping remaining models for this key.`)
+          break
+        }
       }
     }
   }
