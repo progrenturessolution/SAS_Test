@@ -16,10 +16,11 @@
  * 4. 20-second AbortController timeout to prevent hanging.
  */
 
-// Live verified Gemini models (Nov 2026)
+// Live verified Gemini models (no 2.5 models per user request)
 export const DEFAULT_GEMINI_MODELS = [
   "gemini-3.5-flash-lite",
   "gemini-3.8-flash",
+  "gemini-flash-latest",
 ]
 
 /**
