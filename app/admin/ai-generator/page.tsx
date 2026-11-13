@@ -478,9 +478,9 @@ export default function AIGeneratorPage() {
 
   const updateFormatCount = (id: string, count: any) => {
     const parsed = typeof count === "number" ? count : parseInt(String(count), 10)
-    const safeCount = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, Math.round(parsed)))
+    const safeCount = isNaN(parsed) ? 0 : Math.max(0, Math.min(200, Math.round(parsed)))
     setBlueprintFormats((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, count: safeCount } : f))
+      prev.map((f) => (f.id === id ? { ...f, count: safeCount, checked: safeCount > 0 ? true : f.checked } : f))
     )
   }
 
@@ -1460,74 +1460,11 @@ export default function AIGeneratorPage() {
 
                 {/* Right Column: Question Blueprint */}
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center justify-between gap-2 mb-4">
                     <div className="flex items-center gap-2">
                       <span className="w-1 h-4 bg-slate-900 rounded-full" />
                       <h3 className="text-base font-semibold text-slate-800">Question Blueprint</h3>
                     </div>
-                  </div>
-
-                  {/* Master Total Questions Input */}
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 mb-3">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-800">Total Questions to Generate</p>
-                      <p className="text-[11px] text-slate-500">Pick a preset or enter exact count below</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={totalQuestions === 0 ? "" : totalQuestions}
-                        placeholder="10"
-                        onChange={(e) => {
-                          const val = Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1))
-                          setBlueprintFormats([
-                            { id: "mcq", label: "MCQ", checked: true, count: val, marks: 4 },
-                            { id: "assertion", label: "Assertion", checked: false, count: 0, marks: 4 },
-                            { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 2 },
-                            { id: "true_false", label: "True / False", checked: false, count: 0, marks: 2 },
-                          ])
-                        }}
-                        className="w-16 sm:w-20 h-9 px-2 text-center rounded-lg border border-slate-300 bg-white font-bold text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                      />
-                      <span className="text-xs font-medium text-slate-600">Questions</span>
-                    </div>
-                  </div>
-
-                  {/* Quick Preset Buttons */}
-                  <div className="flex items-center gap-1.5 mb-3.5 flex-wrap">
-                    <span className="text-[11px] font-medium text-slate-500 mr-0.5">Quick Presets:</span>
-                    {[
-                      { label: "5 Qs", mcq: 5, assertion: 0, fib: 0, tf: 0 },
-                      { label: "10 Qs", mcq: 10, assertion: 0, fib: 0, tf: 0 },
-                      { label: "15 Qs", mcq: 15, assertion: 0, fib: 0, tf: 0 },
-                      { label: "20 Qs", mcq: 15, assertion: 5, fib: 0, tf: 0 },
-                      { label: "25 Qs", mcq: 20, assertion: 5, fib: 0, tf: 0 },
-                      { label: "30 Qs", mcq: 20, assertion: 5, fib: 5, tf: 0 },
-                      { label: "45 Qs (NEET)", mcq: 30, assertion: 10, fib: 5, tf: 0 },
-                      { label: "50 Qs", mcq: 35, assertion: 10, fib: 5, tf: 0 },
-                    ].map((preset) => (
-                      <button
-                        key={preset.label}
-                        type="button"
-                        onClick={() => {
-                          setBlueprintFormats([
-                            { id: "mcq", label: "MCQ", checked: preset.mcq > 0, count: preset.mcq, marks: 4 },
-                            { id: "assertion", label: "Assertion", checked: preset.assertion > 0, count: preset.assertion, marks: 4 },
-                            { id: "fib", label: "Fill in the Blanks", checked: preset.fib > 0, count: preset.fib, marks: 2 },
-                            { id: "true_false", label: "True / False", checked: preset.tf > 0, count: preset.tf, marks: 2 },
-                          ])
-                        }}
-                        className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer ${
-                          totalQuestions === (preset.mcq + preset.assertion + preset.fib + preset.tf)
-                            ? "bg-[#1E293B] text-white border-slate-900 shadow-2xs"
-                            : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
                   </div>
 
                   {/* Blueprint Matrix Table */}
@@ -1565,11 +1502,12 @@ export default function AIGeneratorPage() {
                                   type="number"
                                   disabled={!f.checked}
                                   min={0}
-                                  max={100}
+                                  max={200}
                                   value={f.count === 0 ? "" : f.count}
                                   placeholder="0"
                                   onChange={(e) => {
-                                    const val = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0))
+                                    const raw = e.target.value
+                                    const val = raw === "" ? 0 : Math.max(0, Math.min(200, parseInt(raw, 10) || 0))
                                     updateFormatCount(f.id, val)
                                   }}
                                   className="w-16 sm:w-20 h-9 px-2 text-center rounded-lg border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 disabled:bg-slate-100 disabled:text-slate-400"
