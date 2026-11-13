@@ -234,11 +234,19 @@ export default function AIGeneratorPage() {
     }
     if (
       q.questionFormat === "assertion" ||
+      q.questionFormat === "assertion_reason" ||
       Boolean(parseAssertionReason(q.questionText || ""))
     ) {
       return "assertion"
     }
-    return q.questionFormat || q.type || "mcq"
+    if (
+      q.questionFormat === "fib" ||
+      q.questionFormat === "fill_in_the_blanks" ||
+      q.questionText?.includes("______")
+    ) {
+      return "fib"
+    }
+    return "mcq"
   }
 
   const filteredGeneratedQuestions = useMemo(() => {

@@ -174,96 +174,131 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
 ]
 `
 
-    // Decide number of parallel chunks based on count and number of keys in pool (up to 5 keys)
-    const numChunks = count <= 10 
-      ? 1 
-      : Math.min(Math.max(Math.ceil(count / 10), 2), keys.length, 5)
+    const formatDirectives: Record<string, string> = {
+      mcq: `CRITICAL FORMAT REQUIREMENT:
+All questions in this batch MUST be multiple-choice questions ("questionFormat": "mcq").
+Provide exactly 4 distinct answer options in the "options" array.
+"correctAnswer" MUST match one of the 4 options exactly.`,
 
-    // Calculate target question counts per chunk
-    const baseCount = Math.floor(count / numChunks)
-    const remainder = count % numChunks
-    const chunkCounts = Array.from({ length: numChunks }, (_, i) => baseCount + (i < remainder ? 1 : 0))
+      assertion: `CRITICAL FORMAT REQUIREMENT:
+All questions in this batch MUST be Assertion & Reason questions ("questionFormat": "assertion").
+The "questionText" MUST be formulated with:
+Assertion (A): [Clear scientific/mathematical assertion statement]
+Reason (R): [Clear explanatory reason statement]
+The "options" array MUST be:
+[
+  "Both (A) and (R) are true and (R) is the correct explanation of (A)",
+  "Both (A) and (R) are true but (R) is not the correct explanation of (A)",
+  "(A) is true but (R) is false",
+  "(A) is false but (R) is true"
+]
+"correctAnswer" MUST match one of these 4 standard options.`,
 
-    const chunkFoci = [
-      "Core definitions, fundamental formula application, direct laws, and introductory PYQ patterns",
-      "Numerical calculation problems, variable relationships, graphical analysis, and standard entrance examination models",
-      "Conceptual derivations, Assertion-Reason statements, fill-in-the-blanks, and multi-concept PYQ problems",
-      "Advanced analytical synthesis, tricky edge cases, and high-yield repeat questions from recent entrance exams",
-      "Comprehensive mixed application, critical PYQ models, and entrance examination level synthesis",
-    ]
+      fib: `CRITICAL FORMAT REQUIREMENT:
+All questions in this batch MUST be Fill in the Blanks questions ("questionFormat": "fib").
+The "questionText" MUST contain a fill-in-the-blank "______" or ask to compute a missing value.
+Provide 4 distinct choices in the "options" array to fill the blank.
+"correctAnswer" MUST match one of the 4 options.`,
 
-    console.log(`[CompetitiveAI] Generating exactly ${count} questions across ${numChunks} parallel chunks using ${keys.length} API keys in pool...`)
+      true_false: `CRITICAL FORMAT REQUIREMENT:
+All questions in this batch MUST be True or False questions ("questionFormat": "true_false").
+The "questionText" must start with "True or False: " followed by a clear conceptual statement.
+The "options" array MUST be exactly ["True", "False"].
+"correctAnswer" MUST be either "True" or "False".`
+    }
 
-    // Dispatch all chunks simultaneously across the key pool with buffer to absorb deduplication
-    const chunkPromises = chunkCounts.map(async (chunkSize, chunkIdx) => {
-      const focusText = chunkFoci[chunkIdx % chunkFoci.length]
-      // Add buffer (+20% or +2) so deduplication never leaves total below user's selected count
-      const requestedChunkCount = numChunks === 1 ? chunkSize + 2 : Math.ceil(chunkSize * 1.25) + 1
+    interface GenerationTask {
+      formatId: "mcq" | "assertion" | "fib" | "true_false"
+      formatLabel: string
+      targetCount: number
+      marks: number
+    }
+
+    const generationTasks: GenerationTask[] = []
+
+    if (activeBlueprintFormats.length > 0) {
+      for (const fmt of activeBlueprintFormats) {
+        const fmtCount = Number(fmt.count) || 0
+        if (fmtCount <= 0) continue
+
+        // If a format has > 25 questions, shard it into sub-chunks of at most 25 questions
+        if (fmtCount <= 25) {
+          generationTasks.push({
+            formatId: fmt.id,
+            formatLabel: fmt.label || fmt.id,
+            targetCount: fmtCount,
+            marks: Number(fmt.marks) || marksPerQuestion,
+          })
+        } else {
+          const numSubChunks = Math.ceil(fmtCount / 20)
+          const baseSub = Math.floor(fmtCount / numSubChunks)
+          const remSub = fmtCount % numSubChunks
+          for (let s = 0; s < numSubChunks; s++) {
+            const subCount = baseSub + (s < remSub ? 1 : 0)
+            generationTasks.push({
+              formatId: fmt.id,
+              formatLabel: fmt.label || fmt.id,
+              targetCount: subCount,
+              marks: Number(fmt.marks) || marksPerQuestion,
+            })
+          }
+        }
+      }
+    } else {
+      generationTasks.push({
+        formatId: "mcq",
+        formatLabel: "MCQ",
+        targetCount: count,
+        marks: marksPerQuestion,
+      })
+    }
+
+    console.log(`[CompetitiveAI] Dispatching ${generationTasks.length} format-specific tasks in parallel across ${keys.length} API keys...`)
+
+    // Dispatch all format tasks simultaneously across the key pool with buffer to absorb deduplication
+    const chunkPromises = generationTasks.map(async (task, taskIdx) => {
+      const requestedCount = task.targetCount <= 5 ? task.targetCount + 1 : task.targetCount + 2
       
-      // If multiple chapters were selected, distribute them across chunks for comprehensive coverage
-      let chunkChapters = chaptersList
+      // Distribute chapters across tasks if multiple chapters exist
+      let taskChapters = chaptersList
       if (chaptersArray.length > 1) {
-        const assigned = chaptersArray.filter((_, idx) => idx % numChunks === chunkIdx)
+        const assigned = chaptersArray.filter((_, idx) => idx % generationTasks.length === taskIdx)
         if (assigned.length > 0) {
-          chunkChapters = assigned.join(", ")
+          taskChapters = assigned.join(", ")
         }
       }
 
-      const chunkPrompt = numChunks === 1
-        ? `Generate exactly ${requestedChunkCount} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chunkChapters}.
-Ensure all generated questions are completely unique and test different concepts. Return raw JSON array ONLY.`
-        : `Generate at least ${requestedChunkCount} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chunkChapters}.
-Batch Focus (${chunkIdx + 1}/${numChunks}): ${focusText}.
-Ensure all generated questions are completely unique and test different concepts. Return raw JSON array ONLY.`
+      const taskPrompt = `Generate exactly ${requestedCount} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${taskChapters}.
+
+${formatDirectives[task.formatId] || formatDirectives.mcq}
+
+Ensure all generated questions have "questionFormat": "${task.formatId}".
+Return raw JSON array ONLY.`
 
       const result = await generateContentWithKeyRotation({
         payload: {
           contents: [
             {
               parts: [
-                { text: `${systemInstruction}\n\nTask: ${chunkPrompt}` }
+                { text: `${systemInstruction}\n\nTask: ${taskPrompt}` }
               ]
             }
           ],
           generationConfig: {
-            temperature: 0.35 + (chunkIdx * 0.05), // Slight temperature variation for diversity
+            temperature: 0.35 + ((taskIdx % 3) * 0.05),
             responseMimeType: "application/json",
           }
         },
         timeoutMs: 15000
       })
 
-      return result.text
+      return {
+        formatId: task.formatId,
+        text: result.text
+      }
     })
 
     const settledChunks = await Promise.allSettled(chunkPromises)
-    const parsedQuestions: any[] = []
-    let lastError: string | null = null
-
-    for (let i = 0; i < settledChunks.length; i++) {
-      const res = settledChunks[i]
-      if (res.status === "fulfilled") {
-        try {
-          const parsed = robustJsonParse(res.value)
-          if (Array.isArray(parsed)) {
-            parsedQuestions.push(...parsed)
-          }
-        } catch (pErr: any) {
-          console.warn(`[CompetitiveAI] Chunk ${i + 1} JSON parse warning:`, pErr.message)
-        }
-      } else {
-        lastError = res.reason?.message || "Chunk generation failed"
-        console.warn(`[CompetitiveAI] Chunk ${i + 1} failed:`, lastError)
-      }
-    }
-
-    if (parsedQuestions.length === 0) {
-      console.error("[CompetitiveAI] All parallel generation chunks failed. Last error:", lastError)
-      return NextResponse.json(
-        { error: lastError || "Failed to generate questions. Please verify your internet or click Generate again." },
-        { status: 502 }
-      )
-    }
 
     // Set of seen texts to prevent duplicate questions within the batch and existing
     const seenTexts = new Set(
@@ -278,20 +313,44 @@ Ensure all generated questions are completely unique and test different concepts
         .replace(/\u0008/g, "\\b")
         .trim()
 
-    function formatSingleQuestion(q: any, idx: number) {
+    function formatSingleQuestion(q: any, idx: number, forcedFormat?: string) {
       const questionText = normalizeGeneratedText(q.questionText || "Question")
-      const rawFormat = String(q.questionFormat || q.type || "").toLowerCase().trim()
+      const rawFormat = String(forcedFormat || q.questionFormat || q.type || "").toLowerCase().trim()
+      
       const isTF =
+        forcedFormat === "true_false" ||
         rawFormat === "true_false" ||
         rawFormat === "truefalse" ||
         rawFormat === "tf" ||
         questionText.toLowerCase().startsWith("true or false") ||
-        questionText.toLowerCase().startsWith("true/false")
+        questionText.toLowerCase().startsWith("true/false") ||
+        (Array.isArray(q.options) && q.options.length === 2 && q.options.some((o: string) => String(o).toLowerCase() === "true"))
+
+      const isAR =
+        !isTF && (
+          forcedFormat === "assertion" ||
+          rawFormat === "assertion" ||
+          rawFormat === "assertion_reason" ||
+          rawFormat === "assertion-reason" ||
+          questionText.toLowerCase().includes("assertion (a)") ||
+          questionText.toLowerCase().includes("assertion:")
+        )
+
+      const isFIB =
+        !isTF && !isAR && (
+          forcedFormat === "fib" ||
+          rawFormat === "fib" ||
+          rawFormat === "fill_in_the_blanks" ||
+          rawFormat === "fill-in-the-blanks" ||
+          questionText.includes("______")
+        )
 
       const formatType = isTF
         ? "true_false"
-        : ["mcq", "assertion", "fib"].includes(rawFormat)
-        ? rawFormat
+        : isAR
+        ? "assertion"
+        : isFIB
+        ? "fib"
         : "mcq"
 
       let options: string[] = []
@@ -338,63 +397,126 @@ Ensure all generated questions are completely unique and test different concepts
         options,
         correctAnswer,
         explanation: normalizeGeneratedText(q.explanation || "No explanation provided."),
-        chapter: String(q.chapter || chapters[0] || "General"),
+        chapter: String(q.chapter || chaptersArray[0] || "General"),
         pyqReference: String(q.pyqReference || `${exam} PYQ Trend`),
       }
     }
 
-    const formattedQuestions: any[] = []
-
-    for (let idx = 0; idx < parsedQuestions.length; idx++) {
-      const q = parsedQuestions[idx]
-      const questionText = normalizeGeneratedText(q.questionText || "Question")
-      const normalizedText = questionText.toLowerCase().replace(/[^a-z0-9]/g, "")
-
-      if (seenTexts.has(normalizedText)) {
-        continue
-      }
-      seenTexts.add(normalizedText)
-      formattedQuestions.push(formatSingleQuestion(q, formattedQuestions.length))
-
-      // Stop once we have reached exactly the requested count
-      if (formattedQuestions.length >= count) {
-        break
-      }
+    // Collect raw items per format
+    const poolByFormat: Record<string, any[]> = {
+      mcq: [],
+      assertion: [],
+      fib: [],
+      true_false: [],
     }
 
-    // Top-up fallback if deduplication resulted in fewer questions than user selected
-    if (formattedQuestions.length < count) {
-      const deficit = count - formattedQuestions.length
-      console.log(`[CompetitiveAI] Buffer deficit detected (${formattedQuestions.length}/${count}). Generating fast top-up of ${deficit} questions...`)
-      try {
-        const topUpPrompt = `Generate exactly ${deficit} additional, unique, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chaptersList}.
-Make sure they are completely distinct from existing questions. Return raw JSON array ONLY.`
-        const topUpRes = await generateContentWithKeyRotation({
-          payload: {
-            contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
-            generationConfig: { temperature: 0.5, responseMimeType: "application/json" }
-          },
-          timeoutMs: 12000
-        })
-        const topUpParsed = robustJsonParse(topUpRes.text)
-        if (Array.isArray(topUpParsed)) {
-          for (const q of topUpParsed) {
-            const questionText = normalizeGeneratedText(q.questionText || "Question")
-            const normalizedText = questionText.toLowerCase().replace(/[^a-z0-9]/g, "")
-            if (!seenTexts.has(normalizedText)) {
-              seenTexts.add(normalizedText)
-              formattedQuestions.push(formatSingleQuestion(q, formattedQuestions.length))
-              if (formattedQuestions.length >= count) break
+    let totalParsed = 0
+    let lastError: string | null = null
+
+    for (let i = 0; i < settledChunks.length; i++) {
+      const res = settledChunks[i]
+      if (res.status === "fulfilled") {
+        try {
+          const parsed = robustJsonParse(res.value.text)
+          const assignedFormat = res.value.formatId
+          if (Array.isArray(parsed)) {
+            totalParsed += parsed.length
+            for (const item of parsed) {
+              if (poolByFormat[assignedFormat]) {
+                poolByFormat[assignedFormat].push(item)
+              } else {
+                poolByFormat.mcq.push(item)
+              }
             }
           }
+        } catch (pErr: any) {
+          console.warn(`[CompetitiveAI] Task ${i + 1} JSON parse warning:`, pErr.message)
         }
-      } catch (topUpErr) {
-        console.warn("[CompetitiveAI] Top-up attempt skipped:", topUpErr)
+      } else {
+        lastError = res.reason?.message || "Task failed"
+        console.warn(`[CompetitiveAI] Task ${i + 1} failed:`, lastError)
       }
     }
 
-    // Ensure we return EXACTLY the number requested by the user
-    const finalQuestions = formattedQuestions.slice(0, count)
+    if (totalParsed === 0) {
+      console.error("[CompetitiveAI] All tasks failed. Last error:", lastError)
+      return NextResponse.json(
+        { error: lastError || "Failed to generate questions. Please verify your internet or click Generate again." },
+        { status: 502 }
+      )
+    }
+
+    const finalQuestions: any[] = []
+
+    // Strictly satisfy each active format's exact count
+    if (activeBlueprintFormats.length > 0) {
+      for (const fmt of activeBlueprintFormats) {
+        const requiredCount = Number(fmt.count) || 0
+        if (requiredCount <= 0) continue
+
+        const rawList = poolByFormat[fmt.id] || []
+        const formattedList: any[] = []
+
+        for (const raw of rawList) {
+          const questionText = normalizeGeneratedText(raw.questionText || "Question")
+          const normalizedText = questionText.toLowerCase().replace(/[^a-z0-9]/g, "")
+          if (seenTexts.has(normalizedText)) continue
+          seenTexts.add(normalizedText)
+
+          formattedList.push(formatSingleQuestion(raw, finalQuestions.length + formattedList.length, fmt.id))
+          if (formattedList.length >= requiredCount) break
+        }
+
+        // Fast top-up if deficit exists for this specific format
+        if (formattedList.length < requiredCount) {
+          const deficit = requiredCount - formattedList.length
+          console.log(`[CompetitiveAI] Deficit for ${fmt.id}: got ${formattedList.length}/${requiredCount}, topping up ${deficit}...`)
+          try {
+            const topUpPrompt = `Generate exactly ${deficit} authentic, unique Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chaptersList}.
+
+${formatDirectives[fmt.id] || formatDirectives.mcq}
+
+Ensure all generated questions have "questionFormat": "${fmt.id}".
+Return raw JSON array ONLY.`
+
+            const topUpRes = await generateContentWithKeyRotation({
+              payload: {
+                contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
+                generationConfig: { temperature: 0.4, responseMimeType: "application/json" }
+              },
+              timeoutMs: 12000
+            })
+            const topUpParsed = robustJsonParse(topUpRes.text)
+            if (Array.isArray(topUpParsed)) {
+              for (const raw of topUpParsed) {
+                const questionText = normalizeGeneratedText(raw.questionText || "Question")
+                const normalizedText = questionText.toLowerCase().replace(/[^a-z0-9]/g, "")
+                if (!seenTexts.has(normalizedText)) {
+                  seenTexts.add(normalizedText)
+                  formattedList.push(formatSingleQuestion(raw, finalQuestions.length + formattedList.length, fmt.id))
+                  if (formattedList.length >= requiredCount) break
+                }
+              }
+            }
+          } catch (tErr) {
+            console.warn(`[CompetitiveAI] Top-up for ${fmt.id} skipped:`, tErr)
+          }
+        }
+
+        // Enforce exact count for this format
+        finalQuestions.push(...formattedList.slice(0, requiredCount))
+      }
+    } else {
+      const allRaw = Object.values(poolByFormat).flat()
+      for (const raw of allRaw) {
+        const questionText = normalizeGeneratedText(raw.questionText || "Question")
+        const normalizedText = questionText.toLowerCase().replace(/[^a-z0-9]/g, "")
+        if (seenTexts.has(normalizedText)) continue
+        seenTexts.add(normalizedText)
+        finalQuestions.push(formatSingleQuestion(raw, finalQuestions.length, "mcq"))
+        if (finalQuestions.length >= count) break
+      }
+    }
 
     return NextResponse.json({
       success: true,
