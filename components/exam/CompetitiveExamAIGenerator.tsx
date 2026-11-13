@@ -845,13 +845,13 @@ export function CompetitiveExamAIGenerator({
                   <label className="text-xs font-bold uppercase tracking-wider text-[#45505F] block mb-2">
                     5. Number of Questions
                   </label>
-                  <div className="flex items-center gap-2">
-                    {[5, 10, 15, 20, 25].map((cnt) => (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[5, 10, 15, 20, 25, 30, 45, 50].map((cnt) => (
                       <button
                         key={cnt}
                         type="button"
                         onClick={() => setQuestionCount(cnt)}
-                        className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                           questionCount === cnt
                             ? "bg-[#2D3A4A] text-white"
                             : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"

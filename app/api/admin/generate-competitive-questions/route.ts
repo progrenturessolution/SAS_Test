@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       ? activeBlueprintFormats.map((f: any) => `- ${f.label} (${f.id}): ${f.count} questions, ${f.marks} marks each`).join("\n")
       : ""
 
-    const count = Math.min(Math.max(Number(questionCount) || 5, 1), 45)
+    const count = Math.min(Math.max(Number(questionCount) || 5, 1), 100)
     const chaptersList = chaptersArray.length > 0
       ? chaptersArray.join(", ")
       : topicsList ? topicsList : "Uploaded Syllabus Material"
@@ -171,12 +171,12 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
 ]
 `
 
-    // Decide number of parallel chunks based on count and number of keys in pool
+    // Decide number of parallel chunks based on count and number of keys in pool (up to 5 keys)
     const numChunks = count <= 6 
       ? 1 
-      : Math.min(Math.max(Math.ceil(count / 9), 2), keys.length, 4)
+      : Math.min(Math.max(Math.ceil(count / 9), 2), keys.length, 5)
 
-    // Calculate question counts per chunk (e.g. 30 -> [10, 10, 10]; 25 -> [9, 8, 8])
+    // Calculate target question counts per chunk
     const baseCount = Math.floor(count / numChunks)
     const remainder = count % numChunks
     const chunkCounts = Array.from({ length: numChunks }, (_, i) => baseCount + (i < remainder ? 1 : 0))
@@ -186,13 +186,16 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
       "Numerical calculation problems, variable relationships, graphical analysis, and standard entrance examination models",
       "Conceptual derivations, Assertion-Reason statements, fill-in-the-blanks, and multi-concept PYQ problems",
       "Advanced analytical synthesis, tricky edge cases, and high-yield repeat questions from recent entrance exams",
+      "Comprehensive mixed application, critical PYQ models, and entrance examination level synthesis",
     ]
 
-    console.log(`[CompetitiveAI] Generating ${count} questions across ${numChunks} parallel chunks using ${keys.length} API keys in pool...`)
+    console.log(`[CompetitiveAI] Generating exactly ${count} questions across ${numChunks} parallel chunks using ${keys.length} API keys in pool...`)
 
-    // Dispatch all chunks simultaneously across the key pool
+    // Dispatch all chunks simultaneously across the key pool with buffer to absorb deduplication
     const chunkPromises = chunkCounts.map(async (chunkSize, chunkIdx) => {
       const focusText = chunkFoci[chunkIdx % chunkFoci.length]
+      // Add buffer (+20% or +2) so deduplication never leaves total below user's selected count
+      const requestedChunkCount = Math.ceil(chunkSize * 1.25) + 1
       
       // If multiple chapters were selected, distribute them across chunks for comprehensive coverage
       let chunkChapters = chaptersList
@@ -203,9 +206,9 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
         }
       }
 
-      const chunkPrompt = `Generate exactly ${chunkSize} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chunkChapters}.
+      const chunkPrompt = `Generate at least ${requestedChunkCount} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chunkChapters}.
 Batch Focus (${chunkIdx + 1}/${numChunks}): ${focusText}.
-Ensure all ${chunkSize} questions are completely unique and test different concepts. Return raw JSON array ONLY.`
+Ensure all generated questions are completely unique and test different concepts. Return raw JSON array ONLY.`
 
       const result = await generateContentWithKeyRotation({
         payload: {
@@ -256,8 +259,6 @@ Ensure all ${chunkSize} questions are completely unique and test different conce
       )
     }
 
-    const questions: any[] = parsedQuestions
-
     // Set of seen texts to prevent duplicate questions within the batch and existing
     const seenTexts = new Set(
       Array.isArray(existingQuestions)
@@ -265,24 +266,14 @@ Ensure all ${chunkSize} questions are completely unique and test different conce
         : []
     )
 
-    const formattedQuestions: any[] = []
+    const normalizeGeneratedText = (value: unknown) =>
+      String(value || "")
+        .replace(/\u000c/g, "\\frac")
+        .replace(/\u0008/g, "\\b")
+        .trim()
 
-    for (let idx = 0; idx < questions.length; idx++) {
-      const q = questions[idx]
-      const normalizeGeneratedText = (value: unknown) =>
-        String(value || "")
-          .replace(/\u000c/g, "\\frac")
-          .replace(/\u0008/g, "\\b")
-          .trim()
+    function formatSingleQuestion(q: any, idx: number) {
       const questionText = normalizeGeneratedText(q.questionText || "Question")
-      const normalizedText = questionText.toLowerCase().replace(/[^a-z0-9]/g, "")
-
-      // Deduplication check: skip if identical question was already generated
-      if (seenTexts.has(normalizedText)) {
-        continue
-      }
-      seenTexts.add(normalizedText)
-
       const rawFormat = String(q.questionFormat || q.type || "").toLowerCase().trim()
       const isTF =
         rawFormat === "true_false" ||
@@ -325,26 +316,84 @@ Ensure all ${chunkSize} questions are completely unique and test different conce
         }
       }
 
-      formattedQuestions.push({
+      const matchedBlueprint = activeBlueprintFormats.find((b: any) => b.id === formatType)
+      const assignedMarks = matchedBlueprint && Number(matchedBlueprint.marks) > 0
+        ? Number(matchedBlueprint.marks)
+        : Number(q.marks) || marksPerQuestion
+
+      return {
         id: `pyq_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
         type: "mcq",
         questionFormat: formatType,
         questionText,
         difficulty: ["easy", "medium", "hard"].includes(q.difficulty) ? q.difficulty : "medium",
-        marks: Number(q.marks) || marksPerQuestion,
+        marks: assignedMarks,
         negativeMark: Number(q.negativeMark ?? negativeMarks),
         options,
         correctAnswer,
         explanation: normalizeGeneratedText(q.explanation || "No explanation provided."),
         chapter: String(q.chapter || chapters[0] || "General"),
         pyqReference: String(q.pyqReference || `${exam} PYQ Trend`),
-      })
+      }
     }
+
+    const formattedQuestions: any[] = []
+
+    for (let idx = 0; idx < parsedQuestions.length; idx++) {
+      const q = parsedQuestions[idx]
+      const questionText = normalizeGeneratedText(q.questionText || "Question")
+      const normalizedText = questionText.toLowerCase().replace(/[^a-z0-9]/g, "")
+
+      if (seenTexts.has(normalizedText)) {
+        continue
+      }
+      seenTexts.add(normalizedText)
+      formattedQuestions.push(formatSingleQuestion(q, formattedQuestions.length))
+
+      // Stop once we have reached exactly the requested count
+      if (formattedQuestions.length >= count) {
+        break
+      }
+    }
+
+    // Top-up fallback if deduplication resulted in fewer questions than user selected
+    if (formattedQuestions.length < count) {
+      const deficit = count - formattedQuestions.length
+      console.log(`[CompetitiveAI] Buffer deficit detected (${formattedQuestions.length}/${count}). Generating fast top-up of ${deficit} questions...`)
+      try {
+        const topUpPrompt = `Generate exactly ${deficit} additional, unique, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chaptersList}.
+Make sure they are completely distinct from existing questions. Return raw JSON array ONLY.`
+        const topUpRes = await generateContentWithKeyRotation({
+          payload: {
+            contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
+            generationConfig: { temperature: 0.5, responseMimeType: "application/json" }
+          },
+          timeoutMs: 25000
+        })
+        const topUpParsed = robustJsonParse(topUpRes.text)
+        if (Array.isArray(topUpParsed)) {
+          for (const q of topUpParsed) {
+            const questionText = normalizeGeneratedText(q.questionText || "Question")
+            const normalizedText = questionText.toLowerCase().replace(/[^a-z0-9]/g, "")
+            if (!seenTexts.has(normalizedText)) {
+              seenTexts.add(normalizedText)
+              formattedQuestions.push(formatSingleQuestion(q, formattedQuestions.length))
+              if (formattedQuestions.length >= count) break
+            }
+          }
+        }
+      } catch (topUpErr) {
+        console.warn("[CompetitiveAI] Top-up attempt skipped:", topUpErr)
+      }
+    }
+
+    // Ensure we return EXACTLY the number requested by the user
+    const finalQuestions = formattedQuestions.slice(0, count)
 
     return NextResponse.json({
       success: true,
-      count: formattedQuestions.length,
-      questions: formattedQuestions,
+      count: finalQuestions.length,
+      questions: finalQuestions,
     })
   } catch (err: any) {
     console.error("[GenerateCompetitiveQuestions] Error:", err)

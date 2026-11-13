@@ -455,13 +455,24 @@ export default function AIGeneratorPage() {
 
   const toggleFormatCheck = (id: string) => {
     setBlueprintFormats((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, checked: !f.checked } : f))
+      prev.map((f) => {
+        if (f.id === id) {
+          const nextChecked = !f.checked
+          return {
+            ...f,
+            checked: nextChecked,
+            count: nextChecked && f.count === 0 ? 5 : f.count,
+          }
+        }
+        return f
+      })
     )
   }
 
   const updateFormatCount = (id: string, count: number) => {
+    const safeCount = Math.max(0, Math.min(100, Math.round(count) || 0))
     setBlueprintFormats((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, count } : f))
+      prev.map((f) => (f.id === id ? { ...f, count: safeCount } : f))
     )
   }
 
@@ -1439,9 +1450,44 @@ export default function AIGeneratorPage() {
 
                 {/* Right Column: Question Blueprint */}
                 <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="w-1 h-4 bg-slate-900 rounded-full" />
-                    <h3 className="text-base font-semibold text-slate-800">Question Blueprint</h3>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1 h-4 bg-slate-900 rounded-full" />
+                      <h3 className="text-base font-semibold text-slate-800">Question Blueprint</h3>
+                    </div>
+                  </div>
+
+                  {/* Quick Preset Buttons */}
+                  <div className="flex items-center gap-1.5 mb-3.5 flex-wrap">
+                    <span className="text-[11px] font-medium text-slate-500 mr-0.5">Quick Presets:</span>
+                    {[
+                      { label: "10 Qs", mcq: 10, assertion: 0, fib: 0, tf: 0 },
+                      { label: "20 Qs", mcq: 15, assertion: 5, fib: 0, tf: 0 },
+                      { label: "30 Qs", mcq: 20, assertion: 5, fib: 5, tf: 0 },
+                      { label: "45 Qs (NEET)", mcq: 30, assertion: 10, fib: 5, tf: 0 },
+                      { label: "50 Qs", mcq: 35, assertion: 10, fib: 5, tf: 0 },
+                      { label: "100 Qs", mcq: 70, assertion: 15, fib: 10, tf: 5 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => {
+                          setBlueprintFormats([
+                            { id: "mcq", label: "MCQ", checked: preset.mcq > 0, count: preset.mcq, marks: 4 },
+                            { id: "assertion", label: "Assertion", checked: preset.assertion > 0, count: preset.assertion, marks: 4 },
+                            { id: "fib", label: "Fill in the Blanks", checked: preset.fib > 0, count: preset.fib, marks: 2 },
+                            { id: "true_false", label: "True / False", checked: preset.tf > 0, count: preset.tf, marks: 2 },
+                          ])
+                        }}
+                        className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer ${
+                          totalQuestions === (preset.mcq + preset.assertion + preset.fib + preset.tf)
+                            ? "bg-[#1E293B] text-white border-slate-900 shadow-2xs"
+                            : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
                   </div>
 
                   {/* Blueprint Matrix Table */}
@@ -1474,19 +1520,20 @@ export default function AIGeneratorPage() {
                                 </span>
                               </label>
 
-                              <div className="col-span-3 flex justify-center">
-                                <select
+                              <div className="col-span-3 flex justify-center items-center">
+                                <input
+                                  type="number"
                                   disabled={!f.checked}
-                                  value={f.count}
-                                  onChange={(e) => updateFormatCount(f.id, Number(e.target.value))}
-                                  className="w-16 sm:w-20 h-9 px-1.5 sm:px-2 rounded-lg border border-slate-200 bg-white text-xs font-normal text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
-                                >
-                                  {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((num) => (
-                                    <option key={num} value={num}>
-                                      {num}
-                                    </option>
-                                  ))}
-                                </select>
+                                  min={0}
+                                  max={100}
+                                  value={f.count === 0 ? "" : f.count}
+                                  placeholder="0"
+                                  onChange={(e) => {
+                                    const val = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0))
+                                    updateFormatCount(f.id, val)
+                                  }}
+                                  className="w-16 sm:w-20 h-9 px-2 text-center rounded-lg border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 disabled:bg-slate-100 disabled:text-slate-400"
+                                />
                               </div>
 
                               <div className="col-span-3 flex justify-center">
@@ -1496,7 +1543,7 @@ export default function AIGeneratorPage() {
                                   onChange={(e) => updateFormatMarks(f.id, Number(e.target.value))}
                                   className="w-14 sm:w-16 h-9 px-1.5 sm:px-2 rounded-lg border border-slate-200 bg-white text-xs font-normal text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
                                 >
-                                  {[0, 1, 2, 3, 4, 5].map((m) => (
+                                  {[0, 1, 2, 3, 4, 5, 8, 10].map((m) => (
                                     <option key={m} value={m}>
                                       {m}
                                     </option>
