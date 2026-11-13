@@ -19,8 +19,7 @@
 // Live verified Gemini models (no 2.5 models per user request)
 export const DEFAULT_GEMINI_MODELS = [
   "gemini-3.5-flash-lite",
-  "gemini-flash-latest",
-  "gemini-3.8-flash",
+  "gemini-3.5-flash",
 ]
 
 /**
@@ -97,7 +96,7 @@ export async function generateContentWithKeyRotation(
   }
 
   const models = options.models && options.models.length > 0 ? options.models : DEFAULT_GEMINI_MODELS
-  const timeoutMs = options.timeoutMs || 45000
+  const timeoutMs = options.timeoutMs || 15000
 
   // Determine starting key using round-robin pointer
   const startIndex = currentKeyPointer % keys.length
@@ -135,17 +134,23 @@ export async function generateContentWithKeyRotation(
           lastErrorMessage = errorMsg
           console.warn(`[GeminiPool] Key ${keyIndex + 1}/${keys.length} (${maskedKey}) on ${model} failed: ${errorMsg}`)
 
-          // If rate limit (429), quota exceeded, or key permission error, failover to NEXT key
-          const isQuotaOrAuth = 
+          // If rate limit (429), quota exceeded, 503 high demand/spikes, 500 server error, or auth error, immediately failover to NEXT key
+          const isFailoverTrigger = 
             res.status === 429 ||
             res.status === 403 ||
+            res.status === 503 ||
+            res.status === 500 ||
             errorMsg.toLowerCase().includes("quota") ||
             errorMsg.toLowerCase().includes("resource_exhausted") ||
+            errorMsg.toLowerCase().includes("demand") ||
+            errorMsg.toLowerCase().includes("spikes") ||
+            errorMsg.toLowerCase().includes("temporary") ||
+            errorMsg.toLowerCase().includes("overloaded") ||
             errorMsg.toLowerCase().includes("api_key")
 
-          if (isQuotaOrAuth) {
-            console.warn(`[GeminiPool] Quota/Auth issue on Key ${keyIndex + 1}. Switching to next key in pool...`)
-            break // Break model loop, proceed to next key
+          if (isFailoverTrigger) {
+            console.warn(`[GeminiPool] Failover trigger (${res.status} / ${errorMsg.slice(0, 45)}) on Key ${keyIndex + 1}. Switching to next key in pool...`)
+            break // Break model loop, proceed immediately to NEXT key in pool!
           }
 
           continue // Try fallback model with same key
@@ -172,11 +177,8 @@ export async function generateContentWithKeyRotation(
           : (err?.message || "Network request failed")
         console.warn(`[GeminiPool] Key ${keyIndex + 1}/${keys.length} (${model}) threw error: ${lastErrorMessage}`)
         
-        // On timeout, aborting all remaining models for this key to prevent long cascading delays
-        if (isTimeout) {
-          console.warn(`[GeminiPool] Key ${keyIndex + 1} timed out. Skipping remaining models for this key.`)
-          break
-        }
+        // On timeout or network error, skip remaining models for this key to prevent cascading delays, switch to next key immediately
+        break
       }
     }
   }

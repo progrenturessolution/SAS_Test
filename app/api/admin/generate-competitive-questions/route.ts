@@ -230,7 +230,7 @@ Ensure all generated questions are completely unique and test different concepts
             responseMimeType: "application/json",
           }
         },
-        timeoutMs: 40000
+        timeoutMs: 15000
       })
 
       return result.text
@@ -374,7 +374,7 @@ Make sure they are completely distinct from existing questions. Return raw JSON 
             contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
             generationConfig: { temperature: 0.5, responseMimeType: "application/json" }
           },
-          timeoutMs: 25000
+          timeoutMs: 12000
         })
         const topUpParsed = robustJsonParse(topUpRes.text)
         if (Array.isArray(topUpParsed)) {
