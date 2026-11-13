@@ -172,9 +172,9 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
 `
 
     // Decide number of parallel chunks based on count and number of keys in pool (up to 5 keys)
-    const numChunks = count <= 6 
+    const numChunks = count <= 10 
       ? 1 
-      : Math.min(Math.max(Math.ceil(count / 9), 2), keys.length, 5)
+      : Math.min(Math.max(Math.ceil(count / 10), 2), keys.length, 5)
 
     // Calculate target question counts per chunk
     const baseCount = Math.floor(count / numChunks)
@@ -195,7 +195,7 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
     const chunkPromises = chunkCounts.map(async (chunkSize, chunkIdx) => {
       const focusText = chunkFoci[chunkIdx % chunkFoci.length]
       // Add buffer (+20% or +2) so deduplication never leaves total below user's selected count
-      const requestedChunkCount = Math.ceil(chunkSize * 1.25) + 1
+      const requestedChunkCount = numChunks === 1 ? chunkSize + 2 : Math.ceil(chunkSize * 1.25) + 1
       
       // If multiple chapters were selected, distribute them across chunks for comprehensive coverage
       let chunkChapters = chaptersList
@@ -206,7 +206,10 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
         }
       }
 
-      const chunkPrompt = `Generate at least ${requestedChunkCount} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chunkChapters}.
+      const chunkPrompt = numChunks === 1
+        ? `Generate exactly ${requestedChunkCount} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chunkChapters}.
+Ensure all generated questions are completely unique and test different concepts. Return raw JSON array ONLY.`
+        : `Generate at least ${requestedChunkCount} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chunkChapters}.
 Batch Focus (${chunkIdx + 1}/${numChunks}): ${focusText}.
 Ensure all generated questions are completely unique and test different concepts. Return raw JSON array ONLY.`
 
