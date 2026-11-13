@@ -92,12 +92,12 @@ export default function AIGeneratorPage() {
     "12": false,
   })
 
-  // Blueprint Format Matrix
+  // Blueprint Format Matrix - Default to 10 MCQ questions
   const [blueprintFormats, setBlueprintFormats] = useState([
-    { id: "mcq", label: "MCQ", checked: true, count: 30, marks: 4 },
-    { id: "assertion", label: "Assertion", checked: true, count: 10, marks: 4 },
-    { id: "fib", label: "Fill in the Blanks", checked: true, count: 5, marks: 2 },
-    { id: "true_false", label: "True / False", checked: false, count: 0, marks: 0 },
+    { id: "mcq", label: "MCQ", checked: true, count: 10, marks: 4 },
+    { id: "assertion", label: "Assertion", checked: false, count: 0, marks: 4 },
+    { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 2 },
+    { id: "true_false", label: "True / False", checked: false, count: 0, marks: 2 },
   ])
 
   // Chapter Selection
@@ -444,13 +444,20 @@ export default function AIGeneratorPage() {
     setChapterSearch("")
   }
 
-  // Step 2: Format calculations
+  // Step 2: Format calculations (guaranteed numeric arithmetic, never string concatenation)
   const totalQuestions = useMemo(() => {
-    return blueprintFormats.reduce((acc, f) => acc + (f.checked ? f.count : 0), 0)
+    return blueprintFormats.reduce((acc, f) => {
+      const c = f.checked ? Number(f.count) : 0
+      return acc + (isNaN(c) ? 0 : c)
+    }, 0)
   }, [blueprintFormats])
 
   const totalMarks = useMemo(() => {
-    return blueprintFormats.reduce((acc, f) => acc + (f.checked ? f.count * f.marks : 0), 0)
+    return blueprintFormats.reduce((acc, f) => {
+      const c = f.checked ? Number(f.count) : 0
+      const m = Number(f.marks) || 4
+      return acc + ((isNaN(c) ? 0 : c) * (isNaN(m) ? 0 : m))
+    }, 0)
   }, [blueprintFormats])
 
   const toggleFormatCheck = (id: string) => {
@@ -461,7 +468,7 @@ export default function AIGeneratorPage() {
           return {
             ...f,
             checked: nextChecked,
-            count: nextChecked && f.count === 0 ? 5 : f.count,
+            count: nextChecked && (Number(f.count) || 0) === 0 ? 5 : Number(f.count) || 0,
           }
         }
         return f
@@ -469,16 +476,19 @@ export default function AIGeneratorPage() {
     )
   }
 
-  const updateFormatCount = (id: string, count: number) => {
-    const safeCount = Math.max(0, Math.min(100, Math.round(count) || 0))
+  const updateFormatCount = (id: string, count: any) => {
+    const parsed = typeof count === "number" ? count : parseInt(String(count), 10)
+    const safeCount = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, Math.round(parsed)))
     setBlueprintFormats((prev) =>
       prev.map((f) => (f.id === id ? { ...f, count: safeCount } : f))
     )
   }
 
-  const updateFormatMarks = (id: string, marks: number) => {
+  const updateFormatMarks = (id: string, marks: any) => {
+    const parsed = typeof marks === "number" ? marks : parseInt(String(marks), 10)
+    const safeMarks = isNaN(parsed) ? 4 : Math.max(0, Math.min(20, Math.round(parsed)))
     setBlueprintFormats((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, marks } : f))
+      prev.map((f) => (f.id === id ? { ...f, marks: safeMarks } : f))
     )
   }
 
@@ -642,7 +652,7 @@ export default function AIGeneratorPage() {
     try {
       const existingQuestionTexts = generatedQuestions.map((q) => q.questionText)
       const targetSubject = activeSubjectTab || selectedSubject
-      const countToGenerate = totalQuestions > 0 ? totalQuestions : questionCount
+      const countToGenerate = Math.max(1, Number(totalQuestions) || Number(questionCount) || 10)
 
       const res = await fetch("/api/admin/generate-competitive-questions", {
         method: "POST",
@@ -1457,16 +1467,46 @@ export default function AIGeneratorPage() {
                     </div>
                   </div>
 
+                  {/* Master Total Questions Input */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 mb-3">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-800">Total Questions to Generate</p>
+                      <p className="text-[11px] text-slate-500">Pick a preset or enter exact count below</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={totalQuestions === 0 ? "" : totalQuestions}
+                        placeholder="10"
+                        onChange={(e) => {
+                          const val = Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1))
+                          setBlueprintFormats([
+                            { id: "mcq", label: "MCQ", checked: true, count: val, marks: 4 },
+                            { id: "assertion", label: "Assertion", checked: false, count: 0, marks: 4 },
+                            { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 2 },
+                            { id: "true_false", label: "True / False", checked: false, count: 0, marks: 2 },
+                          ])
+                        }}
+                        className="w-16 sm:w-20 h-9 px-2 text-center rounded-lg border border-slate-300 bg-white font-bold text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      />
+                      <span className="text-xs font-medium text-slate-600">Questions</span>
+                    </div>
+                  </div>
+
                   {/* Quick Preset Buttons */}
                   <div className="flex items-center gap-1.5 mb-3.5 flex-wrap">
                     <span className="text-[11px] font-medium text-slate-500 mr-0.5">Quick Presets:</span>
                     {[
+                      { label: "5 Qs", mcq: 5, assertion: 0, fib: 0, tf: 0 },
                       { label: "10 Qs", mcq: 10, assertion: 0, fib: 0, tf: 0 },
+                      { label: "15 Qs", mcq: 15, assertion: 0, fib: 0, tf: 0 },
                       { label: "20 Qs", mcq: 15, assertion: 5, fib: 0, tf: 0 },
+                      { label: "25 Qs", mcq: 20, assertion: 5, fib: 0, tf: 0 },
                       { label: "30 Qs", mcq: 20, assertion: 5, fib: 5, tf: 0 },
                       { label: "45 Qs (NEET)", mcq: 30, assertion: 10, fib: 5, tf: 0 },
                       { label: "50 Qs", mcq: 35, assertion: 10, fib: 5, tf: 0 },
-                      { label: "100 Qs", mcq: 70, assertion: 15, fib: 10, tf: 5 },
                     ].map((preset) => (
                       <button
                         key={preset.label}

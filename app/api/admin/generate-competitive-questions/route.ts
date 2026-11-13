@@ -82,11 +82,14 @@ export async function POST(req: Request) {
       ? blueprintFormats.filter((f: any) => f.checked && (Number(f.count) > 0))
       : []
 
+    // Calculate blueprint total if formats were specified
+    const blueprintTotal = activeBlueprintFormats.reduce((sum: number, f: any) => sum + (Number(f.count) || 0), 0)
+    const rawCount = blueprintTotal > 0 ? blueprintTotal : (Number(questionCount) || 5)
+    const count = Math.min(Math.max(Math.round(rawCount), 1), 100)
+
     const blueprintSummary = activeBlueprintFormats.length > 0
       ? activeBlueprintFormats.map((f: any) => `- ${f.label} (${f.id}): ${f.count} questions, ${f.marks} marks each`).join("\n")
       : ""
-
-    const count = Math.min(Math.max(Number(questionCount) || 5, 1), 100)
     const chaptersList = chaptersArray.length > 0
       ? chaptersArray.join(", ")
       : topicsList ? topicsList : "Uploaded Syllabus Material"
