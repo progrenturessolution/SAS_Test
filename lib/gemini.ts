@@ -12,14 +12,13 @@
  * 1. Round-Robin Load Balancing across all configured keys.
  * 2. Automatic Failover: If a key hits 429 (Rate Limit), quota exhausted, or 403,
  *    it automatically switches to the next available key in the pool.
- * 3. Model Fallback: Tries gemini-3.5-flash-lite, then gemini-2.5-flash, then gemini-3.8-flash.
+ * 3. Model Fallback: Tries gemini-3.5-flash-lite, then gemini-3.8-flash.
  * 4. 20-second AbortController timeout to prevent hanging.
  */
 
-// Live verified Gemini models (Nov 2026) in order of speed and quota efficiency
+// Live verified Gemini models (Nov 2026)
 export const DEFAULT_GEMINI_MODELS = [
   "gemini-3.5-flash-lite",
-  "gemini-2.5-flash",
   "gemini-3.8-flash",
 ]
 
