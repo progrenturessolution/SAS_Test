@@ -12,6 +12,7 @@ import {
 import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
 import { CompetitiveExamAIGenerator, GeneratedCompetitiveQuestion } from "@/components/exam/CompetitiveExamAIGenerator"
+import { TopicExamAIGenerator, GeneratedQuestion } from "@/components/exam/TopicExamAIGenerator"
 import { MathRenderer } from "@/components/exam/MathRenderer"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1172,13 +1173,14 @@ function QuestionMenu({ q, onEdit, onDelete, onClose, anchorRect }: { q: Questio
 }
 
 function Step3({
-  questions, setQuestions, canUseQuestionStudio, canUsePdfImport, allowedCustomQuestionTypes
+  questions, setQuestions, canUseQuestionStudio, canUsePdfImport, allowedCustomQuestionTypes, defaultTitle
 }: {
   questions: Question[]
   setQuestions: React.Dispatch<React.SetStateAction<Question[]>>
   canUseQuestionStudio: boolean
   canUsePdfImport: boolean
   allowedCustomQuestionTypes: QuestionType[]
+  defaultTitle?: string
 }) {
   const [modal, setModal] = useState<QuestionType | null>(null)
   const [editQ, setEditQ] = useState<Question | null>(null)
@@ -1189,7 +1191,12 @@ function Step3({
   const [pdfUploading, setPdfUploading] = useState(false)
   const [pdfError, setPdfError] = useState("")
   const [showCompetitiveAiModal, setShowCompetitiveAiModal] = useState(false)
+  const [showTopicAiModal, setShowTopicAiModal] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleAddTopicQuestions = (newQuestions: GeneratedQuestion[]) => {
+    setQuestions(prev => [...prev, ...(newQuestions as Question[])])
+  }
 
   const handleAddCompetitiveQuestions = (newQuestions: GeneratedCompetitiveQuestion[]) => {
     const mapped: Question[] = newQuestions.map(q => ({
@@ -1287,6 +1294,15 @@ function Step3({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
+            onClick={() => setShowTopicAiModal(true)}
+            className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-xs hover:shadow transition-all cursor-pointer"
+            title="Generate MCQs, True/False, Descriptive & Fill in the Blanks from any topic using AI"
+          >
+            <Sparkles size={15} className="text-amber-300 shrink-0" />
+            <span>AI Question Generator</span>
+          </button>
+          <button
+            type="button"
             onClick={() => canUseQuestionStudio && setShowCompetitiveAiModal(true)}
             disabled={!canUseQuestionStudio}
             className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-xs sm:text-sm font-medium shadow-xs transition-colors cursor-pointer"
@@ -1305,11 +1321,19 @@ function Step3({
               <Plus size={15} className="shrink-0" />
               <span>Add Question</span>
             </button>
-            <div className="absolute right-0 top-full pt-1.5 w-44 z-20 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
+            <div className="absolute right-0 top-full pt-1.5 w-48 z-20 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
               <div className="bg-white border border-gray-100 rounded-xl shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => setShowTopicAiModal(true)}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-50 transition-colors border-b border-gray-100 rounded-t-xl cursor-pointer"
+                >
+                  <Sparkles size={14} className="text-purple-600" />
+                  <span>Generate with AI</span>
+                </button>
                 {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).filter(type => allowedCustomQuestionTypes.includes(type)).map(type => (
                   <button key={type} onClick={() => openModal(type)}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl transition-colors">
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 last:rounded-b-xl transition-colors">
                     {TYPE_META[type].icon}
                     {TYPE_META[type].label}
                   </button>
@@ -1359,11 +1383,31 @@ function Step3({
 
       {/* Question List */}
       {filtered.length === 0 ? (
-        <div className="py-16 text-center">
-          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-            <FileText size={20} className="text-gray-400"/>
+        <div className="py-14 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 p-6 my-2">
+          <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
+            <Sparkles size={22} className="text-purple-600" />
           </div>
-          <p className="text-sm text-gray-500">No questions yet. Add questions manually or upload a PDF.</p>
+          <h3 className="text-sm font-bold text-[#2D3A4A] mb-1">No questions added yet</h3>
+          <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
+            Generate MCQs, True/False, Descriptive &amp; Fill in the Blanks automatically on any topic using AI, or add them manually.
+          </p>
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowTopicAiModal(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs hover:shadow flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Sparkles size={14} className="text-amber-300" />
+              <span>Generate Questions with AI</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => openModal("mcq")}
+              className="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-xs transition-colors cursor-pointer"
+            >
+              Add Manually
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-2.5 mb-4 max-h-137.5 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
@@ -1464,6 +1508,12 @@ function Step3({
         isOpen={showCompetitiveAiModal}
         onClose={() => setShowCompetitiveAiModal(false)}
         onAddQuestions={handleAddCompetitiveQuestions}
+      />
+      <TopicExamAIGenerator
+        isOpen={showTopicAiModal}
+        onClose={() => setShowTopicAiModal(false)}
+        onAddQuestions={handleAddTopicQuestions}
+        defaultTitle={defaultTitle}
       />
     </div>
   )
@@ -1694,6 +1744,7 @@ export default function CreateExamPage() {
             canUseQuestionStudio={instituteFeatures.neetJeeGenerator}
             canUsePdfImport={instituteFeatures.pdfImport}
             allowedCustomQuestionTypes={allowedCustomQuestionTypes}
+            defaultTitle={step1.title}
           />
         )}
 

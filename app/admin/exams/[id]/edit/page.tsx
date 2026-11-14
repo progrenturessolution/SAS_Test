@@ -13,6 +13,7 @@ import {
 import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
 import { CompetitiveExamAIGenerator, GeneratedCompetitiveQuestion } from "@/components/exam/CompetitiveExamAIGenerator"
+import { TopicExamAIGenerator, GeneratedQuestion } from "@/components/exam/TopicExamAIGenerator"
 import { MathRenderer } from "@/components/exam/MathRenderer"
 
 // ─── Types (same as create page) ─────────────────────────────────────────────
@@ -1065,7 +1066,7 @@ function QuestionMenu({ q, onEdit, onDelete, onClose, anchorRect }: { q: Questio
 
 // ─── Step 3 Component ─────────────────────────────────────────────────────────
 
-function Step3({ questions, setQuestions }: { questions: Question[]; setQuestions: React.Dispatch<React.SetStateAction<Question[]>> }) {
+function Step3({ questions, setQuestions, defaultTitle }: { questions: Question[]; setQuestions: React.Dispatch<React.SetStateAction<Question[]>>; defaultTitle?: string }) {
   const [modal, setModal] = useState<ModalType>(null)
   const [editQ, setEditQ] = useState<Question | null>(null)
   const [search, setSearch] = useState("")
@@ -1075,7 +1076,12 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
   const [pdfUploading, setPdfUploading] = useState(false)
   const [pdfError, setPdfError] = useState("")
   const [showCompetitiveAiModal, setShowCompetitiveAiModal] = useState(false)
+  const [showTopicAiModal, setShowTopicAiModal] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleAddTopicQuestions = (newQuestions: GeneratedQuestion[]) => {
+    setQuestions(prev => [...prev, ...(newQuestions as Question[])])
+  }
 
   const handleAddCompetitiveQuestions = (newQuestions: GeneratedCompetitiveQuestion[]) => {
     const mapped: Question[] = newQuestions.map(q => ({
@@ -1157,6 +1163,15 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
           <div className="flex flex-wrap gap-2 items-center">
             <button
               type="button"
+              onClick={() => setShowTopicAiModal(true)}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-xs hover:shadow transition-all cursor-pointer"
+              title="Generate MCQs, True/False, Descriptive & Fill in the Blanks from any topic using AI"
+            >
+              <Sparkles size={15} className="text-amber-300 shrink-0" />
+              <span>AI Question Generator</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setShowCompetitiveAiModal(true)}
               className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-xs sm:text-sm font-medium shadow-xs transition-colors cursor-pointer"
             >
@@ -1174,11 +1189,19 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
                 <Plus size={15} className="shrink-0" />
                 <span>Add Question</span>
               </button>
-              <div className="absolute right-0 top-full pt-1.5 w-44 z-30 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
+              <div className="absolute right-0 top-full pt-1.5 w-48 z-30 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
                 <div className="bg-white border border-gray-100 rounded-xl shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => setShowTopicAiModal(true)}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-50 transition-colors border-b border-gray-100 rounded-t-xl cursor-pointer"
+                  >
+                    <Sparkles size={14} className="text-purple-600" />
+                    <span>Generate with AI</span>
+                  </button>
                   {addBtns.map(b => (
                     <button key={b.type} onClick={() => { setEditQ(null); setModal(b.type); }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl transition-colors">
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 last:rounded-b-xl transition-colors">
                       {TYPE_META[b.type].icon}{TYPE_META[b.type].label}
                     </button>
                   ))}
@@ -1216,8 +1239,37 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
         </div>
 
         {filtered.length === 0 ? (
-          <div className="py-12 text-center text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl">
-            {questions.length === 0 ? "No questions yet. Add your first question above or upload from PDF." : "No questions match your search."}
+          <div className="py-14 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 p-6 my-2">
+            <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
+              <Sparkles size={22} className="text-purple-600" />
+            </div>
+            <h3 className="text-sm font-bold text-[#2D3A4A] mb-1">
+              {questions.length === 0 ? "No questions added yet" : "No questions match your search"}
+            </h3>
+            <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
+              {questions.length === 0
+                ? "Generate MCQs, True/False, Descriptive & Fill in the Blanks automatically on any topic using AI, or add them manually."
+                : "Try adjusting your search or filter to find what you're looking for."}
+            </p>
+            {questions.length === 0 && (
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowTopicAiModal(true)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs hover:shadow flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Sparkles size={14} className="text-amber-300" />
+                  <span>Generate Questions with AI</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEditQ(null); setModal("mcq"); }}
+                  className="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  Add Manually
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-2 overflow-y-auto max-h-137.5 pr-2 custom-scrollbar">
@@ -1227,7 +1279,7 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
                 <div key={q.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
                   <span className="text-xs font-bold text-gray-400 w-5 pt-0.5 shrink-0">{idx + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#2D3A4A] font-medium line-clamp-2">{q.questionText || <span className="text-gray-400 italic">No question text</span>}</p>
+                    <div className="text-sm text-[#2D3A4A] font-medium line-clamp-2">{q.questionText ? <MathRenderer content={q.questionText} /> : <span className="text-gray-400 italic">No question text</span>}</div>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${meta.color}`}>{meta.icon}{meta.label}</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${DIFFICULTY_COLORS[q.difficulty]}`}>{q.difficulty}</span>
@@ -1272,6 +1324,12 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
         isOpen={showCompetitiveAiModal}
         onClose={() => setShowCompetitiveAiModal(false)}
         onAddQuestions={handleAddCompetitiveQuestions}
+      />
+      <TopicExamAIGenerator
+        isOpen={showTopicAiModal}
+        onClose={() => setShowTopicAiModal(false)}
+        onAddQuestions={handleAddTopicQuestions}
+        defaultTitle={defaultTitle}
       />
     </div>
   )
@@ -1533,7 +1591,7 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 flex items-center gap-2"><AlertCircle size={14} className="shrink-0"/>{error}</div>}
         {step === 1 && <Step1 form={step1} setForm={setStep1} />}
         {step === 2 && <Step2 form={step2} setForm={setStep2} />}
-        {step === 3 && <Step3 questions={questions} setQuestions={setQuestions} />}
+        {step === 3 && <Step3 questions={questions} setQuestions={setQuestions} defaultTitle={step1.title} />}
 
         <div className="flex items-center justify-between gap-3 mt-5 sm:mt-6">
           {step > 1 ? <button onClick={() => setStep(s => s - 1)} className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Back</button> : <div />}
