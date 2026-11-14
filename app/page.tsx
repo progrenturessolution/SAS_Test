@@ -24,6 +24,7 @@ import {
   Layers,
   Sparkles,
   Laptop,
+  Maximize2,
 } from "lucide-react"
 
 function ScrollReveal({
@@ -89,9 +90,77 @@ function ScrollReveal({
   )
 }
 
+const SECURITY_CONTROLS = [
+  {
+    id: "face-detection",
+    title: "Face Detection Monitoring",
+    description: "Monitor candidate presence and face positioning during examination sessions.",
+    icon: ScanFace,
+    headerTitle: "LIVE EXAMINATION MONITORING",
+    subHeader: "JEE Mock Test 08",
+    statusBadge: "Camera Connected",
+    stats: [
+      { label: "Candidate", value: "Present" },
+      { label: "Session", value: "Active" },
+      { label: "Camera", value: "Connected" },
+    ],
+    tagline: "Active security control",
+    summary: "Monitor candidate presence and face positioning during examination sessions.",
+  },
+  {
+    id: "tab-switch",
+    title: "Tab-Switch Prevention",
+    description: "Detects unauthorized tab switching, window blurring, and external app usage.",
+    icon: Layers,
+    headerTitle: "BROWSER FOCUS & WINDOW GUARD",
+    subHeader: "Strict Anti-Cheat",
+    statusBadge: "Focus Guard Active",
+    stats: [
+      { label: "Tab Switches", value: "0 / 3 (Safe)" },
+      { label: "Window Focus", value: "Foreground" },
+      { label: "Clipboard", value: "Restricted" },
+    ],
+    tagline: "Active security control",
+    summary: "Detects window leaving, unauthorized tab switching, and clipboard actions with instant proctor warnings.",
+  },
+  {
+    id: "fullscreen",
+    title: "Fullscreen Enforcement",
+    description: "Locks assessment interface to kiosk fullscreen to restrict background applications.",
+    icon: Maximize2,
+    headerTitle: "KIOSK FULLSCREEN ENFORCEMENT",
+    subHeader: "Display Locked",
+    statusBadge: "Fullscreen 100%",
+    stats: [
+      { label: "Display Mode", value: "Kiosk Fullscreen" },
+      { label: "OS Shortcuts", value: "Disabled" },
+      { label: "Multi-Display", value: "1 Screen (Safe)" },
+    ],
+    tagline: "Active security control",
+    summary: "Locks assessment interface to kiosk fullscreen to restrict desktop shortcuts, side windows, and split screens.",
+  },
+  {
+    id: "ai-status",
+    title: "AI-Assisted Status Analysis",
+    description: "Computer vision behavioral scoring for multiple faces and suspicious activity.",
+    icon: Sparkles,
+    headerTitle: "AI BEHAVIORAL & INTEGRITY ANALYSIS",
+    subHeader: "Neural Engine 60fps",
+    statusBadge: "AI Proctor Online",
+    stats: [
+      { label: "Faces in Frame", value: "1 Confirmed" },
+      { label: "Gaze Direction", value: "Center Display" },
+      { label: "Trust Score", value: "99.4% (Safe)" },
+    ],
+    tagline: "Active security control",
+    summary: "Computer vision neural models continuously verify single-candidate presence, gaze alignment, and behavioral compliance.",
+  },
+]
+
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null)
+  const [activeSecurityTab, setActiveSecurityTab] = useState(0)
   const locomotiveScrollRef = useRef<any>(null)
 
   // Initialize Locomotive Scroll for smooth scrolling
@@ -682,25 +751,41 @@ export default function HomePage() {
               Advanced monitoring tools help institutions conduct more controlled and reliable online examinations.
             </p>
 
+            {/* Left Column Controls List */}
             <div className="mt-6 max-w-[420px]">
-              {[
-                ["Face Detection Monitoring", "Monitor candidate presence and face positioning during examination sessions."],
-                ["Tab-Switch Prevention", ""],
-                ["Fullscreen Enforcement", ""],
-                ["AI-Assisted Status Analysis", ""],
-              ].map(([title, description], index) => (
-                <div key={title} className={`flex items-center gap-4 border-t border-[#52657b]/50 py-4 ${index === 0 ? "border-l-2 border-l-white bg-[#2c3e55] pl-3" : "pl-3"}`}>
-                  <span className="w-4 text-[9px] text-[#94a8bc]">0{index + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[12px] font-semibold text-white">{title}</p>
-                    {description && <p className="mt-1 text-[9px] text-[#aebdcb]">{description}</p>}
-                  </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-[#8fa4b8]" />
-                </div>
-              ))}
+              {SECURITY_CONTROLS.map((ctrl, index) => {
+                const isActive = activeSecurityTab === index
+                return (
+                  <button
+                    key={ctrl.title}
+                    type="button"
+                    onClick={() => setActiveSecurityTab(index)}
+                    className={`w-full text-left transition-all duration-200 cursor-pointer flex items-center gap-4 border-t border-[#52657b]/50 py-4 ${
+                      isActive
+                        ? "border-l-2 border-l-white bg-[#2c3e55] pl-3"
+                        : "pl-3 hover:bg-[#253549]/60 hover:pl-4 text-[#aebdcb]"
+                    }`}
+                  >
+                    <span className={`w-4 text-[9px] font-mono transition-colors ${isActive ? "text-white font-bold" : "text-[#94a8bc]"}`}>
+                      0{index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-[12px] font-semibold transition-colors ${isActive ? "text-white" : "text-[#dce4ec]"}`}>
+                        {ctrl.title}
+                      </p>
+                      {ctrl.description && (
+                        <p className="mt-1 text-[9px] leading-relaxed text-[#aebdcb]">
+                          {ctrl.description}
+                        </p>
+                      )}
+                    </div>
+                    <ArrowRight className={`h-3.5 w-3.5 transition-transform ${isActive ? "text-white translate-x-1" : "text-[#8fa4b8]"}`} />
+                  </button>
+                )
+              })}
               <div className="flex items-center gap-2 border-t border-[#52657b]/50 pt-4 text-[10px] text-[#aebdcb]">
-                <Shield className="h-3.5 w-3.5" />
-                Configurable security controls. Greater examination integrity.
+                <Shield className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Configurable security controls. Greater examination integrity.</span>
               </div>
             </div>
           </ScrollReveal>
@@ -733,103 +818,288 @@ export default function HomePage() {
             `}} />
 
             {/* Outer card */}
-            <div className="w-full rounded-xl border border-[#344151] bg-[#192331] p-[10px] shadow-[0_15px_40px_rgba(0,0,0,0.25)]">
+            {(() => {
+              const currentControl = SECURITY_CONTROLS[activeSecurityTab] || SECURITY_CONTROLS[0]
+              const ControlIcon = currentControl.icon
 
-              {/* Top header */}
-              <div className="flex items-center justify-between px-[7px] pb-[16px] pt-[9px] text-[9px]">
-                <div className="flex items-center gap-[7px]">
-                  <span className="h-[6px] w-[6px] rounded-full bg-[#a6b7c8]" style={{ boxShadow: "0 0 8px #a6b7c8" }} />
-                  <strong>Live examination monitoring</strong>
-                </div>
-                <div className="flex items-center gap-3 text-[#8c9bad]">
-                  <span>JEE Mock Test 08</span>
-                  <span className="rounded-full border border-[#344151] px-[9px] py-[5px]">Session protected</span>
-                </div>
-              </div>
+              return (
+                <div className="w-full rounded-xl border border-[#344151] bg-[#192331] p-[10px] shadow-[0_15px_40px_rgba(0,0,0,0.25)] transition-all">
 
-              {/* Monitor panel */}
-              <div className="relative overflow-hidden rounded-[9px] border border-[#344151]">
-
-                {/* Monitor header */}
-                <div className="flex h-[33px] items-center justify-between border-b border-[#344151] bg-[#17212e] px-3 text-[9px] font-bold">
-                  <span>● &nbsp; LIVE EXAMINATION MONITORING</span>
-                  <span className="font-normal text-[#8c9bad]">JEE Mock Test 08</span>
-                </div>
-
-                {/* Camera area */}
-                <div
-                  className="relative h-[265px] overflow-hidden bg-[#202c3b]"
-                  style={{
-                    backgroundImage: "linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px)",
-                    backgroundSize: "25px 25px",
-                  }}
-                >
-                  {/* Face detection frame — single box, all 4 corners + scan line */}
-                  <div className="absolute left-1/2 top-[18px] h-[116px] w-[110px] -translate-x-1/2">
-                    <span className="absolute left-0 top-0 h-[19px] w-[19px] border-l-2 border-t-2 border-[#f2f5fa]" />
-                    <span className="absolute right-0 top-0 h-[19px] w-[19px] border-r-2 border-t-2 border-[#f2f5fa]" />
-                    <span className="absolute bottom-0 left-0 h-[19px] w-[19px] border-b-2 border-l-2 border-[#f2f5fa]" />
-                    <span className="absolute bottom-0 right-0 h-[19px] w-[19px] border-b-2 border-r-2 border-[#f2f5fa]" />
-                    
-                    {/* Animated Scanning Line */}
-                    <div className="scan-line-anim" />
+                  {/* Top header */}
+                  <div className="flex items-center justify-between px-[7px] pb-[16px] pt-[9px] text-[9px]">
+                    <div className="flex items-center gap-[7px]">
+                      <span className="h-[6px] w-[6px] rounded-full bg-[#a6b7c8]" style={{ boxShadow: "0 0 8px #a6b7c8" }} />
+                      <strong className="tracking-wide text-white">{currentControl.headerTitle}</strong>
+                    </div>
+                    <div className="flex items-center gap-3 text-[#8c9bad]">
+                      <span>{currentControl.subHeader}</span>
+                      <span className="rounded-full border border-[#344151] px-[9px] py-[5px] text-[#dce7f2]">
+                        {currentControl.statusBadge}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Person silhouette — CSS head + shoulders (matches HTML reference) */}
-                  <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col items-center">
+                  {/* Monitor panel */}
+                  <div className="relative overflow-hidden rounded-[9px] border border-[#344151]">
+
+                    {/* Monitor header */}
+                    <div className="flex h-[33px] items-center justify-between border-b border-[#344151] bg-[#17212e] px-3 text-[9px] font-bold">
+                      <span className="flex items-center gap-1.5 text-white">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        <span>{currentControl.headerTitle}</span>
+                      </span>
+                      <span className="font-normal text-[#8c9bad]">{currentControl.subHeader}</span>
+                    </div>
+
+                    {/* Security Display Area */}
                     <div
-                      className="h-[60px] w-[50px] bg-[#596779]"
-                      style={{ borderRadius: "45% 45% 48% 48%", boxShadow: "inset 0 0 15px #ffffff12" }}
-                    />
-                    <div className="mt-[5px] h-[45px] w-[112px] rounded-t-[65px] bg-[#465467]" />
+                      className="relative h-[265px] overflow-hidden bg-[#202c3b]"
+                      style={{
+                        backgroundImage: "linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px)",
+                        backgroundSize: "25px 25px",
+                      }}
+                    >
+                      {/* TAB 0: Face Detection Monitoring */}
+                      {activeSecurityTab === 0 && (
+                        <div className="relative h-full w-full">
+                          {/* Face detection frame — single box, all 4 corners + scan line */}
+                          <div className="absolute left-1/2 top-[18px] h-[116px] w-[110px] -translate-x-1/2">
+                            <span className="absolute left-0 top-0 h-[19px] w-[19px] border-l-2 border-t-2 border-[#f2f5fa]" />
+                            <span className="absolute right-0 top-0 h-[19px] w-[19px] border-r-2 border-t-2 border-[#f2f5fa]" />
+                            <span className="absolute bottom-0 left-0 h-[19px] w-[19px] border-b-2 border-l-2 border-[#f2f5fa]" />
+                            <span className="absolute bottom-0 right-0 h-[19px] w-[19px] border-b-2 border-r-2 border-[#f2f5fa]" />
+                            
+                            {/* Animated Scanning Line */}
+                            <div className="scan-line-anim" />
+                          </div>
+
+                          {/* Person silhouette — CSS head + shoulders */}
+                          <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col items-center">
+                            <div
+                              className="h-[60px] w-[50px] bg-[#596779]"
+                              style={{ borderRadius: "45% 45% 48% 48%", boxShadow: "inset 0 0 15px #ffffff12" }}
+                            />
+                            <div className="mt-[5px] h-[45px] w-[112px] rounded-t-[65px] bg-[#465467]" />
+                          </div>
+
+                          {/* Face status — bottom left */}
+                          <div
+                            className="absolute bottom-3 left-3 flex items-center gap-[7px] rounded-[7px] border border-[#39485a] px-[10px] py-[7px] text-[9px]"
+                            style={{ background: "rgba(23,33,46,0.92)" }}
+                          >
+                            <ScanFace className="h-3.5 w-3.5 text-[#8aaac8]" />
+                            <span>Face positioned correctly</span>
+                          </div>
+
+                          {/* Camera status — inside camera area, positioned top right */}
+                          <div
+                            className="absolute right-[-1px] top-[30px] w-[92px] rounded-l-[9px] border border-[#3a4858] bg-[#192431] p-[10px] text-[8px]"
+                            style={{ boxShadow: "0 5px 15px #0003" }}
+                          >
+                            <span>● &nbsp; Camera</span>
+                            <strong className="mt-1 block font-bold text-white">Connected</strong>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* TAB 1: Tab-Switch Prevention */}
+                      {activeSecurityTab === 1 && (
+                        <div className="relative h-full w-full flex flex-col justify-between p-3.5">
+                          {/* Browser Tab Bar Mockup */}
+                          <div className="flex items-center gap-2 border-b border-[#354354] pb-2 text-[8px]">
+                            <div className="flex items-center gap-1.5 rounded-md bg-[#2d3d52] px-2.5 py-1 text-white border border-[#48596f]">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              <span className="font-semibold">Live Test Portal (Focused)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 rounded-md bg-[#192330]/70 px-2.5 py-1 text-[#6f8295] border border-[#2b3746]">
+                              <Lock className="h-2.5 w-2.5" />
+                              <span>External App (Restricted)</span>
+                            </div>
+                          </div>
+
+                          {/* Central Focus Security Display */}
+                          <div className="my-auto text-center space-y-2">
+                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#28384b] border border-[#44566c] text-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.15)] mx-auto">
+                              <Shield className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <div className="text-[12px] font-bold text-white tracking-wide">
+                                Browser Focus Active
+                              </div>
+                              <p className="text-[9px] text-[#9bb0c4] max-w-[260px] mx-auto mt-0.5">
+                                Candidate is actively interacting with the examination window.
+                              </p>
+                            </div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[8px] font-semibold">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                              <span>0 Tab Switches Detected · 3 Max Allowed</span>
+                            </div>
+                          </div>
+
+                          {/* Live Event Log ticker */}
+                          <div className="rounded-lg bg-[#182330] border border-[#303f51] p-2 text-[8px] font-mono text-[#899cb0] flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              <span>Window state: Foreground locked</span>
+                            </span>
+                            <span className="text-[#a5b6c7]">Clipboard: Disabled</span>
+                          </div>
+
+                          {/* Top Right Status Badge */}
+                          <div
+                            className="absolute right-[-1px] top-[30px] w-[92px] rounded-l-[9px] border border-[#3a4858] bg-[#192431] p-[10px] text-[8px]"
+                            style={{ boxShadow: "0 5px 15px #0003" }}
+                          >
+                            <span>● &nbsp; Focus</span>
+                            <strong className="mt-1 block font-bold text-emerald-400">Locked</strong>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* TAB 2: Fullscreen Enforcement */}
+                      {activeSecurityTab === 2 && (
+                        <div className="relative h-full w-full flex flex-col justify-between p-3.5">
+                          {/* Fullscreen corner brackets overlay */}
+                          <div className="pointer-events-none absolute inset-2.5 border border-dashed border-[#44556a]/60 rounded-lg">
+                            <span className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-cyan-400" />
+                            <span className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-cyan-400" />
+                            <span className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-cyan-400" />
+                            <span className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-cyan-400" />
+                          </div>
+
+                          {/* Top Banner */}
+                          <div className="flex items-center justify-between text-[8px] text-[#9cb0c2] border-b border-[#354354] pb-1.5">
+                            <span className="flex items-center gap-1">
+                              <Maximize2 className="w-2.5 h-2.5 text-cyan-400" />
+                              <span>Resolution: 1920 × 1080 (100% Viewport)</span>
+                            </span>
+                            <span className="text-cyan-300 font-mono">KIOSK MODE</span>
+                          </div>
+
+                          {/* Center Fullscreen Shield */}
+                          <div className="my-auto text-center space-y-2 relative z-1">
+                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#233547] border border-[#3a5068] text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.15)] mx-auto">
+                              <Maximize2 className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <div className="text-[12px] font-bold text-white tracking-wide">
+                                True Fullscreen Kiosk Enforced
+                              </div>
+                              <p className="text-[9px] text-[#9bb0c4] max-w-[270px] mx-auto mt-0.5">
+                                System shortcuts, Escape key, and Alt+Tab combinations are automatically trapped.
+                              </p>
+                            </div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[8px] font-semibold">
+                              <Lock className="w-3 h-3 text-cyan-400" />
+                              <span>Single Monitor Verified · 0 Displays Added</span>
+                            </div>
+                          </div>
+
+                          {/* Bottom bar status */}
+                          <div className="rounded-lg bg-[#182330] border border-[#303f51] p-2 text-[8px] font-mono text-[#899cb0] flex items-center justify-between">
+                            <span>Taskbar / Dock: Hidden</span>
+                            <span className="text-cyan-400">Violations: 0</span>
+                          </div>
+
+                          {/* Top Right Status Badge */}
+                          <div
+                            className="absolute right-[-1px] top-[30px] w-[92px] rounded-l-[9px] border border-[#3a4858] bg-[#192431] p-[10px] text-[8px]"
+                            style={{ boxShadow: "0 5px 15px #0003" }}
+                          >
+                            <span>● &nbsp; Viewport</span>
+                            <strong className="mt-1 block font-bold text-cyan-400">100% Full</strong>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* TAB 3: AI-Assisted Status Analysis */}
+                      {activeSecurityTab === 3 && (
+                        <div className="relative h-full w-full flex flex-col justify-between p-3.5">
+                          {/* Top analysis metrics */}
+                          <div className="flex items-center justify-between text-[8px] text-[#9cb0c2] border-b border-[#354354] pb-1.5">
+                            <span className="flex items-center gap-1.5 text-purple-300 font-semibold">
+                              <Sparkles className="w-3 h-3 text-purple-400" />
+                              <span>Neural Vision Engine v2.4</span>
+                            </span>
+                            <span className="font-mono text-purple-400">60 FPS Inference</span>
+                          </div>
+
+                          {/* Central AI Radar / Behavioral Analysis Matrix */}
+                          <div className="my-auto space-y-2.5">
+                            {/* Trust Index Meter */}
+                            <div className="bg-[#182330] border border-[#334458] rounded-xl p-2.5 space-y-1.5">
+                              <div className="flex items-center justify-between text-[9px]">
+                                <span className="text-[#a4b5c7] font-medium">Session Integrity Score</span>
+                                <span className="text-emerald-400 font-bold font-mono">99.4% (Safe)</span>
+                              </div>
+                              <div className="w-full bg-[#273648] h-1.5 rounded-full overflow-hidden">
+                                <div className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full rounded-full w-[99.4%]" />
+                              </div>
+                            </div>
+
+                            {/* 2-column live AI detectors */}
+                            <div className="grid grid-cols-2 gap-2 text-[8px]">
+                              <div className="bg-[#182330]/80 border border-[#2e3e52] rounded-lg p-2">
+                                <span className="text-[#8496a9] block mb-0.5">Candidate Presence</span>
+                                <strong className="text-white font-semibold">1 Face (Match Confirmed)</strong>
+                              </div>
+                              <div className="bg-[#182330]/80 border border-[#2e3e52] rounded-lg p-2">
+                                <span className="text-[#8496a9] block mb-0.5">Gaze Alignment</span>
+                                <strong className="text-white font-semibold">Center Display (98.6%)</strong>
+                              </div>
+                            </div>
+
+                            {/* Behavior Log */}
+                            <div className="flex items-center justify-between rounded-lg bg-[#253243]/60 px-2.5 py-1.5 text-[8px] text-[#a4b5c7]">
+                              <span>Unauthorized Devices: None</span>
+                              <span className="text-emerald-400 font-semibold">Low Anomaly Risk</span>
+                            </div>
+                          </div>
+
+                          {/* Bottom bar */}
+                          <div className="rounded-lg bg-[#182330] border border-[#303f51] p-2 text-[8px] font-mono text-[#899cb0] flex items-center justify-between">
+                            <span>Multiple faces: 0 detected</span>
+                            <span className="text-purple-300">Continuous AI Active</span>
+                          </div>
+
+                          {/* Top Right Status Badge */}
+                          <div
+                            className="absolute right-[-1px] top-[30px] w-[92px] rounded-l-[9px] border border-[#3a4858] bg-[#192431] p-[10px] text-[8px]"
+                            style={{ boxShadow: "0 5px 15px #0003" }}
+                          >
+                            <span>● &nbsp; AI Status</span>
+                            <strong className="mt-1 block font-bold text-purple-400">Normal</strong>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Status grid — 3 columns */}
+                    <div className="grid grid-cols-3 gap-[6px] bg-[#17212e] p-2">
+                      {currentControl.stats.map((stat) => (
+                        <div key={stat.label} className="rounded-[7px] border border-[#3b495a] bg-[#202b3a] px-[7px] py-[9px]">
+                          <p className="mb-[5px] text-[7px] text-[#a6b2c0]">{stat.label}</p>
+                          <p className="text-[9px] font-medium text-white">{stat.value}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Face status — bottom left */}
-                  <div
-                    className="absolute bottom-3 left-3 flex items-center gap-[7px] rounded-[7px] border border-[#39485a] px-[10px] py-[7px] text-[9px]"
-                    style={{ background: "rgba(23,33,46,0.92)" }}
-                  >
-                    <ScanFace className="h-3.5 w-3.5 text-[#8aaac8]" />
-                    <span>Face positioned correctly</span>
+                  {/* Footer */}
+                  <div className="flex items-center gap-[10px] pb-[7px] pt-[19px] px-1">
+                    <span className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] border border-[#435267] text-[#8aaac8]">
+                      <ControlIcon className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-[7px] text-[#8b9bae]">{currentControl.tagline}</p>
+                      <h3 className="my-1 text-[14px] font-semibold text-white">{currentControl.title}</h3>
+                      <p className="text-[9px] text-[#a3afbd]">{currentControl.summary}</p>
+                    </div>
                   </div>
 
-                  {/* Camera status — inside camera area, positioned top right */}
-                  <div
-                    className="absolute right-[-1px] top-[30px] w-[92px] rounded-l-[9px] border border-[#3a4858] bg-[#192431] p-[10px] text-[8px]"
-                    style={{ boxShadow: "0 5px 15px #0003" }}
-                  >
-                    <span>● &nbsp; Camera</span>
-                    <strong className="mt-1 block font-bold text-white">Connected</strong>
-                  </div>
                 </div>
-
-                {/* Status grid — 3 columns */}
-                <div className="grid grid-cols-3 gap-[6px] bg-[#17212e] p-2">
-                  {["Candidate|Present", "Session|Active", "Camera|Connected"].map((item) => {
-                    const [label, value] = item.split("|")
-                    return (
-                      <div key={label} className="rounded-[7px] border border-[#3b495a] bg-[#202b3a] px-[7px] py-[9px]">
-                        <p className="mb-[5px] text-[7px] text-[#a6b2c0]">{label}</p>
-                        <p className="text-[9px] font-medium text-white">{value}</p>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center gap-[10px] pb-[7px] pt-[19px] px-1">
-                <span className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] border border-[#435267] text-[#8aaac8]">
-                  <ScanFace className="h-4 w-4" />
-                </span>
-                <div>
-                  <p className="text-[7px] text-[#8b9bae]">Active security control</p>
-                  <h3 className="my-1 text-[14px] font-semibold text-white">Face Detection Monitoring</h3>
-                  <p className="text-[9px] text-[#a3afbd]">Monitor candidate presence and face positioning during examination sessions.</p>
-                </div>
-              </div>
-
-            </div>
+              )
+            })()}
           </ScrollReveal>
         </div>
       </section>
