@@ -10,15 +10,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col overflow-x-hidden bg-[#F5F6FA] lg:h-screen lg:flex-row lg:overflow-hidden">
-      <AdminSidebar
-        userName={session.name}
-        userEmail={session.email}
-        role={session.role}
-        instituteName={session.instituteName}
-        instituteCode={session.instituteCode}
-      />
-      <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
+    <div className="flex min-h-screen w-full flex-col overflow-x-hidden bg-[#F5F6FA] lg:h-screen lg:flex-row lg:overflow-hidden print:h-auto print:overflow-visible print:bg-white print:block">
+      <div className="no-print print:hidden">
+        <AdminSidebar
+          userName={session.name}
+          userEmail={session.email}
+          role={session.role}
+          instituteName={session.instituteName}
+          instituteCode={session.instituteCode}
+        />
+      </div>
+      <main className="min-w-0 flex-1 overflow-y-auto print:overflow-visible print:h-auto print:p-0 print:m-0">{children}</main>
     </div>
   )
 }

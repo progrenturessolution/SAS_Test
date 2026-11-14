@@ -37,6 +37,7 @@ import {
   Info,
   ChevronRight,
   BarChart2,
+  Printer,
 } from "lucide-react"
 import {
   EXAM_TARGETS,
@@ -47,6 +48,7 @@ import {
   Chapter,
 } from "@/lib/curriculumData"
 import { MathRenderer } from "@/components/exam/MathRenderer"
+import { PrintableExamPaper } from "@/components/admin/PrintableExamPaper"
 
 export interface GeneratedCompetitiveQuestion {
   id: string
@@ -141,6 +143,9 @@ export default function AIGeneratorPage() {
   const [creatingExam, setCreatingExam] = useState(false)
   const [editingQuestion, setEditingQuestion] = useState<GeneratedCompetitiveQuestion | null>(null)
   const [formatFilter, setFormatFilter] = useState<string>("all")
+  const [printModalOpen, setPrintModalOpen] = useState(false)
+  const [printMode, setPrintMode] = useState<"student" | "teacher">("student")
+  const [printDropdownOpen, setPrintDropdownOpen] = useState(false)
 
   // Step 4: Exam Details States
   const [duration, setDuration] = useState<number>(30)
@@ -1671,19 +1676,78 @@ export default function AIGeneratorPage() {
                         </span>
                       </div>
 
-                      {/* Desktop Proceed Button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCurrentStep(4)
-                          window.scrollTo({ top: 0, behavior: "smooth" })
-                        }}
-                        disabled={selectedQuestionIds.size === 0}
-                        className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-medium shadow-sm disabled:opacity-40 transition-all cursor-pointer"
-                      >
-                        <span>Proceed to Exam Details</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                      {/* Top Right Actions */}
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        {/* Print Dropdown */}
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setPrintDropdownOpen((prev) => !prev)}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs sm:text-sm font-medium shadow-xs transition-all cursor-pointer"
+                            title="Print Question Paper"
+                          >
+                            <Printer className="w-4 h-4 text-slate-700" />
+                            <span>Print Paper</span>
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                          </button>
+
+                          {printDropdownOpen && (
+                            <div className="absolute right-0 mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-20">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPrintMode("student")
+                                  setPrintModalOpen(true)
+                                  setPrintDropdownOpen(false)
+                                }}
+                                className="w-full px-3 py-2 text-left text-xs hover:bg-slate-50 flex items-start gap-2.5 transition-colors cursor-pointer"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                                  <BookOpen className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-slate-800">Student Copy</div>
+                                  <div className="text-[11px] text-slate-500">Only questions &amp; options (No solutions)</div>
+                                </div>
+                              </button>
+
+                              <div className="border-t border-slate-100 my-1"></div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPrintMode("teacher")
+                                  setPrintModalOpen(true)
+                                  setPrintDropdownOpen(false)
+                                }}
+                                className="w-full px-3 py-2 text-left text-xs hover:bg-slate-50 flex items-start gap-2.5 transition-colors cursor-pointer"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-slate-800">Teacher &amp; Coaching Copy</div>
+                                  <div className="text-[11px] text-slate-500">With verified answers &amp; derivations</div>
+                                </div>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Desktop Proceed Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCurrentStep(4)
+                            window.scrollTo({ top: 0, behavior: "smooth" })
+                          }}
+                          disabled={selectedQuestionIds.size === 0}
+                          className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-medium shadow-sm disabled:opacity-40 transition-all cursor-pointer"
+                        >
+                          <span>Proceed to Exam Details</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Middle Row: Exam Title Input */}
@@ -1699,7 +1763,7 @@ export default function AIGeneratorPage() {
                     </div>
 
                     {/* Bottom Row: Action Buttons */}
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
                       <button
                         type="button"
                         onClick={() => {
@@ -1724,6 +1788,32 @@ export default function AIGeneratorPage() {
                       >
                         <Sliders className="w-3.5 h-3.5 text-slate-500" />
                         <span>Tweak Blueprint</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrintMode("student")
+                          setPrintModalOpen(true)
+                        }}
+                        className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/70 text-blue-800 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        title="Print clean question paper for students"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Print for Students</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrintMode("teacher")
+                          setPrintModalOpen(true)
+                        }}
+                        className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/70 text-emerald-800 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        title="Print complete solutions and answer key for teachers"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Print Teacher Solutions</span>
                       </button>
 
                       {/* Mobile Proceed Button */}
@@ -2896,18 +2986,46 @@ export default function AIGeneratorPage() {
             )}
 
             {currentStep === 3 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentStep(4)
-                  window.scrollTo({ top: 0, behavior: "smooth" })
-                }}
-                disabled={selectedQuestionIds.size === 0}
-                className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
-              >
-                <span>Next: Exam Details</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrintMode("student")
+                    setPrintModalOpen(true)
+                  }}
+                  className="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                  title="Print question paper for students (Without Solutions)"
+                >
+                  <Printer className="w-4 h-4 text-blue-600" />
+                  <span>Print Student Copy</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrintMode("teacher")
+                    setPrintModalOpen(true)
+                  }}
+                  className="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                  title="Print question paper with complete solutions and answer key"
+                >
+                  <FileText className="w-4 h-4 text-emerald-600" />
+                  <span>Print Teacher Copy</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep(4)
+                    window.scrollTo({ top: 0, behavior: "smooth" })
+                  }}
+                  disabled={selectedQuestionIds.size === 0}
+                  className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                >
+                  <span>Next: Exam Details</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             )}
 
             {currentStep === 4 && (
@@ -3067,6 +3185,25 @@ export default function AIGeneratorPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Printable Exam Paper Preview & Print Modal */}
+      {printModalOpen && (
+        <PrintableExamPaper
+          isOpen={printModalOpen}
+          onClose={() => setPrintModalOpen(false)}
+          questions={
+            selectedQuestionIds.size > 0 && selectedQuestionIds.size < generatedQuestions.length
+              ? generatedQuestions.filter((q) => selectedQuestionIds.has(q.id))
+              : generatedQuestions
+          }
+          examTitle={examTitle || getDefaultExamTitle()}
+          subject={activeSubjectTab || selectedSubject || "Physics"}
+          examTarget={selectedExam}
+          grade={selectedGrade}
+          durationMinutes={duration || Math.max(generatedQuestions.length * 2, 30)}
+          defaultMode={printMode}
+        />
       )}
     </div>
   )

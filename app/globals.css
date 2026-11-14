@@ -194,3 +194,60 @@ html.lenis, html.lenis body {
 .lenis.lenis-smooth iframe {
   pointer-events: none;
 }
+
+/* ── High-Resolution Exam Paper Print Styles ── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 12mm 12mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    font-size: 11pt !important;
+  }
+
+  /* Reset all overflow constraints in parent layouts to prevent multi-page truncation */
+  div,
+  main,
+  section,
+  article,
+  [class*="overflow-"] {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Screen-only UI elements to hide on paper */
+  .no-print,
+  .print-hidden,
+  aside,
+  nav,
+  header.admin-header {
+    display: none !important;
+  }
+
+  /* Force background colors, borders, and text contrast */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Prevent question cards from breaking awkwardly across page boundaries */
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* KaTeX mathematical typography crispness */
+  .katex {
+    font-size: 1.05em !important;
+    text-rendering: auto !important;
+  }
+}
+
