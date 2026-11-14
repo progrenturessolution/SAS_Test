@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
+import connectDB from "@/lib/mongodb"
 import { getSession } from "@/lib/auth"
 import { robustJsonParse } from "@/lib/jsonRepair"
 import { generateContentWithKeyRotation, getGeminiApiKeys } from "@/lib/gemini"
@@ -15,17 +16,6 @@ export async function POST(req: Request) {
     )
     if (!canGenerateQuestions) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    if (session.instituteId) {
-      const Institute = (await import("@/models/Institute")).default
-      const inst = await Institute.findById(session.instituteId).lean()
-      if (inst && inst.limits?.features?.neetJeeGenerator === false) {
-        return NextResponse.json(
-          { error: "NEET / JEE / MHT-CET Question Studio is not enabled in your institute plan. Please contact support." },
-          { status: 403 }
-        )
-      }
     }
 
     const body = await req.json()
@@ -48,23 +38,28 @@ export async function POST(req: Request) {
     } = body
 
     if (session.instituteId) {
-      const Institute = (await import("@/models/Institute")).default
-      const inst = await Institute.findById(session.instituteId).select("limits").lean()
-      const examType = String(exam)
-      if (inst && inst.limits?.features?.neetJeeGenerator === false) {
-        return NextResponse.json(
-          { error: "NEET / JEE / MHT-CET Question Studio is not enabled for your institute." },
-          { status: 403 }
-        )
-      }
-      const allowedExamTypes = Array.isArray(inst?.limits?.examTypes)
-        ? inst.limits.examTypes.map((type) => String(type).trim().toUpperCase())
-        : ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM"]
-      if (!allowedExamTypes.includes(examType.trim().toUpperCase())) {
-        return NextResponse.json(
-          { error: `Your institute does not have access to ${String(exam).replaceAll("_", " ")} question generation.` },
-          { status: 403 }
-        )
+      try {
+        await connectDB()
+        const Institute = (await import("@/models/Institute")).default
+        const inst = await Institute.findById(session.instituteId).select("limits").lean()
+        if (inst && inst.limits?.features?.neetJeeGenerator === false) {
+          return NextResponse.json(
+            { error: "NEET / JEE / MHT-CET Question Studio is not enabled in your institute plan. Please contact support." },
+            { status: 403 }
+          )
+        }
+        const examType = String(exam)
+        const allowedExamTypes = Array.isArray(inst?.limits?.examTypes)
+          ? inst.limits.examTypes.map((type) => String(type).trim().toUpperCase())
+          : ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM"]
+        if (!allowedExamTypes.includes(examType.trim().toUpperCase())) {
+          return NextResponse.json(
+            { error: `Your institute does not have access to ${String(exam).replaceAll("_", " ")} question generation.` },
+            { status: 403 }
+          )
+        }
+      } catch (dbErr: any) {
+        console.warn("[CompetitiveAI] Institute limits check non-blocking warning:", dbErr.message)
       }
     }
 
