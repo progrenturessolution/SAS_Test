@@ -13,8 +13,8 @@ import {
 import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
 import { CompetitiveExamAIGenerator, GeneratedCompetitiveQuestion } from "@/components/exam/CompetitiveExamAIGenerator"
-import { TopicExamAIGenerator, GeneratedQuestion } from "@/components/exam/TopicExamAIGenerator"
 import { MathRenderer } from "@/components/exam/MathRenderer"
+import { ModalAIGenerator } from "@/components/exam/ModalAIGenerator"
 
 // ─── Types (same as create page) ─────────────────────────────────────────────
 
@@ -450,7 +450,7 @@ function ModalFooter({ note, onCancel, onSave }: { note: string; onCancel: () =>
   )
 }
 
-function MCQModal({ onSave, onClose, initial }: { onSave: (q: MCQQuestion) => void; onClose: () => void; initial?: MCQQuestion }) {
+function MCQModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q: MCQQuestion) => void; onSaveBatch?: (qs: MCQQuestion[]) => void; onClose: () => void; initial?: MCQQuestion }) {
   const blank = (): MCQQuestion => ({ id: Math.random().toString(36).slice(2), type: "mcq", questionText: "", difficulty: "medium", marks: 1, options: ["","","",""], correctAnswer: "", explanation: "", questionImage: "", optionImages: ["","","",""], codeSnippet: "" })
   const [q, setQ] = useState<MCQQuestion>(initial ?? blank())
   const [error, setError] = useState("")
@@ -464,6 +464,32 @@ function MCQModal({ onSave, onClose, initial }: { onSave: (q: MCQQuestion) => vo
   return (
     <ModalShell title={initial ? "Edit MCQ Question" : "Add MCQ Question"} icon={<div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center"><List size={18} className="text-blue-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
+        {!initial && (
+          <ModalAIGenerator
+            questionType="mcq"
+            defaultMarks={q.marks}
+            defaultDifficulty={q.difficulty}
+            onFillSingle={(generated) => {
+              setQ(prev => ({
+                ...prev,
+                questionText: generated.questionText || prev.questionText,
+                options: generated.options || prev.options,
+                correctAnswer: generated.correctAnswer || prev.correctAnswer,
+                explanation: generated.explanation || prev.explanation,
+                difficulty: generated.difficulty || prev.difficulty,
+                marks: generated.marks || prev.marks,
+              }))
+            }}
+            onSaveBatch={(batch) => {
+              if (onSaveBatch) {
+                onSaveBatch(batch)
+              } else {
+                batch.forEach(item => onSave(item))
+                onClose()
+              }
+            }}
+          />
+        )}
         <div>
           <label className={labelCls}>Question Text *</label>
           <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} placeholder="Enter your question..." className={inputCls + " resize-none"} />
@@ -548,7 +574,7 @@ function MCQModal({ onSave, onClose, initial }: { onSave: (q: MCQQuestion) => vo
   )
 }
 
-function TrueFalseModal({ onSave, onClose, initial }: { onSave: (q: TrueFalseQuestion) => void; onClose: () => void; initial?: TrueFalseQuestion }) {
+function TrueFalseModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q: TrueFalseQuestion) => void; onSaveBatch?: (qs: TrueFalseQuestion[]) => void; onClose: () => void; initial?: TrueFalseQuestion }) {
   const blank = (): TrueFalseQuestion => ({ id: Math.random().toString(36).slice(2), type: "truefalse", questionText: "", difficulty: "medium", marks: 1, correctAnswer: "True", explanation: "", questionImage: "", codeSnippet: "" })
   const [q, setQ] = useState<TrueFalseQuestion>(initial ?? blank())
   const [error, setError] = useState("")
@@ -557,6 +583,31 @@ function TrueFalseModal({ onSave, onClose, initial }: { onSave: (q: TrueFalseQue
   return (
     <ModalShell title={initial ? "Edit True/False" : "Add True/False"} icon={<div className="w-9 h-9 rounded-lg bg-teal-50 flex items-center justify-center"><CheckSquare size={18} className="text-teal-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
+        {!initial && (
+          <ModalAIGenerator
+            questionType="truefalse"
+            defaultMarks={q.marks}
+            defaultDifficulty={q.difficulty}
+            onFillSingle={(generated) => {
+              setQ(prev => ({
+                ...prev,
+                questionText: generated.questionText || prev.questionText,
+                correctAnswer: (generated.correctAnswer as "True" | "False") || prev.correctAnswer,
+                explanation: generated.explanation || prev.explanation,
+                difficulty: generated.difficulty || prev.difficulty,
+                marks: generated.marks || prev.marks,
+              }))
+            }}
+            onSaveBatch={(batch) => {
+              if (onSaveBatch) {
+                onSaveBatch(batch)
+              } else {
+                batch.forEach(item => onSave(item))
+                onClose()
+              }
+            }}
+          />
+        )}
         <div><label className={labelCls}>Question Text *</label>
           <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} className={inputCls + " resize-none"} /></div>
         <div>
@@ -603,7 +654,7 @@ function TrueFalseModal({ onSave, onClose, initial }: { onSave: (q: TrueFalseQue
   )
 }
 
-function DescriptiveModal({ onSave, onClose, initial }: { onSave: (q: DescriptiveQuestion) => void; onClose: () => void; initial?: DescriptiveQuestion }) {
+function DescriptiveModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q: DescriptiveQuestion) => void; onSaveBatch?: (qs: DescriptiveQuestion[]) => void; onClose: () => void; initial?: DescriptiveQuestion }) {
   const blank = (): DescriptiveQuestion => ({ id: Math.random().toString(36).slice(2), type: "descriptive", questionText: "", difficulty: "medium", marks: 5, wordLimit: "", modelAnswer: "", rubric: [], questionImage: "", codeSnippet: "" })
   const [q, setQ] = useState<DescriptiveQuestion>(initial ?? blank())
   const [error, setError] = useState("")
@@ -612,6 +663,32 @@ function DescriptiveModal({ onSave, onClose, initial }: { onSave: (q: Descriptiv
   return (
     <ModalShell title={initial ? "Edit Descriptive" : "Add Descriptive"} icon={<div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center"><AlignLeft size={18} className="text-purple-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
+        {!initial && (
+          <ModalAIGenerator
+            questionType="descriptive"
+            defaultMarks={q.marks}
+            defaultDifficulty={q.difficulty}
+            onFillSingle={(generated) => {
+              setQ(prev => ({
+                ...prev,
+                questionText: generated.questionText || prev.questionText,
+                wordLimit: generated.wordLimit || prev.wordLimit,
+                modelAnswer: generated.modelAnswer || prev.modelAnswer,
+                rubric: generated.rubric || prev.rubric,
+                difficulty: generated.difficulty || prev.difficulty,
+                marks: generated.marks || prev.marks,
+              }))
+            }}
+            onSaveBatch={(batch) => {
+              if (onSaveBatch) {
+                onSaveBatch(batch)
+              } else {
+                batch.forEach(item => onSave(item))
+                onClose()
+              }
+            }}
+          />
+        )}
         <div><label className={labelCls}>Question Text *</label>
           <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} className={inputCls + " resize-none"} /></div>
         <div>
@@ -651,7 +728,7 @@ function DescriptiveModal({ onSave, onClose, initial }: { onSave: (q: Descriptiv
   )
 }
 
-function FillBlanksModal({ onSave, onClose, initial }: { onSave: (q: FillBlanksQuestion) => void; onClose: () => void; initial?: FillBlanksQuestion }) {
+function FillBlanksModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q: FillBlanksQuestion) => void; onSaveBatch?: (qs: FillBlanksQuestion[]) => void; onClose: () => void; initial?: FillBlanksQuestion }) {
   const blank = (): FillBlanksQuestion => ({ id: Math.random().toString(36).slice(2), type: "fillblanks", questionText: "", difficulty: "medium", marks: 1, blanks: [{ answer: "", alsoAccept: [] }], caseInsensitive: true, questionImage: "", codeSnippet: "" })
   const [q, setQ] = useState<FillBlanksQuestion>(initial ?? blank())
   const [error, setError] = useState("")
@@ -664,6 +741,34 @@ function FillBlanksModal({ onSave, onClose, initial }: { onSave: (q: FillBlanksQ
   return (
     <ModalShell title={initial ? "Edit Fill Blanks" : "Add Fill Blanks"} icon={<div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center"><FileText size={18} className="text-amber-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
+        {!initial && (
+          <ModalAIGenerator
+            questionType="fillblanks"
+            defaultMarks={q.marks}
+            defaultDifficulty={q.difficulty}
+            onFillSingle={(generated) => {
+              const text = generated.questionText || ""
+              const matches = text.match(/_{2,}/g) || []
+              const genBlanks = generated.blanks || []
+              const blanks = matches.map((_: string, i: number) => genBlanks[i] || { answer: "", alsoAccept: [] })
+              setQ(prev => ({
+                ...prev,
+                questionText: text,
+                blanks: blanks.length > 0 ? blanks : prev.blanks,
+                difficulty: generated.difficulty || prev.difficulty,
+                marks: generated.marks || prev.marks,
+              }))
+            }}
+            onSaveBatch={(batch) => {
+              if (onSaveBatch) {
+                onSaveBatch(batch)
+              } else {
+                batch.forEach(item => onSave(item))
+                onClose()
+              }
+            }}
+          />
+        )}
         <div><label className={labelCls}>Question Text * <span className="text-xs text-gray-400">(use ___ for blanks)</span></label>
           <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} className={inputCls + " resize-none"} /></div>
         <div>
@@ -1066,7 +1171,7 @@ function QuestionMenu({ q, onEdit, onDelete, onClose, anchorRect }: { q: Questio
 
 // ─── Step 3 Component ─────────────────────────────────────────────────────────
 
-function Step3({ questions, setQuestions, defaultTitle }: { questions: Question[]; setQuestions: React.Dispatch<React.SetStateAction<Question[]>>; defaultTitle?: string }) {
+function Step3({ questions, setQuestions }: { questions: Question[]; setQuestions: React.Dispatch<React.SetStateAction<Question[]>> }) {
   const [modal, setModal] = useState<ModalType>(null)
   const [editQ, setEditQ] = useState<Question | null>(null)
   const [search, setSearch] = useState("")
@@ -1076,12 +1181,7 @@ function Step3({ questions, setQuestions, defaultTitle }: { questions: Question[
   const [pdfUploading, setPdfUploading] = useState(false)
   const [pdfError, setPdfError] = useState("")
   const [showCompetitiveAiModal, setShowCompetitiveAiModal] = useState(false)
-  const [showTopicAiModal, setShowTopicAiModal] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-
-  const handleAddTopicQuestions = (newQuestions: GeneratedQuestion[]) => {
-    setQuestions(prev => [...prev, ...(newQuestions as Question[])])
-  }
 
   const handleAddCompetitiveQuestions = (newQuestions: GeneratedCompetitiveQuestion[]) => {
     const mapped: Question[] = newQuestions.map(q => ({
@@ -1111,6 +1211,12 @@ function Step3({ questions, setQuestions, defaultTitle }: { questions: Question[
       if (idx >= 0) { const next = [...prev]; next[idx] = q; return next }
       return [...prev, q]
     })
+  }
+
+  const saveQuestionsBatch = (batch: Question[]) => {
+    setQuestions(prev => [...prev, ...batch])
+    setEditQ(null)
+    setModal(null)
   }
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1163,15 +1269,6 @@ function Step3({ questions, setQuestions, defaultTitle }: { questions: Question[
           <div className="flex flex-wrap gap-2 items-center">
             <button
               type="button"
-              onClick={() => setShowTopicAiModal(true)}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-xs hover:shadow transition-all cursor-pointer"
-              title="Generate MCQs, True/False, Descriptive & Fill in the Blanks from any topic using AI"
-            >
-              <Sparkles size={15} className="text-amber-300 shrink-0" />
-              <span>AI Question Generator</span>
-            </button>
-            <button
-              type="button"
               onClick={() => setShowCompetitiveAiModal(true)}
               className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-xs sm:text-sm font-medium shadow-xs transition-colors cursor-pointer"
             >
@@ -1189,19 +1286,11 @@ function Step3({ questions, setQuestions, defaultTitle }: { questions: Question[
                 <Plus size={15} className="shrink-0" />
                 <span>Add Question</span>
               </button>
-              <div className="absolute right-0 top-full pt-1.5 w-48 z-30 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
+              <div className="absolute right-0 top-full pt-1.5 w-44 z-30 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
                 <div className="bg-white border border-gray-100 rounded-xl shadow-lg">
-                  <button
-                    type="button"
-                    onClick={() => setShowTopicAiModal(true)}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-50 transition-colors border-b border-gray-100 rounded-t-xl cursor-pointer"
-                  >
-                    <Sparkles size={14} className="text-purple-600" />
-                    <span>Generate with AI</span>
-                  </button>
                   {addBtns.map(b => (
                     <button key={b.type} onClick={() => { setEditQ(null); setModal(b.type); }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 last:rounded-b-xl transition-colors">
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl transition-colors">
                       {TYPE_META[b.type].icon}{TYPE_META[b.type].label}
                     </button>
                   ))}
@@ -1239,37 +1328,8 @@ function Step3({ questions, setQuestions, defaultTitle }: { questions: Question[
         </div>
 
         {filtered.length === 0 ? (
-          <div className="py-14 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 p-6 my-2">
-            <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
-              <Sparkles size={22} className="text-purple-600" />
-            </div>
-            <h3 className="text-sm font-bold text-[#2D3A4A] mb-1">
-              {questions.length === 0 ? "No questions added yet" : "No questions match your search"}
-            </h3>
-            <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
-              {questions.length === 0
-                ? "Generate MCQs, True/False, Descriptive & Fill in the Blanks automatically on any topic using AI, or add them manually."
-                : "Try adjusting your search or filter to find what you're looking for."}
-            </p>
-            {questions.length === 0 && (
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setShowTopicAiModal(true)}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs hover:shadow flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <Sparkles size={14} className="text-amber-300" />
-                  <span>Generate Questions with AI</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEditQ(null); setModal("mcq"); }}
-                  className="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-xs transition-colors cursor-pointer"
-                >
-                  Add Manually
-                </button>
-              </div>
-            )}
+          <div className="py-12 text-center text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl">
+            {questions.length === 0 ? "No questions yet. Add your first question above or upload from PDF." : "No questions match your search."}
           </div>
         ) : (
           <div className="space-y-2 overflow-y-auto max-h-137.5 pr-2 custom-scrollbar">
@@ -1279,7 +1339,7 @@ function Step3({ questions, setQuestions, defaultTitle }: { questions: Question[
                 <div key={q.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
                   <span className="text-xs font-bold text-gray-400 w-5 pt-0.5 shrink-0">{idx + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm text-[#2D3A4A] font-medium line-clamp-2">{q.questionText ? <MathRenderer content={q.questionText} /> : <span className="text-gray-400 italic">No question text</span>}</div>
+                    <p className="text-sm text-[#2D3A4A] font-medium line-clamp-2">{q.questionText || <span className="text-gray-400 italic">No question text</span>}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${meta.color}`}>{meta.icon}{meta.label}</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${DIFFICULTY_COLORS[q.difficulty]}`}>{q.difficulty}</span>
@@ -1315,21 +1375,15 @@ function Step3({ questions, setQuestions, defaultTitle }: { questions: Question[
           </div>
         </div>
       </div>
-      {modal === "mcq"         && <MCQModal         onSave={saveQuestion as (q: MCQQuestion) => void}         onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "mcq" ? editQ : undefined} />}
-      {modal === "truefalse"   && <TrueFalseModal   onSave={saveQuestion as (q: TrueFalseQuestion) => void}   onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "truefalse" ? editQ : undefined} />}
-      {modal === "descriptive" && <DescriptiveModal onSave={saveQuestion as (q: DescriptiveQuestion) => void} onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "descriptive" ? editQ : undefined} />}
-      {modal === "fillblanks"  && <FillBlanksModal  onSave={saveQuestion as (q: FillBlanksQuestion) => void}  onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "fillblanks" ? editQ : undefined} />}
+      {modal === "mcq"         && <MCQModal         onSave={saveQuestion as (q: MCQQuestion) => void}         onSaveBatch={saveQuestionsBatch as (qs: MCQQuestion[]) => void}         onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "mcq" ? editQ : undefined} />}
+      {modal === "truefalse"   && <TrueFalseModal   onSave={saveQuestion as (q: TrueFalseQuestion) => void}   onSaveBatch={saveQuestionsBatch as (qs: TrueFalseQuestion[]) => void}   onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "truefalse" ? editQ : undefined} />}
+      {modal === "descriptive" && <DescriptiveModal onSave={saveQuestion as (q: DescriptiveQuestion) => void} onSaveBatch={saveQuestionsBatch as (qs: DescriptiveQuestion[]) => void} onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "descriptive" ? editQ : undefined} />}
+      {modal === "fillblanks"  && <FillBlanksModal  onSave={saveQuestion as (q: FillBlanksQuestion) => void}  onSaveBatch={saveQuestionsBatch as (qs: FillBlanksQuestion[]) => void}  onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "fillblanks" ? editQ : undefined} />}
       {modal === "coding"      && <CodingModal      onSave={saveQuestion as (q: CodingQuestion) => void}      onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "coding" ? editQ : undefined} />}
       <CompetitiveExamAIGenerator
         isOpen={showCompetitiveAiModal}
         onClose={() => setShowCompetitiveAiModal(false)}
         onAddQuestions={handleAddCompetitiveQuestions}
-      />
-      <TopicExamAIGenerator
-        isOpen={showTopicAiModal}
-        onClose={() => setShowTopicAiModal(false)}
-        onAddQuestions={handleAddTopicQuestions}
-        defaultTitle={defaultTitle}
       />
     </div>
   )
@@ -1591,7 +1645,7 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 flex items-center gap-2"><AlertCircle size={14} className="shrink-0"/>{error}</div>}
         {step === 1 && <Step1 form={step1} setForm={setStep1} />}
         {step === 2 && <Step2 form={step2} setForm={setStep2} />}
-        {step === 3 && <Step3 questions={questions} setQuestions={setQuestions} defaultTitle={step1.title} />}
+        {step === 3 && <Step3 questions={questions} setQuestions={setQuestions} />}
 
         <div className="flex items-center justify-between gap-3 mt-5 sm:mt-6">
           {step > 1 ? <button onClick={() => setStep(s => s - 1)} className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Back</button> : <div />}

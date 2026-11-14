@@ -12,8 +12,8 @@ import {
 import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
 import { CompetitiveExamAIGenerator, GeneratedCompetitiveQuestion } from "@/components/exam/CompetitiveExamAIGenerator"
-import { TopicExamAIGenerator, GeneratedQuestion } from "@/components/exam/TopicExamAIGenerator"
 import { MathRenderer } from "@/components/exam/MathRenderer"
+import { ModalAIGenerator } from "@/components/exam/ModalAIGenerator"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -197,8 +197,11 @@ const labelCls = "block text-sm font-medium text-[#2D3A4A] mb-1.5"
 
 // ─── MCQ Modal ────────────────────────────────────────────────────────────────
 
-function MCQModal({ onSave, onClose, initial }: {
-  onSave: (q: MCQQuestion) => void; onClose: () => void; initial?: MCQQuestion
+function MCQModal({ onSave, onSaveBatch, onClose, initial }: {
+  onSave: (q: MCQQuestion) => void;
+  onSaveBatch?: (qs: MCQQuestion[]) => void;
+  onClose: () => void;
+  initial?: MCQQuestion;
 }) {
   const blank = (): MCQQuestion => ({
     id: Math.random().toString(36).slice(2), type: "mcq",
@@ -216,8 +219,34 @@ function MCQModal({ onSave, onClose, initial }: {
   }
 
   return (
-    <ModalShell title="Add MCQ Question" icon={<div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center"><List size={18} className="text-blue-600"/></div>} onClose={onClose}>
+    <ModalShell title={initial ? "Edit MCQ Question" : "Add MCQ Question"} icon={<div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center"><List size={18} className="text-blue-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
+        {!initial && (
+          <ModalAIGenerator
+            questionType="mcq"
+            defaultMarks={q.marks}
+            defaultDifficulty={q.difficulty}
+            onFillSingle={(generated) => {
+              setQ(prev => ({
+                ...prev,
+                questionText: generated.questionText || prev.questionText,
+                options: generated.options || prev.options,
+                correctAnswer: generated.correctAnswer || prev.correctAnswer,
+                explanation: generated.explanation || prev.explanation,
+                difficulty: generated.difficulty || prev.difficulty,
+                marks: generated.marks || prev.marks,
+              }))
+            }}
+            onSaveBatch={(batch) => {
+              if (onSaveBatch) {
+                onSaveBatch(batch)
+              } else {
+                batch.forEach(item => onSave(item))
+                onClose()
+              }
+            }}
+          />
+        )}
         <div>
           <label className={labelCls}>Question Text *</label>
           <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})}
@@ -302,8 +331,11 @@ function MCQModal({ onSave, onClose, initial }: {
 
 // ─── TrueFalse Modal ──────────────────────────────────────────────────────────
 
-function TrueFalseModal({ onSave, onClose, initial }: {
-  onSave: (q: TrueFalseQuestion) => void; onClose: () => void; initial?: TrueFalseQuestion
+function TrueFalseModal({ onSave, onSaveBatch, onClose, initial }: {
+  onSave: (q: TrueFalseQuestion) => void;
+  onSaveBatch?: (qs: TrueFalseQuestion[]) => void;
+  onClose: () => void;
+  initial?: TrueFalseQuestion;
 }) {
   const blank = (): TrueFalseQuestion => ({
     id: Math.random().toString(36).slice(2), type: "truefalse",
@@ -319,8 +351,33 @@ function TrueFalseModal({ onSave, onClose, initial }: {
   }
 
   return (
-    <ModalShell title="Add True/False Question" icon={<div className="w-9 h-9 rounded-lg bg-teal-50 flex items-center justify-center"><CheckSquare size={18} className="text-teal-600"/></div>} onClose={onClose}>
+    <ModalShell title={initial ? "Edit True/False Question" : "Add True/False Question"} icon={<div className="w-9 h-9 rounded-lg bg-teal-50 flex items-center justify-center"><CheckSquare size={18} className="text-teal-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
+        {!initial && (
+          <ModalAIGenerator
+            questionType="truefalse"
+            defaultMarks={q.marks}
+            defaultDifficulty={q.difficulty}
+            onFillSingle={(generated) => {
+              setQ(prev => ({
+                ...prev,
+                questionText: generated.questionText || prev.questionText,
+                correctAnswer: (generated.correctAnswer as "True" | "False") || prev.correctAnswer,
+                explanation: generated.explanation || prev.explanation,
+                difficulty: generated.difficulty || prev.difficulty,
+                marks: generated.marks || prev.marks,
+              }))
+            }}
+            onSaveBatch={(batch) => {
+              if (onSaveBatch) {
+                onSaveBatch(batch)
+              } else {
+                batch.forEach(item => onSave(item))
+                onClose()
+              }
+            }}
+          />
+        )}
         <div>
           <label className={labelCls}>Statement *</label>
           <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})}
@@ -383,8 +440,11 @@ function TrueFalseModal({ onSave, onClose, initial }: {
 
 // ─── Descriptive Modal ────────────────────────────────────────────────────────
 
-function DescriptiveModal({ onSave, onClose, initial }: {
-  onSave: (q: DescriptiveQuestion) => void; onClose: () => void; initial?: DescriptiveQuestion
+function DescriptiveModal({ onSave, onSaveBatch, onClose, initial }: {
+  onSave: (q: DescriptiveQuestion) => void;
+  onSaveBatch?: (qs: DescriptiveQuestion[]) => void;
+  onClose: () => void;
+  initial?: DescriptiveQuestion;
 }) {
   const blank = (): DescriptiveQuestion => ({
     id: Math.random().toString(36).slice(2), type: "descriptive",
@@ -400,8 +460,34 @@ function DescriptiveModal({ onSave, onClose, initial }: {
   }
 
   return (
-    <ModalShell title="Add Descriptive Question" icon={<div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center"><AlignLeft size={18} className="text-purple-600"/></div>} onClose={onClose}>
+    <ModalShell title={initial ? "Edit Descriptive Question" : "Add Descriptive Question"} icon={<div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center"><AlignLeft size={18} className="text-purple-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
+        {!initial && (
+          <ModalAIGenerator
+            questionType="descriptive"
+            defaultMarks={q.marks}
+            defaultDifficulty={q.difficulty}
+            onFillSingle={(generated) => {
+              setQ(prev => ({
+                ...prev,
+                questionText: generated.questionText || prev.questionText,
+                wordLimit: generated.wordLimit || prev.wordLimit,
+                modelAnswer: generated.modelAnswer || prev.modelAnswer,
+                rubric: generated.rubric || prev.rubric,
+                difficulty: generated.difficulty || prev.difficulty,
+                marks: generated.marks || prev.marks,
+              }))
+            }}
+            onSaveBatch={(batch) => {
+              if (onSaveBatch) {
+                onSaveBatch(batch)
+              } else {
+                batch.forEach(item => onSave(item))
+                onClose()
+              }
+            }}
+          />
+        )}
         <div>
           <label className={labelCls}>Question Text *</label>
           <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})}
@@ -461,8 +547,11 @@ function DescriptiveModal({ onSave, onClose, initial }: {
 
 // ─── FillBlanks Modal ─────────────────────────────────────────────────────────
 
-function FillBlanksModal({ onSave, onClose, initial }: {
-  onSave: (q: FillBlanksQuestion) => void; onClose: () => void; initial?: FillBlanksQuestion
+function FillBlanksModal({ onSave, onSaveBatch, onClose, initial }: {
+  onSave: (q: FillBlanksQuestion) => void;
+  onSaveBatch?: (qs: FillBlanksQuestion[]) => void;
+  onClose: () => void;
+  initial?: FillBlanksQuestion;
 }) {
   const blank = (): FillBlanksQuestion => ({
     id: Math.random().toString(36).slice(2), type: "fillblanks",
@@ -487,8 +576,36 @@ function FillBlanksModal({ onSave, onClose, initial }: {
   }
 
   return (
-    <ModalShell title="Add Fill in the Blanks" icon={<div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center"><FileText size={18} className="text-amber-600"/></div>} onClose={onClose}>
+    <ModalShell title={initial ? "Edit Fill in the Blanks" : "Add Fill in the Blanks"} icon={<div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center"><FileText size={18} className="text-amber-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
+        {!initial && (
+          <ModalAIGenerator
+            questionType="fillblanks"
+            defaultMarks={q.marks}
+            defaultDifficulty={q.difficulty}
+            onFillSingle={(generated) => {
+              const text = generated.questionText || ""
+              const matches = text.match(/_{2,}/g) || []
+              const genBlanks = generated.blanks || []
+              const blanks = matches.map((_: string, i: number) => genBlanks[i] || { answer: "", alsoAccept: [] })
+              setQ(prev => ({
+                ...prev,
+                questionText: text,
+                blanks: blanks.length > 0 ? blanks : prev.blanks,
+                difficulty: generated.difficulty || prev.difficulty,
+                marks: generated.marks || prev.marks,
+              }))
+            }}
+            onSaveBatch={(batch) => {
+              if (onSaveBatch) {
+                onSaveBatch(batch)
+              } else {
+                batch.forEach(item => onSave(item))
+                onClose()
+              }
+            }}
+          />
+        )}
         <div className="bg-amber-50 rounded-lg px-4 py-3 text-sm text-amber-700">
           Use <strong>___</strong> (3+ underscores) to mark blank positions in your question text.
         </div>
@@ -1173,14 +1290,13 @@ function QuestionMenu({ q, onEdit, onDelete, onClose, anchorRect }: { q: Questio
 }
 
 function Step3({
-  questions, setQuestions, canUseQuestionStudio, canUsePdfImport, allowedCustomQuestionTypes, defaultTitle
+  questions, setQuestions, canUseQuestionStudio, canUsePdfImport, allowedCustomQuestionTypes
 }: {
   questions: Question[]
   setQuestions: React.Dispatch<React.SetStateAction<Question[]>>
   canUseQuestionStudio: boolean
   canUsePdfImport: boolean
   allowedCustomQuestionTypes: QuestionType[]
-  defaultTitle?: string
 }) {
   const [modal, setModal] = useState<QuestionType | null>(null)
   const [editQ, setEditQ] = useState<Question | null>(null)
@@ -1191,12 +1307,7 @@ function Step3({
   const [pdfUploading, setPdfUploading] = useState(false)
   const [pdfError, setPdfError] = useState("")
   const [showCompetitiveAiModal, setShowCompetitiveAiModal] = useState(false)
-  const [showTopicAiModal, setShowTopicAiModal] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-
-  const handleAddTopicQuestions = (newQuestions: GeneratedQuestion[]) => {
-    setQuestions(prev => [...prev, ...(newQuestions as Question[])])
-  }
 
   const handleAddCompetitiveQuestions = (newQuestions: GeneratedCompetitiveQuestion[]) => {
     const mapped: Question[] = newQuestions.map(q => ({
@@ -1249,6 +1360,12 @@ function Step3({
     setModal(null)
   }
 
+  const saveQuestionsBatch = (batch: Question[]) => {
+    setQuestions(prev => [...prev, ...batch])
+    setEditQ(null)
+    setModal(null)
+  }
+
   const removeQ = (id: string) => setQuestions(prev => prev.filter(q => q.id !== id))
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1294,15 +1411,6 @@ function Step3({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
-            onClick={() => setShowTopicAiModal(true)}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-xs hover:shadow transition-all cursor-pointer"
-            title="Generate MCQs, True/False, Descriptive & Fill in the Blanks from any topic using AI"
-          >
-            <Sparkles size={15} className="text-amber-300 shrink-0" />
-            <span>AI Question Generator</span>
-          </button>
-          <button
-            type="button"
             onClick={() => canUseQuestionStudio && setShowCompetitiveAiModal(true)}
             disabled={!canUseQuestionStudio}
             className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-xs sm:text-sm font-medium shadow-xs transition-colors cursor-pointer"
@@ -1321,19 +1429,11 @@ function Step3({
               <Plus size={15} className="shrink-0" />
               <span>Add Question</span>
             </button>
-            <div className="absolute right-0 top-full pt-1.5 w-48 z-20 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
+            <div className="absolute right-0 top-full pt-1.5 w-44 z-20 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
               <div className="bg-white border border-gray-100 rounded-xl shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => setShowTopicAiModal(true)}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-50 transition-colors border-b border-gray-100 rounded-t-xl cursor-pointer"
-                >
-                  <Sparkles size={14} className="text-purple-600" />
-                  <span>Generate with AI</span>
-                </button>
                 {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).filter(type => allowedCustomQuestionTypes.includes(type)).map(type => (
                   <button key={type} onClick={() => openModal(type)}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 last:rounded-b-xl transition-colors">
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl transition-colors">
                     {TYPE_META[type].icon}
                     {TYPE_META[type].label}
                   </button>
@@ -1383,31 +1483,11 @@ function Step3({
 
       {/* Question List */}
       {filtered.length === 0 ? (
-        <div className="py-14 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 p-6 my-2">
-          <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
-            <Sparkles size={22} className="text-purple-600" />
+        <div className="py-16 text-center">
+          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <FileText size={20} className="text-gray-400"/>
           </div>
-          <h3 className="text-sm font-bold text-[#2D3A4A] mb-1">No questions added yet</h3>
-          <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
-            Generate MCQs, True/False, Descriptive &amp; Fill in the Blanks automatically on any topic using AI, or add them manually.
-          </p>
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setShowTopicAiModal(true)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs hover:shadow flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Sparkles size={14} className="text-amber-300" />
-              <span>Generate Questions with AI</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => openModal("mcq")}
-              className="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-xs transition-colors cursor-pointer"
-            >
-              Add Manually
-            </button>
-          </div>
+          <p className="text-sm text-gray-500">No questions yet. Add questions manually or upload a PDF.</p>
         </div>
       ) : (
         <div className="space-y-2.5 mb-4 max-h-137.5 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
@@ -1472,6 +1552,7 @@ function Step3({
       {modal === "mcq" && (
         <MCQModal 
           onSave={saveQuestion as (q: MCQQuestion) => void} 
+          onSaveBatch={saveQuestionsBatch as (qs: MCQQuestion[]) => void}
           onClose={() => { setModal(null); setEditQ(null); }} 
           initial={editQ?.type === "mcq" ? editQ : undefined} 
         />
@@ -1479,6 +1560,7 @@ function Step3({
       {modal === "truefalse" && (
         <TrueFalseModal 
           onSave={saveQuestion as (q: TrueFalseQuestion) => void} 
+          onSaveBatch={saveQuestionsBatch as (qs: TrueFalseQuestion[]) => void}
           onClose={() => { setModal(null); setEditQ(null); }} 
           initial={editQ?.type === "truefalse" ? editQ : undefined} 
         />
@@ -1486,6 +1568,7 @@ function Step3({
       {modal === "descriptive" && (
         <DescriptiveModal 
           onSave={saveQuestion as (q: DescriptiveQuestion) => void} 
+          onSaveBatch={saveQuestionsBatch as (qs: DescriptiveQuestion[]) => void}
           onClose={() => { setModal(null); setEditQ(null); }} 
           initial={editQ?.type === "descriptive" ? editQ : undefined} 
         />
@@ -1493,6 +1576,7 @@ function Step3({
       {modal === "fillblanks" && (
         <FillBlanksModal 
           onSave={saveQuestion as (q: FillBlanksQuestion) => void} 
+          onSaveBatch={saveQuestionsBatch as (qs: FillBlanksQuestion[]) => void}
           onClose={() => { setModal(null); setEditQ(null); }} 
           initial={editQ?.type === "fillblanks" ? editQ : undefined} 
         />
@@ -1508,12 +1592,6 @@ function Step3({
         isOpen={showCompetitiveAiModal}
         onClose={() => setShowCompetitiveAiModal(false)}
         onAddQuestions={handleAddCompetitiveQuestions}
-      />
-      <TopicExamAIGenerator
-        isOpen={showTopicAiModal}
-        onClose={() => setShowTopicAiModal(false)}
-        onAddQuestions={handleAddTopicQuestions}
-        defaultTitle={defaultTitle}
       />
     </div>
   )
@@ -1744,7 +1822,6 @@ export default function CreateExamPage() {
             canUseQuestionStudio={instituteFeatures.neetJeeGenerator}
             canUsePdfImport={instituteFeatures.pdfImport}
             allowedCustomQuestionTypes={allowedCustomQuestionTypes}
-            defaultTitle={step1.title}
           />
         )}
 
