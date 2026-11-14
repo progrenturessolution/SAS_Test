@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server"
+
+export const dynamic = "force-dynamic"
+export const maxDuration = 60
 import { getSession } from "@/lib/auth"
 import { robustJsonParse } from "@/lib/jsonRepair"
 import { generateContentWithKeyRotation, getGeminiApiKeys } from "@/lib/gemini"
@@ -41,6 +44,7 @@ export async function POST(req: Request) {
       focusPYQ = true,
       existingQuestions = [],
       blueprintFormats = [],
+      stream = false,
     } = body
 
     if (session.instituteId) {
@@ -221,43 +225,41 @@ The "options" array MUST be exactly ["True", "False"].
         const fmtCount = Number(fmt.count) || 0
         if (fmtCount <= 0) continue
 
-        // If a format has > 25 questions, shard it into sub-chunks of at most 25 questions
-        if (fmtCount <= 25) {
+        // Small chunks return the first questions much sooner and can run on separate API keys.
+        const chunkSize = 8
+        const numSubChunks = Math.ceil(fmtCount / chunkSize)
+        const baseSub = Math.floor(fmtCount / numSubChunks)
+        const remSub = fmtCount % numSubChunks
+        for (let s = 0; s < numSubChunks; s++) {
+          const subCount = baseSub + (s < remSub ? 1 : 0)
           generationTasks.push({
             formatId: fmt.id,
             formatLabel: fmt.label || fmt.id,
-            targetCount: fmtCount,
+            targetCount: subCount,
             marks: Number(fmt.marks) || marksPerQuestion,
           })
-        } else {
-          const numSubChunks = Math.ceil(fmtCount / 20)
-          const baseSub = Math.floor(fmtCount / numSubChunks)
-          const remSub = fmtCount % numSubChunks
-          for (let s = 0; s < numSubChunks; s++) {
-            const subCount = baseSub + (s < remSub ? 1 : 0)
-            generationTasks.push({
-              formatId: fmt.id,
-              formatLabel: fmt.label || fmt.id,
-              targetCount: subCount,
-              marks: Number(fmt.marks) || marksPerQuestion,
-            })
-          }
         }
       }
-    } else {
-      generationTasks.push({
-        formatId: "mcq",
-        formatLabel: "MCQ",
-        targetCount: count,
-        marks: marksPerQuestion,
-      })
+      } else {
+      const chunkSize = 8
+      const numSubChunks = Math.ceil(count / chunkSize)
+      const baseSub = Math.floor(count / numSubChunks)
+      const remSub = count % numSubChunks
+      for (let s = 0; s < numSubChunks; s++) {
+        generationTasks.push({
+          formatId: "mcq",
+          formatLabel: "MCQ",
+          targetCount: baseSub + (s < remSub ? 1 : 0),
+          marks: marksPerQuestion,
+        })
+      }
     }
 
     console.log(`[CompetitiveAI] Dispatching ${generationTasks.length} format-specific tasks in parallel across ${keys.length} API keys...`)
 
     // Dispatch all format tasks simultaneously across the key pool with buffer to absorb deduplication
     const chunkPromises = generationTasks.map(async (task, taskIdx) => {
-      const requestedCount = task.targetCount <= 5 ? task.targetCount + 1 : task.targetCount + 2
+      const requestedCount = task.targetCount
       
       // Distribute chapters across tasks if multiple chapters exist
       let taskChapters = chaptersList
@@ -289,7 +291,7 @@ Return raw JSON array ONLY.`
             responseMimeType: "application/json",
           }
         },
-        timeoutMs: 15000
+        timeoutMs: 40000
       })
 
       return {
@@ -297,8 +299,6 @@ Return raw JSON array ONLY.`
         text: result.text
       }
     })
-
-    const settledChunks = await Promise.allSettled(chunkPromises)
 
     // Set of seen texts to prevent duplicate questions within the batch and existing
     const seenTexts = new Set(
@@ -412,6 +412,121 @@ Return raw JSON array ONLY.`
 
     let totalParsed = 0
     let lastError: string | null = null
+
+    if (stream) {
+      const encoder = new TextEncoder()
+      const readable = new ReadableStream({
+        async start(controller) {
+          const send = (payload: unknown) => {
+            controller.enqueue(encoder.encode(`${JSON.stringify(payload)}\n`))
+          }
+
+          const producedByFormat: Record<string, number> = {
+            mcq: 0,
+            assertion: 0,
+            fib: 0,
+            true_false: 0,
+          }
+          const requiredByFormat: Record<string, number> = {
+            mcq: activeBlueprintFormats.length > 0 ? 0 : count,
+            assertion: 0,
+            fib: 0,
+            true_false: 0,
+          }
+          if (activeBlueprintFormats.length > 0) {
+            for (const fmt of activeBlueprintFormats) {
+              requiredByFormat[fmt.id] = Number(fmt.count) || 0
+            }
+          }
+
+          let totalSent = 0
+
+          const takeQuestions = (rawItems: any[], formatId: string) => {
+            const required = requiredByFormat[formatId] ?? count
+            const room = Math.max(0, required - (producedByFormat[formatId] || 0))
+            const batch: any[] = []
+            for (const raw of rawItems) {
+              if (batch.length >= room) break
+              const questionText = normalizeGeneratedText(raw.questionText || "Question")
+              const normalizedText = questionText.toLowerCase().replace(/[^a-z0-9]/g, "")
+              if (!normalizedText || seenTexts.has(normalizedText)) continue
+              seenTexts.add(normalizedText)
+              batch.push(formatSingleQuestion(raw, totalSent + batch.length, formatId))
+            }
+            producedByFormat[formatId] = (producedByFormat[formatId] || 0) + batch.length
+            totalSent += batch.length
+            return batch
+          }
+
+          try {
+            await Promise.all(chunkPromises.map(async (promise) => {
+              try {
+                const value = await promise
+                const parsed = robustJsonParse(value.text)
+                if (!Array.isArray(parsed)) return
+                const batch = takeQuestions(parsed, value.formatId)
+                if (batch.length > 0) send({ type: "batch", questions: batch })
+              } catch (taskErr: any) {
+                lastError = taskErr?.message || "Task failed"
+                console.warn("[CompetitiveAI] Stream task failed:", lastError)
+              }
+            }))
+
+            const formatsToFill = activeBlueprintFormats.length > 0
+              ? activeBlueprintFormats.map((fmt: any) => fmt.id)
+              : ["mcq"]
+
+            for (const formatId of formatsToFill) {
+              const required = requiredByFormat[formatId] || 0
+              const deficit = required - (producedByFormat[formatId] || 0)
+              if (deficit <= 0) continue
+              try {
+                const topUpPrompt = `Generate exactly ${deficit} authentic, unique Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${chaptersList}.
+
+${formatDirectives[formatId] || formatDirectives.mcq}
+
+Ensure all generated questions have "questionFormat": "${formatId}".
+Return raw JSON array ONLY.`
+                const topUpRes = await generateContentWithKeyRotation({
+                  payload: {
+                    contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
+                    generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
+                  },
+                  timeoutMs: 25000,
+                })
+                const topUpParsed = robustJsonParse(topUpRes.text)
+                if (Array.isArray(topUpParsed)) {
+                  const batch = takeQuestions(topUpParsed, formatId)
+                  if (batch.length > 0) send({ type: "batch", questions: batch })
+                }
+              } catch (topUpErr) {
+                console.warn(`[CompetitiveAI] Stream top-up for ${formatId} skipped:`, topUpErr)
+              }
+            }
+
+            if (totalSent === 0) {
+              send({ type: "error", error: lastError || "Failed to generate questions. Please click Create Questions again." })
+            } else {
+              send({ type: "done", count: totalSent })
+            }
+          } catch (streamErr: any) {
+            send({ type: "error", error: streamErr?.message || "Failed to generate questions." })
+          } finally {
+            controller.close()
+          }
+        },
+      })
+
+      return new Response(readable, {
+        headers: {
+          "Content-Type": "application/x-ndjson; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Accel-Buffering": "no",
+        },
+      })
+    }
+
+    const settledChunks = await Promise.allSettled(chunkPromises)
 
     for (let i = 0; i < settledChunks.length; i++) {
       const res = settledChunks[i]

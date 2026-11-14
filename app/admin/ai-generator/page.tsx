@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef, KeyboardEvent } from "react"
+import { useState, useMemo, useRef, useEffect, KeyboardEvent } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -130,6 +130,7 @@ export default function AIGeneratorPage() {
   // Generation & Status
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
+  const [revealCount, setRevealCount] = useState(6)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   // Questions Review & Publishing
@@ -253,6 +254,14 @@ export default function AIGeneratorPage() {
     if (formatFilter === "all") return generatedQuestions
     return generatedQuestions.filter((q) => getQuestionFormat(q) === formatFilter)
   }, [generatedQuestions, formatFilter])
+
+  useEffect(() => {
+    if (revealCount >= filteredGeneratedQuestions.length) return
+    const timer = window.setTimeout(() => {
+      setRevealCount((count) => Math.min(count + 4, filteredGeneratedQuestions.length))
+    }, 30)
+    return () => window.clearTimeout(timer)
+  }, [revealCount, filteredGeneratedQuestions.length])
 
   const formatCounts = useMemo(() => {
     const counts: Record<string, number> = { all: generatedQuestions.length, mcq: 0, assertion: 0, fib: 0, true_false: 0 }
@@ -653,13 +662,37 @@ export default function AIGeneratorPage() {
     setErrorMsg(null)
     setIsGenerating(true)
     setGenerationStep(1)
+    setGeneratedQuestions([])
+    setSelectedQuestionIds(new Set())
+    setRevealCount(6)
+    setFormatFilter("all")
 
     const timer1 = setTimeout(() => setGenerationStep(2), 2200)
     const timer2 = setTimeout(() => setGenerationStep(3), 5500)
 
+    const chapterTitle =
+      selectedChapters.length === 1
+        ? selectedChapters[0]
+        : selectedChapters.length > 1
+        ? `${selectedChapters[0]} & ${selectedChapters.length - 1} more`
+        : ""
+    const targetSubject = activeSubjectTab || selectedSubject
+    const examCode = selectedExam.replace("-", "_")
+    const nextTitle = `${examCode} ${targetSubject}${chapterTitle ? ` - ${chapterTitle}` : ""}`
+
+    const showQuestions = (questions: GeneratedCompetitiveQuestion[]) => {
+      setGeneratedQuestions(questions)
+      setSelectedQuestionIds(new Set(questions.map((q) => q.id)))
+      setExamTitle(nextTitle)
+      const calculatedTotal = questions.reduce((sum, q) => sum + (q.marks || 4), 0) || totalMarks || 200
+      setExamTotalMarks(calculatedTotal)
+      setPassMarks(Math.round(calculatedTotal * 0.4))
+      setDuration(30)
+      setCurrentStep(3)
+    }
+
     try {
       const existingQuestionTexts = generatedQuestions.map((q) => q.questionText)
-      const targetSubject = activeSubjectTab || selectedSubject
       const countToGenerate = Math.max(1, Number(totalQuestions) || Number(questionCount) || 10)
 
       const res = await fetch("/api/admin/generate-competitive-questions", {
@@ -681,44 +714,52 @@ export default function AIGeneratorPage() {
           negativeMarks: currentExamMeta.defaultNegativeMarks,
           focusPYQ,
           existingQuestions: existingQuestionTexts,
+          stream: true,
         }),
       })
 
-      const data = await res.json()
-
-      if (!res.ok || !data.success) {
+      const contentType = res.headers.get("content-type") || ""
+      if (!res.ok || !contentType.includes("ndjson") || !res.body) {
+        const data = await res.json().catch(() => ({}))
         throw new Error(data.error || "Failed to generate exam questions")
       }
 
-      setGeneratedQuestions(data.questions)
-      setSelectedQuestionIds(new Set(data.questions.map((q: GeneratedCompetitiveQuestion) => q.id)))
-      setFormatFilter("all") // Reset filter to all formats so new questions always render
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
+      let received: GeneratedCompetitiveQuestion[] = []
+      let openedReview = false
 
-      // Set default exam title
-      const chapterTitle =
-        selectedChapters.length === 1
-          ? selectedChapters[0]
-          : selectedChapters.length > 1
-          ? `${selectedChapters[0]} & ${selectedChapters.length - 1} more`
-          : targetSubject
-      const examCode = selectedExam.replace("-", "_")
-      setExamTitle(`${examCode} ${targetSubject} - ${chapterTitle}`)
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() || ""
 
-      // Initialize Step 4 Exam Details
-      const calculatedTotal =
-        data.questions.reduce((sum: number, q: any) => sum + (q.marks || 4), 0) || totalMarks || 200
-      setExamTotalMarks(calculatedTotal)
-      setPassMarks(Math.round(calculatedTotal * 0.4))
-      setDuration(30)
+        for (const line of lines) {
+          if (!line.trim()) continue
+          const event = JSON.parse(line)
+          if (event.type === "error") {
+            throw new Error(event.error || "Failed to generate exam questions")
+          }
+          if (event.type === "batch" && Array.isArray(event.questions) && event.questions.length > 0) {
+            received = received.concat(event.questions)
+            showQuestions(received)
+            if (!openedReview) {
+              openedReview = true
+              window.scrollTo({ top: 0, behavior: "auto" })
+            }
+          }
+        }
+      }
 
-      // Transition to Step 3
-      setCurrentStep(3)
-
-      // Scroll smoothly to results
-      window.scrollTo({ top: 0, behavior: "smooth" })
+      if (received.length === 0) {
+        throw new Error("No questions were created. Please click Create Questions again.")
+      }
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred while generating.")
-      window.scrollTo({ top: 0, behavior: "smooth" })
+      window.scrollTo({ top: 0, behavior: "auto" })
     } finally {
       clearTimeout(timer1)
       clearTimeout(timer2)
@@ -1770,9 +1811,16 @@ export default function AIGeneratorPage() {
                     </div>
                   )}
 
+                  {isGenerating && (
+                    <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-medium text-slate-600 shadow-xs">
+                      <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+                      <span>Questions are still being created. The ones below are ready to review.</span>
+                    </div>
+                  )}
+
                   {/* Generated Questions List */}
                   <div className="space-y-4">
-                    {filteredGeneratedQuestions.map((q, idx) => {
+                    {filteredGeneratedQuestions.slice(0, revealCount).map((q, idx) => {
                       const isSelected = selectedQuestionIds.has(q.id)
                       const isExpanded = expandedSolutions.has(q.id)
                       const qFormat = getQuestionFormat(q)
@@ -1963,6 +2011,14 @@ export default function AIGeneratorPage() {
                         </div>
                       )
                     })}
+                    {revealCount < filteredGeneratedQuestions.length && (
+                      <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-medium text-slate-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>
+                          Showing {Math.min(revealCount, filteredGeneratedQuestions.length)} of {filteredGeneratedQuestions.length} questions
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

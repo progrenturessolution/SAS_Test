@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { memo } from "react"
 import katex from "katex"
 import "katex/dist/katex.min.css"
 
@@ -27,25 +27,37 @@ function isStandaloneFormula(value: string): boolean {
   )
 }
 
+const formulaCache = new Map<string, string>()
+
 function renderFormula(formula: string, displayMode: boolean): string {
+  const trimmed = formula.trim()
+  const cacheKey = `${displayMode ? "d" : "i"}:${trimmed}`
+  const cached = formulaCache.get(cacheKey)
+  if (cached) return cached
+
+  let html: string
   try {
-    return katex.renderToString(formula.trim(), {
+    html = katex.renderToString(trimmed, {
       displayMode,
       throwOnError: false,
       strict: "ignore",
       trust: false,
     })
   } catch {
-    return formula
+    html = trimmed
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;")
   }
+
+  if (formulaCache.size > 800) formulaCache.clear()
+  formulaCache.set(cacheKey, html)
+  return html
 }
 
-export function MathRenderer({ content, className = "" }: MathRendererProps) {
+export const MathRenderer = memo(function MathRenderer({ content, className = "" }: MathRendererProps) {
   if (!content) return null
 
   const normalized = normalizeFormulaText(content)
@@ -136,4 +148,4 @@ export function MathRenderer({ content, className = "" }: MathRendererProps) {
       })}
     </div>
   )
-}
+})
