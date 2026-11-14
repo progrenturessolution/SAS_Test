@@ -146,6 +146,19 @@ export default function AIGeneratorPage() {
   const [printModalOpen, setPrintModalOpen] = useState(false)
   const [printMode, setPrintMode] = useState<"student" | "teacher">("student")
   const [printDropdownOpen, setPrintDropdownOpen] = useState(false)
+  const [coachingName, setCoachingName] = useState<string>("")
+
+  // Fetch logged-in coaching institute name
+  useEffect(() => {
+    fetch("/api/admin/institute-access", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.instituteName && !data.instituteName.toLowerCase().includes("progrentures")) {
+          setCoachingName(data.instituteName)
+        }
+      })
+      .catch((err) => console.error("Error fetching coaching institute name:", err))
+  }, [])
 
   // Step 4: Exam Details States
   const [duration, setDuration] = useState<number>(30)
@@ -3203,6 +3216,7 @@ export default function AIGeneratorPage() {
           grade={selectedGrade}
           durationMinutes={duration || Math.max(generatedQuestions.length * 2, 30)}
           defaultMode={printMode}
+          instituteName={coachingName}
         />
       )}
     </div>

@@ -42,12 +42,24 @@ export function PrintableExamPaper({
   grade,
   durationMinutes = 60,
   defaultMode = "student",
-  instituteName: initialInstitute = "PROGRENTURES TESTRO LAB & COACHING INSTITUTE",
+  instituteName: initialInstitute = "",
 }: PrintableExamPaperProps) {
   const [printMode, setPrintMode] = useState<"student" | "teacher">(defaultMode)
   const [scope, setScope] = useState<"all" | "selected">("all")
-  const [customInstitute, setCustomInstitute] = useState(initialInstitute)
+  
+  const cleanInitialName =
+    initialInstitute && !initialInstitute.toLowerCase().includes("progrentures")
+      ? initialInstitute.trim()
+      : "COACHING INSTITUTE"
+
+  const [customInstitute, setCustomInstitute] = useState(cleanInitialName)
   const [showAnswerKeyGrid, setShowAnswerKeyGrid] = useState(true)
+
+  React.useEffect(() => {
+    if (initialInstitute && !initialInstitute.toLowerCase().includes("progrentures")) {
+      setCustomInstitute(initialInstitute.trim())
+    }
+  }, [initialInstitute])
 
   if (!isOpen) return null
 
@@ -211,13 +223,13 @@ export function PrintableExamPaper({
           {/* Quick Configs */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <label className="text-slate-500 font-medium">Header / Institute:</label>
+              <label className="text-slate-500 font-medium">Coaching Name:</label>
               <input
                 type="text"
                 value={customInstitute}
                 onChange={(e) => setCustomInstitute(e.target.value)}
-                placeholder="Enter institute name..."
-                className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 bg-white text-slate-800 w-44 sm:w-60 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                placeholder="Enter coaching institute name..."
+                className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 bg-white text-slate-800 w-48 sm:w-64 focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
             </div>
 

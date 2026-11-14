@@ -20,6 +20,8 @@ export async function GET(req: Request) {
 
     if (!session.instituteId) {
       return NextResponse.json({
+        instituteName: session.instituteName || session.name || "Coaching Institute",
+        instituteCode: session.instituteCode || "",
         examTypes: ALL_EXAM_TYPES,
         features: {},
         customQuestionTypes: ALL_CUSTOM_QUESTION_TYPES,
@@ -27,12 +29,14 @@ export async function GET(req: Request) {
     }
 
     await connectDB()
-    const institute = await Institute.findById(session.instituteId).select("limits").lean()
+    const institute = await Institute.findById(session.instituteId).select("name code limits").lean()
     if (!institute) {
       return NextResponse.json({ error: "Institute not found" }, { status: 404 })
     }
 
     return NextResponse.json({
+      instituteName: institute.name || session.instituteName || "Coaching Institute",
+      instituteCode: institute.code || session.instituteCode || "",
       examTypes: Array.isArray(institute.limits?.examTypes)
         ? institute.limits.examTypes.map((type) => String(type).trim().toUpperCase())
         : LEGACY_INSTITUTE_EXAM_TYPES,
