@@ -14,7 +14,6 @@ import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
 import { CompetitiveExamAIGenerator, GeneratedCompetitiveQuestion } from "@/components/exam/CompetitiveExamAIGenerator"
 import { MathRenderer } from "@/components/exam/MathRenderer"
-import { ModalAIGenerator } from "@/components/exam/ModalAIGenerator"
 
 // ─── Types (same as create page) ─────────────────────────────────────────────
 
@@ -450,11 +449,44 @@ function ModalFooter({ note, onCancel, onSave }: { note: string; onCancel: () =>
   )
 }
 
-function MCQModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q: MCQQuestion) => void; onSaveBatch?: (qs: MCQQuestion[]) => void; onClose: () => void; initial?: MCQQuestion }) {
+function MCQModal({ onSave, onClose, initial }: { onSave: (q: MCQQuestion | MCQQuestion[]) => void; onClose: () => void; initial?: MCQQuestion }) {
   const blank = (): MCQQuestion => ({ id: Math.random().toString(36).slice(2), type: "mcq", questionText: "", difficulty: "medium", marks: 1, options: ["","","",""], correctAnswer: "", explanation: "", questionImage: "", optionImages: ["","","",""], codeSnippet: "" })
   const [q, setQ] = useState<MCQQuestion>(initial ?? blank())
   const [error, setError] = useState("")
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [bulkTopics, setBulkTopics] = useState([{ topic: "", count: 1 }])
+
+  const generateWithAi = async () => {
+    if (!aiPrompt.trim()) return setError("Enter a topic or short question prompt first")
+    setIsGenerating(true); setError("")
+    try {
+      const res = await fetch("/api/admin/generate-objective-question", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt, type: "mcq", marks: q.marks, difficulty: q.difficulty }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to generate MCQ")
+      setQ(prev => ({ ...prev, questionText: data.data.questionText, options: data.data.options, correctAnswer: data.data.correctAnswer, explanation: data.data.explanation }))
+    } catch (error) { setError(error instanceof Error ? error.message : "Failed to generate MCQ") }
+    finally { setIsGenerating(false) }
+  }
+
+  const generateBulk = async () => {
+    const topics = bulkTopics.filter(item => item.topic.trim() && item.count > 0)
+    if (!topics.length) return setError("Add at least one topic and question count")
+    setIsGenerating(true); setError("")
+    try {
+      const res = await fetch("/api/admin/generate-objective-question", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topics, type: "mcq", marks: q.marks, difficulty: q.difficulty }) })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Bulk generation failed")
+      const generated = data.data.map((item: any): MCQQuestion => ({ ...q, id: Math.random().toString(36).slice(2), questionText: item.questionText, options: item.options, correctAnswer: item.correctAnswer, explanation: item.explanation }))
+      onSave(generated); onClose()
+    } catch (error) { setError(error instanceof Error ? error.message : "Bulk generation failed") }
+    finally { setIsGenerating(false) }
+  }
+
   const save = () => {
     if (!q.questionText.trim()) return setError("Question text is required")
     if (q.options.filter(o => o.trim()).length < 2) return setError("At least 2 options required")
@@ -465,30 +497,27 @@ function MCQModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q: MCQQu
     <ModalShell title={initial ? "Edit MCQ Question" : "Add MCQ Question"} icon={<div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center"><List size={18} className="text-blue-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
         {!initial && (
-          <ModalAIGenerator
-            questionType="mcq"
-            defaultMarks={q.marks}
-            defaultDifficulty={q.difficulty}
-            onFillSingle={(generated) => {
-              setQ(prev => ({
-                ...prev,
-                questionText: generated.questionText || prev.questionText,
-                options: generated.options || prev.options,
-                correctAnswer: generated.correctAnswer || prev.correctAnswer,
-                explanation: generated.explanation || prev.explanation,
-                difficulty: generated.difficulty || prev.difficulty,
-                marks: generated.marks || prev.marks,
-              }))
-            }}
-            onSaveBatch={(batch) => {
-              if (onSaveBatch) {
-                onSaveBatch(batch)
-              } else {
-                batch.forEach(item => onSave(item))
-                onClose()
-              }
-            }}
-          />
+          <>
+            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 space-y-2">
+              <p className="text-xs font-bold text-blue-800">Generate up to 10 topics at once</p>
+              {bulkTopics.map((item, index) => <div key={index} className="flex gap-2">
+                <input value={item.topic} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, topic: e.target.value } : row))} placeholder={`Topic ${index + 1}`} className={inputCls} />
+                <input type="number" min={1} max={60} value={item.count} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, count: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } : row))} className="w-20 rounded-lg border border-gray-200 px-2 text-sm bg-white" />
+                {index === bulkTopics.length - 1 && bulkTopics.length < 10 && <button type="button" onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])} className="rounded-lg border border-gray-200 bg-white hover:bg-gray-50 px-3 text-sm cursor-pointer">+</button>}
+              </div>)}
+              <button type="button" onClick={generateBulk} disabled={isGenerating} className="flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
+                {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Generate All Topics
+              </button>
+            </div>
+            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3">
+              <div className="flex gap-2">
+                <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder="AI topic, e.g. photosynthesis..." className={inputCls} />
+                <button type="button" onClick={generateWithAi} disabled={isGenerating} className="shrink-0 flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
+                  {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {isGenerating ? "Generating..." : "Generate"}
+                </button>
+              </div>
+            </div>
+          </>
         )}
         <div>
           <label className={labelCls}>Question Text *</label>
@@ -574,39 +603,76 @@ function MCQModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q: MCQQu
   )
 }
 
-function TrueFalseModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q: TrueFalseQuestion) => void; onSaveBatch?: (qs: TrueFalseQuestion[]) => void; onClose: () => void; initial?: TrueFalseQuestion }) {
+function TrueFalseModal({ onSave, onClose, initial }: { onSave: (q: TrueFalseQuestion | TrueFalseQuestion[]) => void; onClose: () => void; initial?: TrueFalseQuestion }) {
   const blank = (): TrueFalseQuestion => ({ id: Math.random().toString(36).slice(2), type: "truefalse", questionText: "", difficulty: "medium", marks: 1, correctAnswer: "True", explanation: "", questionImage: "", codeSnippet: "" })
   const [q, setQ] = useState<TrueFalseQuestion>(initial ?? blank())
   const [error, setError] = useState("")
   const [imageError, setImageError] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [bulkTopics, setBulkTopics] = useState([{ topic: "", count: 1 }])
+
+  const generateWithAi = async () => {
+    if (!aiPrompt.trim()) return setError("Enter a topic or statement prompt first")
+    setIsGenerating(true); setError("")
+    try {
+      const res = await fetch("/api/admin/generate-objective-question", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt, type: "truefalse", marks: q.marks, difficulty: q.difficulty }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to generate True/False question")
+      setQ(prev => ({ ...prev, questionText: data.data.questionText, correctAnswer: data.data.correctAnswer, explanation: data.data.explanation }))
+    } catch (err) { setError(err instanceof Error ? err.message : "Failed to generate True/False question") }
+    finally { setIsGenerating(false) }
+  }
+
+  const generateBulk = async () => {
+    const topics = bulkTopics.filter(item => item.topic.trim() && item.count > 0)
+    if (!topics.length) return setError("Add at least one topic and question count")
+    setIsGenerating(true); setError("")
+    try {
+      const res = await fetch("/api/admin/generate-objective-question", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topics, type: "truefalse", marks: q.marks, difficulty: q.difficulty }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Bulk generation failed")
+      onSave(data.data.map((item: any): TrueFalseQuestion => ({
+        ...q, id: Math.random().toString(36).slice(2), questionText: item.questionText,
+        correctAnswer: item.correctAnswer, explanation: item.explanation,
+      })))
+      onClose()
+    } catch (err) { setError(err instanceof Error ? err.message : "Bulk generation failed") }
+    finally { setIsGenerating(false) }
+  }
+
   const save = () => { if (!q.questionText.trim()) return setError("Question text is required"); onSave(q); onClose() }
   return (
     <ModalShell title={initial ? "Edit True/False" : "Add True/False"} icon={<div className="w-9 h-9 rounded-lg bg-teal-50 flex items-center justify-center"><CheckSquare size={18} className="text-teal-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
         {!initial && (
-          <ModalAIGenerator
-            questionType="truefalse"
-            defaultMarks={q.marks}
-            defaultDifficulty={q.difficulty}
-            onFillSingle={(generated) => {
-              setQ(prev => ({
-                ...prev,
-                questionText: generated.questionText || prev.questionText,
-                correctAnswer: (generated.correctAnswer as "True" | "False") || prev.correctAnswer,
-                explanation: generated.explanation || prev.explanation,
-                difficulty: generated.difficulty || prev.difficulty,
-                marks: generated.marks || prev.marks,
-              }))
-            }}
-            onSaveBatch={(batch) => {
-              if (onSaveBatch) {
-                onSaveBatch(batch)
-              } else {
-                batch.forEach(item => onSave(item))
-                onClose()
-              }
-            }}
-          />
+          <>
+            <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-3 space-y-2">
+              <p className="text-xs font-bold text-teal-800">Generate up to 10 topics at once</p>
+              {bulkTopics.map((item, index) => <div key={index} className="flex gap-2">
+                <input value={item.topic} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, topic: e.target.value } : row))} placeholder={`Topic ${index + 1}`} className={inputCls} />
+                <input type="number" min={1} max={60} value={item.count} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, count: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } : row))} className="w-20 rounded-lg border border-gray-200 px-2 text-sm bg-white" />
+                {index === bulkTopics.length - 1 && bulkTopics.length < 10 && <button type="button" onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])} className="rounded-lg border border-gray-200 bg-white hover:bg-gray-50 px-3 text-sm cursor-pointer">+</button>}
+              </div>)}
+              <button type="button" onClick={generateBulk} disabled={isGenerating} className="flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
+                {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Generate All Topics
+              </button>
+            </div>
+            <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-3">
+              <div className="flex gap-2">
+                <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder="AI topic, e.g. JavaScript basics..." className={inputCls} />
+                <button type="button" onClick={generateWithAi} disabled={isGenerating} className="shrink-0 flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
+                  {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {isGenerating ? "Generating..." : "Generate"}
+                </button>
+              </div>
+            </div>
+          </>
         )}
         <div><label className={labelCls}>Question Text *</label>
           <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} className={inputCls + " resize-none"} /></div>
@@ -647,6 +713,8 @@ function TrueFalseModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q:
             ))}
           </div>
         </div>
+        <div><label className={labelCls}>Explanation <span className="text-gray-400 font-normal">(Optional)</span></label>
+          <textarea value={q.explanation} onChange={e => setQ({...q, explanation: e.target.value})} rows={2} className={inputCls + " resize-none"} /></div>
         {error && <p className="text-sm text-red-500 flex items-center gap-1"><AlertCircle size={14}/>{error}</p>}
       </div>
       <ModalFooter note="* required" onCancel={onClose} onSave={save} />
@@ -654,7 +722,7 @@ function TrueFalseModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q:
   )
 }
 
-function DescriptiveModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q: DescriptiveQuestion) => void; onSaveBatch?: (qs: DescriptiveQuestion[]) => void; onClose: () => void; initial?: DescriptiveQuestion }) {
+function DescriptiveModal({ onSave, onClose, initial }: { onSave: (q: DescriptiveQuestion) => void; onClose: () => void; initial?: DescriptiveQuestion }) {
   const blank = (): DescriptiveQuestion => ({ id: Math.random().toString(36).slice(2), type: "descriptive", questionText: "", difficulty: "medium", marks: 5, wordLimit: "", modelAnswer: "", rubric: [], questionImage: "", codeSnippet: "" })
   const [q, setQ] = useState<DescriptiveQuestion>(initial ?? blank())
   const [error, setError] = useState("")
@@ -663,32 +731,6 @@ function DescriptiveModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (
   return (
     <ModalShell title={initial ? "Edit Descriptive" : "Add Descriptive"} icon={<div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center"><AlignLeft size={18} className="text-purple-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
-        {!initial && (
-          <ModalAIGenerator
-            questionType="descriptive"
-            defaultMarks={q.marks}
-            defaultDifficulty={q.difficulty}
-            onFillSingle={(generated) => {
-              setQ(prev => ({
-                ...prev,
-                questionText: generated.questionText || prev.questionText,
-                wordLimit: generated.wordLimit || prev.wordLimit,
-                modelAnswer: generated.modelAnswer || prev.modelAnswer,
-                rubric: generated.rubric || prev.rubric,
-                difficulty: generated.difficulty || prev.difficulty,
-                marks: generated.marks || prev.marks,
-              }))
-            }}
-            onSaveBatch={(batch) => {
-              if (onSaveBatch) {
-                onSaveBatch(batch)
-              } else {
-                batch.forEach(item => onSave(item))
-                onClose()
-              }
-            }}
-          />
-        )}
         <div><label className={labelCls}>Question Text *</label>
           <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} className={inputCls + " resize-none"} /></div>
         <div>
@@ -728,46 +770,91 @@ function DescriptiveModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (
   )
 }
 
-function FillBlanksModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q: FillBlanksQuestion) => void; onSaveBatch?: (qs: FillBlanksQuestion[]) => void; onClose: () => void; initial?: FillBlanksQuestion }) {
+function FillBlanksModal({ onSave, onClose, initial }: { onSave: (q: FillBlanksQuestion | FillBlanksQuestion[]) => void; onClose: () => void; initial?: FillBlanksQuestion }) {
   const blank = (): FillBlanksQuestion => ({ id: Math.random().toString(36).slice(2), type: "fillblanks", questionText: "", difficulty: "medium", marks: 1, blanks: [{ answer: "", alsoAccept: [] }], caseInsensitive: true, questionImage: "", codeSnippet: "" })
   const [q, setQ] = useState<FillBlanksQuestion>(initial ?? blank())
   const [error, setError] = useState("")
   const [imageError, setImageError] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [bulkTopics, setBulkTopics] = useState([{ topic: "", count: 1 }])
+
+  const generateWithAi = async () => {
+    if (!aiPrompt.trim()) return setError("Enter a topic for the fill-in-the-blanks question")
+    setIsGenerating(true); setError("")
+    try {
+      const res = await fetch("/api/admin/generate-objective-question", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt, type: "fillblanks", marks: q.marks, difficulty: q.difficulty }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to generate Fill Blanks question")
+      const item = data.data
+      setQ(prev => ({
+        ...prev,
+        questionText: item.questionText,
+        blanks: (item.blanks || []).map((blank: any) => ({
+          answer: blank.answer,
+          alsoAccept: Array.isArray(blank.alsoAccept) ? blank.alsoAccept : [],
+        })),
+      }))
+    } catch (err) { setError(err instanceof Error ? err.message : "Failed to generate Fill Blanks question") }
+    finally { setIsGenerating(false) }
+  }
+
+  const generateBulk = async () => {
+    const topics = bulkTopics.filter(item => item.topic.trim() && item.count > 0)
+    if (!topics.length) return setError("Add at least one topic and question count")
+    setIsGenerating(true); setError("")
+    try {
+      const res = await fetch("/api/admin/generate-objective-question", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topics, type: "fillblanks", marks: q.marks, difficulty: q.difficulty }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Bulk generation failed")
+      onSave(data.data.map((item: any): FillBlanksQuestion => ({
+        ...q, id: Math.random().toString(36).slice(2), questionText: item.questionText,
+        blanks: (item.blanks || []).map((blank: any) => ({
+          answer: blank.answer, alsoAccept: Array.isArray(blank.alsoAccept) ? blank.alsoAccept : [],
+        })),
+      })))
+      onClose()
+    } catch (err) { setError(err instanceof Error ? err.message : "Bulk generation failed") }
+    finally { setIsGenerating(false) }
+  }
+
   const save = () => {
     if (!q.questionText.trim()) return setError("Question text is required")
     if (q.blanks.some(b => !b.answer.trim())) return setError("All blank answers are required")
     onSave(q); onClose()
   }
+
   return (
     <ModalShell title={initial ? "Edit Fill Blanks" : "Add Fill Blanks"} icon={<div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center"><FileText size={18} className="text-amber-600"/></div>} onClose={onClose}>
       <div className="space-y-4">
         {!initial && (
-          <ModalAIGenerator
-            questionType="fillblanks"
-            defaultMarks={q.marks}
-            defaultDifficulty={q.difficulty}
-            onFillSingle={(generated) => {
-              const text = generated.questionText || ""
-              const matches = text.match(/_{2,}/g) || []
-              const genBlanks = generated.blanks || []
-              const blanks = matches.map((_: string, i: number) => genBlanks[i] || { answer: "", alsoAccept: [] })
-              setQ(prev => ({
-                ...prev,
-                questionText: text,
-                blanks: blanks.length > 0 ? blanks : prev.blanks,
-                difficulty: generated.difficulty || prev.difficulty,
-                marks: generated.marks || prev.marks,
-              }))
-            }}
-            onSaveBatch={(batch) => {
-              if (onSaveBatch) {
-                onSaveBatch(batch)
-              } else {
-                batch.forEach(item => onSave(item))
-                onClose()
-              }
-            }}
-          />
+          <>
+            <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3 space-y-2">
+              <p className="text-xs font-bold text-amber-800">Generate up to 10 topics at once</p>
+              {bulkTopics.map((item, index) => <div key={index} className="flex gap-2">
+                <input value={item.topic} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, topic: e.target.value } : row))} placeholder={`Topic ${index + 1}`} className={inputCls} />
+                <input type="number" min={1} max={60} value={item.count} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, count: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } : row))} className="w-20 rounded-lg border border-gray-200 px-2 text-sm bg-white" />
+                {index === bulkTopics.length - 1 && bulkTopics.length < 10 && <button type="button" onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])} className="rounded-lg border border-gray-200 bg-white hover:bg-gray-50 px-3 text-sm cursor-pointer">+</button>}
+              </div>)}
+              <button type="button" onClick={generateBulk} disabled={isGenerating} className="flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
+                {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Generate All Topics
+              </button>
+            </div>
+            <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+              <div className="flex gap-2">
+                <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder="AI topic, e.g. water cycle..." className={inputCls} />
+                <button type="button" onClick={generateWithAi} disabled={isGenerating} className="shrink-0 flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
+                  {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {isGenerating ? "Generating..." : "Generate"}
+                </button>
+              </div>
+            </div>
+          </>
         )}
         <div><label className={labelCls}>Question Text * <span className="text-xs text-gray-400">(use ___ for blanks)</span></label>
           <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} className={inputCls + " resize-none"} /></div>
@@ -788,6 +875,14 @@ function FillBlanksModal({ onSave, onSaveBatch, onClose, initial }: { onSave: (q
               {imageError && <p className="text-xs text-red-500 mt-1">Failed to load image</p>}
             </div>
           )}
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div><label className={labelCls}>Difficulty</label>
+            <select value={q.difficulty} onChange={e => setQ({...q, difficulty: e.target.value as Difficulty})} className={inputCls}>
+              <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
+            </select></div>
+          <div><label className={labelCls}>Marks</label>
+            <input type="number" value={q.marks} onChange={e => setQ({...q, marks: +e.target.value})} min={1} className={inputCls} /></div>
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -1205,18 +1300,18 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
     setMenuOpen(qId === menuOpen ? null : qId)
   }
 
-  const saveQuestion = (q: Question) => {
+  const saveQuestion = (q: Question | Question[]) => {
+    if (Array.isArray(q)) {
+      setQuestions(prev => [...prev, ...q])
+      setEditQ(null)
+      setModal(null)
+      return
+    }
     setQuestions(prev => {
       const idx = prev.findIndex(p => p.id === q.id)
       if (idx >= 0) { const next = [...prev]; next[idx] = q; return next }
       return [...prev, q]
     })
-  }
-
-  const saveQuestionsBatch = (batch: Question[]) => {
-    setQuestions(prev => [...prev, ...batch])
-    setEditQ(null)
-    setModal(null)
   }
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1375,10 +1470,10 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
           </div>
         </div>
       </div>
-      {modal === "mcq"         && <MCQModal         onSave={saveQuestion as (q: MCQQuestion) => void}         onSaveBatch={saveQuestionsBatch as (qs: MCQQuestion[]) => void}         onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "mcq" ? editQ : undefined} />}
-      {modal === "truefalse"   && <TrueFalseModal   onSave={saveQuestion as (q: TrueFalseQuestion) => void}   onSaveBatch={saveQuestionsBatch as (qs: TrueFalseQuestion[]) => void}   onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "truefalse" ? editQ : undefined} />}
-      {modal === "descriptive" && <DescriptiveModal onSave={saveQuestion as (q: DescriptiveQuestion) => void} onSaveBatch={saveQuestionsBatch as (qs: DescriptiveQuestion[]) => void} onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "descriptive" ? editQ : undefined} />}
-      {modal === "fillblanks"  && <FillBlanksModal  onSave={saveQuestion as (q: FillBlanksQuestion) => void}  onSaveBatch={saveQuestionsBatch as (qs: FillBlanksQuestion[]) => void}  onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "fillblanks" ? editQ : undefined} />}
+      {modal === "mcq"         && <MCQModal         onSave={saveQuestion as (q: MCQQuestion | MCQQuestion[]) => void}         onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "mcq" ? editQ : undefined} />}
+      {modal === "truefalse"   && <TrueFalseModal   onSave={saveQuestion as (q: TrueFalseQuestion | TrueFalseQuestion[]) => void}   onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "truefalse" ? editQ : undefined} />}
+      {modal === "descriptive" && <DescriptiveModal onSave={saveQuestion as (q: DescriptiveQuestion) => void} onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "descriptive" ? editQ : undefined} />}
+      {modal === "fillblanks"  && <FillBlanksModal  onSave={saveQuestion as (q: FillBlanksQuestion | FillBlanksQuestion[]) => void}  onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "fillblanks" ? editQ : undefined} />}
       {modal === "coding"      && <CodingModal      onSave={saveQuestion as (q: CodingQuestion) => void}      onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "coding" ? editQ : undefined} />}
       <CompetitiveExamAIGenerator
         isOpen={showCompetitiveAiModal}
