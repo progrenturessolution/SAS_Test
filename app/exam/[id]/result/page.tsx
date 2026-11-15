@@ -172,7 +172,7 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
                   {result.examId.title} • {new Date(result.submittedAt).toLocaleDateString()}
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 w-full max-w-4xl py-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 w-full max-w-4xl py-2 sm:py-4">
                   <StatCard icon={Target} label="Final Score" value={result.score + " / " + result.maxScore} />
                   <StatCard icon={Award} label="Percentage" value={scorePercentage.toFixed(1) + "%"} />
                   <StatCard icon={Clock} label="Time Taken" value={formatTime(result.timeSpent)} />

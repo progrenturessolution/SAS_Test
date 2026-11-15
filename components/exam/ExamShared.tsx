@@ -70,10 +70,15 @@ export function ExamHeader({
   const initials = studentName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 
   return (
-    <header className="bg-white border-b border-gray-200 px-3 sm:px-6 py-2 sm:py-3 flex items-center justify-between shrink-0 h-16 sm:h-20">
+    <header className="bg-white border-b border-gray-200 px-2 sm:px-6 py-1.5 sm:py-3 flex items-center justify-between shrink-0 h-14 sm:h-20 relative select-none">
       {/* Left section: Logo and Title */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        <ProcrentureLogo />
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        <div className="sm:hidden">
+          <ProcrentureLogo small />
+        </div>
+        <div className="hidden sm:block">
+          <ProcrentureLogo />
+        </div>
         <div className="hidden sm:block h-8 border-l border-gray-200 mx-1" />
         <div className="hidden sm:block">
           <p className="text-xs sm:text-sm font-bold text-foreground line-clamp-1">{title}</p>
@@ -82,38 +87,40 @@ export function ExamHeader({
       </div>
 
       {/* Center section: Timer Block */}
-      <div className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl border-2 transition-all duration-500 ${timerBorder} absolute left-1/2 -translate-x-1/2`}>
-        <Clock className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${timerIconColor}`} />
+      <div className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl border-2 transition-all duration-500 ${timerBorder} absolute left-1/2 -translate-x-1/2 z-10 shadow-xs`}>
+        <Clock className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${timerIconColor} shrink-0`} />
         <div className="text-center">
-          <p className="text-[7px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-widest leading-none mb-0.5">
+          <p className="hidden sm:block text-[7px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-widest leading-none mb-0.5">
             {endTimeLabel ? `Time Left · Closes ${endTimeLabel}` : "Time Left"}
           </p>
-          <p className={`text-base sm:text-2xl font-black tabular-nums leading-none ${timerColor}`}>
+          <p className={`text-sm sm:text-2xl font-black tabular-nums leading-none ${timerColor}`}>
             {timeFormatted}
           </p>
         </div>
       </div>
 
       {/* Right section: Profile and Stats */}
-      <div className="flex items-center gap-2 sm:gap-4">
+      <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
         {warningCount > 0 && (
           <div className="hidden sm:flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
             <span className="text-xs text-amber-700 font-semibold">Warnings: {warningCount}/{maxWarnings}</span>
           </div>
         )}
-        <div className="text-right flex flex-col items-end">
-          <p className="text-[11px] sm:text-sm font-bold text-foreground leading-tight hover:text-primary transition-colors cursor-default">{studentName}</p>
-          <div className="flex items-center gap-1 text-[9px] sm:text-xs text-gray-400 font-medium">
+        <div className="text-right flex flex-col items-end max-w-[70px] xs:max-w-[100px] sm:max-w-none">
+          <p className="text-[10px] sm:text-sm font-bold text-foreground leading-tight truncate hover:text-primary transition-colors cursor-default" title={studentName}>
+            {studentName}
+          </p>
+          <div className="flex items-center gap-1 text-[8px] sm:text-xs text-gray-400 font-medium">
             <span className="hidden sm:inline">Roll No:</span>
-            <span>{rollNo}</span>
+            <span className="truncate">{rollNo}</span>
           </div>
         </div>
-        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-sm border border-gray-200 group relative">
-          <span className="text-white text-[10px] sm:text-xs font-bold">{initials}</span>
+        <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-sm border border-gray-200 group relative">
+          <span className="text-white text-[9px] sm:text-xs font-bold">{initials}</span>
           {/* Simple Mobile Warning indicator */}
           {warningCount > 0 && (
-            <div className="sm:hidden absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center">
-               <span className="text-[8px] text-white font-black">!</span>
+            <div className="sm:hidden absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center shadow-xs" title={`${warningCount} Warning${warningCount > 1 ? 's' : ''}`}>
+               <span className="text-[7px] text-white font-black">{warningCount}</span>
             </div>
           )}
         </div>

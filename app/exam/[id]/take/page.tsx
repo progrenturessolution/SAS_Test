@@ -805,94 +805,94 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             <span className="text-gray-600">General Instructions</span>
           </div>
 
-          <h1 className="text-4xl font-black text-[#2D3A4A] mb-2 tracking-tight">General Instructions</h1>
-          <p className="text-gray-500 font-medium mb-8">Please read all instructions carefully before starting your exam</p>
+          <h1 className="text-2xl sm:text-4xl font-black text-[#2D3A4A] mb-2 tracking-tight">General Instructions</h1>
+          <p className="text-xs sm:text-base text-gray-500 font-medium mb-6 sm:mb-8">Please read all instructions carefully before starting your exam</p>
 
           {/* Scheduled Status Banner */}
           {isExamEnded && (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-8 flex items-center justify-between gap-4 shadow-sm animate-in fade-in">
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8 flex items-center justify-between gap-4 shadow-sm animate-in fade-in">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600 shrink-0">
                   <AlertCircle className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-red-600 uppercase tracking-wider">Examination Window Closed</p>
-                  <p className="text-sm font-bold text-[#2D3A4A]">The scheduled time for this exam has ended. You can no longer start this exam.</p>
+                  <p className="text-xs sm:text-sm font-bold text-[#2D3A4A]">The scheduled time for this exam has ended. You can no longer start this exam.</p>
                 </div>
               </div>
             </div>
           )}
 
           {!scheduleStartReached && countdownTime !== null && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in">
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
-                  <Clock className="w-6 h-6 animate-pulse" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                  <Clock className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
                 </div>
                 <div>
                   <p className="text-xs font-black text-amber-600 uppercase tracking-widest">Scheduled Start Time</p>
-                  <p className="text-base font-bold text-[#2D3A4A]">
+                  <p className="text-sm sm:text-base font-bold text-[#2D3A4A]">
                     Exam starts at {formatScheduleDateTime(getExamStartDateTime(exam.settings))}
                   </p>
                   <p className="text-xs text-gray-500 font-medium">Please review the rules below. The start button will automatically unlock at the exact start time.</p>
                 </div>
               </div>
-              <div className="text-center sm:text-right bg-white px-5 py-3 rounded-xl border border-amber-200 shadow-sm shrink-0">
+              <div className="text-center sm:text-right bg-white px-4 sm:px-5 py-2 sm:py-3 rounded-xl border border-amber-200 shadow-sm shrink-0 w-full sm:w-auto">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Starts in</span>
-                <span className="text-2xl font-black font-mono text-amber-600">{formatCountdown(countdownTime)}</span>
+                <span className="text-xl sm:text-2xl font-black font-mono text-amber-600">{formatCountdown(countdownTime)}</span>
               </div>
             </div>
           )}
 
           {scheduleStartReached && !isExamEnded && exam.settings?.endDate && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-8 flex items-center justify-between gap-4 text-xs text-emerald-800 shadow-sm">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 sm:p-4 mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 text-xs text-emerald-800 shadow-sm">
               <div className="flex items-center gap-2.5">
                 <Clock className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>
                   Exam is active. Scheduled to close & auto-submit at: <strong className="font-bold text-emerald-950">{formatScheduleDateTime(getExamEndDateTime(exam.settings))}</strong>
                 </span>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-0.5 rounded-full shrink-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-0.5 rounded-full shrink-0 self-start sm:self-auto">
                 Active
               </span>
             </div>
           )}
 
           {/* Info Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
             <Card className="bg-white border-gray-100 shadow-sm rounded-2xl">
-              <CardContent className="p-6 flex flex-col items-center text-center gap-2">
+              <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center gap-1.5 sm:gap-2">
                 <Clock className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Duration</p>
-                  <p className="text-lg font-black text-[#2D3A4A]">{exam.duration} Minutes</p>
+                  <p className="text-sm sm:text-lg font-black text-[#2D3A4A]">{exam.duration} Mins</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="bg-white border-gray-100 shadow-sm rounded-2xl">
-              <CardContent className="p-6 flex flex-col items-center text-center gap-2">
+              <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center gap-1.5 sm:gap-2">
                 <FileText className="w-5 h-5 text-gray-400" />
                 <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Questions</p>
-                  <p className="text-lg font-black text-[#2D3A4A]">{exam.sections.flatMap(s => s.questions).length} Questions</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Qs</p>
+                  <p className="text-sm sm:text-lg font-black text-[#2D3A4A]">{exam.sections.flatMap(s => s.questions).length} Qs</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="bg-white border-gray-100 shadow-sm rounded-2xl">
-              <CardContent className="p-6 flex flex-col items-center text-center gap-2">
+              <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center gap-1.5 sm:gap-2">
                 <CheckCircle2 className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Marks</p>
-                  <p className="text-lg font-black text-[#2D3A4A]">{exam.totalMarks} Marks</p>
+                  <p className="text-sm sm:text-lg font-black text-[#2D3A4A]">{exam.totalMarks} Marks</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="bg-white border-gray-100 shadow-sm rounded-2xl">
-              <CardContent className="p-6 flex flex-col items-center text-center gap-2">
+              <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center gap-1.5 sm:gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Passing Score</p>
-                  <p className="text-lg font-black text-[#2D3A4A]">{Math.round((exam.passMarks / exam.totalMarks) * 100)}%</p>
+                  <p className="text-sm sm:text-lg font-black text-[#2D3A4A]">{Math.round((exam.passMarks / exam.totalMarks) * 100)}%</p>
                 </div>
               </CardContent>
             </Card>
@@ -977,22 +977,22 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
             {/* Agreement & Start */}
             <Card className="bg-white border-gray-100 shadow-sm rounded-2xl overflow-hidden mb-12">
-              <CardContent className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-start gap-4 flex-1">
+              <CardContent className="p-4 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-6">
+                <div className="flex items-start gap-3 sm:gap-4 flex-1">
                   <Checkbox 
                     id="agreement" 
                     checked={agreed} 
                     onCheckedChange={(checked) => setAgreed(!!checked)} 
                     className="mt-1 w-5 h-5 rounded-md border-gray-300 data-[state=checked]:bg-[#2D3A4A] data-[state=checked]:border-[#2D3A4A]"
                   />
-                  <label htmlFor="agreement" className="text-sm text-gray-500 font-medium cursor-pointer leading-tight">
+                  <label htmlFor="agreement" className="text-xs sm:text-sm text-gray-600 font-medium cursor-pointer leading-relaxed">
                     I have read and understood all the instructions and agree to abide by the exam rules.
                   </label>
                 </div>
-                <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="flex flex-col-reverse sm:flex-row items-center gap-2.5 sm:gap-3 w-full md:w-auto">
                   <Button 
                     variant="outline" 
-                    className="flex-1 md:flex-none h-12 px-8 rounded-xl font-bold text-gray-500 border-gray-200"
+                    className="w-full sm:w-auto h-11 sm:h-12 px-6 sm:px-8 rounded-xl font-bold text-gray-500 border-gray-200"
                     onClick={() => router.back()}
                   >
                     Go Back
@@ -1000,7 +1000,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                   <Button 
                     disabled={!agreed || (isFaceDetectionEnabled && camStatus !== "active") || !scheduleStartReached || isExamEnded}
                     onClick={() => setIsStarted(true)}
-                    className="flex-1 md:flex-none h-12 px-10 rounded-xl font-black uppercase text-xs tracking-widest bg-[#2D3A4A] text-white hover:bg-[#1a2535] shadow-xl shadow-[#2D3A4A]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto h-11 sm:h-12 px-8 sm:px-10 rounded-xl font-black uppercase text-xs tracking-widest bg-[#2D3A4A] text-white hover:bg-[#1a2535] shadow-xl shadow-[#2D3A4A]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isExamEnded 
                       ? "Exam Ended" 
@@ -1094,21 +1094,33 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const isFullscreenRequired = exam?.settings?.proctoring?.fullscreenExit ?? exam?.proctoring?.fullscreenExit;
 
   return (
-    <div onContextMenu={(e) => { e.preventDefault(); addToast("Right-click is restricted during the exam", "warn"); }} className="flex flex-col h-screen bg-gray-50 overflow-hidden select-none">
+    <div onContextMenu={(e) => { e.preventDefault(); addToast("Right-click is restricted during the exam", "warn"); }} className="flex flex-col h-[100dvh] bg-gray-50 overflow-hidden select-none">
       {!procState.isFullscreen && isFullscreenRequired && (
-        <div className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm text-white p-8">
-          <AlertCircle size={64} className="text-red-500 mb-6 animate-pulse" />
-          <h1 className="text-4xl font-black mb-4 text-center tracking-tight">Fullscreen Required</h1>
-          <p className="text-gray-300 text-center max-w-lg mb-8 leading-relaxed text-lg">
+        <div className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm text-white p-6 sm:p-8">
+          <AlertCircle size={48} className="text-red-500 mb-4 sm:mb-6 animate-pulse sm:w-16 sm:h-16" />
+          <h1 className="text-2xl sm:text-4xl font-black mb-3 sm:mb-4 text-center tracking-tight">Fullscreen Required</h1>
+          <p className="text-gray-300 text-center max-w-lg mb-6 sm:mb-8 leading-relaxed text-sm sm:text-lg">
             This exam must be taken in fullscreen mode to prevent plagiarism. Your exam is temporarily paused (timer is still running on the server).
           </p>
-          <button 
-            onClick={requestFullscreen}
-            className="px-10 py-5 bg-primary text-white rounded-2xl font-bold text-lg hover:bg-accent transition-all transform hover:scale-105 active:scale-95 shadow-xl flex items-center gap-3"
-          >
-            <Shield size={24} />
-            Return to Fullscreen
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs sm:max-w-none justify-center">
+            <button 
+              onClick={requestFullscreen}
+              className="px-6 sm:px-10 py-3.5 sm:py-5 bg-primary text-white rounded-xl sm:rounded-2xl font-bold text-sm sm:text-lg hover:bg-accent transition-all transform hover:scale-105 active:scale-95 shadow-xl flex items-center justify-center gap-2.5"
+            >
+              <Shield size={20} className="sm:w-6 sm:h-6" />
+              Return to Fullscreen
+            </button>
+            <button
+              onClick={() => {
+                // Mobile Safari / touch fallback if device doesn't support requestFullscreen
+                setStateRestored(true);
+                addToast("Continuing in mobile view", "info");
+              }}
+              className="sm:hidden px-4 py-2.5 bg-white/10 text-gray-300 rounded-xl font-semibold text-xs text-center hover:bg-white/20 transition-all"
+            >
+              Continue on Mobile
+            </button>
+          </div>
         </div>
       )}
       <ProctoringWarning
@@ -1143,8 +1155,13 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
       {/* Section Tabs: Questions and Coding Problems */}
       <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0 sticky top-0 z-20">
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="sm:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="sm:hidden flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold shrink-0 transition-colors"
+          title="Open Question Palette"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          <span>Palette</span>
         </button>
         {hasNonCodingQuestions && (
           <button
@@ -1164,7 +1181,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             onClick={() => { setCurrentSection(-2); setCurrentQ(0); setSidebarOpen(false) }}
           >
             <Code className="w-3.5 h-3.5" />
-            <span className="inline">Coding Problems</span>
+            <span className="inline">Coding</span>
             <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${currentSection === -2 ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
               {exam.sections.flatMap(sec => sec.questions.filter(q => q.type === "coding")).length}
             </span>
@@ -1187,9 +1204,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Mobile overlay */}
-        {sidebarOpen && <div className="fixed inset-0 bg-black/40 sm:hidden z-40" onClick={() => setSidebarOpen(false)} />}
+        {sidebarOpen && <div className="fixed inset-0 bg-black/50 sm:hidden z-40 backdrop-blur-xs transition-opacity" onClick={() => setSidebarOpen(false)} />}
         {/* Main question area */}
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4" style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}>
+        <main className="flex-1 overflow-y-auto p-3 sm:p-5 pb-28 sm:pb-8">
           {/* Section header and instructions */}
           {currentSection === -1 && (
             <div className="mb-3 flex items-center gap-2">
@@ -1202,41 +1219,44 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             </div>
           )}
           {/* Question meta */}
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
-            <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
-              <span className="text-white font-bold text-xs">Q{currentQ + 1}</span>
-            </div>
-            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded-full uppercase">
-              {question.type === "fillblanks" ? "Fill" : question.type === "truefalse" ? "T/F" : question.type}
-            </span>
-            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded-full">
-              {question.marks}pts
-            </span>
-            {question.difficulty && (
-              <span className={`px-3 py-1.5 text-xs font-semibold rounded-full ${
-                question.difficulty === "easy" ? "bg-green-100 text-green-600" :
-                question.difficulty === "medium" ? "bg-blue-100 text-blue-600" :
-                "bg-red-100 text-red-600"
-              }`}>
-                {question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                <span className="text-white font-bold text-xs">Q{currentQ + 1}</span>
+              </div>
+              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded-full uppercase">
+                {question.type === "fillblanks" ? "Fill Blanks" : question.type === "truefalse" ? "True/False" : question.type.toUpperCase()}
               </span>
-            )}
-            <div className="ml-auto flex items-center gap-2">
+              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded-full">
+                {question.marks} mark{question.marks > 1 ? "s" : ""}
+              </span>
+              {question.difficulty && (
+                <span className={`px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-full ${
+                  question.difficulty === "easy" ? "bg-green-100 text-green-700" :
+                  question.difficulty === "medium" ? "bg-blue-100 text-blue-700" :
+                  "bg-red-100 text-red-700"
+                }`}>
+                  {question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={() => toggleReview(question._id, section?.type || question.type || "unknown")}
-                className={`px-4 py-2 text-sm font-semibold border rounded-xl transition-colors ${
+                className={`flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold border rounded-xl transition-colors whitespace-nowrap text-center ${
                   isReview(question._id)
                     ? "border-[#F59E0B] bg-amber-50 text-[#F59E0B]"
                     : "border-[#F59E0B] text-[#F59E0B] hover:bg-amber-50"
                 }`}
               >
-                {isReview(question._id) ? "Marked for Review" : "Mark for Review"}
+                {isReview(question._id) ? "★ Marked" : "☆ Review"}
+                <span className="hidden sm:inline">{isReview(question._id) ? " for Review" : " for Review"}</span>
               </button>
               <button
                 onClick={() => setAnswer(question._id, "", section?.type || question.type || "unknown", true)}
-                className="px-4 py-2 text-sm font-semibold border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors whitespace-nowrap text-center"
               >
-                Clear Option
+                Clear<span className="hidden sm:inline"> Option</span>
               </button>
             </div>
           </div>
@@ -1301,15 +1321,15 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
           {/* True / False */}
           {question.type === "truefalse" && (
-            <div className="flex gap-4">
+            <div className="flex gap-3 sm:gap-4">
               {["True", "False"].map((val) => {
                 const selected = getAnswer(question._id)?.answer === val
                 return (
                   <button
                     key={val}
                     onClick={() => setAnswer(question._id, val, section?.type || question.type)}
-                    className={`flex-1 py-6 border-2 rounded-2xl text-center font-bold text-lg transition-all ${
-                      selected ? "border-[#2D3A4A] bg-[#2D3A4A] text-white" : "border-gray-200 bg-white hover:border-gray-300 text-gray-600"
+                    className={`flex-1 py-4 sm:py-6 border-2 rounded-2xl text-center font-bold text-base sm:text-lg transition-all ${
+                      selected ? "border-[#2D3A4A] bg-[#2D3A4A] text-white shadow-sm" : "border-gray-200 bg-white hover:border-gray-300 text-gray-700"
                     }`}
                   >
                     {val}
@@ -1323,14 +1343,14 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           {question.type === "descriptive" && (
             <div>
               <textarea
-                rows={8}
+                rows={6}
                 placeholder="Write your answer here..."
                 value={(getAnswer(question._id)?.answer as string) || ""}
                 onChange={(e) => setAnswer(question._id, e.target.value, section?.type || question.type)}
-                className="w-full border-2 border-gray-200 rounded-2xl p-4 text-sm text-[#1a2535] focus:outline-none focus:border-[#2D3A4A] resize-none transition-colors"
+                className="w-full border-2 border-gray-200 rounded-2xl p-4 text-base sm:text-sm text-[#1a2535] focus:outline-none focus:border-[#2D3A4A] resize-none transition-colors"
               />
               {question.wordLimit && (
-                <p className="text-xs text-gray-400 mt-1 text-right">
+                <p className="text-xs text-gray-400 mt-1 text-right font-medium">
                   {((getAnswer(question._id)?.answer as string) || "").trim().split(/\s+/).filter(Boolean).length} / {question.wordLimit} words
                 </p>
               )}
@@ -1339,16 +1359,18 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
           {/* Fill in the Blanks */}
           {question.type === "fillblanks" && question.blanks && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {question.blanks.map((blank, bi) => {
                 const inputs = blankInputs[question._id] || []
                 return (
-                  <div key={bi} className="flex items-center gap-3">
-                    <span className="w-7 h-7 rounded-full bg-[#F59E0B] text-white text-xs font-bold flex items-center justify-center shrink-0">{bi + 1}</span>
-                    <label className="text-sm text-gray-600 font-medium min-w-0 truncate">{blank.label || `Blank ${bi + 1}`}</label>
+                  <div key={bi} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 sm:p-0 bg-gray-50 sm:bg-transparent rounded-xl border sm:border-0 border-gray-100">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="w-7 h-7 rounded-full bg-[#F59E0B] text-white text-xs font-bold flex items-center justify-center shrink-0">{bi + 1}</span>
+                      <label className="text-xs sm:text-sm text-gray-700 font-semibold min-w-0 truncate">{blank.label || `Blank ${bi + 1}`}</label>
+                    </div>
                     <input
                       type="text"
-                      placeholder={`Answer for blank ${bi + 1}`}
+                      placeholder={`Enter answer for blank ${bi + 1}...`}
                       value={inputs[bi] || ""}
                       onChange={(e) => {
                         const updated = [...(blankInputs[question._id] || question.blanks!.map(() => ""))]
@@ -1356,7 +1378,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                         setBlankInputs((prev) => ({ ...prev, [question._id]: updated }))
                         setAnswer(question._id, updated, section?.type || question.type)
                       }}
-                      className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#F59E0B] transition-colors"
+                      className="w-full sm:flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-[#F59E0B] transition-colors bg-white"
                     />
                   </div>
                 )
@@ -1486,7 +1508,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                                 <option key={l.toLowerCase()} value={l.toLowerCase()}>{l}</option>
                               ))}
                             </select>
-                            <div className="a`absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                             </div>
                           </div>
@@ -1668,11 +1690,11 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           })()}
 
           {/* Navigation buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 sm:mt-8 pb-20 sm:pb-0">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 sm:mt-8 pb-12 sm:pb-0">
             <button
               onClick={goPrev}
-              disabled={currentQ === 0 && currentSection === 0}
-              className="hidden sm:block px-4 sm:px-5 py-3 sm:py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              disabled={currentQ === 0 && (currentSection === 0 || currentSection === -1)}
+              className="hidden sm:block px-4 sm:px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Previous
             </button>
@@ -1682,66 +1704,82 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                   await setAnswer(question._id, getAnswer(question._id)?.answer || "", section?.type || question.type, true);
                   goNext();
                 }}
-                className="px-4 sm:px-5 py-3 sm:py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                className="px-4 sm:px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
               >
                 Skip
               </button>
               <button
                 onClick={async () => {
                   await setAnswer(question._id, getAnswer(question._id)?.answer || "", section?.type || question.type, true);
-                  goNext();
+                  if (currentQ === filteredQuestions.length - 1) {
+                    setShowSubmitConfirm(true);
+                  } else {
+                    goNext();
+                  }
                 }}
-                className="px-4 sm:px-6 py-3 sm:py-2.5 bg-[#2D3A4A] text-white text-sm font-bold rounded-xl hover:bg-[#1a2535] transition-colors"
+                className={`px-5 py-2.5 text-white text-sm font-bold rounded-xl transition-colors shadow-sm ${
+                  currentQ === filteredQuestions.length - 1 ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#2D3A4A] hover:bg-[#1a2535]"
+                }`}
               >
-                Save & Next
+                {currentQ === filteredQuestions.length - 1 ? "Submit Exam" : "Save & Next"}
               </button>
             </div>
           </div>
 
           {/* Mobile Bottom Navigation Bar */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 flex items-center justify-between gap-3 z-50 sm:hidden">
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-3 py-2.5 flex items-center justify-between gap-2 z-40 sm:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.08)] pb-[max(0.625rem,env(safe-area-inset-bottom))]">
             <button
               onClick={goPrev}
-              disabled={currentQ === 0 && currentSection === 0}
-              className="flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 text-gray-600 text-sm font-bold rounded-xl active:bg-gray-100 disabled:opacity-30 transition-colors"
+              disabled={currentQ === 0 && (currentSection === 0 || currentSection === -1)}
+              className="flex items-center justify-center gap-1 py-2.5 px-3 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl active:bg-gray-100 disabled:opacity-30 transition-colors shrink-0"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+              <ChevronLeft className="w-4 h-4" />
               Prev
             </button>
             <button
-              onClick={async () => {
-                await setAnswer(question._id, getAnswer(question._id)?.answer || "", section?.type || question.type, true);
-                goNext();
-              }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 text-gray-600 text-sm font-bold rounded-xl active:bg-gray-100 transition-colors"
+              onClick={() => setSidebarOpen(true)}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-gray-100 text-gray-800 text-xs font-bold rounded-xl active:bg-gray-200 transition-colors shrink-0"
+              title="Open Question Palette"
             >
-              Skip
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 5l7 7-7 7" /></svg>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              Q {currentQ + 1}/{filteredQuestions.length}
             </button>
             <button
               onClick={async () => {
                 await setAnswer(question._id, getAnswer(question._id)?.answer || "", section?.type || question.type, true);
-                goNext();
+                if (currentQ === filteredQuestions.length - 1) {
+                  setShowSubmitConfirm(true);
+                } else {
+                  goNext();
+                }
               }}
-              className="flex-[1.5] flex items-center justify-center gap-2 py-3 bg-[#2D3A4A] text-white text-sm font-bold rounded-xl active:bg-[#1a2535] shadow-lg transition-colors"
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 text-white text-xs font-bold rounded-xl shadow-md transition-colors ${
+                currentQ === filteredQuestions.length - 1 ? "bg-emerald-600 active:bg-emerald-700" : "bg-[#2D3A4A] active:bg-[#1a2535]"
+              }`}
             >
-              Save & Next
-              <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              <span>{currentQ === filteredQuestions.length - 1 ? "Submit Exam" : "Save & Next"}</span>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </button>
           </div>
         </main>
 
         {/* Right sidebar — question palette */}
-        <aside className={`fixed sm:static inset-y-0 right-0 w-64 sm:w-56 bg-white border-l border-gray-200 flex flex-col overflow-y-auto shrink-0 z-40 transition-transform transform ${
+        <aside className={`fixed sm:static inset-y-0 right-0 w-[82vw] max-w-xs sm:w-64 bg-white border-l border-gray-200 flex flex-col overflow-y-auto shrink-0 z-50 transition-transform duration-300 ease-in-out transform shadow-2xl sm:shadow-none ${
           sidebarOpen ? 'translate-x-0' : 'translate-x-full sm:translate-x-0'
         }`}>
-          {/* Close button on mobile */}
-          <button onClick={() => setSidebarOpen(false)} className="sm:hidden a`absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors z-50">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+          {/* Header on mobile */}
+          <div className="sm:hidden flex items-center justify-between p-3.5 border-b border-gray-100 bg-gray-50/80 sticky top-0 z-10 backdrop-blur-xs">
+            <div>
+              <p className="font-bold text-xs text-[#1a2535] uppercase tracking-wider">Question Palette</p>
+              <p className="text-[11px] text-gray-500">{totalAnswered} of {totalQuestions} answered</p>
+            </div>
+            <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
           {/* Camera in Sidebar - Top */}
           {isStarted && !examSubmitted && (exam?.settings?.proctoring?.faceDetection ?? exam?.proctoring?.faceDetection) && (
-            <div className="p-3 border-b border-gray-100 mt-10 sm:mt-0">
+            <div className="p-3 border-b border-gray-100">
               <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Proctoring Camera</p>
               <div className="rounded-lg overflow-hidden border border-gray-300 bg-gray-900 aspect-video shadow-md">
                 <ProctoringCamera onFaceEvent={(evt) => {
@@ -1812,7 +1850,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                         {nonCodingQuestions.filter((q) => { const a = getAnswer(q._id); const ans = a?.answer; return Array.isArray(ans) ? ans.some(Boolean) : !!ans }).length}/{nonCodingQuestions.length}
                       </span>
                     </div>
-                    <div className="grid grid-cols-6 gap-1.5">
+                    <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 sm:gap-1.5">
                       {nonCodingQuestions.map((q, qi) => {
                         const ans = getAnswer(q._id)?.answer
                         const status = getAnswer(q._id)?.isMarkedForReview
@@ -1823,8 +1861,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                         return (
                           <button
                             key={q._id}
-                            onClick={() => { setCurrentSection(si); setCurrentQ(qi) }}
-                            className={`w-8 h-8 rounded-full text-xs font-semibold transition-all ${si === currentSection && qi === currentQ ? "ring-2 ring-offset-1 ring-[#2D3A4A] " : ""}${statusColorMap[status]}`}
+                            onClick={() => { setCurrentSection(si); setCurrentQ(qi); setSidebarOpen(false) }}
+                            className={`w-9 h-9 sm:w-8 sm:h-8 rounded-full text-xs font-semibold transition-all ${si === currentSection && qi === currentQ ? "ring-2 ring-offset-1 ring-[#2D3A4A] " : ""}${statusColorMap[status]}`}
                           >
                             {qi + 1}
                           </button>
@@ -1865,7 +1903,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       {/* Submission Confirmation Modal */}
       {showSubmitConfirm && (
         <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div className="a`absolute inset-0 bg-[#1a2535]/80 backdrop-blur-sm" onClick={() => setShowSubmitConfirm(false)} />
+          <div className="absolute inset-0 bg-[#1a2535]/80 backdrop-blur-sm" onClick={() => setShowSubmitConfirm(false)} />
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="bg-[#2D3A4A] p-6 text-white text-center">
               <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
