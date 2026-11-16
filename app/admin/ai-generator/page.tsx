@@ -1028,9 +1028,9 @@ export default function AIGeneratorPage() {
         </div>
 
         {/* ─── Studio Title & Badges Header ─── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
           <div>
-            <h1 className="text-xl sm:text-3xl font-semibold tracking-tight text-slate-900">
+            <h1 className="text-lg sm:text-xl font-medium tracking-tight text-slate-900">
               Competitive Test Studio
             </h1>
             <p className="sm:hidden text-xs text-slate-500 mt-0.5">
@@ -1157,7 +1157,7 @@ export default function AIGeneratorPage() {
                         {isComplete ? <Check className="w-4 h-4 stroke-[2.5]" /> : s.step}
                       </button>
                       <span
-                        className={`mt-2 text-xs font-medium transition-colors text-center ${
+                        className={`mt-1.5 text-[11px] font-medium transition-colors text-center ${
                           isCurrent ? "text-slate-900" : isComplete ? "text-emerald-700" : "text-slate-400"
                         }`}
                       >
@@ -1179,12 +1179,12 @@ export default function AIGeneratorPage() {
 
           {/* ─── STEP 1: EXAM DETAILS ─── */}
           {currentStep === 1 && (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 pb-10 shadow-xs relative z-20">
-              <div className="mb-8">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-7 pb-8 shadow-xs relative z-20">
+              <div className="mb-6">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
                   STEP 1 · EXAM DETAILS
                 </p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+                <h2 className="mt-1 text-base sm:text-lg font-medium tracking-tight text-slate-900">
                   Choose Exam, Class and Subjects
                 </h2>
               </div>
@@ -1340,7 +1340,7 @@ export default function AIGeneratorPage() {
                     <Layers className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg sm:text-2xl font-semibold tracking-tight text-slate-900">
+                    <h2 className="text-base sm:text-lg font-medium tracking-tight text-slate-900">
                       Content &amp; Blueprint
                     </h2>
                     <p className="text-xs text-slate-500 mt-0.5">
@@ -1385,9 +1385,9 @@ export default function AIGeneratorPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start pt-6">
                 {/* Left Column: Chapter Selection */}
                 <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="w-1 h-4 bg-slate-900 rounded-full" />
-                    <h3 className="text-base font-semibold text-slate-800">Chapter Selection</h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-1 h-3.5 bg-slate-900 rounded-full" />
+                    <h3 className="text-sm font-medium text-slate-800">Chapter Selection</h3>
                   </div>
 
                   {/* Subject Filter Pills */}
@@ -1585,10 +1585,10 @@ export default function AIGeneratorPage() {
 
                 {/* Right Column: Question Blueprint */}
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-4">
+                  <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="w-1 h-4 bg-slate-900 rounded-full" />
-                      <h3 className="text-base font-semibold text-slate-800">Question Blueprint</h3>
+                      <span className="w-1 h-3.5 bg-slate-900 rounded-full" />
+                      <h3 className="text-sm font-medium text-slate-800">Question Blueprint</h3>
                     </div>
                   </div>
 
@@ -2089,7 +2089,7 @@ export default function AIGeneratorPage() {
                                     Assertion (A)
                                   </span>
                                 </div>
-                                <div className="text-xs sm:text-base font-normal leading-relaxed text-slate-800 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                                <div className="text-xs sm:text-sm font-normal leading-relaxed text-slate-800 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                                   <MathRenderer content={parsedAR.assertion} />
                                 </div>
                               </div>
@@ -2100,13 +2100,13 @@ export default function AIGeneratorPage() {
                                     Reason (R)
                                   </span>
                                 </div>
-                                <div className="text-xs sm:text-base font-normal leading-relaxed text-slate-800 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                                <div className="text-xs sm:text-sm font-normal leading-relaxed text-slate-800 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                                   <MathRenderer content={parsedAR.reason} />
                                 </div>
                               </div>
                             </div>
                           ) : (
-                            <div className="text-xs sm:text-base font-normal text-slate-800 pl-0 sm:pl-8 mb-4 leading-relaxed overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                            <div className="text-xs sm:text-sm font-normal text-slate-800 pl-0 sm:pl-8 mb-4 leading-relaxed overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                               <MathRenderer content={q.questionText} />
                             </div>
                           )}
@@ -2201,11 +2201,11 @@ export default function AIGeneratorPage() {
               {/* Left Card: Exam Details */}
               <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-8 shadow-xs flex flex-col justify-between">
                 <div>
-                  <div className="mb-6">
-                    <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
+                  <div className="mb-5">
+                    <h2 className="text-base sm:text-lg font-medium tracking-tight text-slate-900">
                       Exam Details
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       Set the key details for your exam.
                     </p>
                   </div>
@@ -2373,11 +2373,11 @@ export default function AIGeneratorPage() {
               {/* Right Card: Exam Overview */}
               <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-8 shadow-xs flex flex-col justify-between">
                 <div>
-                  <div className="mb-6">
-                    <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
+                  <div className="mb-5">
+                    <h2 className="text-base sm:text-lg font-medium tracking-tight text-slate-900">
                       Exam Overview
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       Review your exam configuration.
                     </p>
                   </div>
@@ -2443,22 +2443,22 @@ export default function AIGeneratorPage() {
                 {/* Bottom Summary Stats Strip */}
                 <div className="mt-8 rounded-2xl bg-slate-50 border border-slate-200/80 p-3.5 sm:p-5 grid grid-cols-3 divide-x divide-slate-200">
                   <div className="text-center px-1 sm:px-2">
-                    <p className="text-[11px] sm:text-xs font-normal text-slate-500 mb-1">Duration</p>
-                    <p className="text-lg sm:text-2xl font-semibold text-slate-800">
-                      {duration} <span className="text-[10px] sm:text-sm font-normal text-slate-500">min</span>
+                    <p className="text-[10px] sm:text-[11px] font-normal text-slate-500 mb-0.5">Duration</p>
+                    <p className="text-sm sm:text-base font-medium text-slate-800">
+                      {duration} <span className="text-[10px] sm:text-xs font-normal text-slate-500">min</span>
                     </p>
                   </div>
 
                   <div className="text-center px-1 sm:px-2">
-                    <p className="text-[11px] sm:text-xs font-normal text-slate-500 mb-1">Total Questions</p>
-                    <p className="text-lg sm:text-2xl font-semibold text-slate-800">
+                    <p className="text-[10px] sm:text-[11px] font-normal text-slate-500 mb-0.5">Total Questions</p>
+                    <p className="text-sm sm:text-base font-medium text-slate-800">
                       {selectedQuestionIds.size > 0 ? selectedQuestionIds.size : totalQuestions}
                     </p>
                   </div>
 
                   <div className="text-center px-1 sm:px-2">
-                    <p className="text-[11px] sm:text-xs font-normal text-slate-500 mb-1">Total Marks</p>
-                    <p className="text-lg sm:text-2xl font-semibold text-slate-800">
+                    <p className="text-[10px] sm:text-[11px] font-normal text-slate-500 mb-0.5">Total Marks</p>
+                    <p className="text-sm sm:text-base font-medium text-slate-800">
                       {examTotalMarks}
                     </p>
                   </div>
@@ -2476,11 +2476,11 @@ export default function AIGeneratorPage() {
                 <div className="absolute top-0 right-0 w-48 h-32 bg-gradient-to-bl from-blue-50/70 to-transparent rounded-bl-full pointer-events-none" />
 
                 <div>
-                  <div className="mb-6 relative z-10">
-                    <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
+                  <div className="mb-5 relative z-10">
+                    <h2 className="text-base sm:text-lg font-medium tracking-tight text-slate-900">
                       Exam Schedule
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       Set the exam start and end date with time.
                     </p>
                   </div>
@@ -2918,69 +2918,69 @@ export default function AIGeneratorPage() {
 
           {/* ─── STEP 6: PUBLISH & CONFIRMATION ─── */}
           {currentStep === 6 && (
-            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-10 shadow-xs">
-              <div className="max-w-3xl mx-auto text-center space-y-6">
-                <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 border border-emerald-200/80 mx-auto flex items-center justify-center shadow-xs">
-                  <CheckCircle2 className="w-8 h-8" />
+            <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-8 shadow-xs">
+              <div className="max-w-2xl mx-auto text-center space-y-5">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200/80 mx-auto flex items-center justify-center shadow-xs">
+                  <CheckCircle2 className="w-6 h-6" />
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-emerald-600">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-emerald-600">
                     STEP 6 · FINAL PUBLISH
                   </p>
-                  <h2 className="mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
+                  <h2 className="mt-1 text-base sm:text-lg font-medium tracking-tight text-slate-900">
                     Ready to Publish Exam Paper
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-lg mx-auto font-normal">
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto font-normal">
                     Review the final summary below. Once published, your exam will be ready in draft status and scheduled for candidates.
                   </p>
                 </div>
 
                 {/* Summary Card Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left pt-2">
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                    <span className="text-[11px] font-medium uppercase text-slate-400 block mb-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left pt-1">
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                    <span className="text-[10px] font-medium uppercase text-slate-400 block mb-0.5">
                       Paper Details
                     </span>
-                    <p className="text-sm font-medium text-slate-800 truncate">
+                    <p className="text-xs sm:text-sm font-medium text-slate-800 truncate">
                       {examTitle || getDefaultExamTitle()}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1 font-normal">
+                    <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
                       {examOverviewName} · {classOverviewText}
                     </p>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                    <span className="text-[11px] font-medium uppercase text-slate-400 block mb-1">
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                    <span className="text-[10px] font-medium uppercase text-slate-400 block mb-0.5">
                       Questions &amp; Marks
                     </span>
-                    <p className="text-sm font-medium text-slate-800">
+                    <p className="text-xs sm:text-sm font-medium text-slate-800">
                       {selectedQuestionIds.size > 0 ? selectedQuestionIds.size : totalQuestions} Questions
                     </p>
-                    <p className="text-xs text-slate-500 mt-1 font-normal">
+                    <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
                       {examTotalMarks} Marks · {duration} min
                     </p>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                    <span className="text-[11px] font-medium uppercase text-slate-400 block mb-1">
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                    <span className="text-[10px] font-medium uppercase text-slate-400 block mb-0.5">
                       Scheduled Window
                     </span>
-                    <p className="text-sm font-medium text-slate-800">
+                    <p className="text-xs sm:text-sm font-medium text-slate-800">
                       {formatDateDisplay(startDate)}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1 font-normal">
+                    <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
                       {startHour}:{startMinute} {startPeriod} – {endHour}:{endMinute} {endPeriod}
                     </p>
                   </div>
                 </div>
 
-                <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
                     type="button"
                     onClick={handleSaveAsExam}
                     disabled={creatingExam || selectedQuestionIds.size === 0}
-                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-sm shadow-md flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md active:scale-[0.99]"
                   >
                     {creatingExam ? (
                       <>
