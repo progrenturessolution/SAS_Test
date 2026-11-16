@@ -168,7 +168,7 @@ export default function AIGeneratorPage() {
   const [examTotalMarks, setExamTotalMarks] = useState<number>(200)
   const [passMarks, setPassMarks] = useState<number>(80)
   const [questionsPerMinute, setQuestionsPerMinute] = useState<string>("")
-  const [minDurationHours, setMinDurationHours] = useState<string>("02")
+  const [minDurationHours, setMinDurationHours] = useState<string>("2")
   const [minDurationMinutes, setMinDurationMinutes] = useState<string>("00")
   const [instructions, setInstructions] = useState<string[]>([
     "Read each question carefully before submitting your answer.",
@@ -2293,10 +2293,10 @@ export default function AIGeneratorPage() {
                               onChange={(e) => setMinDurationHours(e.target.value)}
                               className="w-full appearance-none px-4 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-8"
                             >
-                              <option value="00">00 Hr</option>
-                              <option value="01">01 Hr</option>
-                              <option value="02">02 Hr</option>
-                              <option value="03">03 Hr</option>
+                              <option value="0">0 Hr</option>
+                              <option value="1">1 Hr</option>
+                              <option value="2">2 Hr</option>
+                              <option value="3">3 Hr</option>
                             </select>
                             <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                           </div>
