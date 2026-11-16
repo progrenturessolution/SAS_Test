@@ -50,6 +50,7 @@ import {
 import { MathRenderer } from "@/components/exam/MathRenderer"
 import { PrintableExamPaper } from "@/components/admin/PrintableExamPaper"
 import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
+import { toast } from "sonner"
 
 export interface GeneratedCompetitiveQuestion {
   id: string
@@ -999,17 +1000,18 @@ export default function AIGeneratorPage() {
               aiStatusAnalysis: proctoringSettings.aiStatusAnalysis,
             },
           },
-          status: "draft",
+          status: "active",
         }),
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to create exam")
+      if (!res.ok) throw new Error(data.error || "Failed to publish exam")
 
-      const createdId = data.exam?._id || data.id
-      router.push(`/admin/exams/${createdId}/edit?step=3`)
+      toast.success("Exam paper published successfully!")
+      router.push("/admin/exams")
     } catch (err: any) {
-      setErrorMsg("Error creating exam: " + err.message)
+      toast.error(err.message || "Failed to publish exam")
+      setErrorMsg("Error publishing exam: " + err.message)
     } finally {
       setCreatingExam(false)
     }
@@ -2927,7 +2929,7 @@ export default function AIGeneratorPage() {
                   Ready to Publish Exam Paper
                 </h2>
                 <p className="text-xs text-slate-500 mt-1 font-normal">
-                  Review the final summary below. Once published, your exam will be ready in draft status and scheduled for candidates.
+                  Review the final summary below. Once published, your exam will be active and scheduled for candidates.
                 </p>
               </div>
 
@@ -2969,6 +2971,13 @@ export default function AIGeneratorPage() {
                   </p>
                 </div>
               </div>
+
+              {errorMsg && (
+                <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
 
               {/* Right-aligned Actions at Bottom Right */}
               <div className="mt-7 flex items-center justify-end gap-2.5 pt-1">

@@ -2789,7 +2789,11 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
           duration: String(exam.duration || ""),
           passMarks: String(exam.passMarks || ""),
           totalMarks: String(exam.totalMarks || ""),
-          instructions: (exam.instructions || []).join("\n"),
+          instructions: Array.isArray(exam.instructions)
+            ? exam.instructions.join("\n")
+            : typeof exam.instructions === "string"
+            ? exam.instructions
+            : exam.description || "",
           questionsPerMin: exam.questionsPerMin ? String(exam.questionsPerMin) : "",
         })
         
@@ -2897,7 +2901,11 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
         setQuestions(allQ)
         setLoading(false)
       })
-      .catch(() => { setNotFound(true); setLoading(false) })
+      .catch((err) => {
+        console.error("Failed to load exam in edit page:", err)
+        setNotFound(true)
+        setLoading(false)
+      })
   }, [id])
 
   const validateStep1 = () => {
