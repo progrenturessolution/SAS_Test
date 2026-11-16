@@ -848,6 +848,266 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     }
   }
 
+  // --- Dynamic Section and Question Organization ---
+  const { allFlatQuestions, sectionTabs } = useMemo(() => {
+    if (!exam || !exam.sections?.length) {
+      return { allFlatQuestions: [], sectionTabs: [] }
+    }
+
+    const flat: {
+      question: Question
+      globalIndex: number
+      sectionIndex: number
+      sectionName: string
+      category: "mcq" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding"
+    }[] = []
+
+    exam.sections.forEach((sec, sIdx) => {
+      sec.questions.forEach((q) => {
+        flat.push({
+          question: q,
+          globalIndex: flat.length,
+          sectionIndex: sIdx,
+          sectionName: sec.name || `Section ${sIdx + 1}`,
+          category: getQuestionCategory(q),
+        })
+      })
+    })
+
+    const hasMultipleNamedSections = exam.sections.length > 1 && !exam.sections.every(s => s.name === "Questions")
+
+    let tabs: {
+      id: string
+      title: string
+      shortTitle: string
+      category: string
+      questions: Question[]
+      questionIndices: number[]
+      activeColor: string
+      badgeBg: string
+      dotColor: string
+    }[] = []
+
+    if (hasMultipleNamedSections) {
+      tabs = exam.sections.map((sec, sIdx) => {
+        const matching = flat.filter(f => f.sectionIndex === sIdx)
+        const secCat = sec.type || (matching[0] ? matching[0].category : "mcq")
+        const meta = getCategoryMeta(secCat)
+        return {
+          id: `sec_${sIdx}`,
+          title: sec.name || `Section ${sIdx + 1}`,
+          shortTitle: sec.name || `Sec ${sIdx + 1}`,
+          category: secCat,
+          questions: matching.map(m => m.question),
+          questionIndices: matching.map(m => m.globalIndex),
+          activeColor: meta.activeTabBg,
+          badgeBg: meta.badgeBg,
+          dotColor: meta.dotColor,
+        }
+      }).filter(t => t.questions.length > 0)
+    } else {
+      const categoriesOrder: ("mcq" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding")[] = [
+        "mcq",
+        "assertion",
+        "fillblanks",
+        "truefalse",
+        "descriptive",
+        "coding",
+      ]
+
+      tabs = categoriesOrder.map(cat => {
+        const matching = flat.filter(f => f.category === cat)
+        if (matching.length === 0) return null
+        const meta = getCategoryMeta(cat)
+        return {
+          id: cat,
+          title: meta.label,
+          shortTitle: meta.shortLabel,
+          category: cat,
+          questions: matching.map(m => m.question),
+          questionIndices: matching.map(m => m.globalIndex),
+          activeColor: meta.activeTabBg,
+          badgeBg: meta.badgeBg,
+          dotColor: meta.dotColor,
+        }
+      }).filter(Boolean) as any[]
+    }
+
+    if (tabs.length > 1) {
+      const allTab = {
+        id: "all",
+        title: "All Questions",
+        shortTitle: "All",
+        category: "all",
+        questions: flat.map(f => f.question),
+        questionIndices: flat.map(f => f.globalIndex),
+        activeColor: "bg-[#1E293B] text-white",
+        badgeBg: "bg-slate-100 text-slate-700 border-slate-200",
+        dotColor: "bg-slate-500",
+      }
+      tabs = [allTab, ...tabs]
+    }
+
+    return { allFlatQuestions: flat, sectionTabs: tabs }
+  }, [exam])
+
+  // Automatically select the first specific section tab if activeSectionId is unset or invalid
+  useEffect(() => {
+    if (sectionTabs.length > 0) {
+      const exists = sectionTabs.some(t => t.id === activeSectionId)
+      if (!exists) {
+        const defaultTab = sectionTabs.length > 1 && sectionTabs[0].id === "all" ? sectionTabs[1].id : sectionTabs[0].id
+        setActiveSectionId(defaultTab)
+      }
+    }
+  }, [sectionTabs, activeSectionId])
+
+  const activeTab = sectionTabs.find(t => t.id === activeSectionId) || sectionTabs[0]
+  const filteredQuestions: Question[] = activeTab ? activeTab.questions : []
+  const question: Question | null = filteredQuestions[currentQ] || filteredQuestions[0] || null
+
+  const globalQuestionIndex = question
+    ? allFlatQuestions.findIndex(f => f.question._id === question._id)
+    : 0
+
+  const activeQuestionCategory = question ? getQuestionCategory(question) : "mcq"
+  const activeTabMeta = getCategoryMeta(activeQuestionCategory)
+
+  // Track visited questions for accurate palette status
+  useEffect(() => {
+    if (question?._id && !visitedQuestionIds.includes(question._id)) {
+      setVisitedQuestionIds(prev => [...prev, question._id])
+    }
+  }, [question?._id, visitedQuestionIds])
+
+  // If exam has no questions at all
+  if (!question && allFlatQuestions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <h2 className="text-2xl font-bold mb-4 text-foreground">No questions found for this exam.</h2>
+        <p className="mb-6 text-gray-600">Please contact your instructor or administrator.</p>
+        <button
+          onClick={() => router.push(`/exam/${id}`)}
+          className="px-8 py-3 bg-[#1E293B] text-white text-base font-bold rounded-xl hover:bg-[#0F172A] transition-colors"
+        >
+          Return to Exam Page
+        </button>
+      </div>
+    )
+  }
+
+  const totalQuestions = allFlatQuestions.length
+  const totalAnswered = answers.filter((a) => Array.isArray(a.answer) ? a.answer.some(Boolean) : !!a.answer).length
+
+  const specificTabs = sectionTabs.filter(t => t.id !== "all")
+  const currentSpecificIdx = specificTabs.findIndex(t => t.id === activeTab?.id)
+  const isFirstQuestionOverall = globalQuestionIndex === 0
+  const isLastQuestionOverall = globalQuestionIndex === allFlatQuestions.length - 1
+  const isLastQuestionInSection = currentQ >= filteredQuestions.length - 1
+  const nextSectionTab = currentSpecificIdx >= 0 && currentSpecificIdx < specificTabs.length - 1
+    ? specificTabs[currentSpecificIdx + 1]
+    : null
+  const prevSectionTab = currentSpecificIdx > 0
+    ? specificTabs[currentSpecificIdx - 1]
+    : null
+
+  const goNext = () => {
+    if (currentQ < filteredQuestions.length - 1) {
+      const nextQ = currentQ + 1
+      setCurrentQ(nextQ)
+      setSectionPosMap(p => ({ ...p, [activeTab?.id || ""]: nextQ }))
+    } else if (nextSectionTab && activeTab?.id !== "all") {
+      setActiveSectionId(nextSectionTab.id)
+      setCurrentQ(0)
+      setSectionPosMap(p => ({ ...p, [nextSectionTab.id]: 0 }))
+      addToast(`Moving to next section: ${nextSectionTab.title}`, "info")
+    }
+  }
+
+  const goPrev = () => {
+    if (currentQ > 0) {
+      const prevQ = currentQ - 1
+      setCurrentQ(prevQ)
+      setSectionPosMap(p => ({ ...p, [activeTab?.id || ""]: prevQ }))
+    } else if (prevSectionTab && activeTab?.id !== "all") {
+      const prevQ = prevSectionTab.questions.length - 1
+      setActiveSectionId(prevSectionTab.id)
+      setCurrentQ(prevQ)
+      setSectionPosMap(p => ({ ...p, [prevSectionTab.id]: prevQ }))
+      addToast(`Returned to section: ${prevSectionTab.title}`, "info")
+    }
+  }
+
+  const handleSaveAndNext = async () => {
+    if (!question) return
+    await setAnswer(question._id, getAnswer(question._id)?.answer || "", question.type, true)
+    if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
+      setShowSubmitConfirm(true)
+    } else {
+      goNext()
+    }
+  }
+
+  const handleSkip = async () => {
+    if (!question) return
+    if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
+      setShowSubmitConfirm(true)
+    } else {
+      goNext()
+    }
+  }
+
+  const handleSelectSectionTab = (tabId: string) => {
+    setActiveSectionId(tabId)
+    const savedPos = sectionPosMap[tabId] ?? 0
+    const targetTab = sectionTabs.find(t => t.id === tabId)
+    const maxIdx = targetTab ? targetTab.questions.length - 1 : 0
+    setCurrentQ(Math.min(savedPos, Math.max(0, maxIdx)))
+    setSidebarOpen(false)
+  }
+
+  const handleSelectQuestionFromPalette = (targetQ: Question) => {
+    if (activeSectionId === "all") {
+      const idxInAll = allFlatQuestions.findIndex(f => f.question._id === targetQ._id)
+      if (idxInAll !== -1) {
+        setCurrentQ(idxInAll)
+        setSidebarOpen(false)
+        return
+      }
+    }
+    const targetTab = sectionTabs.find(t => t.id !== "all" && t.questions.some(q => q._id === targetQ._id))
+    if (targetTab) {
+      setActiveSectionId(targetTab.id)
+      const localIdx = targetTab.questions.findIndex(q => q._id === targetQ._id)
+      const validIdx = localIdx >= 0 ? localIdx : 0
+      setCurrentQ(validIdx)
+      setSectionPosMap(p => ({ ...p, [targetTab.id]: validIdx }))
+    } else {
+      const anyTab = sectionTabs.find(t => t.questions.some(q => q._id === targetQ._id))
+      if (anyTab) {
+        setActiveSectionId(anyTab.id)
+        const localIdx = anyTab.questions.findIndex(q => q._id === targetQ._id)
+        setCurrentQ(localIdx >= 0 ? localIdx : 0)
+      }
+    }
+    setSidebarOpen(false)
+  }
+
+  const getQuestionStatus = (q: Question): QuestionStatus => {
+    const a = getAnswer(q._id)
+    if (a?.isMarkedForReview) return "review"
+    const hasAnswer = Array.isArray(a?.answer) ? a.answer.some(Boolean) : !!a?.answer
+    if (hasAnswer) return "answered"
+    if (visitedQuestionIds.includes(q._id)) return "not-answered"
+    return "not-visited"
+  }
+
+  const optionKeys = ["A", "B", "C", "D", "E"]
+  const isFullscreenRequired = exam?.settings?.proctoring?.fullscreenExit ?? exam?.proctoring?.fullscreenExit
+
+  const isAssertion = activeQuestionCategory === "assertion"
+  const parsedAR = question ? parseAssertionReason(question.questionText) : null
+
   // ── Loading / Error / Instructions ──────────────────────────────────────────
 
   if (loading || !exam) {
@@ -1117,267 +1377,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     );
   }
 
-  // --- Dynamic Section and Question Organization ---
-  const { allFlatQuestions, sectionTabs } = useMemo(() => {
-    if (!exam || !exam.sections?.length) {
-      return { allFlatQuestions: [], sectionTabs: [] }
-    }
-
-    const flat: {
-      question: Question
-      globalIndex: number
-      sectionIndex: number
-      sectionName: string
-      category: "mcq" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding"
-    }[] = []
-
-    exam.sections.forEach((sec, sIdx) => {
-      sec.questions.forEach((q) => {
-        flat.push({
-          question: q,
-          globalIndex: flat.length,
-          sectionIndex: sIdx,
-          sectionName: sec.name || `Section ${sIdx + 1}`,
-          category: getQuestionCategory(q),
-        })
-      })
-    })
-
-    const hasMultipleNamedSections = exam.sections.length > 1 && !exam.sections.every(s => s.name === "Questions")
-
-    let tabs: {
-      id: string
-      title: string
-      shortTitle: string
-      category: string
-      questions: Question[]
-      questionIndices: number[]
-      activeColor: string
-      badgeBg: string
-      dotColor: string
-    }[] = []
-
-    if (hasMultipleNamedSections) {
-      tabs = exam.sections.map((sec, sIdx) => {
-        const matching = flat.filter(f => f.sectionIndex === sIdx)
-        const secCat = sec.type || (matching[0] ? matching[0].category : "mcq")
-        const meta = getCategoryMeta(secCat)
-        return {
-          id: `sec_${sIdx}`,
-          title: sec.name || `Section ${sIdx + 1}`,
-          shortTitle: sec.name || `Sec ${sIdx + 1}`,
-          category: secCat,
-          questions: matching.map(m => m.question),
-          questionIndices: matching.map(m => m.globalIndex),
-          activeColor: meta.activeTabBg,
-          badgeBg: meta.badgeBg,
-          dotColor: meta.dotColor,
-        }
-      }).filter(t => t.questions.length > 0)
-    } else {
-      const categoriesOrder: ("mcq" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding")[] = [
-        "mcq",
-        "assertion",
-        "fillblanks",
-        "truefalse",
-        "descriptive",
-        "coding",
-      ]
-
-      tabs = categoriesOrder.map(cat => {
-        const matching = flat.filter(f => f.category === cat)
-        if (matching.length === 0) return null
-        const meta = getCategoryMeta(cat)
-        return {
-          id: cat,
-          title: meta.label,
-          shortTitle: meta.shortLabel,
-          category: cat,
-          questions: matching.map(m => m.question),
-          questionIndices: matching.map(m => m.globalIndex),
-          activeColor: meta.activeTabBg,
-          badgeBg: meta.badgeBg,
-          dotColor: meta.dotColor,
-        }
-      }).filter(Boolean) as any[]
-    }
-
-    if (tabs.length > 1) {
-      const allTab = {
-        id: "all",
-        title: "All Questions",
-        shortTitle: "All",
-        category: "all",
-        questions: flat.map(f => f.question),
-        questionIndices: flat.map(f => f.globalIndex),
-        activeColor: "bg-[#1E293B] text-white",
-        badgeBg: "bg-slate-100 text-slate-700 border-slate-200",
-        dotColor: "bg-slate-500",
-      }
-      tabs = [allTab, ...tabs]
-    }
-
-    return { allFlatQuestions: flat, sectionTabs: tabs }
-  }, [exam])
-
-  // Automatically select the first specific section tab if activeSectionId is unset or invalid
-  useEffect(() => {
-    if (sectionTabs.length > 0) {
-      const exists = sectionTabs.some(t => t.id === activeSectionId)
-      if (!exists) {
-        const defaultTab = sectionTabs.length > 1 && sectionTabs[0].id === "all" ? sectionTabs[1].id : sectionTabs[0].id
-        setActiveSectionId(defaultTab)
-      }
-    }
-  }, [sectionTabs, activeSectionId])
-
-  const activeTab = sectionTabs.find(t => t.id === activeSectionId) || sectionTabs[0]
-  const filteredQuestions: Question[] = activeTab ? activeTab.questions : []
-  const question: Question | null = filteredQuestions[currentQ] || filteredQuestions[0] || null
-
-  const globalQuestionIndex = question
-    ? allFlatQuestions.findIndex(f => f.question._id === question._id)
-    : 0
-
-  const activeQuestionCategory = question ? getQuestionCategory(question) : "mcq"
-  const activeTabMeta = getCategoryMeta(activeQuestionCategory)
-
-  // Track visited questions for accurate palette status
-  useEffect(() => {
-    if (question?._id && !visitedQuestionIds.includes(question._id)) {
-      setVisitedQuestionIds(prev => [...prev, question._id])
-    }
-  }, [question?._id, visitedQuestionIds])
-
-  // If exam has no questions at all
-  if (!question && allFlatQuestions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4 text-foreground">No questions found for this exam.</h2>
-        <p className="mb-6 text-gray-600">Please contact your instructor or administrator.</p>
-        <button
-          onClick={() => router.push(`/exam/${id}`)}
-          className="px-8 py-3 bg-[#1E293B] text-white text-base font-bold rounded-xl hover:bg-[#0F172A] transition-colors"
-        >
-          Return to Exam Page
-        </button>
-      </div>
-    )
-  }
-
-  const totalQuestions = allFlatQuestions.length
-  const totalAnswered = answers.filter((a) => Array.isArray(a.answer) ? a.answer.some(Boolean) : !!a.answer).length
-
-  const specificTabs = sectionTabs.filter(t => t.id !== "all")
-  const currentSpecificIdx = specificTabs.findIndex(t => t.id === activeTab?.id)
-  const isFirstQuestionOverall = globalQuestionIndex === 0
-  const isLastQuestionOverall = globalQuestionIndex === allFlatQuestions.length - 1
-  const isLastQuestionInSection = currentQ >= filteredQuestions.length - 1
-  const nextSectionTab = currentSpecificIdx >= 0 && currentSpecificIdx < specificTabs.length - 1
-    ? specificTabs[currentSpecificIdx + 1]
-    : null
-  const prevSectionTab = currentSpecificIdx > 0
-    ? specificTabs[currentSpecificIdx - 1]
-    : null
-
-  const goNext = () => {
-    if (currentQ < filteredQuestions.length - 1) {
-      const nextQ = currentQ + 1
-      setCurrentQ(nextQ)
-      setSectionPosMap(p => ({ ...p, [activeTab?.id || ""]: nextQ }))
-    } else if (nextSectionTab && activeTab?.id !== "all") {
-      setActiveSectionId(nextSectionTab.id)
-      setCurrentQ(0)
-      setSectionPosMap(p => ({ ...p, [nextSectionTab.id]: 0 }))
-      addToast(`Moving to next section: ${nextSectionTab.title}`, "info")
-    }
-  }
-
-  const goPrev = () => {
-    if (currentQ > 0) {
-      const prevQ = currentQ - 1
-      setCurrentQ(prevQ)
-      setSectionPosMap(p => ({ ...p, [activeTab?.id || ""]: prevQ }))
-    } else if (prevSectionTab && activeTab?.id !== "all") {
-      const prevQ = prevSectionTab.questions.length - 1
-      setActiveSectionId(prevSectionTab.id)
-      setCurrentQ(prevQ)
-      setSectionPosMap(p => ({ ...p, [prevSectionTab.id]: prevQ }))
-      addToast(`Returned to section: ${prevSectionTab.title}`, "info")
-    }
-  }
-
-  const handleSaveAndNext = async () => {
-    if (!question) return
-    await setAnswer(question._id, getAnswer(question._id)?.answer || "", question.type, true)
-    if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
-      setShowSubmitConfirm(true)
-    } else {
-      goNext()
-    }
-  }
-
-  const handleSkip = async () => {
-    if (!question) return
-    if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
-      setShowSubmitConfirm(true)
-    } else {
-      goNext()
-    }
-  }
-
-  const handleSelectSectionTab = (tabId: string) => {
-    setActiveSectionId(tabId)
-    const savedPos = sectionPosMap[tabId] ?? 0
-    const targetTab = sectionTabs.find(t => t.id === tabId)
-    const maxIdx = targetTab ? targetTab.questions.length - 1 : 0
-    setCurrentQ(Math.min(savedPos, Math.max(0, maxIdx)))
-    setSidebarOpen(false)
-  }
-
-  const handleSelectQuestionFromPalette = (targetQ: Question) => {
-    if (activeSectionId === "all") {
-      const idxInAll = allFlatQuestions.findIndex(f => f.question._id === targetQ._id)
-      if (idxInAll !== -1) {
-        setCurrentQ(idxInAll)
-        setSidebarOpen(false)
-        return
-      }
-    }
-    const targetTab = sectionTabs.find(t => t.id !== "all" && t.questions.some(q => q._id === targetQ._id))
-    if (targetTab) {
-      setActiveSectionId(targetTab.id)
-      const localIdx = targetTab.questions.findIndex(q => q._id === targetQ._id)
-      const validIdx = localIdx >= 0 ? localIdx : 0
-      setCurrentQ(validIdx)
-      setSectionPosMap(p => ({ ...p, [targetTab.id]: validIdx }))
-    } else {
-      const anyTab = sectionTabs.find(t => t.questions.some(q => q._id === targetQ._id))
-      if (anyTab) {
-        setActiveSectionId(anyTab.id)
-        const localIdx = anyTab.questions.findIndex(q => q._id === targetQ._id)
-        setCurrentQ(localIdx >= 0 ? localIdx : 0)
-      }
-    }
-    setSidebarOpen(false)
-  }
-
-  const getQuestionStatus = (q: Question): QuestionStatus => {
-    const a = getAnswer(q._id)
-    if (a?.isMarkedForReview) return "review"
-    const hasAnswer = Array.isArray(a?.answer) ? a.answer.some(Boolean) : !!a?.answer
-    if (hasAnswer) return "answered"
-    if (visitedQuestionIds.includes(q._id)) return "not-answered"
-    return "not-visited"
-  }
-
-  const optionKeys = ["A", "B", "C", "D", "E"]
-  const isFullscreenRequired = exam?.settings?.proctoring?.fullscreenExit ?? exam?.proctoring?.fullscreenExit
-
-  const isAssertion = activeQuestionCategory === "assertion"
-  const parsedAR = question ? parseAssertionReason(question.questionText) : null
-
-  return (
     <div onContextMenu={(e) => { e.preventDefault(); addToast("Right-click is restricted during the exam", "warn"); }} className="flex flex-col h-[100dvh] bg-gray-50 overflow-hidden select-none">
       {!procState.isFullscreen && isFullscreenRequired && (
         <div className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm text-white p-6 sm:p-8">
