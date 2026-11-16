@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback, use } from "react"
+import { useState, useEffect, useCallback, use, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Editor from "@monaco-editor/react"
 import { ExamHeader, ProctoringCamera, QuestionStatus, statusColorMap, ProcrentureLogo } from "@/components/exam/ExamShared"
-import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft } from "lucide-react"
+import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft, ChevronRight, Sparkles, LayoutGrid, Layers, ArrowRight, HelpCircle, BookOpen } from "lucide-react"
 import { ProctoringWarning } from "@/components/exam/ProctoringWarning"
 import { useProctoring } from "@/hooks/use-proctoring"
 import { ExamTakingSkeleton } from "@/components/SkeletonLoaders"
@@ -20,9 +20,95 @@ import { MathRenderer } from "@/components/exam/MathRenderer"
 interface Toast { id: number; message: string; type: "warn" | "info" | "danger" }
 let _toastId = 0
 
+// ─── Assertion & Question Category Helpers ────────────────────────────────────
+export function parseAssertionReason(text: string) {
+  if (!text) return null
+  const match = text.match(
+    /(?:Assertion|Statement\s*1)\s*(?:\([Aa1]\))?\s*:\s*([\s\S]*?)(?:Reason|Statement\s*2)\s*(?:\([Rr2]\))?\s*:\s*([\s\S]*)$/i
+  )
+  if (!match) return null
+  return {
+    assertion: match[1].trim(),
+    reason: match[2].trim(),
+  }
+}
+
+export function getQuestionCategory(q: any): "mcq" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding" {
+  if (!q) return "mcq"
+  if (
+    q.questionFormat === "assertion" ||
+    q.questionFormat === "assertion_reason" ||
+    q.type === "assertion" ||
+    Boolean(parseAssertionReason(q.questionText || ""))
+  ) {
+    return "assertion"
+  }
+  if (q.type === "coding") return "coding"
+  if (q.type === "fillblanks" || q.questionFormat === "fib") return "fillblanks"
+  if (q.type === "truefalse" || q.questionFormat === "true_false") return "truefalse"
+  if (q.type === "descriptive") return "descriptive"
+  return "mcq"
+}
+
+export function getCategoryMeta(category: string) {
+  switch (category) {
+    case "assertion":
+      return {
+        label: "Assertion & Reason",
+        shortLabel: "Assertion",
+        badgeBg: "bg-purple-50 text-purple-700 border-purple-200",
+        activeTabBg: "bg-purple-700 text-white",
+        dotColor: "bg-purple-500",
+      }
+    case "fillblanks":
+      return {
+        label: "Fill in the Blanks",
+        shortLabel: "Fill Blanks",
+        badgeBg: "bg-amber-50 text-amber-700 border-amber-200",
+        activeTabBg: "bg-amber-600 text-white",
+        dotColor: "bg-amber-500",
+      }
+    case "truefalse":
+      return {
+        label: "True / False",
+        shortLabel: "True/False",
+        badgeBg: "bg-teal-50 text-teal-700 border-teal-200",
+        activeTabBg: "bg-teal-600 text-white",
+        dotColor: "bg-teal-500",
+      }
+    case "descriptive":
+      return {
+        label: "Descriptive Questions",
+        shortLabel: "Descriptive",
+        badgeBg: "bg-rose-50 text-rose-700 border-rose-200",
+        activeTabBg: "bg-rose-600 text-white",
+        dotColor: "bg-rose-500",
+      }
+    case "coding":
+      return {
+        label: "Coding Challenges",
+        shortLabel: "Coding",
+        badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        activeTabBg: "bg-emerald-600 text-white",
+        dotColor: "bg-emerald-500",
+      }
+    case "mcq":
+    default:
+      return {
+        label: "Multiple Choice Questions",
+        shortLabel: "MCQ",
+        badgeBg: "bg-blue-50 text-blue-700 border-blue-200",
+        activeTabBg: "bg-[#2D3A4A] text-white",
+        dotColor: "bg-blue-500",
+      }
+  }
+}
+
 interface Question {
   _id: string
   type: "mcq" | "truefalse" | "descriptive" | "fillblanks" | "coding"
+  questionFormat?: string
+  negativeMark?: number
   questionText: string
   questionImage?: string
   codeSnippet?: string
@@ -106,6 +192,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const [agreed, setAgreed] = useState(false)
   const [timeLeft, setTimeLeft] = useState(0)
   const [currentSection, setCurrentSection] = useState(0)
+  const [activeSectionId, setActiveSectionId] = useState<string>("")
+  const [sectionPosMap, setSectionPosMap] = useState<Record<string, number>>({})
+  const [visitedQuestionIds, setVisitedQuestionIds] = useState<string[]>([])
   const [currentQ, setCurrentQ] = useState(0)
   const [answers, setAnswers] = useState<Answer[]>([])
   const [activeWarning, setActiveWarning] = useState<string | null>(null)
@@ -157,7 +246,10 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     const examState = {
       attemptId,
       examId: id,
+      activeSectionId,
       currentSection,
+      sectionPosMap,
+      visitedQuestionIds,
       currentQ,
       answers,
       blankInputs,
@@ -170,7 +262,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     } catch (e) {
       console.error("Failed to save exam state:", e)
     }
-  }, [attemptId, id, currentSection, currentQ, answers, blankInputs, timeLeft, codeLanguage])
+  }, [attemptId, id, activeSectionId, currentSection, sectionPosMap, visitedQuestionIds, currentQ, answers, blankInputs, timeLeft, codeLanguage])
 
   // Restore exam state from localStorage + Server merging
   const restoreExamState = useCallback((serverAttempt?: any) => {
@@ -211,6 +303,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
       // 4. Other UI states
       if (localState) {
+        if (localState.activeSectionId) setActiveSectionId(localState.activeSectionId)
+        if (localState.sectionPosMap) setSectionPosMap(localState.sectionPosMap)
+        if (localState.visitedQuestionIds) setVisitedQuestionIds(localState.visitedQuestionIds)
         setCurrentSection(localState.currentSection ?? 0)
         setCurrentQ(localState.currentQ ?? 0)
         setBlankInputs(localState.blankInputs || {})
@@ -352,6 +447,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 setTimeLeft(capWithScheduledEnd(examData.duration * 60))
               }
               setCurrentSection(localState.currentSection ?? initialSection)
+              if (localState.activeSectionId) setActiveSectionId(localState.activeSectionId)
+              if (localState.sectionPosMap) setSectionPosMap(localState.sectionPosMap)
+              if (localState.visitedQuestionIds) setVisitedQuestionIds(localState.visitedQuestionIds)
               setCurrentQ(localState.currentQ ?? 0)
               setBlankInputs(localState.blankInputs || {})
               setCodeLanguage(localState.codeLanguage || {})
@@ -1039,59 +1137,265 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     );
   }
 
-  // --- Section/question logic for separated tabs ---
-  // -1: Questions (non-coding), -2: Coding Problems, >=0: original section
-  let section: Section | null = null
-  let question: Question | null = null
-  let filteredQuestions: Question[] = []
-  if (currentSection === -1) {
-    // Only non-coding questions in Questions tab
-    filteredQuestions = exam.sections.flatMap(sec => sec.questions.filter(q => q.type !== "coding"))
-    question = filteredQuestions[currentQ] || null
-  } else if (currentSection === -2) {
-    // Only coding questions in Coding Problems tab
-    filteredQuestions = exam.sections.flatMap(sec => sec.questions.filter(q => q.type === "coding"))
-    question = filteredQuestions[currentQ] || null
-  } else {
-    // For section tabs, filter out coding questions from display and navigation
-    section = exam.sections[currentSection]
-    if (section) {
-      const nonCodingQuestions = section.questions.filter(q => q.type !== "coding")
-      filteredQuestions = nonCodingQuestions
-      question = nonCodingQuestions[currentQ] || null
+  // --- Dynamic Section and Question Organization ---
+  const { allFlatQuestions, sectionTabs } = useMemo(() => {
+    if (!exam || !exam.sections?.length) {
+      return { allFlatQuestions: [], sectionTabs: [] }
     }
-  }
 
-  // If user has finished all questions in the current tab, show a submit screen/button
-  if (!question) {
+    const flat: {
+      question: Question
+      globalIndex: number
+      sectionIndex: number
+      sectionName: string
+      category: "mcq" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding"
+    }[] = []
+
+    exam.sections.forEach((sec, sIdx) => {
+      sec.questions.forEach((q) => {
+        flat.push({
+          question: q,
+          globalIndex: flat.length,
+          sectionIndex: sIdx,
+          sectionName: sec.name || `Section ${sIdx + 1}`,
+          category: getQuestionCategory(q),
+        })
+      })
+    })
+
+    const hasMultipleNamedSections = exam.sections.length > 1 && !exam.sections.every(s => s.name === "Questions")
+
+    let tabs: {
+      id: string
+      title: string
+      shortTitle: string
+      category: string
+      questions: Question[]
+      questionIndices: number[]
+      activeColor: string
+      badgeBg: string
+      dotColor: string
+    }[] = []
+
+    if (hasMultipleNamedSections) {
+      tabs = exam.sections.map((sec, sIdx) => {
+        const matching = flat.filter(f => f.sectionIndex === sIdx)
+        const secCat = sec.type || (matching[0] ? matching[0].category : "mcq")
+        const meta = getCategoryMeta(secCat)
+        return {
+          id: `sec_${sIdx}`,
+          title: sec.name || `Section ${sIdx + 1}`,
+          shortTitle: sec.name || `Sec ${sIdx + 1}`,
+          category: secCat,
+          questions: matching.map(m => m.question),
+          questionIndices: matching.map(m => m.globalIndex),
+          activeColor: meta.activeTabBg,
+          badgeBg: meta.badgeBg,
+          dotColor: meta.dotColor,
+        }
+      }).filter(t => t.questions.length > 0)
+    } else {
+      const categoriesOrder: ("mcq" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding")[] = [
+        "mcq",
+        "assertion",
+        "fillblanks",
+        "truefalse",
+        "descriptive",
+        "coding",
+      ]
+
+      tabs = categoriesOrder.map(cat => {
+        const matching = flat.filter(f => f.category === cat)
+        if (matching.length === 0) return null
+        const meta = getCategoryMeta(cat)
+        return {
+          id: cat,
+          title: meta.label,
+          shortTitle: meta.shortLabel,
+          category: cat,
+          questions: matching.map(m => m.question),
+          questionIndices: matching.map(m => m.globalIndex),
+          activeColor: meta.activeTabBg,
+          badgeBg: meta.badgeBg,
+          dotColor: meta.dotColor,
+        }
+      }).filter(Boolean) as any[]
+    }
+
+    if (tabs.length > 1) {
+      const allTab = {
+        id: "all",
+        title: "All Questions",
+        shortTitle: "All",
+        category: "all",
+        questions: flat.map(f => f.question),
+        questionIndices: flat.map(f => f.globalIndex),
+        activeColor: "bg-[#1E293B] text-white",
+        badgeBg: "bg-slate-100 text-slate-700 border-slate-200",
+        dotColor: "bg-slate-500",
+      }
+      tabs = [allTab, ...tabs]
+    }
+
+    return { allFlatQuestions: flat, sectionTabs: tabs }
+  }, [exam])
+
+  // Automatically select the first specific section tab if activeSectionId is unset or invalid
+  useEffect(() => {
+    if (sectionTabs.length > 0) {
+      const exists = sectionTabs.some(t => t.id === activeSectionId)
+      if (!exists) {
+        const defaultTab = sectionTabs.length > 1 && sectionTabs[0].id === "all" ? sectionTabs[1].id : sectionTabs[0].id
+        setActiveSectionId(defaultTab)
+      }
+    }
+  }, [sectionTabs, activeSectionId])
+
+  const activeTab = sectionTabs.find(t => t.id === activeSectionId) || sectionTabs[0]
+  const filteredQuestions: Question[] = activeTab ? activeTab.questions : []
+  const question: Question | null = filteredQuestions[currentQ] || filteredQuestions[0] || null
+
+  const globalQuestionIndex = question
+    ? allFlatQuestions.findIndex(f => f.question._id === question._id)
+    : 0
+
+  const activeQuestionCategory = question ? getQuestionCategory(question) : "mcq"
+  const activeTabMeta = getCategoryMeta(activeQuestionCategory)
+
+  // Track visited questions for accurate palette status
+  useEffect(() => {
+    if (question?._id && !visitedQuestionIds.includes(question._id)) {
+      setVisitedQuestionIds(prev => [...prev, question._id])
+    }
+  }, [question?._id, visitedQuestionIds])
+
+  // If exam has no questions at all
+  if (!question && allFlatQuestions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8">
-        <h2 className="text-2xl font-bold mb-4 text-foreground">You have reached the end of this section.</h2>
-        <p className="mb-6 text-gray-600">Please review your answers or submit your exam when ready.</p>
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <h2 className="text-2xl font-bold mb-4 text-foreground">No questions found for this exam.</h2>
+        <p className="mb-6 text-gray-600">Please contact your instructor or administrator.</p>
         <button
-          onClick={handleSubmitExam}
-          className="px-8 py-3 bg-[#10B981] text-white text-lg font-bold rounded-xl hover:bg-[#059669] transition-colors"
-          disabled={submitting}
+          onClick={() => router.push(`/exam/${id}`)}
+          className="px-8 py-3 bg-[#1E293B] text-white text-base font-bold rounded-xl hover:bg-[#0F172A] transition-colors"
         >
-          {submitting ? "Submitting..." : "Submit Exam"}
+          Return to Exam Page
         </button>
       </div>
     )
   }
 
-  const allQuestions = exam.sections.flatMap(sec => sec.questions)
-  const totalQuestions = allQuestions.length
+  const totalQuestions = allFlatQuestions.length
   const totalAnswered = answers.filter((a) => Array.isArray(a.answer) ? a.answer.some(Boolean) : !!a.answer).length
-  const hasCodingQuestions = exam.sections.some(sec => sec.questions.some(q => q.type === "coding"))
-  const hasNonCodingQuestions = exam.sections.some(sec => sec.questions.some(q => q.type !== "coding"))
-  const answeredInSection = currentSection >= 0 && section ? section.questions.filter((q) => {
+
+  const specificTabs = sectionTabs.filter(t => t.id !== "all")
+  const currentSpecificIdx = specificTabs.findIndex(t => t.id === activeTab?.id)
+  const isFirstQuestionOverall = globalQuestionIndex === 0
+  const isLastQuestionOverall = globalQuestionIndex === allFlatQuestions.length - 1
+  const isLastQuestionInSection = currentQ >= filteredQuestions.length - 1
+  const nextSectionTab = currentSpecificIdx >= 0 && currentSpecificIdx < specificTabs.length - 1
+    ? specificTabs[currentSpecificIdx + 1]
+    : null
+  const prevSectionTab = currentSpecificIdx > 0
+    ? specificTabs[currentSpecificIdx - 1]
+    : null
+
+  const goNext = () => {
+    if (currentQ < filteredQuestions.length - 1) {
+      const nextQ = currentQ + 1
+      setCurrentQ(nextQ)
+      setSectionPosMap(p => ({ ...p, [activeTab?.id || ""]: nextQ }))
+    } else if (nextSectionTab && activeTab?.id !== "all") {
+      setActiveSectionId(nextSectionTab.id)
+      setCurrentQ(0)
+      setSectionPosMap(p => ({ ...p, [nextSectionTab.id]: 0 }))
+      addToast(`Moving to next section: ${nextSectionTab.title}`, "info")
+    }
+  }
+
+  const goPrev = () => {
+    if (currentQ > 0) {
+      const prevQ = currentQ - 1
+      setCurrentQ(prevQ)
+      setSectionPosMap(p => ({ ...p, [activeTab?.id || ""]: prevQ }))
+    } else if (prevSectionTab && activeTab?.id !== "all") {
+      const prevQ = prevSectionTab.questions.length - 1
+      setActiveSectionId(prevSectionTab.id)
+      setCurrentQ(prevQ)
+      setSectionPosMap(p => ({ ...p, [prevSectionTab.id]: prevQ }))
+      addToast(`Returned to section: ${prevSectionTab.title}`, "info")
+    }
+  }
+
+  const handleSaveAndNext = async () => {
+    if (!question) return
+    await setAnswer(question._id, getAnswer(question._id)?.answer || "", question.type, true)
+    if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
+      setShowSubmitConfirm(true)
+    } else {
+      goNext()
+    }
+  }
+
+  const handleSkip = async () => {
+    if (!question) return
+    if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
+      setShowSubmitConfirm(true)
+    } else {
+      goNext()
+    }
+  }
+
+  const handleSelectSectionTab = (tabId: string) => {
+    setActiveSectionId(tabId)
+    const savedPos = sectionPosMap[tabId] ?? 0
+    const targetTab = sectionTabs.find(t => t.id === tabId)
+    const maxIdx = targetTab ? targetTab.questions.length - 1 : 0
+    setCurrentQ(Math.min(savedPos, Math.max(0, maxIdx)))
+    setSidebarOpen(false)
+  }
+
+  const handleSelectQuestionFromPalette = (targetQ: Question) => {
+    if (activeSectionId === "all") {
+      const idxInAll = allFlatQuestions.findIndex(f => f.question._id === targetQ._id)
+      if (idxInAll !== -1) {
+        setCurrentQ(idxInAll)
+        setSidebarOpen(false)
+        return
+      }
+    }
+    const targetTab = sectionTabs.find(t => t.id !== "all" && t.questions.some(q => q._id === targetQ._id))
+    if (targetTab) {
+      setActiveSectionId(targetTab.id)
+      const localIdx = targetTab.questions.findIndex(q => q._id === targetQ._id)
+      const validIdx = localIdx >= 0 ? localIdx : 0
+      setCurrentQ(validIdx)
+      setSectionPosMap(p => ({ ...p, [targetTab.id]: validIdx }))
+    } else {
+      const anyTab = sectionTabs.find(t => t.questions.some(q => q._id === targetQ._id))
+      if (anyTab) {
+        setActiveSectionId(anyTab.id)
+        const localIdx = anyTab.questions.findIndex(q => q._id === targetQ._id)
+        setCurrentQ(localIdx >= 0 ? localIdx : 0)
+      }
+    }
+    setSidebarOpen(false)
+  }
+
+  const getQuestionStatus = (q: Question): QuestionStatus => {
     const a = getAnswer(q._id)
-    return Array.isArray(a?.answer) ? a!.answer.some(Boolean) : !!a?.answer
-  }).length : 0
+    if (a?.isMarkedForReview) return "review"
+    const hasAnswer = Array.isArray(a?.answer) ? a.answer.some(Boolean) : !!a?.answer
+    if (hasAnswer) return "answered"
+    if (visitedQuestionIds.includes(q._id)) return "not-answered"
+    return "not-visited"
+  }
 
   const optionKeys = ["A", "B", "C", "D", "E"]
+  const isFullscreenRequired = exam?.settings?.proctoring?.fullscreenExit ?? exam?.proctoring?.fullscreenExit
 
-  const isFullscreenRequired = exam?.settings?.proctoring?.fullscreenExit ?? exam?.proctoring?.fullscreenExit;
+  const isAssertion = activeQuestionCategory === "assertion"
+  const parsedAR = question ? parseAssertionReason(question.questionText) : null
 
   return (
     <div onContextMenu={(e) => { e.preventDefault(); addToast("Right-click is restricted during the exam", "warn"); }} className="flex flex-col h-[100dvh] bg-gray-50 overflow-hidden select-none">
@@ -1105,18 +1409,17 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs sm:max-w-none justify-center">
             <button 
               onClick={requestFullscreen}
-              className="px-6 sm:px-10 py-3.5 sm:py-5 bg-primary text-white rounded-xl sm:rounded-2xl font-bold text-sm sm:text-lg hover:bg-accent transition-all transform hover:scale-105 active:scale-95 shadow-xl flex items-center justify-center gap-2.5"
+              className="px-6 sm:px-10 py-3.5 sm:py-5 bg-primary text-white rounded-xl sm:rounded-2xl font-bold text-sm sm:text-lg hover:bg-accent transition-all transform hover:scale-105 active:scale-95 shadow-xl flex items-center justify-center gap-2.5 cursor-pointer"
             >
               <Shield size={20} className="sm:w-6 sm:h-6" />
               Return to Fullscreen
             </button>
             <button
               onClick={() => {
-                // Mobile Safari / touch fallback if device doesn't support requestFullscreen
-                setStateRestored(true);
-                addToast("Continuing in mobile view", "info");
+                setStateRestored(true)
+                addToast("Continuing in mobile view", "info")
               }}
-              className="sm:hidden px-4 py-2.5 bg-white/10 text-gray-300 rounded-xl font-semibold text-xs text-center hover:bg-white/20 transition-all"
+              className="sm:hidden px-4 py-2.5 bg-white/10 text-gray-300 rounded-xl font-semibold text-xs text-center hover:bg-white/20 transition-all cursor-pointer"
             >
               Continue on Mobile
             </button>
@@ -1140,7 +1443,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         return (
           <ExamHeader
             title={exam.title}
-            section={section ? section.name : (currentSection === -2 ? "Coding Problems" : "Questions")}
+            section={activeTab ? activeTab.title : "Examination"}
             timeLeft={timeLeft}
             duration={exam.duration * 60}
             studentName={studentName}
@@ -1153,50 +1456,61 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         )
       })()}
 
-      {/* Section Tabs: Questions and Coding Problems */}
-      <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0 sticky top-0 z-20">
+      {/* ─── Modern Responsive Section Navigation Bar ─── */}
+      <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-2.5 flex items-center gap-2 overflow-x-auto shrink-0 sticky top-0 z-20 shadow-2xs">
+        {/* Mobile Question Palette Toggle */}
         <button
           onClick={() => setSidebarOpen(true)}
-          className="sm:hidden flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold shrink-0 transition-colors"
+          className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold shrink-0 transition-colors border border-gray-200 cursor-pointer"
           title="Open Question Palette"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
           <span>Palette</span>
         </button>
-        {hasNonCodingQuestions && (
-          <button
-            className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${currentSection === -1 ? "bg-accent text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
-            onClick={() => { setCurrentSection(-1); setCurrentQ(0); setSidebarOpen(false) }}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
-            Questions
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${currentSection === -1 ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
-              {exam.sections.flatMap(sec => sec.questions.filter(q => q.type !== "coding")).length}
+
+        {/* Section Tabs */}
+        {sectionTabs.map((tab) => {
+          const isActive = activeSectionId === tab.id
+          const answeredCount = tab.questions.filter((q) => {
+            const a = getAnswer(q._id)
+            return Array.isArray(a?.answer) ? a.answer.some(Boolean) : !!a?.answer
+          }).length
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleSelectSectionTab(tab.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
+                isActive
+                  ? `${tab.activeColor} shadow-sm scale-[1.02]`
+                  : "bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900 border border-gray-200/80"
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${isActive ? "bg-white" : tab.dotColor}`} />
+              <span>{tab.shortTitle}</span>
+              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                isActive ? "bg-white/20 text-white" : "bg-gray-200/70 text-gray-600"
+              }`}>
+                {answeredCount}/{tab.questions.length}
+              </span>
+            </button>
+          )
+        })}
+
+        {/* Overall progress on desktop */}
+        <div className="ml-auto flex items-center gap-3 shrink-0">
+          <div className="hidden md:flex flex-col items-end">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+              Overall Progress
             </span>
-          </button>
-        )}
-        {hasCodingQuestions && (
-          <button
-            className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${currentSection === -2 ? "bg-accent text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
-            onClick={() => { setCurrentSection(-2); setCurrentQ(0); setSidebarOpen(false) }}
-          >
-            <Code className="w-3.5 h-3.5" />
-            <span className="inline">Coding</span>
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${currentSection === -2 ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
-              {exam.sections.flatMap(sec => sec.questions.filter(q => q.type === "coding")).length}
-            </span>
-          </button>
-        )}
-        <div className="ml-auto flex items-center gap-3">
-          <div className="hidden sm:flex flex-col items-end">
-             <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 transition-all duration-500" 
-                  style={{ width: `${(totalAnswered/totalQuestions)*100}%` }}
-                />
-             </div>
+            <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+              <div 
+                className="h-full bg-emerald-500 transition-all duration-500" 
+                style={{ width: `${totalQuestions > 0 ? (totalAnswered / totalQuestions) * 100 : 0}%` }}
+              />
+            </div>
           </div>
-          <span className="text-xs sm:text-sm font-bold text-emerald-600 whitespace-nowrap bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
+          <span className="text-xs sm:text-sm font-black text-emerald-700 whitespace-nowrap bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200 shadow-2xs">
             {totalAnswered}/{totalQuestions}
           </span>
         </div>

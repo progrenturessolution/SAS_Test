@@ -25,6 +25,15 @@ export interface IAttempt extends Document {
   percentage?: number
   passed?: boolean
   isGraded?: boolean
+  sectionResults?: {
+    name: string
+    type: string
+    attempted: number
+    total: number
+    correctOrMarked: number
+    score: number
+    maxScore: number
+  }[]
   proctoring: {
     warnings: number
     events: {
@@ -66,6 +75,17 @@ const AttemptSchema = new Schema<IAttempt>(
     percentage: Number,
     passed: Boolean,
     isGraded: { type: Boolean, default: false },
+    sectionResults: [
+      {
+        name: String,
+        type: String,
+        attempted: Number,
+        total: Number,
+        correctOrMarked: Number,
+        score: Number,
+        maxScore: Number,
+      },
+    ],
     proctoring: {
       warnings: { type: Number, default: 0 },
       events: [

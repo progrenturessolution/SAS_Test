@@ -2419,19 +2419,54 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
         throw new Error("End Date & Time must be after Start Date & Time")
       }
 
-      const sections = [{
-        name: "Questions",
-        type: questions[0]?.type || "mcq",
-        negativeMarking: step2.negativeMarking,
-        sectionNegativeMark: step2.sectionNegativeMark,
-        questionRange: `1-${questions.length}`,
-        questions: questions.map(({ id: _id, ...q }) => ({
-          ...q,
-          correctAnswer: q.type === "fillblanks"
-            ? (q as FillBlanksQuestion).blanks.map(b => b.answer)
-            : (q as MCQQuestion | TrueFalseQuestion).correctAnswer ?? ""
-        }))
-      }]
+      const typeTitles: Record<string, string> = {
+        mcq: "Multiple Choice Questions",
+        truefalse: "True / False Questions",
+        fillblanks: "Fill in the Blanks",
+        descriptive: "Descriptive Questions",
+        coding: "Coding Challenges",
+      }
+      
+      const typeOrder = ["mcq", "truefalse", "fillblanks", "descriptive", "coding"]
+      const groupedTypes = typeOrder.filter(t => questions.some(q => q.type === t))
+
+      let sections: any[] = []
+      if (groupedTypes.length <= 1) {
+        sections = [{
+          name: questions[0]?.type ? (typeTitles[questions[0].type] || "Questions") : "Questions",
+          type: questions[0]?.type || "mcq",
+          negativeMarking: step2.negativeMarking,
+          sectionNegativeMark: step2.sectionNegativeMark,
+          questionRange: `1-${questions.length}`,
+          questions: questions.map(({ id: _id, ...q }) => ({
+            ...q,
+            correctAnswer: q.type === "fillblanks"
+              ? (q as FillBlanksQuestion).blanks.map(b => b.answer)
+              : (q as MCQQuestion | TrueFalseQuestion).correctAnswer ?? ""
+          }))
+        }]
+      } else {
+        let runningCount = 1
+        sections = groupedTypes.map(t => {
+          const qs = questions.filter(q => q.type === t)
+          const startNum = runningCount
+          const endNum = runningCount + qs.length - 1
+          runningCount = endNum + 1
+          return {
+            name: typeTitles[t] || "Questions",
+            type: t,
+            negativeMarking: step2.negativeMarking,
+            sectionNegativeMark: step2.sectionNegativeMark,
+            questionRange: `${startNum}-${endNum}`,
+            questions: qs.map(({ id: _id, ...q }) => ({
+              ...q,
+              correctAnswer: q.type === "fillblanks"
+                ? (q as FillBlanksQuestion).blanks.map(b => b.answer)
+                : (q as MCQQuestion | TrueFalseQuestion).correctAnswer ?? ""
+            }))
+          }
+        })
+      }
       const payload = {
         title: step1.title,
         subject: "",

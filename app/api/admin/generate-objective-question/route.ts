@@ -32,8 +32,8 @@ export async function POST(req: Request) {
     if (!isBulk && (typeof prompt !== "string" || !prompt.trim())) {
       return NextResponse.json({ error: "Topic or question prompt is required" }, { status: 400 })
     }
-    if (type !== "mcq" && type !== "truefalse" && type !== "fillblanks") {
-      return NextResponse.json({ error: "Unsupported objective question type" }, { status: 400 })
+    if (type !== "mcq" && type !== "truefalse" && type !== "fillblanks" && type !== "descriptive") {
+      return NextResponse.json({ error: "Unsupported question type" }, { status: 400 })
     }
 
     const keys = getGeminiApiKeys()
@@ -45,13 +45,17 @@ export async function POST(req: Request) {
       ? `{"questionText":"string","options":["string","string","string","string"],"correctAnswer":"A","explanation":"string"}`
       : type === "truefalse"
         ? `{"questionText":"string","correctAnswer":"True","explanation":"string"}`
-        : `{"questionText":"string containing one or more ___ blank markers","blanks":[{"answer":"string","alsoAccept":["string"]}]}`
+        : type === "fillblanks"
+          ? `{"questionText":"string containing one or more ___ blank markers","blanks":[{"answer":"string","alsoAccept":["string"]}]}`
+          : `{"questionText":"string","wordLimit":"150-200 words","modelAnswer":"string","rubric":["criterion 1","criterion 2","criterion 3"]}`
 
     const questionKind = type === "mcq"
       ? "multiple-choice question with exactly four options"
       : type === "truefalse"
         ? "clear true/false statement"
-        : "fill-in-the-blanks question with one or more blank markers"
+        : type === "fillblanks"
+          ? "fill-in-the-blanks question with one or more blank markers"
+          : "descriptive question with model answer and grading rubric"
 
     const promptText = `You are an expert exam question writer. Create ${isBulk ? "the requested questions for every topic below" : `one ${questionKind}`}.
 Topic/request:
@@ -63,6 +67,7 @@ Return only valid JSON ${isBulk ? `as an array, with each item in this exact sha
 For MCQ, correctAnswer must be exactly one of A, B, C, or D and options must be distinct.
 For True/False, correctAnswer must be exactly True or False.
 For Fill in the Blanks, questionText must contain one ___ marker for every item in blanks. Return the answers in the same order as the markers.
+For Descriptive, provide an engaging questionText, suggested wordLimit, comprehensive modelAnswer, and a 3-point rubric array.
 For any mathematical formula or scientific notation, use standard LaTeX math syntax (e.g. $F = ma$, $\\frac{a}{b}$, $H_2SO_4$).
 Avoid ambiguous wording, trick questions, duplicate options, markdown headings, and markdown code fences.`
 
@@ -134,6 +139,14 @@ Avoid ambiguous wording, trick questions, duplicate options, markdown headings, 
           if (item.blanks.length === 0) {
             item.blanks = [{ answer: "answer", alsoAccept: [] }]
           }
+        }
+      }
+
+      if (type === "descriptive") {
+        if (typeof item.modelAnswer !== "string") item.modelAnswer = item.explanation || ""
+        if (typeof item.wordLimit !== "string") item.wordLimit = "150-200 words"
+        if (!Array.isArray(item.rubric) || item.rubric.length === 0) {
+          item.rubric = ["Understanding of core concepts", "Accuracy and completeness", "Clarity and structure"]
         }
       }
 

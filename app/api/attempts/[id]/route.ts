@@ -131,19 +131,36 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const exam = await Exam.findById(attempt.examId)
     let score = 0
     let maxScore = 0
+    const sectionResults: {
+      name: string
+      type: string
+      attempted: number
+      total: number
+      correctOrMarked: number
+      score: number
+      maxScore: number
+    }[] = []
 
     if (exam) {
       for (const section of exam.sections as any[]) {
         const sectionNegativeMarking = section.negativeMarking || exam.settings?.negativeMarking || false;
         const sectionNegativeValue = section.sectionNegativeMark ?? 0;
 
+        let secScore = 0
+        let secMaxScore = 0
+        let secAttempted = 0
+        let secCorrectOrMarked = 0
+
         for (const q of section.questions as IQuestion[]) {
+          secMaxScore += q.marks
           maxScore += q.marks
           const studentAnswer = attempt.answers.find(
             (a: { questionId: string }) => a.questionId === q._id?.toString()
           )
           
-          if (!studentAnswer || !studentAnswer.answer) continue
+          if (!studentAnswer || !studentAnswer.answer || (Array.isArray(studentAnswer.answer) && !studentAnswer.answer.some(Boolean))) continue
+
+          secAttempted++
 
           let isCorrect = false;
           let earnedMarks = 0;
@@ -193,16 +210,30 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           }
 
           if (isCorrect) {
+            secCorrectOrMarked++
             score += earnedMarks;
+            secScore += earnedMarks;
           } else if (earnedMarks > 0) {
-              // Partial credit case
-              score += earnedMarks;
+            secCorrectOrMarked++
+            score += earnedMarks;
+            secScore += earnedMarks;
           } else if (sectionNegativeMarking && (q.type === "mcq" || q.type === "truefalse")) {
             // Apply negative marks only if explicitly wrong (not just empty)
             const negativeValue = q.negativeMark ?? sectionNegativeValue;
             score -= Math.abs(negativeValue);
+            secScore -= Math.abs(negativeValue);
           }
         }
+
+        sectionResults.push({
+          name: section.name || "Questions",
+          type: section.type || "mcq",
+          attempted: secAttempted,
+          total: section.questions.length,
+          correctOrMarked: secCorrectOrMarked,
+          score: Math.round(secScore * 100) / 100,
+          maxScore: secMaxScore,
+        })
       }
     }
 
@@ -227,6 +258,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     attempt.score = Math.round(score * 100) / 100
     attempt.maxScore = maxScore
     attempt.percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
+    attempt.sectionResults = sectionResults
     // passed = scored at least passMarks (absolute, not relative)
     attempt.passed = exam ? attempt.score >= exam.passMarks : false
 
