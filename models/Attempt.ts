@@ -47,6 +47,19 @@ export interface IAttempt extends Document {
   lastSavedAt?: Date
 }
 
+const SectionResultSchema = new Schema(
+  {
+    name: { type: String, default: "" },
+    type: { type: String, default: "mcq" },
+    attempted: { type: Number, default: 0 },
+    total: { type: Number, default: 0 },
+    correctOrMarked: { type: Number, default: 0 },
+    score: { type: Number, default: 0 },
+    maxScore: { type: Number, default: 0 },
+  },
+  { _id: false, strict: false }
+)
+
 const AttemptSchema = new Schema<IAttempt>(
   {
     examId: { type: Schema.Types.ObjectId, ref: "Exam", required: true, index: true },
@@ -75,17 +88,10 @@ const AttemptSchema = new Schema<IAttempt>(
     percentage: Number,
     passed: Boolean,
     isGraded: { type: Boolean, default: false },
-    sectionResults: [
-      {
-        name: String,
-        type: String,
-        attempted: Number,
-        total: Number,
-        correctOrMarked: Number,
-        score: Number,
-        maxScore: Number,
-      },
-    ],
+    sectionResults: {
+      type: [SectionResultSchema],
+      default: [],
+    },
     proctoring: {
       warnings: { type: Number, default: 0 },
       events: [

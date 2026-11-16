@@ -76,6 +76,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       delete (sanitizedAttempt as any).percentage
       delete (sanitizedAttempt as any).passed
       delete (sanitizedAttempt as any).manualScore
+      delete (sanitizedAttempt as any).sectionResults
       if (sanitizedAttempt.answers) {
         sanitizedAttempt.answers = sanitizedAttempt.answers.map((ans: any) => {
           const { correct, marks, manualScore, ...rest } = ans
@@ -258,7 +259,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     attempt.score = Math.round(score * 100) / 100
     attempt.maxScore = maxScore
     attempt.percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
-    attempt.sectionResults = sectionResults
+    attempt.set("sectionResults", sectionResults)
+    attempt.markModified("sectionResults")
     // passed = scored at least passMarks (absolute, not relative)
     attempt.passed = exam ? attempt.score >= exam.passMarks : false
 
@@ -272,6 +274,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       delete (sanitizedAttempt as any).percentage
       delete (sanitizedAttempt as any).passed
       delete (sanitizedAttempt as any).manualScore
+      delete (sanitizedAttempt as any).sectionResults
       if (sanitizedAttempt.answers) {
         sanitizedAttempt.answers = sanitizedAttempt.answers.map((ans: any) => {
           const { correct, marks, manualScore, ...rest } = ans
