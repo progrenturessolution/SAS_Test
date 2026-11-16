@@ -44,8 +44,30 @@ export function getQuestionCategory(q: any): "mcq" | "assertion" | "fillblanks" 
     return "assertion"
   }
   if (q.type === "coding") return "coding"
-  if (q.type === "fillblanks" || q.questionFormat === "fib") return "fillblanks"
-  if (q.type === "truefalse" || q.questionFormat === "true_false") return "truefalse"
+  if (
+    q.type === "fillblanks" ||
+    q.questionFormat === "fib" ||
+    q.questionFormat === "fill_in_the_blanks" ||
+    q.questionFormat === "fillblanks" ||
+    (Array.isArray(q.blanks) && q.blanks.length > 0) ||
+    (typeof q.questionText === "string" && (
+      q.questionText.includes("______") ||
+      /_{2,}/.test(q.questionText) ||
+      q.questionText.toLowerCase().includes("fill in the blank") ||
+      q.questionText.toLowerCase().includes("fill in the blanks")
+    ))
+  ) {
+    return "fillblanks"
+  }
+  if (
+    q.type === "truefalse" ||
+    q.questionFormat === "true_false" ||
+    q.questionText?.toLowerCase().startsWith("true or false") ||
+    q.questionText?.toLowerCase().startsWith("true/false") ||
+    (Array.isArray(q.options) && q.options.length === 2 && q.options.some((o: string) => String(o).toLowerCase() === "true"))
+  ) {
+    return "truefalse"
+  }
   if (q.type === "descriptive") return "descriptive"
   return "mcq"
 }
@@ -1483,6 +1505,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           {/* Question meta & Section badge */}
           {(() => {
             const isAssertion = activeQuestionCategory === "assertion";
+            const isFillBlanks = activeQuestionCategory === "fillblanks";
+            const isTrueFalse = activeQuestionCategory === "truefalse";
             const parsedAR = isAssertion && question ? parseAssertionReason(question.questionText) : null;
 
             return (
@@ -1581,8 +1605,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                   </div>
                 )}
 
-                {/* MCQ or Assertion (with choices) */}
-                {(question.type === "mcq" || isAssertion) && question.options && (
+                {/* MCQ or Assertion or FIB with choices */}
+                {(question.type === "mcq" || isAssertion || (isFillBlanks && question.options && question.options.length > 0)) && question.options && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     {(question.shuffledOptionIndices || question.options!.map((_, i) => i)).map((shuffledIndex, oi) => {
                       const opt = question.options![shuffledIndex];
@@ -1618,7 +1642,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 )}
 
                 {/* True / False */}
-                {question.type === "truefalse" && (
+                {(question.type === "truefalse" || isTrueFalse) && (
                   <div className="flex gap-3 sm:gap-4">
                     {["True", "False"].map((val) => {
                       const selected = getAnswer(question._id)?.answer === val;
@@ -1656,7 +1680,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 )}
 
                 {/* Fill in the Blanks */}
-                {question.type === "fillblanks" && (
+                {(question.type === "fillblanks" || isFillBlanks) && (!question.options || question.options.length === 0 || (question.blanks && question.blanks.length > 0)) && (
                   <div className="space-y-3 sm:space-y-4">
                     {question.blanks && question.blanks.length > 0 ? (
                       question.blanks.map((blank, bi) => {

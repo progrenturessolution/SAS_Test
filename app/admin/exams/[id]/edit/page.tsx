@@ -69,6 +69,9 @@ interface FillBlanksQuestion {
   blanks: { answer: string; alsoAccept: string[] }[]
   caseInsensitive: boolean
   questionImage?: string; codeSnippet?: string
+  options?: string[]
+  correctAnswer?: string | string[]
+  explanation?: string
 }
 interface CodingQuestion {
   id: string; type: "coding"
@@ -1646,7 +1649,15 @@ function FillBlanksModal({ onSave, onClose, initial }: {
     questionText: "", difficulty: "medium", marks: 1,
     blanks: [], caseInsensitive: true
   })
-  const [q, setQ] = useState<FillBlanksQuestion>(initial ?? blank())
+  const [q, setQ] = useState<FillBlanksQuestion>(() => {
+    if (initial) {
+      const blanks = (initial.blanks && initial.blanks.length > 0)
+        ? initial.blanks
+        : [{ answer: (initial as any).correctAnswer || (initial.options ? initial.options[0] : "") || "", alsoAccept: [] }]
+      return { ...initial, blanks }
+    }
+    return blank()
+  })
   const [error, setError] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiPrompt, setAiPrompt] = useState("")
@@ -2328,17 +2339,92 @@ function Step3({
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleAddCompetitiveQuestions = (newQuestions: GeneratedCompetitiveQuestion[]) => {
-    const mapped: Question[] = newQuestions.map(q => ({
-      id: q.id,
-      type: "mcq",
-      questionText: q.questionText,
-      difficulty: q.difficulty,
-      marks: q.marks,
-      negativeMark: q.negativeMark,
-      options: q.options,
-      correctAnswer: q.correctAnswer,
-      explanation: q.explanation,
-    }))
+    const mapped: Question[] = newQuestions.map(q => {
+      const rawFormat = (q.questionFormat || "").toLowerCase()
+      const isTF =
+        rawFormat === "true_false" ||
+        rawFormat === "truefalse" ||
+        q.questionText?.toLowerCase().startsWith("true or false") ||
+        q.questionText?.toLowerCase().startsWith("true/false") ||
+        (Array.isArray(q.options) && q.options.length === 2 && q.options.includes("True"))
+
+      const isAR =
+        !isTF && (
+          rawFormat === "assertion" ||
+          rawFormat === "assertion_reason" ||
+          q.type === "assertion" ||
+          Boolean(parseAssertionReason(q.questionText || ""))
+        )
+
+      const isFIB =
+        !isTF && !isAR && (
+          rawFormat === "fib" ||
+          rawFormat === "fill_in_the_blanks" ||
+          rawFormat === "fillblanks" ||
+          q.type === "fillblanks" ||
+          q.questionText?.includes("______") ||
+          /_{2,}/.test(q.questionText || "") ||
+          q.questionText?.toLowerCase().includes("fill in the blank")
+        )
+
+      if (isAR) {
+        const parsed = parseAssertionReason(q.questionText)
+        return {
+          id: q.id,
+          type: "assertion",
+          assertionText: parsed?.assertion || "",
+          reasonText: parsed?.reason || "",
+          questionText: q.questionText,
+          difficulty: q.difficulty,
+          marks: q.marks,
+          negativeMark: q.negativeMark,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+        }
+      }
+
+      if (isFIB) {
+        return {
+          id: q.id,
+          type: "fillblanks",
+          questionText: q.questionText,
+          difficulty: q.difficulty,
+          marks: q.marks,
+          negativeMark: q.negativeMark,
+          blanks: [{ id: 1, label: "Blank 1", answer: q.correctAnswer || (q.options ? q.options[0] : "") }],
+          caseInsensitive: true,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+        } as any
+      }
+
+      if (isTF) {
+        return {
+          id: q.id,
+          type: "truefalse",
+          questionText: q.questionText,
+          difficulty: q.difficulty,
+          marks: q.marks,
+          negativeMark: q.negativeMark,
+          correctAnswer: (String(q.correctAnswer).toLowerCase().includes("false") || q.correctAnswer === "Option B") ? "False" : "True",
+          explanation: q.explanation,
+        }
+      }
+
+      return {
+        id: q.id,
+        type: "mcq",
+        questionText: q.questionText,
+        difficulty: q.difficulty,
+        marks: q.marks,
+        negativeMark: q.negativeMark,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+      }
+    })
     setQuestions(prev => [...prev, ...mapped])
   }
 
@@ -2760,8 +2846,33 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
               Boolean(parseAssertionReason(q.questionText || ""))
             ) {
               determinedType = "assertion"
+            } else if (
+              q.type === "fillblanks" ||
+              q.questionFormat === "fib" ||
+              q.questionFormat === "fill_in_the_blanks" ||
+              q.questionFormat === "fillblanks" ||
+              (Array.isArray(q.blanks) && q.blanks.length > 0) ||
+              (typeof q.questionText === "string" && (
+                q.questionText.includes("______") ||
+                /_{2,}/.test(q.questionText) ||
+                q.questionText.toLowerCase().includes("fill in the blank")
+              ))
+            ) {
+              determinedType = "fillblanks"
+            } else if (
+              q.type === "truefalse" ||
+              q.questionFormat === "true_false" ||
+              q.questionText?.toLowerCase().startsWith("true or false") ||
+              q.questionText?.toLowerCase().startsWith("true/false") ||
+              (Array.isArray(q.options) && q.options.length === 2 && q.options.some((o: string) => String(o).toLowerCase() === "true"))
+            ) {
+              determinedType = "truefalse"
             }
-            const base = { ...q, id: Math.random().toString(36).slice(2), type: determinedType }
+
+            const base: any = { ...q, id: Math.random().toString(36).slice(2), type: determinedType }
+            if (determinedType === "fillblanks" && (!q.blanks || q.blanks.length === 0)) {
+              base.blanks = [{ id: 1, label: "Blank 1", answer: q.correctAnswer || (q.options ? q.options[0] : "") }]
+            }
             if (determinedType === "coding") {
               return {
                 ...base,
@@ -2838,7 +2949,7 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
           questions: questions.map(({ id: _id, ...q }) => ({
             ...q,
             correctAnswer: q.type === "fillblanks"
-              ? (q as FillBlanksQuestion).blanks.map(b => b.answer)
+              ? ((q as any).blanks?.map((b: any) => b.answer) || [(q as any).correctAnswer || ""])
               : (q as MCQQuestion | TrueFalseQuestion).correctAnswer ?? ""
           }))
         }]
@@ -2858,7 +2969,7 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
             questions: qs.map(({ id: _id, ...q }) => ({
               ...q,
               correctAnswer: q.type === "fillblanks"
-                ? (q as FillBlanksQuestion).blanks.map(b => b.answer)
+                ? ((q as any).blanks?.map((b: any) => b.answer) || [(q as any).correctAnswer || ""])
                 : (q as MCQQuestion | TrueFalseQuestion).correctAnswer ?? ""
             }))
           }

@@ -863,6 +863,82 @@ export default function AIGeneratorPage() {
       const isNegativeEnabled = evalSettings.enableNegativeMarking
       const defaultNegMark = isNegativeEnabled ? (currentExamMeta.defaultNegativeMarks || 1) : 0
 
+      const typeTitles: Record<string, string> = {
+        mcq: "Multiple Choice Questions",
+        assertion: "Assertion & Reason",
+        truefalse: "True / False Questions",
+        fillblanks: "Fill in the Blanks",
+      }
+
+      const mappedQuestions = toSave.map((q) => {
+        const fmt = getQuestionFormat(q)
+        const isTF = fmt === "true_false"
+        const isAR = fmt === "assertion"
+        const isFIB = fmt === "fib"
+
+        let determinedType: "mcq" | "assertion" | "truefalse" | "fillblanks" = "mcq"
+        if (isTF) determinedType = "truefalse"
+        else if (isAR) determinedType = "assertion"
+        else if (isFIB) determinedType = "fillblanks"
+
+        const options = isTF ? ["True", "False"] : q.options
+        const correctAnswer = isTF
+          ? (String(q.correctAnswer).toLowerCase().includes("false") || q.correctAnswer === "Option B" ? "False" : "True")
+          : q.correctAnswer
+
+        const parsedAR = isAR ? parseAssertionReason(q.questionText || "") : null
+
+        return {
+          type: determinedType,
+          questionFormat: isTF ? "true_false" : isAR ? "assertion" : isFIB ? "fib" : "mcq",
+          assertionText: parsedAR?.assertion,
+          reasonText: parsedAR?.reason,
+          questionText: q.questionText,
+          difficulty: q.difficulty,
+          marks: q.marks || currentExamMeta.defaultMarksPerQuestion,
+          negativeMark:
+            q.negativeMark !== undefined
+              ? q.negativeMark
+              : defaultNegMark,
+          options,
+          correctAnswer,
+          explanation: q.explanation,
+        }
+      })
+
+      const typeOrder: ("mcq" | "assertion" | "truefalse" | "fillblanks")[] = ["mcq", "assertion", "truefalse", "fillblanks"]
+      const groupedTypes = typeOrder.filter(t => mappedQuestions.some(q => q.type === t))
+
+      let sections: any[] = []
+      if (groupedTypes.length <= 1) {
+        sections = [{
+          name: mappedQuestions[0]?.type ? (typeTitles[mappedQuestions[0].type] || "Questions") : "Questions",
+          title: `${activeSubjectTab || selectedSubject} - Section 1`,
+          type: mappedQuestions[0]?.type || "mcq",
+          negativeMarking: isNegativeEnabled,
+          sectionNegativeMark: defaultNegMark,
+          questionRange: `1-${mappedQuestions.length}`,
+          questions: mappedQuestions,
+        }]
+      } else {
+        let runningCount = 1
+        sections = groupedTypes.map(t => {
+          const qs = mappedQuestions.filter(q => q.type === t)
+          const startNum = runningCount
+          const endNum = runningCount + qs.length - 1
+          runningCount = endNum + 1
+          return {
+            name: typeTitles[t] || "Questions",
+            title: `${activeSubjectTab || selectedSubject} - ${typeTitles[t]}`,
+            type: t,
+            negativeMarking: isNegativeEnabled,
+            sectionNegativeMark: defaultNegMark,
+            questionRange: `${startNum}-${endNum}`,
+            questions: qs,
+          }
+        })
+      }
+
       const res = await fetch("/api/exams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -878,37 +954,7 @@ export default function AIGeneratorPage() {
           questionsPerMin: questionsPerMinute ? Number(questionsPerMinute) : undefined,
           description: finalInstructions.join("\n"),
           instructions: finalInstructions,
-          sections: [
-            {
-              name: "Questions",
-              title: `${activeSubjectTab || selectedSubject} - Section 1`,
-              type: "mcq",
-              negativeMarking: isNegativeEnabled,
-              sectionNegativeMark: defaultNegMark,
-              questionRange: `1-${toSave.length}`,
-              questions: toSave.map((q) => {
-                const isTF = getQuestionFormat(q) === "true_false"
-                const options = isTF ? ["True", "False"] : q.options
-                const correctAnswer = isTF
-                  ? (String(q.correctAnswer).toLowerCase().includes("false") || q.correctAnswer === "Option B" ? "False" : "True")
-                  : q.correctAnswer
-
-                return {
-                  type: isTF ? "truefalse" : "mcq",
-                  questionText: q.questionText,
-                  difficulty: q.difficulty,
-                  marks: q.marks || currentExamMeta.defaultMarksPerQuestion,
-                  negativeMark:
-                    q.negativeMark !== undefined
-                      ? q.negativeMark
-                      : defaultNegMark,
-                  options,
-                  correctAnswer,
-                  explanation: q.explanation,
-                }
-              }),
-            },
-          ],
+          sections,
           proctoring: {
             enabled: proctoringSettings.faceDetection || proctoringSettings.tabSwitchPrevention || proctoringSettings.enforceFullscreen || proctoringSettings.aiStatusAnalysis,
             faceDetection: proctoringSettings.faceDetection,

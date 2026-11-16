@@ -383,7 +383,7 @@ Return raw JSON array ONLY.`
 
       return {
         id: `pyq_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
-        type: "mcq",
+        type: isTF ? "truefalse" : isAR ? "assertion" : isFIB ? "fillblanks" : "mcq",
         questionFormat: formatType,
         questionText,
         difficulty: ["easy", "medium", "hard"].includes(q.difficulty) ? q.difficulty : "medium",

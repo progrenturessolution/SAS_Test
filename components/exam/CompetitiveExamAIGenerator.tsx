@@ -38,7 +38,8 @@ import { MathRenderer } from "./MathRenderer"
 
 export interface GeneratedCompetitiveQuestion {
   id: string
-  type: "mcq"
+  type: string
+  questionFormat?: string
   questionText: string
   difficulty: "easy" | "medium" | "hard"
   marks: number
