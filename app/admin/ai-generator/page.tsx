@@ -2918,88 +2918,92 @@ export default function AIGeneratorPage() {
 
           {/* ─── STEP 6: PUBLISH & CONFIRMATION ─── */}
           {currentStep === 6 && (
-            <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-8 shadow-xs">
-              <div className="max-w-2xl mx-auto text-center space-y-5">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200/80 mx-auto flex items-center justify-center shadow-xs">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
+            <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-6 sm:p-10 shadow-xs">
+              <div className="mb-6">
+                <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  STEP 6 · FINAL PUBLISH
+                </p>
+                <h2 className="mt-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                  Ready to Publish Exam Paper
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1.5 font-normal">
+                  Review the final summary below. Once published, your exam will be ready in draft status and scheduled for candidates.
+                </p>
+              </div>
 
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-emerald-600">
-                    STEP 6 · FINAL PUBLISH
+              {/* Summary Card Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 sm:p-5 rounded-2xl border border-slate-200/90 bg-white">
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-2">
+                    PAPER DETAILS
+                  </span>
+                  <p className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                    {examTitle || getDefaultExamTitle()}
                   </p>
-                  <h2 className="mt-1 text-base sm:text-lg font-medium tracking-tight text-slate-900">
-                    Ready to Publish Exam Paper
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto font-normal">
-                    Review the final summary below. Once published, your exam will be ready in draft status and scheduled for candidates.
+                  <p className="text-xs text-slate-500 mt-1 font-normal">
+                    {examOverviewName} • {classOverviewText}
                   </p>
                 </div>
 
-                {/* Summary Card Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left pt-1">
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                    <span className="text-[10px] font-medium uppercase text-slate-400 block mb-0.5">
-                      Paper Details
-                    </span>
-                    <p className="text-xs sm:text-sm font-medium text-slate-800 truncate">
-                      {examTitle || getDefaultExamTitle()}
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
-                      {examOverviewName} · {classOverviewText}
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                    <span className="text-[10px] font-medium uppercase text-slate-400 block mb-0.5">
-                      Questions &amp; Marks
-                    </span>
-                    <p className="text-xs sm:text-sm font-medium text-slate-800">
-                      {selectedQuestionIds.size > 0 ? selectedQuestionIds.size : totalQuestions} Questions
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
-                      {examTotalMarks} Marks · {duration} min
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                    <span className="text-[10px] font-medium uppercase text-slate-400 block mb-0.5">
-                      Scheduled Window
-                    </span>
-                    <p className="text-xs sm:text-sm font-medium text-slate-800">
-                      {formatDateDisplay(startDate)}
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
-                      {startHour}:{startMinute} {startPeriod} – {endHour}:{endMinute} {endPeriod}
-                    </p>
-                  </div>
+                <div className="p-4 sm:p-5 rounded-2xl border border-slate-200/90 bg-white">
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-2">
+                    QUESTIONS &amp; MARKS
+                  </span>
+                  <p className="text-sm sm:text-base font-bold text-slate-900">
+                    {selectedQuestionIds.size > 0 ? selectedQuestionIds.size : totalQuestions} Questions
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1 font-normal">
+                    {examTotalMarks} Marks • {duration} min
+                  </p>
                 </div>
 
-                <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleSaveAsExam}
-                    disabled={creatingExam || selectedQuestionIds.size === 0}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md active:scale-[0.99]"
-                  >
-                    {creatingExam ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
-                        <span>Publishing Exam...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-4 h-4 text-emerald-400" />
-                        <span>Confirm &amp; Publish Exam Paper</span>
-                      </>
-                    )}
-                  </button>
+                <div className="p-4 sm:p-5 rounded-2xl border border-slate-200/90 bg-white">
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-2">
+                    SCHEDULED WINDOW
+                  </span>
+                  <p className="text-sm sm:text-base font-bold text-slate-900">
+                    {formatDateDisplay(startDate)}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1 font-normal">
+                    {startHour}:{startMinute} {startPeriod} – {endHour}:{endMinute} {endPeriod}
+                  </p>
                 </div>
+              </div>
+
+              {/* Right-aligned Actions at Bottom Right */}
+              <div className="mt-8 flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep(5)
+                    window.scrollTo({ top: 0, behavior: "smooth" })
+                  }}
+                  className="px-6 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs sm:text-sm shadow-2xs transition-all cursor-pointer"
+                >
+                  Back
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveAsExam}
+                  disabled={creatingExam || selectedQuestionIds.size === 0}
+                  className="px-6 py-2.5 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-semibold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md active:scale-[0.99]"
+                >
+                  {creatingExam ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                      <span>Publishing...</span>
+                    </>
+                  ) : (
+                    <span>Publish Exam</span>
+                  )}
+                </button>
               </div>
             </div>
           )}
 
-          {/* ─── Bottom Navigation Actions ─── */}
+          {/* ─── Bottom Navigation Actions (Steps 1 to 5) ─── */}
+          {currentStep < 6 && (
           <div className="mt-8 flex items-center justify-between gap-3 pt-2">
             <button
               type="button"
@@ -3136,28 +3140,8 @@ export default function AIGeneratorPage() {
                 <ArrowRight className="w-4 h-4" />
               </button>
             )}
-
-            {currentStep === 6 && (
-              <button
-                type="button"
-                onClick={handleSaveAsExam}
-                disabled={creatingExam || selectedQuestionIds.size === 0}
-                className="px-5 sm:px-8 py-2.5 sm:py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
-              >
-                {creatingExam ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>Publishing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 text-white" />
-                    <span>Publish Paper</span>
-                  </>
-                )}
-              </button>
-            )}
           </div>
+          )}
       </div>
     </div>
 
