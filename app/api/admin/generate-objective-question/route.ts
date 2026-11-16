@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     if (!isBulk && (typeof prompt !== "string" || !prompt.trim())) {
       return NextResponse.json({ error: "Topic or question prompt is required" }, { status: 400 })
     }
-    if (type !== "mcq" && type !== "truefalse" && type !== "fillblanks" && type !== "descriptive") {
+    if (type !== "mcq" && type !== "truefalse" && type !== "fillblanks" && type !== "descriptive" && type !== "assertion") {
       return NextResponse.json({ error: "Unsupported question type" }, { status: 400 })
     }
 
@@ -43,19 +43,23 @@ export async function POST(req: Request) {
 
     const shape = type === "mcq"
       ? `{"questionText":"string","options":["string","string","string","string"],"correctAnswer":"A","explanation":"string"}`
-      : type === "truefalse"
-        ? `{"questionText":"string","correctAnswer":"True","explanation":"string"}`
-        : type === "fillblanks"
-          ? `{"questionText":"string containing one or more ___ blank markers","blanks":[{"answer":"string","alsoAccept":["string"]}]}`
-          : `{"questionText":"string","wordLimit":"150-200 words","modelAnswer":"string","rubric":["criterion 1","criterion 2","criterion 3"]}`
+      : type === "assertion"
+        ? `{"assertionText":"string","reasonText":"string","questionText":"Assertion (A): string\\nReason (R): string","options":["Both (A) and (R) are true and (R) is the correct explanation of (A)","Both (A) and (R) are true but (R) is not the correct explanation of (A)","(A) is true but (R) is false","(A) is false but (R) is true"],"correctAnswer":"A","explanation":"string"}`
+        : type === "truefalse"
+          ? `{"questionText":"string","correctAnswer":"True","explanation":"string"}`
+          : type === "fillblanks"
+            ? `{"questionText":"string containing one or more ___ blank markers","blanks":[{"answer":"string","alsoAccept":["string"]}]}`
+            : `{"questionText":"string","wordLimit":"150-200 words","modelAnswer":"string","rubric":["criterion 1","criterion 2","criterion 3"]}`
 
     const questionKind = type === "mcq"
       ? "multiple-choice question with exactly four options"
-      : type === "truefalse"
-        ? "clear true/false statement"
-        : type === "fillblanks"
-          ? "fill-in-the-blanks question with one or more blank markers"
-          : "descriptive question with model answer and grading rubric"
+      : type === "assertion"
+        ? "assertion-reason question with Assertion (A) statement, Reason (R) statement, and 4 standard choices"
+        : type === "truefalse"
+          ? "clear true/false statement"
+          : type === "fillblanks"
+            ? "fill-in-the-blanks question with one or more blank markers"
+            : "descriptive question with model answer and grading rubric"
 
     const promptText = `You are an expert exam question writer. Create ${isBulk ? "the requested questions for every topic below" : `one ${questionKind}`}.
 Topic/request:
@@ -65,6 +69,7 @@ Marks: ${Number(marks) || 1}
 
 Return only valid JSON ${isBulk ? `as an array, with each item in this exact shape: ${shape}` : `in this exact shape: ${shape}`}
 For MCQ, correctAnswer must be exactly one of A, B, C, or D and options must be distinct.
+For Assertion & Reason, provide Assertion (A) and Reason (R), format questionText as "Assertion (A): [statement]\\nReason (R): [statement]", set 4 standard options (A: Both true & R explains A, B: Both true & R does not explain A, C: A true R false, D: A false R true), and set correctAnswer to A, B, C, or D.
 For True/False, correctAnswer must be exactly True or False.
 For Fill in the Blanks, questionText must contain one ___ marker for every item in blanks. Return the answers in the same order as the markers.
 For Descriptive, provide an engaging questionText, suggested wordLimit, comprehensive modelAnswer, and a 3-point rubric array.
@@ -110,6 +115,33 @@ Avoid ambiguous wording, trick questions, duplicate options, markdown headings, 
         while (item.options.length < 4) item.options.push(`Option ${item.options.length + 1}`)
         item.options = item.options.slice(0, 4)
 
+        if (typeof item.correctAnswer === "number") {
+          const map: Record<number, string> = { 0: "A", 1: "B", 2: "C", 3: "D" }
+          item.correctAnswer = map[item.correctAnswer] ?? "A"
+        }
+        if (typeof item.correctAnswer === "string") {
+          const match = item.correctAnswer.trim().toUpperCase().match(/([A-D])/)
+          if (match) item.correctAnswer = match[1]
+        }
+        if (!["A", "B", "C", "D"].includes(item.correctAnswer)) item.correctAnswer = "A"
+      }
+
+      if (type === "assertion") {
+        const assertion = (item.assertionText || "").trim()
+        const reason = (item.reasonText || "").trim()
+        if (!item.questionText || !item.questionText.toLowerCase().includes("reason")) {
+          item.questionText = `Assertion (A): ${assertion || "Statement 1"}\nReason (R): ${reason || "Statement 2"}`
+        }
+        item.assertionText = assertion
+        item.reasonText = reason
+        if (!Array.isArray(item.options) || item.options.length < 4) {
+          item.options = [
+            "Both (A) and (R) are true and (R) is the correct explanation of (A)",
+            "Both (A) and (R) are true but (R) is not the correct explanation of (A)",
+            "(A) is true but (R) is false",
+            "(A) is false but (R) is true"
+          ]
+        }
         if (typeof item.correctAnswer === "number") {
           const map: Record<number, string> = { 0: "A", 1: "B", 2: "C", 3: "D" }
           item.correctAnswer = map[item.correctAnswer] ?? "A"

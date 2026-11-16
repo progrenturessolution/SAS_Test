@@ -893,10 +893,20 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         const matching = flat.filter(f => f.sectionIndex === sIdx)
         const secCat = sec.type || (matching[0] ? matching[0].category : "mcq")
         const meta = getCategoryMeta(secCat)
+        const isStandardTypeTitle = [
+          "Multiple Choice Questions",
+          "Assertion & Reason",
+          "True / False Questions",
+          "Fill in the Blanks",
+          "Descriptive Questions",
+          "Coding Challenges"
+        ].includes(sec.name)
+        const shortTitle = isStandardTypeTitle ? meta.shortLabel : (sec.name || `Sec ${sIdx + 1}`)
+
         return {
           id: `sec_${sIdx}`,
           title: sec.name || `Section ${sIdx + 1}`,
-          shortTitle: sec.name || `Sec ${sIdx + 1}`,
+          shortTitle,
           category: secCat,
           questions: matching.map(m => m.question),
           questionIndices: matching.map(m => m.globalIndex),
@@ -933,31 +943,15 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       }).filter(Boolean) as any[]
     }
 
-    if (tabs.length > 1) {
-      const allTab = {
-        id: "all",
-        title: "All Questions",
-        shortTitle: "All",
-        category: "all",
-        questions: flat.map(f => f.question),
-        questionIndices: flat.map(f => f.globalIndex),
-        activeColor: "bg-[#1E293B] text-white",
-        badgeBg: "bg-slate-100 text-slate-700 border-slate-200",
-        dotColor: "bg-slate-500",
-      }
-      tabs = [allTab, ...tabs]
-    }
-
     return { allFlatQuestions: flat, sectionTabs: tabs }
   }, [exam])
 
-  // Automatically select the first specific section tab if activeSectionId is unset or invalid
+  // Automatically select the first section tab if activeSectionId is unset or invalid
   useEffect(() => {
     if (sectionTabs.length > 0) {
       const exists = sectionTabs.some(t => t.id === activeSectionId)
       if (!exists) {
-        const defaultTab = sectionTabs.length > 1 && sectionTabs[0].id === "all" ? sectionTabs[1].id : sectionTabs[0].id
-        setActiveSectionId(defaultTab)
+        setActiveSectionId(sectionTabs[0].id)
       }
     }
   }, [sectionTabs, activeSectionId])
@@ -999,16 +993,16 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const totalQuestions = allFlatQuestions.length
   const totalAnswered = answers.filter((a) => Array.isArray(a.answer) ? a.answer.some(Boolean) : !!a.answer).length
 
-  const specificTabs = sectionTabs.filter(t => t.id !== "all")
-  const currentSpecificIdx = specificTabs.findIndex(t => t.id === activeTab?.id)
+  const specificTabs = sectionTabs
+  const currentSpecificIdx = sectionTabs.findIndex(t => t.id === activeTab?.id)
   const isFirstQuestionOverall = globalQuestionIndex === 0
   const isLastQuestionOverall = globalQuestionIndex === allFlatQuestions.length - 1
   const isLastQuestionInSection = currentQ >= filteredQuestions.length - 1
-  const nextSectionTab = currentSpecificIdx >= 0 && currentSpecificIdx < specificTabs.length - 1
-    ? specificTabs[currentSpecificIdx + 1]
+  const nextSectionTab = currentSpecificIdx >= 0 && currentSpecificIdx < sectionTabs.length - 1
+    ? sectionTabs[currentSpecificIdx + 1]
     : null
   const prevSectionTab = currentSpecificIdx > 0
-    ? specificTabs[currentSpecificIdx - 1]
+    ? sectionTabs[currentSpecificIdx - 1]
     : null
 
   const goNext = () => {
@@ -1016,7 +1010,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       const nextQ = currentQ + 1
       setCurrentQ(nextQ)
       setSectionPosMap(p => ({ ...p, [activeTab?.id || ""]: nextQ }))
-    } else if (nextSectionTab && activeTab?.id !== "all") {
+    } else if (nextSectionTab) {
       setActiveSectionId(nextSectionTab.id)
       setCurrentQ(0)
       setSectionPosMap(p => ({ ...p, [nextSectionTab.id]: 0 }))
@@ -1029,7 +1023,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       const prevQ = currentQ - 1
       setCurrentQ(prevQ)
       setSectionPosMap(p => ({ ...p, [activeTab?.id || ""]: prevQ }))
-    } else if (prevSectionTab && activeTab?.id !== "all") {
+    } else if (prevSectionTab) {
       const prevQ = prevSectionTab.questions.length - 1
       setActiveSectionId(prevSectionTab.id)
       setCurrentQ(prevQ)
@@ -1067,28 +1061,13 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   }
 
   const handleSelectQuestionFromPalette = (targetQ: Question) => {
-    if (activeSectionId === "all") {
-      const idxInAll = allFlatQuestions.findIndex(f => f.question._id === targetQ._id)
-      if (idxInAll !== -1) {
-        setCurrentQ(idxInAll)
-        setSidebarOpen(false)
-        return
-      }
-    }
-    const targetTab = sectionTabs.find(t => t.id !== "all" && t.questions.some(q => q._id === targetQ._id))
+    const targetTab = sectionTabs.find(t => t.questions.some(q => q._id === targetQ._id))
     if (targetTab) {
       setActiveSectionId(targetTab.id)
       const localIdx = targetTab.questions.findIndex(q => q._id === targetQ._id)
       const validIdx = localIdx >= 0 ? localIdx : 0
       setCurrentQ(validIdx)
       setSectionPosMap(p => ({ ...p, [targetTab.id]: validIdx }))
-    } else {
-      const anyTab = sectionTabs.find(t => t.questions.some(q => q._id === targetQ._id))
-      if (anyTab) {
-        setActiveSectionId(anyTab.id)
-        const localIdx = anyTab.questions.findIndex(q => q._id === targetQ._id)
-        setCurrentQ(localIdx >= 0 ? localIdx : 0)
-      }
     }
     setSidebarOpen(false)
   }

@@ -17,8 +17,20 @@ import { MathRenderer } from "@/components/exam/MathRenderer"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export function parseAssertionReason(text: string) {
+  if (!text) return null
+  const match = text.match(
+    /(?:Assertion|Statement\s*1)\s*(?:\([Aa1]\))?\s*:\s*([\s\S]*?)(?:Reason|Statement\s*2)\s*(?:\([Rr2]\))?\s*:\s*([\s\S]*)$/i
+  )
+  if (!match) return null
+  return {
+    assertion: match[1].trim(),
+    reason: match[2].trim(),
+  }
+}
+
 type Difficulty = "easy" | "medium" | "hard"
-type QuestionType = "mcq" | "truefalse" | "descriptive" | "fillblanks" | "coding"
+type QuestionType = "mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks" | "coding"
 
 interface MCQQuestion {
   id: string; type: "mcq"
@@ -26,6 +38,14 @@ interface MCQQuestion {
   negativeMark?: number
   options: string[]; correctAnswer: string; explanation: string
   questionImage?: string; optionImages?: string[]
+}
+interface AssertionQuestion {
+  id: string; type: "assertion"
+  assertionText?: string; reasonText?: string
+  questionText: string; difficulty: Difficulty; marks: number
+  negativeMark?: number
+  options: string[]; correctAnswer: string; explanation: string
+  questionImage?: string
 }
 interface TrueFalseQuestion {
   id: string; type: "truefalse"
@@ -61,7 +81,7 @@ interface CodingQuestion {
   questionImage?: string
 }
 
-type Question = MCQQuestion | TrueFalseQuestion | DescriptiveQuestion | FillBlanksQuestion | CodingQuestion
+type Question = MCQQuestion | AssertionQuestion | TrueFalseQuestion | DescriptiveQuestion | FillBlanksQuestion | CodingQuestion
 
 interface Step1Form {
   title: string; examType: string; duration: string
@@ -88,11 +108,12 @@ const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   hard: "bg-red-100 text-red-700",
 }
 const TYPE_META: Record<QuestionType, { label: string; color: string; icon: React.ReactNode }> = {
-  mcq:         { label: "MCQ",         color: "bg-blue-100 text-blue-700",   icon: <List size={13}/> },
-  descriptive: { label: "Descriptive", color: "bg-purple-100 text-purple-700", icon: <AlignLeft size={13}/> },
-  truefalse:   { label: "True/False",  color: "bg-teal-100 text-teal-700",   icon: <CheckSquare size={13}/> },
-  fillblanks:  { label: "Fill Blanks", color: "bg-amber-100 text-amber-700", icon: <FileText size={13}/> },
-  coding:      { label: "Coding",      color: "bg-red-100 text-red-700",     icon: <Code2 size={13}/> },
+  mcq:         { label: "MCQ",                color: "bg-blue-100 text-blue-700",     icon: <List size={13}/> },
+  assertion:   { label: "Assertion & Reason", color: "bg-purple-100 text-purple-700", icon: <Layers size={13}/> },
+  truefalse:   { label: "True/False",         color: "bg-teal-100 text-teal-700",     icon: <CheckSquare size={13}/> },
+  fillblanks:  { label: "Fill Blanks",        color: "bg-amber-100 text-amber-700",   icon: <FileText size={13}/> },
+  descriptive: { label: "Descriptive",        color: "bg-rose-100 text-rose-700",     icon: <AlignLeft size={13}/> },
+  coding:      { label: "Coding",             color: "bg-red-100 text-red-700",       icon: <Code2 size={13}/> },
 }
 
 // ─── Stepper ──────────────────────────────────────────────────────────────────
@@ -501,6 +522,367 @@ function MCQModal({ onSave, onClose, initial }: {
             onChange={e => setQ({ ...q, explanation: e.target.value })}
             rows={3}
             placeholder="Explain why the correct answer is right..."
+            className={textareaCls}
+          />
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-600 font-medium flex items-center gap-1.5 p-2.5 rounded-lg bg-red-50 border border-red-200">
+            <AlertCircle size={14} className="shrink-0" />
+            <span>{error}</span>
+          </p>
+        )}
+      </div>
+      <ModalFooter note="Fields marked with * are required" onCancel={onClose} onSave={save} />
+    </ModalShell>
+  )
+}
+
+// ─── Assertion Modal ─────────────────────────────────────────────────────────
+
+function AssertionModal({ onSave, onClose, initial }: {
+  onSave: (q: AssertionQuestion | AssertionQuestion[]) => void; onClose: () => void; initial?: AssertionQuestion
+}) {
+  const defaultOptions = [
+    "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A)",
+    "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A)",
+    "Assertion (A) is true but Reason (R) is false",
+    "Assertion (A) is false but Reason (R) is true"
+  ]
+
+  const blank = (): AssertionQuestion => ({
+    id: Math.random().toString(36).slice(2),
+    type: "assertion",
+    assertionText: "",
+    reasonText: "",
+    questionText: "",
+    difficulty: "medium",
+    marks: 4,
+    negativeMark: 1,
+    options: [...defaultOptions],
+    correctAnswer: "A",
+    explanation: ""
+  })
+
+  const [q, setQ] = useState<AssertionQuestion>(() => {
+    if (!initial) return blank()
+    const parsed = parseAssertionReason(initial.questionText)
+    return {
+      ...initial,
+      assertionText: initial.assertionText || parsed?.assertion || "",
+      reasonText: initial.reasonText || parsed?.reason || "",
+      options: initial.options?.length === 4 ? initial.options : [...defaultOptions],
+      correctAnswer: initial.correctAnswer || "A"
+    }
+  })
+
+  const [error, setError] = useState("")
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [bulkTopics, setBulkTopics] = useState([{ topic: "", count: 1 }])
+
+  const save = () => {
+    const aText = (q.assertionText || "").trim()
+    const rText = (q.reasonText || "").trim()
+    if (!aText) return setError("Assertion (A) statement is required")
+    if (!rText) return setError("Reason (R) statement is required")
+    if (q.options.filter(o => o.trim()).length < 4) return setError("All 4 option statements are required")
+    if (!q.correctAnswer) return setError("Select the correct answer (A, B, C, or D)")
+
+    const fullQuestionText = `Assertion (A): ${aText}\nReason (R): ${rText}`
+    onSave({
+      ...q,
+      assertionText: aText,
+      reasonText: rText,
+      questionText: fullQuestionText
+    })
+    onClose()
+  }
+
+  const generateWithAi = async () => {
+    if (!aiPrompt.trim()) return setError("Enter a topic for the Assertion & Reason question")
+    setIsGenerating(true); setError("")
+    try {
+      const res = await fetch("/api/admin/generate-objective-question", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt, type: "assertion", marks: q.marks, difficulty: q.difficulty }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to generate Assertion & Reason question")
+      const item = data.data
+      setQ(prev => ({
+        ...prev,
+        assertionText: item.assertionText || prev.assertionText,
+        reasonText: item.reasonText || prev.reasonText,
+        questionText: item.questionText || prev.questionText,
+        options: item.options || prev.options,
+        correctAnswer: item.correctAnswer || prev.correctAnswer,
+        explanation: item.explanation || prev.explanation
+      }))
+    } catch (err) { setError(err instanceof Error ? err.message : "Failed to generate Assertion & Reason question") }
+    finally { setIsGenerating(false) }
+  }
+
+  const generateBulk = async () => {
+    const topics = bulkTopics.filter(item => item.topic.trim() && item.count > 0)
+    if (!topics.length) return setError("Add at least one topic and question count")
+    setIsGenerating(true); setError("")
+    try {
+      const res = await fetch("/api/admin/generate-objective-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topics, type: "assertion", marks: q.marks, difficulty: q.difficulty }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Bulk generation failed")
+      const generated = data.data.map((item: any): AssertionQuestion => ({
+        ...q,
+        id: Math.random().toString(36).slice(2),
+        type: "assertion",
+        assertionText: item.assertionText,
+        reasonText: item.reasonText,
+        questionText: item.questionText || `Assertion (A): ${item.assertionText}\nReason (R): ${item.reasonText}`,
+        options: item.options || [...defaultOptions],
+        correctAnswer: item.correctAnswer || "A",
+        explanation: item.explanation || "",
+      }))
+      onSave(generated); onClose()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Bulk generation failed")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  return (
+    <ModalShell
+      title={initial ? "Edit Assertion & Reason Question" : "Add Assertion & Reason Question"}
+      icon={
+        <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
+          <Layers size={18} className="text-purple-600"/>
+        </div>
+      }
+      onClose={onClose}
+    >
+      <div className="space-y-4">
+        {!initial && (
+          <>
+            {/* Box 1: Generate up to 10 topics at once */}
+            <div className="rounded-2xl border border-purple-100 bg-purple-50/40 p-4 space-y-3">
+              <p className="text-xs font-bold text-purple-800">Generate up to 10 topics at once</p>
+              <div className="space-y-2">
+                {bulkTopics.map((item, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <input
+                      value={item.topic}
+                      onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, topic: e.target.value } : row))}
+                      placeholder={`Topic ${index + 1}`}
+                      className="flex-1 h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={item.count}
+                      onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, count: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } : row))}
+                      className="w-18 sm:w-20 h-11 px-2.5 rounded-xl border border-slate-200 bg-white text-sm text-center font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                    />
+                    {index === bulkTopics.length - 1 && bulkTopics.length < 10 && (
+                      <button
+                        type="button"
+                        onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])}
+                        className="w-11 h-11 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 text-lg font-bold cursor-pointer transition-colors shadow-2xs shrink-0"
+                        title="Add topic row"
+                      >
+                        +
+                      </button>
+                    )}
+                    {bulkTopics.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setBulkTopics(rows => rows.filter((_, i) => i !== index))}
+                        className="w-11 h-11 rounded-xl border border-red-100 bg-white hover:bg-red-50 flex items-center justify-center text-red-500 cursor-pointer transition-colors shrink-0"
+                        title="Remove row"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={generateBulk}
+                disabled={isGenerating}
+                className="h-10 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+              >
+                {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                <span>Generate All Topics</span>
+              </button>
+            </div>
+
+            {/* Box 2: Single topic generator */}
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3">
+              <div className="flex gap-2">
+                <input
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  placeholder="AI topic, e.g. Newton's laws, Thermodynamics..."
+                  className="flex-1 h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); generateWithAi(); } }}
+                />
+                <button
+                  type="button"
+                  onClick={generateWithAi}
+                  disabled={isGenerating}
+                  className="h-11 px-5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  <span>{isGenerating ? "Generating..." : "Generate"}</span>
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Assertion (A) Statement */}
+        <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/40 space-y-1.5">
+          <label className="text-xs font-bold text-purple-900 flex items-center gap-1.5">
+            <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white text-[10px] uppercase font-black">Assertion (A) *</span>
+          </label>
+          <textarea
+            value={q.assertionText || ""}
+            onChange={e => setQ({ ...q, assertionText: e.target.value })}
+            rows={3}
+            placeholder="Enter the Assertion (A) statement..."
+            className={textareaCls}
+          />
+        </div>
+
+        {/* Reason (R) Statement */}
+        <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-1.5">
+          <label className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+            <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white text-[10px] uppercase font-black">Reason (R) *</span>
+          </label>
+          <textarea
+            value={q.reasonText || ""}
+            onChange={e => setQ({ ...q, reasonText: e.target.value })}
+            rows={3}
+            placeholder="Enter the Reason (R) statement..."
+            className={textareaCls}
+          />
+        </div>
+
+        {/* Question Image URL */}
+        <div>
+          <label className={labelCls}>
+            Question Image URL <span className="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <input
+            value={q.questionImage || ""}
+            onChange={e => setQ({ ...q, questionImage: e.target.value })}
+            placeholder="https://example.com/image.png"
+            className={inputCls}
+          />
+        </div>
+
+        {/* 3 Columns: Difficulty, Marks, Negative Mark */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div>
+            <label className={labelCls}>Difficulty *</label>
+            <select
+              value={q.difficulty}
+              onChange={e => setQ({ ...q, difficulty: e.target.value as Difficulty })}
+              className={inputCls + " cursor-pointer"}
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Marks *</label>
+            <input
+              type="number"
+              value={q.marks}
+              onChange={e => setQ({ ...q, marks: +e.target.value })}
+              min={1}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>
+              Negative Mark <span className="text-slate-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              type="number"
+              value={q.negativeMark ?? 1}
+              onChange={e => setQ({ ...q, negativeMark: +e.target.value })}
+              min={0}
+              step={0.25}
+              placeholder="e.g. 1"
+              className={inputCls}
+            />
+          </div>
+        </div>
+
+        {/* Answer Options */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+              Answer Options
+            </span>
+            <span className="text-[11px] font-semibold text-slate-400">
+              Select the correct option (A, B, C, or D)
+            </span>
+          </div>
+          <div className="space-y-2.5">
+            {["A", "B", "C", "D"].map((key, i) => {
+              const isSelected = q.correctAnswer === key
+              return (
+                <div
+                  key={key}
+                  className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
+                    isSelected ? "border-purple-400 bg-purple-50/50 shadow-xs" : "border-slate-200 bg-white"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setQ({ ...q, correctAnswer: key })}
+                    className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 font-bold text-xs cursor-pointer transition-colors ${
+                      isSelected
+                        ? "border-purple-600 bg-purple-600 text-white"
+                        : "border-slate-300 text-slate-500 hover:border-slate-400"
+                    }`}
+                  >
+                    {key}
+                  </button>
+                  <textarea
+                    rows={2}
+                    value={q.options[i]}
+                    onChange={e => {
+                      const updated = [...q.options]
+                      updated[i] = e.target.value
+                      setQ({ ...q, options: updated })
+                    }}
+                    className="flex-1 bg-transparent border-0 p-0 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none font-medium"
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Explanation */}
+        <div>
+          <label className={labelCls}>
+            Explanation <span className="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <textarea
+            value={q.explanation}
+            onChange={e => setQ({ ...q, explanation: e.target.value })}
+            rows={3}
+            placeholder="Explain why this option is correct..."
             className={textareaCls}
           />
         </div>
@@ -2036,7 +2418,7 @@ function Step3({
   const openEdit = (q: Question) => { setEditQ(q); setModal(q.type) }
 
   const typeCounts = Object.fromEntries(
-    (["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => [t, questions.filter(q => q.type === t).length])
+    (["mcq","assertion","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => [t, questions.filter(q => q.type === t).length])
   )
 
   return (
@@ -2086,7 +2468,7 @@ function Step3({
             </button>
             <div className="absolute right-0 top-full pt-1.5 w-48 z-20 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
               <div className="bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden p-1 animate-in fade-in zoom-in-95">
-                {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).filter(type => allowedCustomQuestionTypes.includes(type)).map(type => (
+                {(["mcq","assertion","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).filter(type => allowedCustomQuestionTypes.includes(type)).map(type => (
                   <button
                     key={type}
                     type="button"
@@ -2127,7 +2509,7 @@ function Step3({
           className="h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors cursor-pointer shadow-2xs"
         >
           <option value="all">All Question Types</option>
-          {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
+          {(["mcq","assertion","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
             <option key={t} value={t}>{TYPE_META[t].label}</option>
           ))}
         </select>
@@ -2136,7 +2518,7 @@ function Step3({
       {/* Type Legend */}
       <div className="flex items-center gap-2 mb-5 flex-wrap">
         <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mr-1">TYPES:</span>
-        {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
+        {(["mcq","assertion","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
           <button 
             key={t} 
             type="button"
@@ -2223,6 +2605,13 @@ function Step3({
           onSave={saveQuestion as (q: MCQQuestion | MCQQuestion[]) => void} 
           onClose={() => { setModal(null); setEditQ(null); }} 
           initial={editQ?.type === "mcq" ? editQ : undefined} 
+        />
+      )}
+      {modal === "assertion" && (
+        <AssertionModal 
+          onSave={saveQuestion as (q: AssertionQuestion | AssertionQuestion[]) => void} 
+          onClose={() => { setModal(null); setEditQ(null); }} 
+          initial={editQ?.type === "assertion" ? editQ : undefined} 
         />
       )}
       {modal === "truefalse" && (
@@ -2384,13 +2773,14 @@ export default function CreateExamPage() {
 
       const typeTitles: Record<string, string> = {
         mcq: "Multiple Choice Questions",
+        assertion: "Assertion & Reason",
         truefalse: "True / False Questions",
         fillblanks: "Fill in the Blanks",
         descriptive: "Descriptive Questions",
         coding: "Coding Challenges",
       }
       
-      const typeOrder = ["mcq", "truefalse", "fillblanks", "descriptive", "coding"]
+      const typeOrder = ["mcq", "assertion", "truefalse", "fillblanks", "descriptive", "coding"]
       const groupedTypes = typeOrder.filter(t => questions.some(q => q.type === t))
 
       let sections: any[] = []

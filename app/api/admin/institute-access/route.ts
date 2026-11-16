@@ -5,7 +5,7 @@ import Institute from "@/models/Institute"
 
 const ALL_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "CODING"]
 const LEGACY_INSTITUTE_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM"]
-const ALL_CUSTOM_QUESTION_TYPES = ["mcq", "truefalse", "descriptive", "fillblanks", "coding"]
+const ALL_CUSTOM_QUESTION_TYPES = ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"]
 
 export async function GET(req: Request) {
   try {

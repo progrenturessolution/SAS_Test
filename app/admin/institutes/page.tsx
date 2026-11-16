@@ -51,6 +51,7 @@ const EXAM_ACCESS_OPTIONS = [
 
 const CUSTOM_QUESTION_TYPE_OPTIONS = [
   { value: "mcq", label: "MCQ" },
+  { value: "assertion", label: "Assertion & Reason" },
   { value: "truefalse", label: "True / False" },
   { value: "descriptive", label: "Descriptive" },
   { value: "fillblanks", label: "Fill Blanks" },

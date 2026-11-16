@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       maxStudents = 100,
       maxExams = 20,
       examTypes = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM"],
-      customQuestionTypes = ["mcq", "truefalse", "descriptive", "fillblanks", "coding"],
+      customQuestionTypes = ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"],
       features = { neetJeeGenerator: true, aiProctoring: true, pdfImport: true },
       validUntil,
     } = body
