@@ -165,11 +165,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           let isCorrect = false;
           let earnedMarks = 0;
 
-          if (q.type === "mcq" || q.type === "truefalse") {
+          if (q.type === "mcq" || q.type === "truefalse" || q.type === "assertion") {
             const correct = Array.isArray(q.correctAnswer)
               ? q.correctAnswer[0]
               : q.correctAnswer
-            if (answersMatch(studentAnswer.answer, correct, q.type === "mcq" ? q.options : undefined)) {
+            if (answersMatch(studentAnswer.answer, correct, (q.type === "mcq" || q.type === "assertion") ? q.options : undefined)) {
               isCorrect = true;
               earnedMarks = q.marks;
             }
@@ -217,7 +217,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             secCorrectOrMarked++
             score += earnedMarks;
             secScore += earnedMarks;
-          } else if (sectionNegativeMarking && (q.type === "mcq" || q.type === "truefalse")) {
+          } else if (sectionNegativeMarking && (q.type === "mcq" || q.type === "truefalse" || q.type === "assertion")) {
             // Apply negative marks only if explicitly wrong (not just empty)
             const negativeValue = q.negativeMark ?? sectionNegativeValue;
             score -= Math.abs(negativeValue);

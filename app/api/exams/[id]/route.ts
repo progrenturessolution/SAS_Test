@@ -145,7 +145,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
     
-    const exam = await Exam.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
+    const exam = await Exam.findByIdAndUpdate(id, updateData, { returnDocument: "after", runValidators: true })
     if (!exam) return NextResponse.json({ error: "Exam not found" }, { status: 404 })
     return NextResponse.json({ exam })
   } catch (error) {

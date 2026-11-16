@@ -2,7 +2,10 @@ import mongoose, { Schema, Document } from "mongoose"
 
 export interface IQuestion {
   _id?: string
-  type: "mcq" | "truefalse" | "descriptive" | "fillblanks" | "coding"
+  type: "mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks" | "coding"
+  questionFormat?: string
+  assertionText?: string
+  reasonText?: string
   questionText: string
   options?: string[]
   correctAnswer?: string | string[]
@@ -37,7 +40,7 @@ export interface IExam extends Document {
   status: "draft" | "active" | "closed"
   sections: {
     name: string
-    type: "mcq" | "truefalse" | "descriptive" | "fillblanks" | "coding"
+    type: "mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks" | "coding"
     questionRange: string
     negativeMarking?: boolean
     sectionNegativeMark?: number // Default negative marks for all questions in this section
@@ -76,7 +79,10 @@ export interface IExam extends Document {
 }
 
 const QuestionSchema = new Schema<IQuestion>({
-  type: { type: String, enum: ["mcq", "truefalse", "descriptive", "fillblanks", "coding"], required: true },
+  type: { type: String, enum: ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"], required: true },
+  questionFormat: String,
+  assertionText: String,
+  reasonText: String,
   questionText: { type: String, required: true },
   options: [String],
   correctAnswer: Schema.Types.Mixed,
@@ -115,7 +121,7 @@ const ExamSchema = new Schema<IExam>(
     sections: [
       {
         name: String,
-        type: { type: String, enum: ["mcq", "truefalse", "descriptive", "fillblanks", "coding"] },
+        type: { type: String, enum: ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"] },
         questionRange: String,
         negativeMarking: { type: Boolean, default: false },
         sectionNegativeMark: { type: Number, default: 0 },
