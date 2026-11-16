@@ -1,9 +1,14 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Poppins } from 'next/font/google'
 import { Toaster } from 'sonner'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const poppins = Poppins({
+  weight: ['300', '400', '500', '600'],
+  subsets: ['latin'],
+  variable: '--font-poppins',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Progrentures - Online Assessment Platform',
@@ -18,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${poppins.variable} font-sans antialiased font-normal`}>
         <Toaster richColors position="top-right" />
         {children}
       </body>

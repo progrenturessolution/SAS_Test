@@ -1481,14 +1481,14 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               <button
                 key={tab.id}
                 onClick={() => handleSelectSectionTab(tab.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                   isActive
-                    ? `${tab.activeColor} shadow-sm font-bold scale-[1.02]`
+                    ? `${tab.activeColor} shadow-sm font-medium`
                     : "bg-white text-slate-700 hover:bg-gray-100 hover:text-gray-900 border border-gray-200/90"
                 }`}
               >
                 <span>{tab.shortTitle}</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                   isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
                 }`}>
                   {answeredCount}/{tab.questions.length}
