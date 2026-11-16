@@ -8,7 +8,8 @@ import { toast } from "sonner"
 import {
   Check, Plus, X, Trash2, Search, AlertCircle, Info,
   FileText, CheckSquare, List, Code2, AlignLeft, Loader2, Upload, Pencil, MoreVertical,
-  Shield, Camera, Maximize, AlertTriangle, Sparkles, Clock, GraduationCap
+  Shield, Camera, Maximize, AlertTriangle, Sparkles, Clock, GraduationCap,
+  ArrowRight, ArrowLeft, CheckCircle2, Zap, Layers
 } from "lucide-react"
 import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
@@ -80,8 +81,9 @@ interface Step2Form {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const inputCls = "w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
-const labelCls = "block text-sm font-medium text-[#2D3A4A] mb-1.5"
+const inputCls = "w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-sm text-slate-800 placeholder:text-slate-400 transition-colors shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+const textareaCls = "w-full px-3.5 py-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-sm text-slate-800 placeholder:text-slate-400 transition-colors shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 resize-none"
+const labelCls = "block text-xs font-semibold text-slate-700 mb-1.5"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -120,82 +122,124 @@ const TYPE_META: Record<QuestionType, { label: string; color: string; icon: Reac
 // ─── Stepper ──────────────────────────────────────────────────────────────────
 
 function Stepper({ step, onStepClick }: { step: number; onStepClick?: (step: number) => void }) {
-  const steps = [{ n: 1, label: "Exam Details" }, { n: 2, label: "Settings" }, { n: 3, label: "Questions" }]
+  const steps = [
+    { n: 1, label: "Exam Details" },
+    { n: 2, label: "Settings" },
+    { n: 3, label: "Questions" },
+  ]
+
   return (
     <>
-      {/* Mobile Stepper */}
-      <div className="flex sm:hidden flex-col gap-2.5">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-bold uppercase tracking-wider text-primary">
-            Step {step} of 3
-          </span>
-          <span className="text-gray-500 font-medium">
-            {steps[step - 1]?.label}
+      {/* Mobile Dedicated Stepper (sm:hidden) */}
+      <div className="sm:hidden mb-5 bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="w-6 h-6 rounded-lg bg-[#1E293B] text-white text-xs font-semibold flex items-center justify-center shadow-2xs">
+              {step}
+            </span>
+            <div>
+              <p className="text-xs font-semibold text-slate-900 leading-none">
+                {steps[step - 1]?.label}
+              </p>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Step {step} of {steps.length}
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+            {Math.round((step / steps.length) * 100)}% Done
           </span>
         </div>
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-          <div
-            className="bg-[#2D3A4A] h-full transition-all duration-300 rounded-full"
-            style={{ width: `${(step / 3) * 100}%` }}
-          />
-        </div>
-        {/* Step Indicator Pills */}
-        <div className="grid grid-cols-3 gap-1.5 pt-1">
-          {steps.map((s) => (
-            <button
-              key={s.n}
-              type="button"
-              onClick={() => onStepClick?.(s.n)}
-              className={`py-1.5 px-2 rounded-lg text-center text-[11px] font-semibold transition-all ${
-                step === s.n
-                  ? "bg-[#2D3A4A] text-white shadow-xs"
-                  : step > s.n
-                  ? "bg-primary/10 text-primary"
-                  : "bg-gray-100 text-gray-400"
-              }`}
-            >
-              {s.n}. {s.label}
-            </button>
-          ))}
+
+        {/* 3-Step Quick Action Touch Buttons */}
+        <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+          {steps.map((s) => {
+            const isCurrent = s.n === step
+            const isComplete = s.n < step
+            return (
+              <button
+                key={s.n}
+                type="button"
+                onClick={() => onStepClick?.(s.n)}
+                className={`h-9 rounded-xl flex items-center justify-center text-xs font-medium transition-all cursor-pointer ${
+                  isCurrent
+                    ? "bg-[#1E293B] text-white shadow-xs font-semibold ring-2 ring-slate-900/15"
+                    : isComplete
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                    : "bg-slate-50 text-slate-400 border border-slate-200/60"
+                }`}
+                title={s.label}
+              >
+                {isComplete ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : `${s.n}. ${s.label.split(" ")[0]}`}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {/* Desktop Stepper */}
-      <div className="hidden sm:flex items-center justify-center gap-0">
-        {steps.map((s, i) => (
-          <div key={s.n} className="flex items-center">
-            <button
-              type="button"
-              onClick={() => onStepClick?.(s.n)}
-              className="flex flex-col items-center gap-1 cursor-pointer focus:outline-none"
-            >
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all
-                ${step > s.n ? "bg-primary border-primary text-white"
-                  : step === s.n ? "bg-[#2D3A4A] border-[#2D3A4A] text-white"
-                  : "bg-white border-gray-200 text-gray-400 hover:border-gray-300"}`}>
-                {step > s.n ? <Check size={16}/> : s.n}
+      {/* Desktop Stepper (hidden sm:block) */}
+      <div className="hidden sm:block mb-6 bg-white rounded-2xl border border-slate-200/80 px-4 py-5 sm:px-8 shadow-xs">
+        <div className="flex items-center justify-between max-w-2xl mx-auto">
+          {steps.map((s, index) => {
+            const isCurrent = s.n === step
+            const isComplete = s.n < step
+            return (
+              <div key={s.n} className="flex-1 flex items-center">
+                <div className="flex flex-col items-center flex-1">
+                  <button
+                    type="button"
+                    onClick={() => onStepClick?.(s.n)}
+                    className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                      isCurrent
+                        ? "bg-[#1E293B] text-white shadow-sm ring-2 ring-slate-900/20"
+                        : isComplete
+                        ? "bg-emerald-500 text-white"
+                        : "bg-white text-slate-400 border border-slate-300 hover:border-slate-400"
+                    }`}
+                  >
+                    {isComplete ? <Check className="w-4 h-4 stroke-[2.5]" /> : s.n}
+                  </button>
+                  <span
+                    className={`mt-2 text-xs font-medium transition-colors text-center ${
+                      isCurrent ? "text-slate-900 font-semibold" : isComplete ? "text-emerald-700" : "text-slate-400"
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                </div>
+                {index < steps.length - 1 && (
+                  <div
+                    className={`h-[1.5px] w-full max-w-[120px] -mt-5 transition-colors ${
+                      s.n < step ? "bg-emerald-400" : "bg-slate-200"
+                    }`}
+                  />
+                )}
               </div>
-              <div className="text-center">
-                <p className={`text-[10px] uppercase tracking-wide font-semibold ${step >= s.n ? "text-[#2D3A4A]" : "text-gray-400"}`}>STEP {s.n}</p>
-                <p className={`text-xs font-medium ${step >= s.n ? "text-primary" : "text-gray-400"}`}>{s.label}</p>
-              </div>
-            </button>
-            {i < steps.length - 1 && (
-              <div className={`w-16 md:w-24 h-0.5 mx-3 mb-5 transition-colors ${step > s.n ? "bg-primary" : "bg-gray-200"}`} />
-            )}
-          </div>
-        ))}
+            )
+          })}
+        </div>
       </div>
     </>
   )
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+function Toggle({ checked, onChange, disabled = false }: { checked: boolean; onChange: () => void; disabled?: boolean }) {
   return (
-    <button type="button" onClick={onChange}
-      className={`relative w-12 h-6 rounded-full transition-colors focus:outline-none ${checked ? "bg-[#2D3A4A]" : "bg-gray-200"}`}>
-      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${checked ? "translate-x-6" : "translate-x-0"}`} />
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={onChange}
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:cursor-not-allowed disabled:opacity-40 ${
+        checked ? "bg-[#1E293B]" : "bg-slate-200"
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+          checked ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
     </button>
   )
 }
@@ -204,42 +248,97 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
 
 function Step1({ form, setForm }: { form: Step1Form; setForm: React.Dispatch<React.SetStateAction<Step1Form>> }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 lg:p-8 shadow-xs">
-      <h2 className="text-lg sm:text-xl font-bold text-[#2D3A4A] mb-5 sm:mb-6">Basic Information</h2>
-      <div className="space-y-4 sm:space-y-5">
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs relative">
+      <div className="mb-6 sm:mb-8 pb-5 border-b border-slate-100">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+          STEP 1 · EXAM DETAILS
+        </p>
+        <h2 className="mt-1 text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
+          Basic Information
+        </h2>
+      </div>
+
+      <div className="space-y-5 sm:space-y-6">
         <div>
-          <label className={labelCls}>Exam Title <span className="text-red-500">*</span></label>
-          <input value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))}
-            placeholder="Enter exam title..." className={inputCls} />
+          <label className={labelCls}>
+            Exam Title <span className="text-red-500">*</span>
+          </label>
+          <input
+            value={form.title}
+            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            placeholder="e.g. Physics Final Exam / Organic Chemistry Mock / General Aptitude"
+            className={inputCls}
+          />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div>
-            <label className={labelCls}>Duration (minutes) <span className="text-red-500">*</span></label>
-            <input type="number" value={form.duration} onChange={e => setForm(f => ({...f, duration: e.target.value}))}
-              placeholder="e.g., 60" min="1" className={inputCls} />
+            <label className={labelCls}>
+              Duration (minutes) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              value={form.duration}
+              onChange={e => setForm(f => ({ ...f, duration: e.target.value }))}
+              placeholder="e.g. 60"
+              min="1"
+              className={inputCls}
+            />
           </div>
           <div>
-            <label className={labelCls}>Questions Per Minute <span className="text-xs text-gray-400 font-normal">(Optional)</span></label>
-            <input type="number" value={form.questionsPerMin} onChange={e => setForm(f => ({...f, questionsPerMin: e.target.value}))}
-              placeholder="e.g., 1.5" min="0.1" step="0.1" className={inputCls} />
+            <label className={labelCls}>
+              Questions Per Minute <span className="text-slate-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              type="number"
+              value={form.questionsPerMin}
+              onChange={e => setForm(f => ({ ...f, questionsPerMin: e.target.value }))}
+              placeholder="e.g. 1.5"
+              min="0.1"
+              step="0.1"
+              className={inputCls}
+            />
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div>
-            <label className={labelCls}>Pass Marks <span className="text-red-500">*</span></label>
-            <input type="number" value={form.passMarks} onChange={e => setForm(f => ({...f, passMarks: e.target.value}))}
-              placeholder="e.g., 40" min="0" className={inputCls} />
+            <label className={labelCls}>
+              Pass Marks <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              value={form.passMarks}
+              onChange={e => setForm(f => ({ ...f, passMarks: e.target.value }))}
+              placeholder="e.g. 40"
+              min="0"
+              className={inputCls}
+            />
           </div>
           <div>
-            <label className={labelCls}>Total Marks <span className="text-red-500">*</span></label>
-            <input type="number" value={form.totalMarks} onChange={e => setForm(f => ({...f, totalMarks: e.target.value}))}
-              placeholder="e.g., 100" min="1" className={inputCls} />
+            <label className={labelCls}>
+              Total Marks <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              value={form.totalMarks}
+              onChange={e => setForm(f => ({ ...f, totalMarks: e.target.value }))}
+              placeholder="e.g. 100"
+              min="1"
+              className={inputCls}
+            />
           </div>
         </div>
+
         <div>
-          <label className={labelCls}>Instructions</label>
-          <textarea value={form.instructions} onChange={e => setForm(f => ({...f, instructions: e.target.value}))}
-            rows={4} placeholder="Enter exam instructions for students..." className={inputCls + " resize-none"} />
+          <label className={labelCls}>Instructions for Students</label>
+          <textarea
+            value={form.instructions}
+            onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
+            rows={4}
+            placeholder="Enter instructions, e.g. 'Read each question carefully. Calculators are not allowed.'"
+            className={textareaCls}
+          />
         </div>
       </div>
     </div>
@@ -248,30 +347,40 @@ function Step1({ form, setForm }: { form: Step1Form; setForm: React.Dispatch<Rea
 
 // ─── Step 2 ───────────────────────────────────────────────────────────────────
 
-function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<React.SetStateAction<Step2Form>> }) {
+function Step2({ form, setForm, canUseAiProctoring = true }: { form: Step2Form; setForm: React.Dispatch<React.SetStateAction<Step2Form>>; canUseAiProctoring?: boolean }) {
   const toggles: { key: keyof Step2Form; label: string; desc: string }[] = [
-    { key: "randomize",      label: "Randomize Questions",    desc: "Display questions in random order for each student" },
-    { key: "showResults",    label: "Show Results Immediately", desc: "Students can see their results right after submission" },
-    { key: "allowReview",    label: "Allow Review",            desc: "Students can review their answers after submission" },
-    { key: "negativeMarking", label: "Enable Negative Marking", desc: "Deduct marks for wrong answers" },
+    { key: "randomize",      label: "Randomize Questions",       desc: "Display questions in random order for each student" },
+    { key: "showResults",    label: "Show Results Immediately",  desc: "Students can see their score & answers right after submission" },
+    { key: "allowReview",    label: "Allow Review Mode",         desc: "Students can review question explanations after submitting" },
+    { key: "negativeMarking", label: "Enable Negative Marking",  desc: "Deduct marks for incorrect answers across sections" },
   ]
 
   const proctoringToggles = [
-    { key: "faceDetection", label: "Face Detection", desc: "Monitors candidate through camera", icon: <Camera size={16} /> },
-    { key: "tabSwitch",     label: "Tab-Switch Prevention", desc: "Warns when student leaves the tab", icon: <AlertTriangle size={16} /> },
-    { key: "fullscreen",    label: "Enforce Fullscreen", desc: "Exits exam if fullscreen is closed", icon: <Maximize size={16} /> },
-    { key: "aiProctoring",  label: "AI Status Analysis", desc: "Analyzes face positioning and focus", icon: <Shield size={16} /> },
+    { key: "faceDetection", label: "Face Detection Monitoring", desc: "Monitors candidate presence and face positioning during exam", icon: <Camera size={16} /> },
+    { key: "tabSwitch",     label: "Tab-Switch Prevention",    desc: "Detects and warns when candidate leaves or switches tabs", icon: <AlertTriangle size={16} /> },
+    { key: "fullscreen",    label: "Enforce Fullscreen Mode",   desc: "Requires exam to be taken in full screen with auto-termination", icon: <Maximize size={16} /> },
+    { key: "aiProctoring",  label: "AI Proctoring Analysis",    desc: "Analyzes webcam stream in real-time for anomaly warnings", icon: <Shield size={16} /> },
   ] as const
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 lg:p-8 shadow-xs">
-      <h2 className="text-lg sm:text-xl font-bold text-[#2D3A4A] mb-5 sm:mb-6">Exam Settings</h2>
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs relative">
+      <div className="mb-6 sm:mb-8 pb-5 border-b border-slate-100">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+          STEP 2 · TIMELINE & POLICIES
+        </p>
+        <h2 className="mt-1 text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
+          Exam Settings & Proctoring
+        </h2>
+      </div>
+
       <div className="space-y-6 sm:space-y-8">
+        {/* Schedule & Timeline */}
         <div>
-          <h3 className="text-base font-bold text-[#2D3A4A] mb-3 sm:mb-4 flex items-center gap-2">
-            <div className="w-1.5 h-6 bg-[#3D4B5C] rounded-full" />
-            Schedule & Timeline
-          </h3>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-1.5 h-5 bg-slate-900 rounded-full" />
+            <h3 className="text-base font-semibold text-slate-900">Schedule & Timeline</h3>
+          </div>
+
           {(() => {
             const startDt = form.startDate ? getExamStartDateTime({ startDate: form.startDate, startTime: form.startTime }) : null
             const endDt = form.endDate ? getExamEndDateTime({ endDate: form.endDate, endTime: form.endTime }) : null
@@ -279,7 +388,7 @@ function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<Rea
 
             return (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <ExamDateTimePicker
                     label="Start Date & Time"
                     sublabel="Students can only begin the exam at or after this time"
@@ -300,17 +409,18 @@ function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<Rea
                 </div>
 
                 {isInvalid && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-bold flex items-center gap-2">
-                    <AlertCircle size={14} /> End Date & Time must be after Start Date & Time!
+                  <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 font-medium flex items-center gap-2">
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span>End Date & Time must be after Start Date & Time!</span>
                   </div>
                 )}
 
                 {startDt && endDt && !isInvalid && (
-                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 shadow-2xs">
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs sm:text-sm text-emerald-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 shadow-2xs">
                     <div className="flex items-center gap-2.5">
-                      <Clock size={15} className="text-emerald-600 shrink-0" />
+                      <Clock size={16} className="text-emerald-600 shrink-0" />
                       <span className="leading-snug">
-                        <strong className="font-bold text-emerald-950">Active Exam Window: </strong>
+                        <strong className="font-semibold text-emerald-950">Active Exam Window: </strong>
                         {formatScheduleDateTime(startDt)} → {formatScheduleDateTime(endDt)}
                       </span>
                     </div>
@@ -324,38 +434,36 @@ function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<Rea
           })()}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+        {/* 2 Columns: Evaluation Options & Proctoring Security */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 pt-4 border-t border-slate-100">
+          {/* Evaluation Options */}
           <div>
-            <h3 className="text-base font-bold text-[#2D3A4A] mb-3 sm:mb-4 flex items-center gap-2">
-              <div className="w-1.5 h-6 bg-[#3D4B5C] rounded-full" />
-              Evaluation Options
-            </h3>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-1.5 h-5 bg-slate-900 rounded-full" />
+              <h3 className="text-base font-semibold text-slate-900">Evaluation Options</h3>
+            </div>
             <div className="space-y-3">
               {toggles.map(t => (
-                <div key={t.key} className="flex flex-col border border-transparent rounded-xl hover:border-gray-200 transition-all">
-                  <div className="flex items-center justify-between p-3 gap-2">
-                    <div className="flex-1 pr-2 sm:pr-4">
-                      <p className="text-sm font-bold text-[#2D3A4A]">{t.label}</p>
-                      <p className="text-[11px] text-gray-500 font-medium leading-relaxed mt-0.5">{t.desc}</p>
+                <div key={t.key} className="rounded-xl border border-slate-200/80 p-3.5 hover:border-slate-300 transition-colors bg-white">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 pr-2">
+                      <p className="text-sm font-semibold text-slate-900">{t.label}</p>
+                      <p className="text-xs text-slate-500 leading-relaxed mt-0.5">{t.desc}</p>
                     </div>
-                    <div className="shrink-0">
-                      <Toggle checked={form[t.key] as boolean} onChange={() => setForm(f => ({...f, [t.key]: !f[t.key]}))} />
-                    </div>
+                    <Toggle checked={form[t.key] as boolean} onChange={() => setForm(f => ({ ...f, [t.key]: !f[t.key] }))} />
                   </div>
                   {t.key === "negativeMarking" && form.negativeMarking && (
-                    <div className="pb-4 px-4">
-                       <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <label className="text-[11px] font-bold text-gray-500 uppercase mb-2 block">Default Negative Mark</label>
-                        <input
-                          type="number"
-                          step="0.25"
-                          min="0"
-                          value={form.sectionNegativeMark}
-                          onChange={e => setForm(f => ({...f, sectionNegativeMark: +e.target.value}))}
-                          className={`${inputCls} bg-white`}
-                          placeholder="e.g. 0.25"
-                        />
-                      </div>
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      <label className="text-xs font-semibold text-slate-700 block mb-1.5">Default Negative Mark</label>
+                      <input
+                        type="number"
+                        step="0.25"
+                        min="0"
+                        value={form.sectionNegativeMark}
+                        onChange={e => setForm(f => ({ ...f, sectionNegativeMark: +e.target.value }))}
+                        className={inputCls}
+                        placeholder="e.g. 0.25"
+                      />
                     </div>
                   )}
                 </div>
@@ -363,40 +471,41 @@ function Step2({ form, setForm }: { form: Step2Form; setForm: React.Dispatch<Rea
             </div>
           </div>
 
+          {/* Proctoring Security */}
           <div>
-            <h3 className="text-base font-bold text-[#2D3A4A] mb-3 sm:mb-4 flex items-center gap-2">
-              <div className="w-1.5 h-6 bg-red-400 rounded-full" />
-              Proctoring Security
-            </h3>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-1.5 h-5 bg-red-500 rounded-full" />
+              <h3 className="text-base font-semibold text-slate-900">Proctoring Security</h3>
+            </div>
             <div className="space-y-3">
               {proctoringToggles.map(pt => (
-                <div key={pt.key} className="flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-gray-200 hover:bg-white transition-all bg-gray-50/50 gap-2">
+                <div key={pt.key} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 hover:border-slate-300 transition-colors bg-white gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`p-2 rounded-lg shrink-0 ${form.proctoring[pt.key] ? 'bg-primary/10 text-primary' : 'bg-gray-200 text-gray-400'}`}>
+                    <div className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center ${form.proctoring[pt.key] ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}>
                       {pt.icon}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-[#2D3A4A]">{pt.label}</p>
-                      <p className="text-[11px] text-gray-500 font-medium mt-0.5">{pt.desc}</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{pt.label}</p>
+                      <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{pt.desc}</p>
                     </div>
                   </div>
-                  <div className="shrink-0">
-                    <Toggle 
-                      checked={form.proctoring[pt.key]} 
-                      onChange={() => setForm(f => ({
-                        ...f, 
-                        proctoring: { ...f.proctoring, [pt.key]: !f.proctoring[pt.key] }
-                      }))} 
-                    />
-                  </div>
+                  <Toggle
+                    checked={form.proctoring[pt.key]}
+                    disabled={pt.key === "aiProctoring" && !canUseAiProctoring}
+                    onChange={() => setForm(f => ({
+                      ...f,
+                      proctoring: { ...f.proctoring, [pt.key]: !f.proctoring[pt.key] }
+                    }))}
+                  />
                 </div>
               ))}
-              <div className="mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100/50 border-dashed">
-                <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                   <Info size={12} /> Pro-Tip
+              <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 text-xs text-blue-800">
+                <p className="font-semibold flex items-center gap-1.5 mb-1 text-blue-900">
+                  <Info size={14} className="text-blue-600" />
+                  <span>Proctoring Notice</span>
                 </p>
-                <p className="text-xs text-blue-800 leading-relaxed font-medium">
-                  Enabling Face Detection & AI Status Analysis requires students to have a working webcam.
+                <p className="leading-relaxed">
+                  Enabling Face Detection and Fullscreen ensures student integrity by monitoring presence and preventing split-screen cheating.
                 </p>
               </div>
             </div>
@@ -414,49 +523,70 @@ type ModalType = QuestionType | null
 function ModalShell({ title, icon, onClose, children }: {
   title: string; icon: React.ReactNode; onClose: () => void; children: React.ReactNode
 }) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  
-  if (!mounted) return null
-  
-  return createPortal(
-    <>
-      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col pointer-events-auto">
-          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
-            {icon}
-            <h3 className="text-lg font-bold text-[#2D3A4A] flex-1">{title}</h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
-          </div>
-          <div className="overflow-y-auto flex-1 px-6 py-4">{children}</div>
-        </div>
-      </div>
-    </>,
-    document.body
-  )
-}
-
-function ModalFooter({ note, onCancel, onSave }: { note: string; onCancel: () => void; onSave: () => void }) {
   return (
-    <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
-      <p className="text-xs text-gray-400">{note}</p>
-      <div className="flex gap-2">
-        <button onClick={onCancel} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-        <button onClick={onSave} className="px-4 py-2 rounded-lg bg-[#2D3A4A] text-white text-sm font-medium hover:bg-[#1e2a38]">Save Question</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in-50">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+        <div className="flex items-center gap-3 px-5 sm:px-6 py-4 border-b border-slate-100 shrink-0">
+          {icon}
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 flex-1 truncate">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-5 sm:px-6 py-4 space-y-4 custom-scrollbar">{children}</div>
       </div>
     </div>
   )
 }
 
-function MCQModal({ onSave, onClose, initial }: { onSave: (q: MCQQuestion | MCQQuestion[]) => void; onClose: () => void; initial?: MCQQuestion }) {
-  const blank = (): MCQQuestion => ({ id: Math.random().toString(36).slice(2), type: "mcq", questionText: "", difficulty: "medium", marks: 1, options: ["","","",""], correctAnswer: "", explanation: "", questionImage: "", optionImages: ["","","",""], codeSnippet: "" })
+function ModalFooter({ note, onCancel, onSave }: { note: React.ReactNode; onCancel: () => void; onSave: () => void }) {
+  return (
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 mt-2 border-t border-slate-100 shrink-0">
+      <div className="text-xs text-slate-500 font-medium">{note}</div>
+      <div className="flex gap-2 sm:gap-3 justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 sm:flex-none h-10 px-5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs sm:text-sm font-semibold text-slate-700 transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={onSave}
+          className="flex-1 sm:flex-none h-10 px-6 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+        >
+          Save Question
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function MCQModal({ onSave, onClose, initial }: {
+  onSave: (q: MCQQuestion | MCQQuestion[]) => void; onClose: () => void; initial?: MCQQuestion
+}) {
+  const blank = (): MCQQuestion => ({
+    id: Math.random().toString(36).slice(2), type: "mcq",
+    questionText: "", difficulty: "medium", marks: 1,
+    options: ["", "", "", ""], correctAnswer: "", explanation: ""
+  })
   const [q, setQ] = useState<MCQQuestion>(initial ?? blank())
   const [error, setError] = useState("")
-  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
   const [aiPrompt, setAiPrompt] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [bulkTopics, setBulkTopics] = useState([{ topic: "", count: 1 }])
+
+  const save = () => {
+    if (!q.questionText.trim()) return setError("Question text is required")
+    if (q.options.filter(o => o.trim()).length < 2) return setError("At least 2 options required")
+    if (!q.correctAnswer) return setError("Select the correct answer")
+    onSave(q); onClose()
+  }
 
   const generateWithAi = async () => {
     if (!aiPrompt.trim()) return setError("Enter a topic or short question prompt first")
@@ -487,130 +617,261 @@ function MCQModal({ onSave, onClose, initial }: { onSave: (q: MCQQuestion | MCQQ
     finally { setIsGenerating(false) }
   }
 
-  const save = () => {
-    if (!q.questionText.trim()) return setError("Question text is required")
-    if (q.options.filter(o => o.trim()).length < 2) return setError("At least 2 options required")
-    if (!q.correctAnswer) return setError("Select the correct answer")
-    onSave(q); onClose()
-  }
   return (
-    <ModalShell title={initial ? "Edit MCQ Question" : "Add MCQ Question"} icon={<div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center"><List size={18} className="text-blue-600"/></div>} onClose={onClose}>
+    <ModalShell
+      title={initial ? "Edit MCQ Question" : "Add MCQ Question"}
+      icon={
+        <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+          <List size={18} className="text-blue-600"/>
+        </div>
+      }
+      onClose={onClose}
+    >
       <div className="space-y-4">
         {!initial && (
           <>
-            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 space-y-2">
-              <p className="text-xs font-bold text-blue-800">Generate up to 10 topics at once</p>
-              {bulkTopics.map((item, index) => <div key={index} className="flex gap-2">
-                <input value={item.topic} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, topic: e.target.value } : row))} placeholder={`Topic ${index + 1}`} className={inputCls} />
-                <input type="number" min={1} max={60} value={item.count} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, count: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } : row))} className="w-20 rounded-lg border border-gray-200 px-2 text-sm bg-white" />
-                {index === bulkTopics.length - 1 && bulkTopics.length < 10 && <button type="button" onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])} className="rounded-lg border border-gray-200 bg-white hover:bg-gray-50 px-3 text-sm cursor-pointer">+</button>}
-              </div>)}
-              <button type="button" onClick={generateBulk} disabled={isGenerating} className="flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
-                {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Generate All Topics
+            {/* Box 1: Generate up to 10 topics at once */}
+            <div className="rounded-2xl border border-blue-100 bg-[#F0F7FF]/60 p-4 space-y-3">
+              <p className="text-xs font-bold text-blue-700">Generate up to 10 topics at once</p>
+              <div className="space-y-2">
+                {bulkTopics.map((item, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <input
+                      value={item.topic}
+                      onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, topic: e.target.value } : row))}
+                      placeholder={`Topic ${index + 1}`}
+                      className="flex-1 h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={item.count}
+                      onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, count: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } : row))}
+                      className="w-18 sm:w-20 h-11 px-2.5 rounded-xl border border-slate-200 bg-white text-sm text-center font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                    />
+                    {index === bulkTopics.length - 1 && bulkTopics.length < 10 && (
+                      <button
+                        type="button"
+                        onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])}
+                        className="w-11 h-11 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 text-lg font-bold cursor-pointer transition-colors shadow-2xs shrink-0"
+                        title="Add topic row"
+                      >
+                        +
+                      </button>
+                    )}
+                    {bulkTopics.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setBulkTopics(rows => rows.filter((_, i) => i !== index))}
+                        className="w-11 h-11 rounded-xl border border-red-100 bg-white hover:bg-red-50 flex items-center justify-center text-red-500 cursor-pointer transition-colors shrink-0"
+                        title="Remove row"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={generateBulk}
+                disabled={isGenerating}
+                className="h-10 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+              >
+                {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                <span>Generate All Topics</span>
               </button>
             </div>
-            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3">
+
+            {/* Box 2: Single topic generator */}
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3">
               <div className="flex gap-2">
-                <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder="AI topic, e.g. photosynthesis..." className={inputCls} />
-                <button type="button" onClick={generateWithAi} disabled={isGenerating} className="shrink-0 flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
-                  {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {isGenerating ? "Generating..." : "Generate"}
+                <input
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  placeholder="AI topic, e.g. photosynthesis..."
+                  className="flex-1 h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); generateWithAi(); } }}
+                />
+                <button
+                  type="button"
+                  onClick={generateWithAi}
+                  disabled={isGenerating}
+                  className="h-11 px-5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  <span>{isGenerating ? "Generating..." : "Generate"}</span>
                 </button>
               </div>
             </div>
           </>
         )}
+
+        {/* Question Text */}
         <div>
           <label className={labelCls}>Question Text *</label>
-          <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} placeholder="Enter your question..." className={inputCls + " resize-none"} />
+          <textarea
+            value={q.questionText}
+            onChange={e => setQ({ ...q, questionText: e.target.value })}
+            rows={4}
+            placeholder="Enter your question here..."
+            className={textareaCls}
+          />
         </div>
+
+        {/* Question Image URL */}
         <div>
-          <label className={labelCls}>Code Snippet <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <textarea value={q.codeSnippet || ""} onChange={e => setQ({...q, codeSnippet: e.target.value})} rows={3} placeholder="Paste code snippet here (Python, JavaScript, etc.)..." className="w-full p-3 bg-[#1e2a38] text-white font-mono text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none" />
+          <label className={labelCls}>
+            Question Image URL <span className="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <input
+            value={q.questionImage || ""}
+            onChange={e => setQ({ ...q, questionImage: e.target.value })}
+            placeholder="https://example.com/image.png"
+            className={inputCls}
+          />
         </div>
-        <div>
-          <label className={labelCls}>Question Image URL <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <div className="flex gap-2">
-            <input value={q.questionImage || ""} onChange={e => { setQ({...q, questionImage: e.target.value}); setImageErrors({...imageErrors, question: false}) }} 
-              placeholder="https://example.com/image.png" className={inputCls} />
+
+        {/* 3 Columns: Difficulty, Marks, Negative Mark */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div>
+            <label className={labelCls}>Difficulty *</label>
+            <select
+              value={q.difficulty}
+              onChange={e => setQ({ ...q, difficulty: e.target.value as Difficulty })}
+              className={inputCls + " cursor-pointer"}
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
           </div>
-          {q.questionImage && (
-            <div className="mt-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-              <img src={q.questionImage} alt="Question preview" className="max-w-xs max-h-48 rounded-lg object-contain"
-                onError={() => setImageErrors({...imageErrors, question: true})} onLoad={() => setImageErrors({...imageErrors, question: false})} />
-              {imageErrors.question && <p className="text-xs text-red-500 mt-1">Failed to load image</p>}
-            </div>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div><label className={labelCls}>Difficulty *</label>
-            <select value={q.difficulty} onChange={e => setQ({...q, difficulty: e.target.value as Difficulty})} className={inputCls}>
-              <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
-            </select></div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className={labelCls}>Marks *</label>
-              <input type="number" value={q.marks} onChange={e => setQ({...q, marks: +e.target.value})} min={1} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Neg. Mark</label>
-              <input type="number" step="0.25" value={q.negativeMark || 0} onChange={e => setQ({...q, negativeMark: +e.target.value})} min={0} className={inputCls} placeholder="0" />
-            </div>
+          <div>
+            <label className={labelCls}>Marks *</label>
+            <input
+              type="number"
+              value={q.marks}
+              onChange={e => setQ({ ...q, marks: +e.target.value })}
+              min={1}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Negative Mark</label>
+            <input
+              type="number"
+              step="0.25"
+              value={q.negativeMark || 0}
+              onChange={e => setQ({ ...q, negativeMark: +e.target.value })}
+              min={0}
+              className={inputCls}
+              placeholder="0"
+            />
           </div>
         </div>
+
+        {/* ANSWER OPTIONS */}
         <div>
-          <div className="flex items-center justify-between mb-2"><label className={labelCls + " mb-0"}>OPTIONS</label><span className="text-xs text-gray-400">Click a letter to mark correct</span></div>
-          <div className="space-y-3">
-            {q.options.map((opt, i) => (
-              <div key={i}>
-                <div className={`flex items-center gap-3 border rounded-lg px-3 py-2 transition-colors ${q.correctAnswer === String.fromCharCode(65+i) ? "border-[#10B981] bg-green-50" : "border-gray-200"}`}>
-                  <button type="button" onClick={() => setQ({...q, correctAnswer: String.fromCharCode(65+i)})}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${q.correctAnswer === String.fromCharCode(65+i) ? "bg-[#10B981] text-white" : "border-2 border-gray-300 text-gray-400"}`}>
-                    {q.correctAnswer === String.fromCharCode(65+i) ? <Check size={13}/> : String.fromCharCode(65+i)}
+          <div className="flex items-center justify-between mb-2">
+            <label className={labelCls + " mb-0 uppercase tracking-wider"}>ANSWER OPTIONS</label>
+            <span className="text-xs text-slate-400">Select the correct answer</span>
+          </div>
+          <div className="space-y-2.5">
+            {q.options.map((opt, i) => {
+              const letter = String.fromCharCode(65 + i)
+              const isSelected = q.correctAnswer === letter
+              return (
+                <div
+                  key={i}
+                  className={`flex items-start gap-3 rounded-xl border p-3 transition-colors ${
+                    isSelected ? "border-emerald-500 bg-emerald-50/40 shadow-2xs" : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setQ({ ...q, correctAnswer: letter })}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors cursor-pointer mt-0.5 ${
+                      isSelected ? "bg-emerald-600 text-white shadow-2xs" : "border-2 border-slate-300 text-slate-500 bg-white"
+                    }`}
+                  >
+                    {isSelected ? <Check size={13} className="stroke-[3]" /> : letter}
                   </button>
-                  <input value={opt} onChange={e => { const opts = [...q.options]; opts[i] = e.target.value; setQ({...q, options: opts}) }}
-                    placeholder={`Option ${String.fromCharCode(65+i)}...`} className="flex-1 text-sm bg-transparent focus:outline-none" />
-                </div>
-                <div className="flex items-center gap-1.5 border-t border-gray-100 pt-1.5 mt-1">
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Image URL:</span>
-                  <input 
-                    value={q.optionImages?.[i] || ""} 
-                    onChange={e => {
-                      const img = [...(q.optionImages || ["","","",""])];
-                      img[i] = e.target.value;
-                      setQ({...q, optionImages: img})
-                    }}
-                    placeholder="Optional image URL for this option..."
-                    className="flex-1 text-[10px] bg-transparent focus:outline-none border-none p-0 text-blue-500" 
-                  />
-                </div>
-                {q.optionImages?.[i] && (
-                  <div className="mt-1 p-2 border border-gray-100 rounded-lg bg-gray-50">
-                    <img src={q.optionImages[i]} alt={`Option ${String.fromCharCode(65+i)} preview`} className="max-w-xs max-h-32 rounded-lg object-contain"
-                      onError={() => setImageErrors({...imageErrors, [`opt${i}`]: true})} onLoad={() => setImageErrors({...imageErrors, [`opt${i}`]: false})} />
-                    {imageErrors[`opt${i}`] && <p className="text-xs text-red-500 mt-1">Failed to load image</p>}
+                  <div className="flex-1 space-y-2 min-w-0">
+                    <input
+                      value={opt}
+                      onChange={e => {
+                        const opts = [...q.options]
+                        opts[i] = e.target.value
+                        setQ({ ...q, options: opts })
+                      }}
+                      placeholder={`Enter option ${letter}...`}
+                      className="w-full text-sm bg-transparent focus:outline-none text-slate-800 placeholder:text-slate-400"
+                    />
+                    <div className="flex items-center gap-1.5 border-t border-slate-100 pt-1.5">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Image URL:</span>
+                      <input
+                        value={q.optionImages?.[i] || ""}
+                        onChange={e => {
+                          const img = [...(q.optionImages || ["", "", "", ""])]
+                          img[i] = e.target.value
+                          setQ({ ...q, optionImages: img })
+                        }}
+                        placeholder="Optional image URL for this option..."
+                        className="flex-1 text-[11px] bg-transparent focus:outline-none text-blue-600 placeholder:text-slate-300"
+                      />
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              )
+            })}
           </div>
         </div>
-        <div><label className={labelCls}>Explanation <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <textarea value={q.explanation} onChange={e => setQ({...q, explanation: e.target.value})} rows={2} className={inputCls + " resize-none"} /></div>
-        {error && <p className="text-sm text-red-500 flex items-center gap-1"><AlertCircle size={14}/>{error}</p>}
+
+        {/* Explanation */}
+        <div>
+          <label className={labelCls}>
+            Explanation <span className="text-slate-400 font-normal">(Optional - shown after answer)</span>
+          </label>
+          <textarea
+            value={q.explanation}
+            onChange={e => setQ({ ...q, explanation: e.target.value })}
+            rows={3}
+            placeholder="Explain why the correct answer is right..."
+            className={textareaCls}
+          />
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-600 font-medium flex items-center gap-1.5 p-2.5 rounded-lg bg-red-50 border border-red-200">
+            <AlertCircle size={14} className="shrink-0" />
+            <span>{error}</span>
+          </p>
+        )}
       </div>
-      <ModalFooter note="* required" onCancel={onClose} onSave={save} />
+      <ModalFooter note="Fields marked with * are required" onCancel={onClose} onSave={save} />
     </ModalShell>
   )
 }
 
-function TrueFalseModal({ onSave, onClose, initial }: { onSave: (q: TrueFalseQuestion | TrueFalseQuestion[]) => void; onClose: () => void; initial?: TrueFalseQuestion }) {
-  const blank = (): TrueFalseQuestion => ({ id: Math.random().toString(36).slice(2), type: "truefalse", questionText: "", difficulty: "medium", marks: 1, correctAnswer: "True", explanation: "", questionImage: "", codeSnippet: "" })
+function TrueFalseModal({ onSave, onClose, initial }: {
+  onSave: (q: TrueFalseQuestion | TrueFalseQuestion[]) => void; onClose: () => void; initial?: TrueFalseQuestion
+}) {
+  const blank = (): TrueFalseQuestion => ({
+    id: Math.random().toString(36).slice(2), type: "truefalse",
+    questionText: "", difficulty: "medium", marks: 1,
+    correctAnswer: "True", explanation: ""
+  })
   const [q, setQ] = useState<TrueFalseQuestion>(initial ?? blank())
   const [error, setError] = useState("")
-  const [imageError, setImageError] = useState(false)
   const [aiPrompt, setAiPrompt] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [bulkTopics, setBulkTopics] = useState([{ topic: "", count: 1 }])
+
+  const save = () => {
+    if (!q.questionText.trim()) return setError("Statement is required")
+    onSave(q); onClose()
+  }
 
   const generateWithAi = async () => {
     if (!aiPrompt.trim()) return setError("Enter a topic or statement prompt first")
@@ -623,7 +884,7 @@ function TrueFalseModal({ onSave, onClose, initial }: { onSave: (q: TrueFalseQue
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to generate True/False question")
       setQ(prev => ({ ...prev, questionText: data.data.questionText, correctAnswer: data.data.correctAnswer, explanation: data.data.explanation }))
-    } catch (err) { setError(err instanceof Error ? err.message : "Failed to generate True/False question") }
+    } catch (error) { setError(error instanceof Error ? error.message : "Failed to generate True/False question") }
     finally { setIsGenerating(false) }
   }
 
@@ -632,152 +893,397 @@ function TrueFalseModal({ onSave, onClose, initial }: { onSave: (q: TrueFalseQue
     if (!topics.length) return setError("Add at least one topic and question count")
     setIsGenerating(true); setError("")
     try {
-      const res = await fetch("/api/admin/generate-objective-question", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topics, type: "truefalse", marks: q.marks, difficulty: q.difficulty }),
-      })
+      const res = await fetch("/api/admin/generate-objective-question", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topics, type: "truefalse", marks: q.marks, difficulty: q.difficulty }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Bulk generation failed")
-      onSave(data.data.map((item: any): TrueFalseQuestion => ({
-        ...q, id: Math.random().toString(36).slice(2), questionText: item.questionText,
-        correctAnswer: item.correctAnswer, explanation: item.explanation,
-      })))
-      onClose()
-    } catch (err) { setError(err instanceof Error ? err.message : "Bulk generation failed") }
+      const generated = data.data.map((item: any): TrueFalseQuestion => ({ ...q, id: Math.random().toString(36).slice(2), questionText: item.questionText, correctAnswer: item.correctAnswer, explanation: item.explanation }))
+      onSave(generated); onClose()
+    } catch (error) { setError(error instanceof Error ? error.message : "Bulk generation failed") }
     finally { setIsGenerating(false) }
   }
 
-  const save = () => { if (!q.questionText.trim()) return setError("Question text is required"); onSave(q); onClose() }
   return (
-    <ModalShell title={initial ? "Edit True/False" : "Add True/False"} icon={<div className="w-9 h-9 rounded-lg bg-teal-50 flex items-center justify-center"><CheckSquare size={18} className="text-teal-600"/></div>} onClose={onClose}>
+    <ModalShell
+      title={initial ? "Edit True/False Question" : "Add True/False Question"}
+      icon={
+        <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+          <CheckSquare size={18} className="text-teal-600"/>
+        </div>
+      }
+      onClose={onClose}
+    >
       <div className="space-y-4">
         {!initial && (
           <>
-            <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-3 space-y-2">
+            {/* Box 1: Generate up to 10 topics at once */}
+            <div className="rounded-2xl border border-teal-100 bg-teal-50/40 p-4 space-y-3">
               <p className="text-xs font-bold text-teal-800">Generate up to 10 topics at once</p>
-              {bulkTopics.map((item, index) => <div key={index} className="flex gap-2">
-                <input value={item.topic} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, topic: e.target.value } : row))} placeholder={`Topic ${index + 1}`} className={inputCls} />
-                <input type="number" min={1} max={60} value={item.count} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, count: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } : row))} className="w-20 rounded-lg border border-gray-200 px-2 text-sm bg-white" />
-                {index === bulkTopics.length - 1 && bulkTopics.length < 10 && <button type="button" onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])} className="rounded-lg border border-gray-200 bg-white hover:bg-gray-50 px-3 text-sm cursor-pointer">+</button>}
-              </div>)}
-              <button type="button" onClick={generateBulk} disabled={isGenerating} className="flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
-                {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Generate All Topics
+              <div className="space-y-2">
+                {bulkTopics.map((item, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <input
+                      value={item.topic}
+                      onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, topic: e.target.value } : row))}
+                      placeholder={`Topic ${index + 1}`}
+                      className="flex-1 h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={item.count}
+                      onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, count: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } : row))}
+                      className="w-18 sm:w-20 h-11 px-2.5 rounded-xl border border-slate-200 bg-white text-sm text-center font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                    />
+                    {index === bulkTopics.length - 1 && bulkTopics.length < 10 && (
+                      <button
+                        type="button"
+                        onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])}
+                        className="w-11 h-11 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 text-lg font-bold cursor-pointer transition-colors shadow-2xs shrink-0"
+                        title="Add topic row"
+                      >
+                        +
+                      </button>
+                    )}
+                    {bulkTopics.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setBulkTopics(rows => rows.filter((_, i) => i !== index))}
+                        className="w-11 h-11 rounded-xl border border-red-100 bg-white hover:bg-red-50 flex items-center justify-center text-red-500 cursor-pointer transition-colors shrink-0"
+                        title="Remove row"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={generateBulk}
+                disabled={isGenerating}
+                className="h-10 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+              >
+                {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                <span>Generate All Topics</span>
               </button>
             </div>
-            <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-3">
+
+            {/* Box 2: Single topic generator */}
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3">
               <div className="flex gap-2">
-                <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder="AI topic, e.g. JavaScript basics..." className={inputCls} />
-                <button type="button" onClick={generateWithAi} disabled={isGenerating} className="shrink-0 flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
-                  {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {isGenerating ? "Generating..." : "Generate"}
+                <input
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  placeholder="AI topic, e.g. JavaScript basics..."
+                  className="flex-1 h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); generateWithAi(); } }}
+                />
+                <button
+                  type="button"
+                  onClick={generateWithAi}
+                  disabled={isGenerating}
+                  className="h-11 px-5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  <span>{isGenerating ? "Generating..." : "Generate"}</span>
                 </button>
               </div>
             </div>
           </>
         )}
-        <div><label className={labelCls}>Question Text *</label>
-          <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} className={inputCls + " resize-none"} /></div>
+
+        {/* Statement */}
         <div>
-          <label className={labelCls}>Code Snippet <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <textarea value={q.codeSnippet || ""} onChange={e => setQ({...q, codeSnippet: e.target.value})} rows={3} placeholder="Paste code snippet here (Python, JavaScript, etc.)..." className="w-full p-3 bg-[#1e2a38] text-white font-mono text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none" />
+          <label className={labelCls}>Statement *</label>
+          <textarea
+            value={q.questionText}
+            onChange={e => setQ({ ...q, questionText: e.target.value })}
+            rows={4}
+            placeholder="Enter the statement here..."
+            className={textareaCls}
+          />
         </div>
+
+        {/* Question Image URL */}
         <div>
-          <label className={labelCls}>Question Image URL <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <div className="flex gap-2">
-            <input value={q.questionImage || ""} onChange={e => { setQ({...q, questionImage: e.target.value}); setImageError(false) }} 
-              placeholder="https://example.com/image.png" className={inputCls} />
+          <label className={labelCls}>
+            Question Image URL <span className="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <input
+            value={q.questionImage || ""}
+            onChange={e => setQ({ ...q, questionImage: e.target.value })}
+            placeholder="https://example.com/image.png"
+            className={inputCls}
+          />
+        </div>
+
+        {/* 3 Columns: Difficulty, Marks, Negative Mark */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div>
+            <label className={labelCls}>Difficulty *</label>
+            <select
+              value={q.difficulty}
+              onChange={e => setQ({ ...q, difficulty: e.target.value as Difficulty })}
+              className={inputCls + " cursor-pointer"}
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
           </div>
-          {q.questionImage && (
-            <div className="mt-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-              <img src={q.questionImage} alt="Question preview" className="max-w-xs max-h-48 rounded-lg object-contain"
-                onError={() => setImageError(true)} onLoad={() => setImageError(false)} />
-              {imageError && <p className="text-xs text-red-500 mt-1">Failed to load image</p>}
-            </div>
-          )}
+          <div>
+            <label className={labelCls}>Marks *</label>
+            <input
+              type="number"
+              value={q.marks}
+              onChange={e => setQ({ ...q, marks: +e.target.value })}
+              min={1}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Negative Mark</label>
+            <input
+              type="number"
+              step="0.25"
+              value={q.negativeMark || 0}
+              onChange={e => setQ({ ...q, negativeMark: +e.target.value })}
+              min={0}
+              className={inputCls}
+              placeholder="0"
+            />
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div><label className={labelCls}>Difficulty</label>
-            <select value={q.difficulty} onChange={e => setQ({...q, difficulty: e.target.value as Difficulty})} className={inputCls}>
-              <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
-            </select></div>
-          <div><label className={labelCls}>Marks</label>
-            <input type="number" value={q.marks} onChange={e => setQ({...q, marks: +e.target.value})} min={1} className={inputCls} /></div>
-        </div>
+
+        {/* Correct Answer */}
         <div>
-          <label className={labelCls}>Correct Answer</label>
-          <div className="flex gap-3">
-            {["True","False"].map(v => (
-              <button key={v} type="button" onClick={() => setQ({...q, correctAnswer: v as "True"|"False"})}
-                className={`flex-1 py-2.5 rounded-lg border-2 text-sm font-semibold transition-colors ${q.correctAnswer === v ? v === "True" ? "border-[#10B981] bg-green-50 text-[#10B981]" : "border-red-400 bg-red-50 text-red-600" : "border-gray-200 text-gray-500"}`}>
-                {v}
+          <label className={labelCls}>Correct Answer *</label>
+          <div className="grid grid-cols-2 gap-3">
+            {(["True", "False"] as const).map(opt => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setQ({ ...q, correctAnswer: opt })}
+                className={`h-12 rounded-xl border-2 text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  q.correctAnswer === opt
+                    ? opt === "True"
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-2xs"
+                      : "border-red-500 bg-red-50 text-red-700 shadow-2xs"
+                    : "border-slate-200 text-slate-600 hover:border-slate-300 bg-white"
+                }`}
+              >
+                {q.correctAnswer === opt && <Check size={14} className="stroke-[3]" />}
+                <span>{opt}</span>
               </button>
             ))}
           </div>
         </div>
-        <div><label className={labelCls}>Explanation <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <textarea value={q.explanation} onChange={e => setQ({...q, explanation: e.target.value})} rows={2} className={inputCls + " resize-none"} /></div>
-        {error && <p className="text-sm text-red-500 flex items-center gap-1"><AlertCircle size={14}/>{error}</p>}
+
+        {/* Explanation */}
+        <div>
+          <label className={labelCls}>
+            Explanation <span className="text-slate-400 font-normal">(Shown after answering)</span>
+          </label>
+          <textarea
+            value={q.explanation}
+            onChange={e => setQ({ ...q, explanation: e.target.value })}
+            rows={3}
+            placeholder="Explain why this is true or false..."
+            className={textareaCls}
+          />
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-600 font-medium flex items-center gap-1.5 p-2.5 rounded-lg bg-red-50 border border-red-200">
+            <AlertCircle size={14} className="shrink-0" />
+            <span>{error}</span>
+          </p>
+        )}
       </div>
-      <ModalFooter note="* required" onCancel={onClose} onSave={save} />
+      <ModalFooter
+        note={<span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Auto-graded question type</span>}
+        onCancel={onClose}
+        onSave={save}
+      />
     </ModalShell>
   )
 }
 
-function DescriptiveModal({ onSave, onClose, initial }: { onSave: (q: DescriptiveQuestion) => void; onClose: () => void; initial?: DescriptiveQuestion }) {
-  const blank = (): DescriptiveQuestion => ({ id: Math.random().toString(36).slice(2), type: "descriptive", questionText: "", difficulty: "medium", marks: 5, wordLimit: "", modelAnswer: "", rubric: [], questionImage: "", codeSnippet: "" })
+function DescriptiveModal({ onSave, onClose, initial }: {
+  onSave: (q: DescriptiveQuestion) => void; onClose: () => void; initial?: DescriptiveQuestion
+}) {
+  const blank = (): DescriptiveQuestion => ({
+    id: Math.random().toString(36).slice(2), type: "descriptive",
+    questionText: "", difficulty: "medium", marks: 10,
+    wordLimit: "", modelAnswer: "", rubric: ["","",""]
+  })
   const [q, setQ] = useState<DescriptiveQuestion>(initial ?? blank())
   const [error, setError] = useState("")
-  const [imageError, setImageError] = useState(false)
-  const save = () => { if (!q.questionText.trim()) return setError("Question text is required"); onSave(q); onClose() }
+
+  const save = () => {
+    if (!q.questionText.trim()) return setError("Question text is required")
+    onSave(q); onClose()
+  }
+
   return (
-    <ModalShell title={initial ? "Edit Descriptive" : "Add Descriptive"} icon={<div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center"><AlignLeft size={18} className="text-purple-600"/></div>} onClose={onClose}>
+    <ModalShell
+      title={initial ? "Edit Descriptive Question" : "Add Descriptive Question"}
+      icon={
+        <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
+          <AlignLeft size={18} className="text-purple-600"/>
+        </div>
+      }
+      onClose={onClose}
+    >
       <div className="space-y-4">
-        <div><label className={labelCls}>Question Text *</label>
-          <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} className={inputCls + " resize-none"} /></div>
         <div>
-          <label className={labelCls}>Code Snippet <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <textarea value={q.codeSnippet || ""} onChange={e => setQ({...q, codeSnippet: e.target.value})} rows={3} placeholder="Paste code snippet here (Python, JavaScript, etc.)..." className="w-full p-3 bg-[#1e2a38] text-white font-mono text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none" />
+          <label className={labelCls}>Question Text *</label>
+          <textarea
+            value={q.questionText}
+            onChange={e => setQ({ ...q, questionText: e.target.value })}
+            rows={4}
+            placeholder="Enter your descriptive question here..."
+            className={textareaCls}
+          />
         </div>
         <div>
-          <label className={labelCls}>Question Image URL <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <div className="flex gap-2">
-            <input value={q.questionImage || ""} onChange={e => { setQ({...q, questionImage: e.target.value}); setImageError(false) }} 
-              placeholder="https://example.com/image.png" className={inputCls} />
+          <label className={labelCls}>
+            Question Image URL <span className="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <input
+            value={q.questionImage || ""}
+            onChange={e => setQ({ ...q, questionImage: e.target.value })}
+            placeholder="https://example.com/image.png"
+            className={inputCls}
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div>
+            <label className={labelCls}>Difficulty *</label>
+            <select
+              value={q.difficulty}
+              onChange={e => setQ({ ...q, difficulty: e.target.value as Difficulty })}
+              className={inputCls + " cursor-pointer"}
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
           </div>
-          {q.questionImage && (
-            <div className="mt-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-              <img src={q.questionImage} alt="Question preview" className="max-w-xs max-h-48 rounded-lg object-contain"
-                onError={() => setImageError(true)} onLoad={() => setImageError(false)} />
-              {imageError && <p className="text-xs text-red-500 mt-1">Failed to load image</p>}
-            </div>
-          )}
+          <div>
+            <label className={labelCls}>Marks *</label>
+            <input
+              type="number"
+              value={q.marks}
+              onChange={e => setQ({ ...q, marks: +e.target.value })}
+              min={1}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>
+              Word Limit <span className="text-slate-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              value={q.wordLimit}
+              onChange={e => setQ({ ...q, wordLimit: e.target.value })}
+              placeholder="e.g. 200-300 words"
+              className={inputCls}
+            />
+          </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div><label className={labelCls}>Difficulty</label>
-            <select value={q.difficulty} onChange={e => setQ({...q, difficulty: e.target.value as Difficulty})} className={inputCls}>
-              <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
-            </select></div>
-          <div><label className={labelCls}>Marks</label>
-            <input type="number" value={q.marks || ""} onChange={e => setQ({...q, marks: +e.target.value})} min={1} className={inputCls} /></div>
-          <div><label className={labelCls}>Word Limit</label>
-            <input type="number" value={q.wordLimit || ""} onChange={e => setQ({...q, wordLimit: e.target.value})} placeholder="0 = no limit" className={inputCls} /></div>
+        <div>
+          <label className={labelCls}>
+            Model Answer <span className="text-slate-400 font-normal">(For grading reference)</span>
+          </label>
+          <textarea
+            value={q.modelAnswer}
+            onChange={e => setQ({ ...q, modelAnswer: e.target.value })}
+            rows={4}
+            placeholder="Enter the ideal answer or key points that should be covered..."
+            className={textareaCls}
+          />
         </div>
-        <div><label className={labelCls}>Model Answer</label>
-          <textarea value={q.modelAnswer} onChange={e => setQ({...q, modelAnswer: e.target.value})} rows={3} className={inputCls + " resize-none"} /></div>
-        {error && <p className="text-sm text-red-500 flex items-center gap-1"><AlertCircle size={14}/>{error}</p>}
+        <div>
+          <label className={labelCls}>
+            Grading Rubric <span className="text-slate-400 font-normal">(Optional - define scoring criteria)</span>
+          </label>
+          <div className="space-y-2">
+            {q.rubric.map((r, i) => (
+              <div key={i} className="flex gap-2 items-center">
+                <input
+                  value={r}
+                  onChange={e => {
+                    const rb = [...q.rubric]
+                    rb[i] = e.target.value
+                    setQ({ ...q, rubric: rb })
+                  }}
+                  placeholder={`Criterion ${i + 1}`}
+                  className={inputCls}
+                />
+                {q.rubric.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setQ({ ...q, rubric: q.rubric.filter((_, idx) => idx !== i) })}
+                    className="w-11 h-11 rounded-xl border border-red-100 bg-white hover:bg-red-50 flex items-center justify-center text-red-500 cursor-pointer transition-colors shrink-0"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setQ({ ...q, rubric: [...q.rubric, ""] })}
+              className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Plus size={14} /> Add Rubric Criterion
+            </button>
+          </div>
+        </div>
+        {error && (
+          <p className="text-sm text-red-600 font-medium flex items-center gap-1.5 p-2.5 rounded-lg bg-red-50 border border-red-200">
+            <AlertCircle size={14} className="shrink-0" />
+            <span>{error}</span>
+          </p>
+        )}
       </div>
-      <ModalFooter note="* required" onCancel={onClose} onSave={save} />
+      <ModalFooter
+        note={<span className="flex items-center gap-1.5"><AlertCircle size={13} className="text-slate-400"/>Descriptive answers require manual evaluation</span>}
+        onCancel={onClose}
+        onSave={save}
+      />
     </ModalShell>
   )
 }
 
-function FillBlanksModal({ onSave, onClose, initial }: { onSave: (q: FillBlanksQuestion | FillBlanksQuestion[]) => void; onClose: () => void; initial?: FillBlanksQuestion }) {
-  const blank = (): FillBlanksQuestion => ({ id: Math.random().toString(36).slice(2), type: "fillblanks", questionText: "", difficulty: "medium", marks: 1, blanks: [{ answer: "", alsoAccept: [] }], caseInsensitive: true, questionImage: "", codeSnippet: "" })
+function FillBlanksModal({ onSave, onClose, initial }: {
+  onSave: (q: FillBlanksQuestion | FillBlanksQuestion[]) => void; onClose: () => void; initial?: FillBlanksQuestion
+}) {
+  const blank = (): FillBlanksQuestion => ({
+    id: Math.random().toString(36).slice(2), type: "fillblanks",
+    questionText: "", difficulty: "medium", marks: 1,
+    blanks: [], caseInsensitive: true
+  })
   const [q, setQ] = useState<FillBlanksQuestion>(initial ?? blank())
   const [error, setError] = useState("")
-  const [imageError, setImageError] = useState(false)
-  const [aiPrompt, setAiPrompt] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState("")
   const [bulkTopics, setBulkTopics] = useState([{ topic: "", count: 1 }])
+
+  const detectBlanks = (text: string) => {
+    const matches = text.match(/_{2,}/g) || []
+    const newBlanks = matches.map((_, i) => q.blanks[i] ?? { answer: "", alsoAccept: [] })
+    setQ(prev => ({ ...prev, questionText: text, blanks: newBlanks }))
+  }
+
+  const save = () => {
+    if (!q.questionText.trim()) return setError("Question text is required")
+    if (q.blanks.length === 0) return setError("Use ___ to mark blanks in the question text")
+    if (q.blanks.some(b => !b.answer.trim())) return setError("All blanks need a correct answer")
+    onSave(q); onClose()
+  }
 
   const generateWithAi = async () => {
     if (!aiPrompt.trim()) return setError("Enter a topic for the fill-in-the-blanks question")
@@ -808,102 +1314,266 @@ function FillBlanksModal({ onSave, onClose, initial }: { onSave: (q: FillBlanksQ
     setIsGenerating(true); setError("")
     try {
       const res = await fetch("/api/admin/generate-objective-question", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topics, type: "fillblanks", marks: q.marks, difficulty: q.difficulty }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Bulk generation failed")
-      onSave(data.data.map((item: any): FillBlanksQuestion => ({
-        ...q, id: Math.random().toString(36).slice(2), questionText: item.questionText,
-        blanks: (item.blanks || []).map((blank: any) => ({
-          answer: blank.answer, alsoAccept: Array.isArray(blank.alsoAccept) ? blank.alsoAccept : [],
-        })),
-      })))
-      onClose()
-    } catch (err) { setError(err instanceof Error ? err.message : "Bulk generation failed") }
-    finally { setIsGenerating(false) }
-  }
-
-  const save = () => {
-    if (!q.questionText.trim()) return setError("Question text is required")
-    if (q.blanks.some(b => !b.answer.trim())) return setError("All blank answers are required")
-    onSave(q); onClose()
+      const generated = data.data.map((item: any): FillBlanksQuestion => ({
+        ...q,
+        id: Math.random().toString(36).slice(2),
+        questionText: item.questionText,
+        blanks: item.blanks.map((blank: any) => ({ answer: blank.answer, alsoAccept: Array.isArray(blank.alsoAccept) ? blank.alsoAccept : [] })),
+      }))
+      onSave(generated); onClose()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Bulk generation failed")
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
-    <ModalShell title={initial ? "Edit Fill Blanks" : "Add Fill Blanks"} icon={<div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center"><FileText size={18} className="text-amber-600"/></div>} onClose={onClose}>
+    <ModalShell
+      title={initial ? "Edit Fill in the Blanks" : "Add Fill in the Blanks"}
+      icon={
+        <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+          <FileText size={18} className="text-amber-600"/>
+        </div>
+      }
+      onClose={onClose}
+    >
       <div className="space-y-4">
         {!initial && (
           <>
-            <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3 space-y-2">
+            {/* Box 1: Generate up to 10 topics at once */}
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/40 p-4 space-y-3">
               <p className="text-xs font-bold text-amber-800">Generate up to 10 topics at once</p>
-              {bulkTopics.map((item, index) => <div key={index} className="flex gap-2">
-                <input value={item.topic} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, topic: e.target.value } : row))} placeholder={`Topic ${index + 1}`} className={inputCls} />
-                <input type="number" min={1} max={60} value={item.count} onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, count: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } : row))} className="w-20 rounded-lg border border-gray-200 px-2 text-sm bg-white" />
-                {index === bulkTopics.length - 1 && bulkTopics.length < 10 && <button type="button" onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])} className="rounded-lg border border-gray-200 bg-white hover:bg-gray-50 px-3 text-sm cursor-pointer">+</button>}
-              </div>)}
-              <button type="button" onClick={generateBulk} disabled={isGenerating} className="flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
-                {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Generate All Topics
+              <div className="space-y-2">
+                {bulkTopics.map((item, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <input
+                      value={item.topic}
+                      onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, topic: e.target.value } : row))}
+                      placeholder={`Topic ${index + 1}`}
+                      className="flex-1 h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={item.count}
+                      onChange={e => setBulkTopics(rows => rows.map((row, i) => i === index ? { ...row, count: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } : row))}
+                      className="w-18 sm:w-20 h-11 px-2.5 rounded-xl border border-slate-200 bg-white text-sm text-center font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                    />
+                    {index === bulkTopics.length - 1 && bulkTopics.length < 10 && (
+                      <button
+                        type="button"
+                        onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])}
+                        className="w-11 h-11 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 text-lg font-bold cursor-pointer transition-colors shadow-2xs shrink-0"
+                        title="Add topic row"
+                      >
+                        +
+                      </button>
+                    )}
+                    {bulkTopics.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setBulkTopics(rows => rows.filter((_, i) => i !== index))}
+                        className="w-11 h-11 rounded-xl border border-red-100 bg-white hover:bg-red-50 flex items-center justify-center text-red-500 cursor-pointer transition-colors shrink-0"
+                        title="Remove row"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={generateBulk}
+                disabled={isGenerating}
+                className="h-10 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+              >
+                {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                <span>Generate All Topics</span>
               </button>
             </div>
-            <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+
+            {/* Box 2: Single topic generator */}
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3">
               <div className="flex gap-2">
-                <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder="AI topic, e.g. water cycle..." className={inputCls} />
-                <button type="button" onClick={generateWithAi} disabled={isGenerating} className="shrink-0 flex items-center gap-1.5 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white px-3 py-2 text-xs font-semibold disabled:opacity-60 cursor-pointer">
-                  {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {isGenerating ? "Generating..." : "Generate"}
+                <input
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  placeholder="AI topic, e.g. water cycle..."
+                  className="flex-1 h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); generateWithAi(); } }}
+                />
+                <button
+                  type="button"
+                  onClick={generateWithAi}
+                  disabled={isGenerating}
+                  className="h-11 px-5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  <span>{isGenerating ? "Generating..." : "Generate"}</span>
                 </button>
               </div>
             </div>
           </>
         )}
-        <div><label className={labelCls}>Question Text * <span className="text-xs text-gray-400">(use ___ for blanks)</span></label>
-          <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})} rows={4} className={inputCls + " resize-none"} /></div>
-        <div>
-          <label className={labelCls}>Code Snippet <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <textarea value={q.codeSnippet || ""} onChange={e => setQ({...q, codeSnippet: e.target.value})} rows={3} placeholder="Paste code snippet here (Python, JavaScript, etc.)..." className="w-full p-3 bg-[#1e2a38] text-white font-mono text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none" />
+
+        <div className="bg-amber-50 rounded-xl px-4 py-3 text-xs text-amber-800 border border-amber-200/60 leading-relaxed">
+          Use <strong>___</strong> (3 or more underscores) to designate blank locations in your text.
         </div>
+
         <div>
-          <label className={labelCls}>Question Image URL <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <div className="flex gap-2">
-            <input value={q.questionImage || ""} onChange={e => { setQ({...q, questionImage: e.target.value}); setImageError(false) }} 
-              placeholder="https://example.com/image.png" className={inputCls} />
+          <label className={labelCls}>Question with Blanks *</label>
+          <textarea
+            value={q.questionText}
+            onChange={e => detectBlanks(e.target.value)}
+            rows={3}
+            placeholder="The chemical formula for water is ___ and for carbon dioxide is ___."
+            className={textareaCls}
+          />
+        </div>
+
+        <div>
+          <label className={labelCls}>
+            Question Image URL <span className="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <input
+            value={q.questionImage || ""}
+            onChange={e => setQ({ ...q, questionImage: e.target.value })}
+            placeholder="https://example.com/image.png"
+            className={inputCls}
+          />
+        </div>
+
+        {/* 3 Columns: Difficulty, Marks, Negative Mark */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div>
+            <label className={labelCls}>Difficulty *</label>
+            <select
+              value={q.difficulty}
+              onChange={e => setQ({ ...q, difficulty: e.target.value as Difficulty })}
+              className={inputCls + " cursor-pointer"}
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
           </div>
-          {q.questionImage && (
-            <div className="mt-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-              <img src={q.questionImage} alt="Question preview" className="max-w-xs max-h-48 rounded-lg object-contain"
-                onError={() => setImageError(true)} onLoad={() => setImageError(false)} />
-              {imageError && <p className="text-xs text-red-500 mt-1">Failed to load image</p>}
+          <div>
+            <label className={labelCls}>Marks *</label>
+            <input
+              type="number"
+              value={q.marks}
+              onChange={e => setQ({ ...q, marks: +e.target.value })}
+              min={1}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Negative Mark</label>
+            <input
+              type="number"
+              step="0.1"
+              value={q.negativeMark || 0}
+              onChange={e => setQ({ ...q, negativeMark: +e.target.value })}
+              min={0}
+              className={inputCls}
+              placeholder="0"
+            />
+          </div>
+        </div>
+
+        {q.blanks.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className={labelCls + " mb-0 uppercase tracking-wider"}>CORRECT ANSWERS</label>
+              <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={q.caseInsensitive}
+                  onChange={e => setQ({ ...q, caseInsensitive: e.target.checked })}
+                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900/20"
+                />
+                Case insensitive matching
+              </label>
             </div>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div><label className={labelCls}>Difficulty</label>
-            <select value={q.difficulty} onChange={e => setQ({...q, difficulty: e.target.value as Difficulty})} className={inputCls}>
-              <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
-            </select></div>
-          <div><label className={labelCls}>Marks</label>
-            <input type="number" value={q.marks} onChange={e => setQ({...q, marks: +e.target.value})} min={1} className={inputCls} /></div>
-        </div>
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className={labelCls + " mb-0"}>Blank Answers</label>
-            <button type="button" onClick={() => setQ({...q, blanks: [...q.blanks, { answer: "", alsoAccept: [] }]})}
-              className="text-xs text-[#10B981] font-medium flex items-center gap-1"><Plus size={13}/>Add Blank</button>
+            <div className="space-y-3">
+              {q.blanks.map((bl, i) => (
+                <div key={i} className="p-3 bg-slate-50/60 rounded-xl border border-slate-200/80 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 text-xs font-bold flex items-center justify-center shrink-0">
+                      {i + 1}
+                    </span>
+                    <input
+                      value={bl.answer}
+                      onChange={e => {
+                        const bs = [...q.blanks]
+                        bs[i] = { ...bs[i], answer: e.target.value }
+                        setQ({ ...q, blanks: bs })
+                      }}
+                      placeholder={`Correct answer for blank #${i + 1}`}
+                      className={inputCls}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pl-9 flex-wrap">
+                    <span className="text-xs text-slate-400">Also accept:</span>
+                    {bl.alsoAccept.map((a, ai) => (
+                      <input
+                        key={ai}
+                        value={a}
+                        onChange={e => {
+                          const bs = [...q.blanks]
+                          const aa = [...bs[i].alsoAccept]
+                          aa[ai] = e.target.value
+                          bs[i] = { ...bs[i], alsoAccept: aa }
+                          setQ({ ...q, blanks: bs })
+                        }}
+                        placeholder="Alternative..."
+                        className="w-28 h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:border-slate-400"
+                      />
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const bs = [...q.blanks]
+                        bs[i] = { ...bs[i], alsoAccept: [...bs[i].alsoAccept, ""] }
+                        setQ({ ...q, blanks: bs })
+                      }}
+                      className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Plus size={13} /> Add
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="space-y-2">
-            {q.blanks.map((b, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 w-6">#{i+1}</span>
-                <input value={b.answer} onChange={e => { const blanks = [...q.blanks]; blanks[i] = {...b, answer: e.target.value}; setQ({...q, blanks}) }}
-                  placeholder="Correct answer..." className={inputCls + " flex-1"} />
-                {q.blanks.length > 1 && <button type="button" onClick={() => setQ({...q, blanks: q.blanks.filter((_,j) => j !== i)})} className="text-gray-400 hover:text-red-500"><X size={15}/></button>}
-              </div>
-            ))}
-          </div>
-        </div>
-        {error && <p className="text-sm text-red-500 flex items-center gap-1"><AlertCircle size={14}/>{error}</p>}
+        )}
+
+        {error && (
+          <p className="text-sm text-red-600 font-medium flex items-center gap-1.5 p-2.5 rounded-lg bg-red-50 border border-red-200">
+            <AlertCircle size={14} className="shrink-0" />
+            <span>{error}</span>
+          </p>
+        )}
       </div>
-      <ModalFooter note="* required" onCancel={onClose} onSave={save} />
+      <ModalFooter
+        note={
+          <span className="flex items-center gap-1.5 text-amber-700">
+            <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"/>
+            {q.blanks.length} blank{q.blanks.length !== 1 ? "s" : ""} detected · Auto-graded
+          </span>
+        }
+        onCancel={onClose}
+        onSave={save}
+      />
     </ModalShell>
   )
 }
@@ -918,21 +1588,19 @@ function CodingModal({ onSave, onClose, initial }: {
     codeTemplates: { ...DEFAULT_TEMPLATES },
     driverCode: { ...DEFAULT_DRIVERS },
     testCases: [{ input: "", expectedOutput: "" }],
-    constraints: [], languages: ["Python", "JavaScript"],
-    questionImage: ""
+    constraints: [], languages: ["Python", "JavaScript"]
   })
 
   // Merge initial data with defaults for missing fields (new multi-lang support)
   const [q, setQ] = useState<CodingQuestion>(() => {
     const base = initial ?? blank()
+    // Ensure all enabled languages have a template/driver (fallback to defaults if missing)
     const templates = { ...DEFAULT_TEMPLATES, ...(base.codeTemplates || {}) }
     const drivers = { ...DEFAULT_DRIVERS, ...(base.driverCode || {}) }
-    const langs = base.languages?.length ? base.languages : ["Python", "JavaScript"]
-    return { ...base, codeTemplates: templates, driverCode: drivers, languages: langs }
+    return { ...base, codeTemplates: templates, driverCode: drivers }
   })
   const [activeLang, setActiveLang] = useState<string>(q.languages[0]?.toLowerCase() || "python")
   const [error, setError] = useState("")
-  const [imageError, setImageError] = useState(false)
   const [aiPrompt, setAiPrompt] = useState("")
   const [isAiGenerating, setIsAiGenerating] = useState(false)
   const [aiError, setAiError] = useState("")
@@ -945,6 +1613,7 @@ function CodingModal({ onSave, onClose, initial }: {
       const res = await fetch("/api/admin/generate-coding-question", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           prompt: aiPrompt,
           languages: q.languages.length > 0 ? q.languages : ["Python", "Java", "C++", "JavaScript"]
@@ -1033,12 +1702,13 @@ function CodingModal({ onSave, onClose, initial }: {
           </p>
         </div>
 
+        {/* Step-by-Step Guide */}
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-[11px] text-blue-700 leading-relaxed">
           <p className="font-bold mb-1 flex items-center gap-1"><Info size={12}/> How to create a LeetCode-style problem:</p>
           <ol className="list-decimal list-inside space-y-0.5 ml-1">
             <li>Write the <b>Problem Statement</b> and set <b>Marks</b>.</li>
             <li>Enable the <b>Languages</b> you want to support.</li>
-            <li>Under each language tab, the <b>Initial Template</b> is what the student sees.</li>
+            <li>Under each language tab, the <b>Initial Template</b> is what the student sees (e.g. a class method).</li>
             <li>The <b>Driver Code</b> (hidden) is what executes the student's code and reads test cases via <code>stdin</code>.</li>
             <li>Add <b>Test Cases</b> with the specific inputs your Driver expects.</li>
           </ol>
@@ -1051,37 +1721,26 @@ function CodingModal({ onSave, onClose, initial }: {
             className={inputCls + " resize-none"} />
         </div>
         <div>
-          <label className={labelCls}>Problem Image URL <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <div className="flex gap-2">
-            <input value={q.questionImage || ""} onChange={e => { setQ({...q, questionImage: e.target.value}); setImageError(false) }} 
-              placeholder="https://example.com/image.png" className={inputCls} />
-          </div>
-          {q.questionImage && (
-            <div className="mt-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-              <img src={q.questionImage} alt="Problem preview" className="max-w-xs max-h-48 rounded-lg object-contain"
-                onError={() => setImageError(true)} onLoad={() => setImageError(false)} />
-              {imageError && <p className="text-xs text-red-500 mt-1">Failed to load image</p>}
-            </div>
-          )}
+          <label className={labelCls}>Question Image URL <span className="text-gray-400 font-normal">(Optional)</span></label>
+          <input value={q.questionImage || ""} onChange={e => setQ({...q, questionImage: e.target.value})} 
+            placeholder="https://example.com/image.png" className={inputCls} />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div>
             <label className={labelCls}>Difficulty *</label>
-            <select value={q.difficulty} onChange={e => setQ({...q, difficulty: e.target.value as Difficulty})} className={inputCls}>
+            <select value={q.difficulty} onChange={e => setQ({...q, difficulty: e.target.value as Difficulty})} className={inputCls + " cursor-pointer"}>
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
               <option value="hard">Hard</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className={labelCls}>Marks *</label>
-              <input type="number" value={q.marks} onChange={e => setQ({...q, marks: +e.target.value})} min={1} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Neg. Mark</label>
-              <input type="number" step="0.25" value={q.negativeMark || 0} onChange={e => setQ({...q, negativeMark: +e.target.value})} min={0} className={inputCls} placeholder="0" />
-            </div>
+          <div>
+            <label className={labelCls}>Marks *</label>
+            <input type="number" value={q.marks} onChange={e => setQ({...q, marks: +e.target.value})} min={1} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Negative Mark</label>
+            <input type="number" step="0.1" value={q.negativeMark || 0} onChange={e => setQ({...q, negativeMark: +e.target.value})} min={0} className={inputCls} placeholder="0" />
           </div>
         </div>
 
@@ -1095,7 +1754,7 @@ function CodingModal({ onSave, onClose, initial }: {
                   const langs = active ? prev.languages.filter(l => l !== lang) : [...prev.languages, lang]
                   return { ...prev, languages: langs }
                 })} className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all
-                  ${active ? "bg-[#2D3A4A] text-white border-[#2D3A4A] shadow-md" : "bg-white border-gray-100 text-gray-500 hover:border-gray-300"}`}>
+                  ${active ? "bg-[#45505F] text-white border-[#45505F] shadow-md" : "bg-white border-gray-100 text-gray-500 hover:border-gray-300"}`}>
                   {lang}
                 </button>
               )
@@ -1111,7 +1770,7 @@ function CodingModal({ onSave, onClose, initial }: {
                     type="button"
                     onClick={() => setActiveLang(lang.toLowerCase())}
                     className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
-                      activeLang === lang.toLowerCase() ? "bg-white text-[#2D3A4A] shadow-sm" : "text-gray-400 hover:text-gray-600"
+                      activeLang === lang.toLowerCase() ? "bg-white text-[#45505F] shadow-sm" : "text-gray-400 hover:text-gray-600"
                     }`}
                   >
                     {lang}
@@ -1132,6 +1791,7 @@ function CodingModal({ onSave, onClose, initial }: {
                     })}
                     rows={6}
                     className="w-full p-3 bg-[#1e2a38] text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                    placeholder={`Enter boilerplate code for ${activeLang}...`}
                   />
                 </div>
                 <div>
@@ -1146,7 +1806,8 @@ function CodingModal({ onSave, onClose, initial }: {
                        driverCode: { ...q.driverCode, [activeLang]: e.target.value }
                     })}
                     rows={4}
-                    className="w-full p-3 bg-gray-100 text-[#2D3A4A] font-mono text-xs rounded-xl border border-gray-200 focus:outline-none"
+                    className="w-full p-3 bg-gray-100 text-[#45505F] font-mono text-xs rounded-xl border border-gray-200 focus:outline-none"
+                    placeholder={`Enter driver code to run test cases in ${activeLang}...`}
                   />
                   <p className="text-[9px] text-gray-400 mt-1.5">Use <code>stdin</code> to read inputs from test cases and print output for validation.</p>
                 </div>
@@ -1158,49 +1819,45 @@ function CodingModal({ onSave, onClose, initial }: {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className={labelCls + " mb-0"}>Test Cases</label>
-            <button type="button" onClick={() => setQ({ ...q, testCases: [...q.testCases, { input: "", expectedOutput: "" }] })}
-              className="text-xs text-[#10B981] font-semibold flex items-center gap-1 hover:text-[#059669]"><Plus size={13}/>Add Case</button>
+            <button type="button" onClick={() => setQ({...q, testCases: [...q.testCases, {input:"", expectedOutput:"", hidden: false}]})}
+              className="text-xs text-[#10B981] hover:underline flex items-center gap-1 font-bold"><Plus size={12}/>ADD TEST CASE</button>
           </div>
           <div className="space-y-3">
             {q.testCases.map((tc, i) => (
-              <div key={i} className="border border-gray-200 rounded-xl p-3 bg-gray-50">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-gray-500">Case {i + 1}</span>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input type="checkbox" checked={!!tc.hidden}
-                        onChange={e => {
-                          const t = [...q.testCases]; t[i] = { ...t[i], hidden: e.target.checked }; setQ({ ...q, testCases: t })
-                        }}
-                        className="w-3.5 h-3.5 accent-[#2D3A4A]" />
-                      <span className="text-xs text-gray-500">Hidden</span>
-                    </label>
-                    {q.testCases.length > 1 && (
-                      <button onClick={() => setQ({ ...q, testCases: q.testCases.filter((_, j) => j !== i) })} className="text-gray-400 hover:text-red-500"><X size={14}/></button>
-                    )}
+              <div key={i} className="flex gap-2 items-start bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                <div className="flex-1 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[9px] font-black text-gray-400 uppercase mb-1 block">Input</label>
+                      <textarea value={tc.input} onChange={e => {
+                        const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], input: e.target.value}; setQ({...q, testCases: tc2})
+                      }} placeholder="e.g. [1, 2, 3]" className={inputCls + " text-xs font-mono h-16 resize-none"} />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-gray-400 uppercase mb-1 block">Expected Output</label>
+                      <textarea value={tc.expectedOutput} onChange={e => {
+                        const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], expectedOutput: e.target.value}; setQ({...q, testCases: tc2})
+                      }} placeholder="e.g. 6" className={inputCls + " text-xs font-mono h-16 resize-none"} />
+                    </div>
                   </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={!!tc.hidden} onChange={e => {
+                      const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], hidden: e.target.checked}; setQ({...q, testCases: tc2})
+                    }} className="rounded border-gray-300 text-[#10B981] focus:ring-[#10B981]" />
+                    <span className="text-[10px] font-bold text-gray-500 uppercase">Hidden Test Case</span>
+                  </label>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Input (stdin)</p>
-                    <textarea value={tc.input} onChange={e => {
-                      const t = [...q.testCases]; t[i] = { ...t[i], input: e.target.value }; setQ({ ...q, testCases: t })
-                    }} rows={3} className={inputCls + " font-mono text-xs resize-none"} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Expected Output</p>
-                    <textarea value={tc.expectedOutput} onChange={e => {
-                      const t = [...q.testCases]; t[i] = { ...t[i], expectedOutput: e.target.value }; setQ({ ...q, testCases: t })
-                    }} rows={3} className={inputCls + " font-mono text-xs resize-none"} />
-                  </div>
-                </div>
+                <button type="button" onClick={() => setQ({...q, testCases: q.testCases.filter((_, idx) => idx !== i)})}
+                  className="p-1.5 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors mt-4">
+                  <Trash2 size={16}/>
+                </button>
               </div>
             ))}
           </div>
         </div>
-        {error && <p className="text-sm text-red-500 flex items-center gap-1"><AlertCircle size={14}/>{error}</p>}
+        {error && <p className="text-sm text-red-500 flex items-center gap-1 font-medium bg-red-50 p-2 rounded-lg"><AlertCircle size={14}/>{error}</p>}
       </div>
-      <ModalFooter note="* required" onCancel={onClose} onSave={save} />
+      <ModalFooter note={<span className="font-medium text-gray-500">Enable multiple languages for student choice</span>} onCancel={onClose} onSave={save} />
     </ModalShell>
   )
 }
@@ -1266,13 +1923,25 @@ function QuestionMenu({ q, onEdit, onDelete, onClose, anchorRect }: { q: Questio
 
 // ─── Step 3 Component ─────────────────────────────────────────────────────────
 
-function Step3({ questions, setQuestions }: { questions: Question[]; setQuestions: React.Dispatch<React.SetStateAction<Question[]>> }) {
-  const [modal, setModal] = useState<ModalType>(null)
+function Step3({
+  questions,
+  setQuestions,
+  canUseQuestionStudio = true,
+  canUsePdfImport = true,
+  allowedCustomQuestionTypes = ["mcq", "truefalse", "descriptive", "fillblanks", "coding"]
+}: {
+  questions: Question[]
+  setQuestions: React.Dispatch<React.SetStateAction<Question[]>>
+  canUseQuestionStudio?: boolean
+  canUsePdfImport?: boolean
+  allowedCustomQuestionTypes?: QuestionType[]
+}) {
+  const [modal, setModal] = useState<QuestionType | null>(null)
   const [editQ, setEditQ] = useState<Question | null>(null)
   const [search, setSearch] = useState("")
+  const [filterType, setFilterType] = useState<QuestionType | "all">("all")
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
-  const [filterType, setFilterType] = useState<QuestionType | "all">("all")
   const [pdfUploading, setPdfUploading] = useState(false)
   const [pdfError, setPdfError] = useState("")
   const [showCompetitiveAiModal, setShowCompetitiveAiModal] = useState(false)
@@ -1292,12 +1961,26 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
     }))
     setQuestions(prev => [...prev, ...mapped])
   }
-  
+
   const openMenu = (qId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     const rect = e.currentTarget.getBoundingClientRect()
     setAnchorRect(rect)
     setMenuOpen(qId === menuOpen ? null : qId)
+  }
+
+  const filtered = questions.filter(q => {
+    const matchType = filterType === "all" || q.type === filterType
+    const matchSearch = q.questionText.toLowerCase().includes(search.toLowerCase())
+    return matchType && matchSearch
+  })
+
+  const totalMarks = questions.reduce((s, q) => s + q.marks, 0)
+
+  const openModal = (type: QuestionType) => {
+    if (!allowedCustomQuestionTypes.includes(type)) return
+    setEditQ(null)
+    setModal(type)
   }
 
   const saveQuestion = (q: Question | Question[]) => {
@@ -1308,173 +1991,262 @@ function Step3({ questions, setQuestions }: { questions: Question[]; setQuestion
       return
     }
     setQuestions(prev => {
-      const idx = prev.findIndex(p => p.id === q.id)
-      if (idx >= 0) { const next = [...prev]; next[idx] = q; return next }
+      const existingIdx = prev.findIndex(x => x.id === q.id)
+      if (existingIdx >= 0) {
+        const n = [...prev]
+        n[existingIdx] = q
+        return n
+      }
       return [...prev, q]
     })
+    setEditQ(null)
+    setModal(null)
   }
 
+  const removeQ = (id: string) => setQuestions(prev => prev.filter(q => q.id !== id))
+
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0]; if (!file) return
     if (file.type !== "application/pdf") return setPdfError("Please upload a PDF file")
-    setPdfUploading(true)
-    setPdfError("")
+    setPdfUploading(true); setPdfError("")
     try {
-      const formData = new FormData()
-      formData.append("file", file)
+      const formData = new FormData(); formData.append("file", file)
       const res = await fetch("/api/exams/parse-pdf", { method: "POST", body: formData, credentials: "include" })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to parse PDF")
       if (data.questions?.length) {
         setQuestions(prev => [...prev, ...data.questions.map((q: Omit<Question, "id">) => ({...q, id: Math.random().toString(36).slice(2)}))])
-        setPdfError("")
+      } else {
+        setPdfError("No questions could be extracted from this PDF")
       }
     } catch (err) {
-      setPdfError(err instanceof Error ? err.message : "Failed to upload PDF")
+      setPdfError(err instanceof Error ? err.message : "Failed to parse PDF")
     } finally {
       setPdfUploading(false)
       if (fileRef.current) fileRef.current.value = ""
     }
   }
 
-  const totalMarks = questions.reduce((s, q) => s + q.marks, 0)
-  const typeCounts: Record<QuestionType, number> = { mcq: 0, truefalse: 0, descriptive: 0, fillblanks: 0, coding: 0 }
-  questions.forEach(q => typeCounts[q.type]++)
-  
-  let filtered = questions.filter(q => q.questionText.toLowerCase().includes(search.toLowerCase()))
-  if (filterType !== "all") {
-    filtered = filtered.filter(q => q.type === filterType)
-  }
+  const openEdit = (q: Question) => { setEditQ(q); setModal(q.type) }
 
-  const addBtns: { type: QuestionType; label: string }[] = [
-    { type: "mcq", label: "MCQ" }, { type: "truefalse", label: "True/False" },
-    { type: "descriptive", label: "Descriptive" }, { type: "fillblanks", label: "Fill Blanks" },
-    { type: "coding", label: "Coding" },
-  ]
+  const typeCounts = Object.fromEntries(
+    (["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => [t, questions.filter(q => q.type === t).length])
+  )
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-[#2D3A4A]">Questions</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{questions.length} questions selected · Total: {totalMarks} marks</p>
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs relative">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+            STEP 3 · QUESTION STUDIO
+          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">Select & Manage Questions</h2>
+            {questions.length > 0 && (
+              <span className="px-3 py-1 bg-slate-100 rounded-full text-xs font-semibold text-slate-800 ring-1 ring-slate-200">
+                {questions.length} Selected
+              </span>
+            )}
           </div>
-          <div className="flex flex-wrap gap-2 items-center">
+        </div>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => canUseQuestionStudio && setShowCompetitiveAiModal(true)}
+            disabled={!canUseQuestionStudio}
+            className="h-10 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <GraduationCap size={16} className="text-white shrink-0" />
+            <span>{canUseQuestionStudio ? "Competitive Test" : "Question Studio"}</span>
+          </button>
+          <input ref={fileRef} type="file" accept="application/pdf" onChange={handlePdfUpload} className="hidden" />
+          <button
+            type="button"
+            onClick={() => canUsePdfImport && fileRef.current?.click()}
+            disabled={pdfUploading || !canUsePdfImport}
+            className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Upload size={15} className="shrink-0" />
+            <span>{pdfUploading ? "Uploading..." : "Upload from PDF"}</span>
+          </button>
+          <div className="relative group">
             <button
               type="button"
-              onClick={() => setShowCompetitiveAiModal(true)}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white text-xs sm:text-sm font-medium shadow-xs transition-colors cursor-pointer"
+              className="h-10 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
             >
-              <GraduationCap size={15} className="text-white shrink-0" />
-              <span>Competitive Test</span>
+              <Plus size={16} className="shrink-0" />
+              <span>Add Question</span>
             </button>
-            <button onClick={() => fileRef.current?.click()} disabled={pdfUploading}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 transition-colors">
-              <Upload size={15} className="shrink-0" />
-              <span>{pdfUploading ? "Uploading..." : "Upload from PDF"}</span>
-            </button>
-            <input ref={fileRef} type="file" accept="application/pdf" onChange={handlePdfUpload} className="hidden" />
-            <div className="relative group">
-              <button className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#2D3A4A] text-white text-xs sm:text-sm font-medium hover:bg-[#1e2a38] transition-colors">
-                <Plus size={15} className="shrink-0" />
-                <span>Add Question</span>
-              </button>
-              <div className="absolute right-0 top-full pt-1.5 w-44 z-30 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
-                <div className="bg-white border border-gray-100 rounded-xl shadow-lg">
-                  {addBtns.map(b => (
-                    <button key={b.type} onClick={() => { setEditQ(null); setModal(b.type); }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl transition-colors">
-                      {TYPE_META[b.type].icon}{TYPE_META[b.type].label}
-                    </button>
-                  ))}
-                </div>
+            <div className="absolute right-0 top-full pt-1.5 w-48 z-20 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden p-1 animate-in fade-in zoom-in-95">
+                {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).filter(type => allowedCustomQuestionTypes.includes(type)).map(type => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => openModal(type)}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer text-left font-medium"
+                  >
+                    {TYPE_META[type].icon}
+                    <span>{TYPE_META[type].label}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
         </div>
-        
-        {pdfError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 flex items-center gap-2"><AlertCircle size={14}/>{pdfError}</div>}
+      </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 mb-4 flex-wrap">
-          <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">TYPES:</span>
+      {pdfError && (
+        <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 flex items-center gap-2">
+          <AlertCircle size={15} className="shrink-0"/>
+          <span>{pdfError}</span>
+        </div>
+      )}
+
+      {/* Search + Filter */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="flex-1 relative">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search questions by text..."
+            className="w-full h-11 pl-10 pr-4 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors shadow-2xs"
+          />
+        </div>
+        <select
+          value={filterType}
+          onChange={e => setFilterType(e.target.value as QuestionType | "all")}
+          className="h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors cursor-pointer shadow-2xs"
+        >
+          <option value="all">All Question Types</option>
           {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
-            <button 
-              key={t} 
-              onClick={() => { setEditQ(null); setModal(t); }}
-              className={`flex items-center gap-1.5 text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full ${TYPE_META[t].color} border border-current/20 hover:scale-105 hover:shadow-xs active:scale-95 transition-all duration-200 cursor-pointer uppercase tracking-tight`}
-            >
-              {TYPE_META[t].icon} {TYPE_META[t].label}
-            </button>
+            <option key={t} value={t}>{TYPE_META[t].label}</option>
           ))}
-        </div>
+        </select>
+      </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-4 mb-4">
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search questions..."
-            className="flex-1 px-3.5 py-2 sm:py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/20 focus:border-[#2D3A4A]" />
-          <select value={filterType} onChange={e => setFilterType(e.target.value as QuestionType | "all")}
-            className="px-3.5 py-2 sm:py-2.5 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#2D3A4A] cursor-pointer">
-            <option value="all">All Types</option>
-            {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
-              <option key={t} value={t}>{TYPE_META[t].label}</option>
-            ))}
-          </select>
-        </div>
+      {/* Type Legend */}
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mr-1">TYPES:</span>
+        {(["mcq","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
+          <button 
+            key={t} 
+            type="button"
+            onClick={() => openModal(t)}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${TYPE_META[t].color} border border-current/20 hover:scale-105 active:scale-95 transition-all cursor-pointer`}
+          >
+            {TYPE_META[t].icon}
+            <span>{TYPE_META[t].label}</span>
+          </button>
+        ))}
+      </div>
 
-        {filtered.length === 0 ? (
-          <div className="py-12 text-center text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl">
-            {questions.length === 0 ? "No questions yet. Add your first question above or upload from PDF." : "No questions match your search."}
+      {/* Question List */}
+      {filtered.length === 0 ? (
+        <div className="py-16 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+          <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center mx-auto mb-3">
+            <FileText size={20} className="text-slate-400"/>
           </div>
-        ) : (
-          <div className="space-y-2 overflow-y-auto max-h-137.5 pr-2 custom-scrollbar">
-            {filtered.map((q, idx) => {
-              const meta = TYPE_META[q.type]
-              return (
-                <div key={q.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
-                  <span className="text-xs font-bold text-gray-400 w-5 pt-0.5 shrink-0">{idx + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#2D3A4A] font-medium line-clamp-2">{q.questionText || <span className="text-gray-400 italic">No question text</span>}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${meta.color}`}>{meta.icon}{meta.label}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${DIFFICULTY_COLORS[q.difficulty]}`}>{q.difficulty}</span>
-                      <span className="text-[10px] text-gray-400">{q.marks} mark{q.marks !== 1 ? "s" : ""}</span>
-                    </div>
-                  </div>
-                  <button onClick={e => openMenu(q.id, e)} className="p-1.5 rounded-lg hover:bg-white text-gray-400 hover:text-[#2D3A4A]">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+          <p className="text-sm font-semibold text-slate-700">No questions added yet</p>
+          <p className="text-xs text-slate-400 mt-1">Add questions manually above, generate via AI topic, or import from PDF.</p>
+        </div>
+      ) : (
+        <div className="space-y-2.5 mb-4 max-h-137.5 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+          {filtered.map((q, i) => (
+            <div key={q.id} className={`flex items-start sm:items-center gap-3 p-3.5 sm:p-4 rounded-xl border transition-colors bg-white hover:border-slate-300
+              ${q.type === "coding" ? "border-red-100 bg-red-50/20" : "border-slate-200/80"}`}>
+              <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${TYPE_META[q.type].color} mt-0.5 sm:mt-0 shadow-2xs`}>
+                {TYPE_META[q.type].icon}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug">
+                  <MathRenderer content={q.questionText || `Question ${i+1}`} />
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1.5">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${TYPE_META[q.type].color} border-current opacity-90`}>{TYPE_META[q.type].label}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${DIFFICULTY_COLORS[q.difficulty]} border-current opacity-90`}>{q.difficulty}</span>
+                  <span className="sm:hidden text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-700 font-semibold rounded">
+                    {q.marks} {q.marks === 1 ? "mark" : "marks"}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-bold text-slate-800">{q.marks}</p>
+                  <p className="text-[10px] font-medium text-slate-400 uppercase">Marks</p>
+                </div>
+                <div className="flex items-center gap-1 relative">
+                  <button onClick={(e) => openMenu(q.id, e)} className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
+                    <MoreVertical size={16}/>
                   </button>
                   {menuOpen === q.id && (
                     <QuestionMenu
                       q={q}
                       anchorRect={anchorRect}
-                      onEdit={q => { setEditQ(q); setModal(q.type) }}
-                      onDelete={id => setQuestions(prev => prev.filter(p => p.id !== id))}
+                      onEdit={q => openEdit(q)}
+                      onDelete={id => removeQ(id)}
                       onClose={() => setMenuOpen(null)}
                     />
                   )}
                 </div>
-              )
-            })}
-          </div>
-        )}
-        
-        <div className="pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-sm font-semibold text-[#2D3A4A]">{questions.length} questions selected</span>
-            <span className="text-gray-300">·</span>
-            <span className="text-sm text-gray-500">Total: {totalMarks} marks</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Footer Summary */}
+      {questions.length > 0 && (
+        <div className="pt-4 sm:pt-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+          <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
+            <span className="font-bold text-slate-900 tracking-tight">{questions.length} questions selected</span>
+            <span className="text-slate-300">|</span>
+            <span className="font-medium text-slate-500">Total: <span className="text-slate-900 font-bold">{totalMarks} marks</span></span>
             {Object.entries(typeCounts).filter(([,c]) => c > 0).map(([t, c]) => (
-              <span key={t}><span className="text-gray-300 mx-1">·</span><span className="text-sm text-gray-500">{c} {TYPE_META[t as QuestionType].label}</span></span>
+              <span key={t} className="flex items-center gap-1.5"><span className="text-slate-300">·</span><span className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-semibold">{c} {TYPE_META[t as QuestionType].label}</span></span>
             ))}
           </div>
         </div>
-      </div>
-      {modal === "mcq"         && <MCQModal         onSave={saveQuestion as (q: MCQQuestion | MCQQuestion[]) => void}         onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "mcq" ? editQ : undefined} />}
-      {modal === "truefalse"   && <TrueFalseModal   onSave={saveQuestion as (q: TrueFalseQuestion | TrueFalseQuestion[]) => void}   onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "truefalse" ? editQ : undefined} />}
-      {modal === "descriptive" && <DescriptiveModal onSave={saveQuestion as (q: DescriptiveQuestion) => void} onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "descriptive" ? editQ : undefined} />}
-      {modal === "fillblanks"  && <FillBlanksModal  onSave={saveQuestion as (q: FillBlanksQuestion | FillBlanksQuestion[]) => void}  onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "fillblanks" ? editQ : undefined} />}
-      {modal === "coding"      && <CodingModal      onSave={saveQuestion as (q: CodingQuestion) => void}      onClose={() => { setModal(null); setEditQ(null) }} initial={editQ?.type === "coding" ? editQ : undefined} />}
+      )}
+
+      {/* Modals */}
+      {modal === "mcq" && (
+        <MCQModal 
+          onSave={saveQuestion as (q: MCQQuestion | MCQQuestion[]) => void} 
+          onClose={() => { setModal(null); setEditQ(null); }} 
+          initial={editQ?.type === "mcq" ? editQ : undefined} 
+        />
+      )}
+      {modal === "truefalse" && (
+        <TrueFalseModal 
+          onSave={saveQuestion as (q: TrueFalseQuestion | TrueFalseQuestion[]) => void} 
+          onClose={() => { setModal(null); setEditQ(null); }} 
+          initial={editQ?.type === "truefalse" ? editQ : undefined} 
+        />
+      )}
+      {modal === "descriptive" && (
+        <DescriptiveModal 
+          onSave={saveQuestion as (q: DescriptiveQuestion) => void} 
+          onClose={() => { setModal(null); setEditQ(null); }} 
+          initial={editQ?.type === "descriptive" ? editQ : undefined} 
+        />
+      )}
+      {modal === "fillblanks" && (
+        <FillBlanksModal 
+          onSave={saveQuestion as (q: FillBlanksQuestion | FillBlanksQuestion[]) => void} 
+          onClose={() => { setModal(null); setEditQ(null); }} 
+          initial={editQ?.type === "fillblanks" ? editQ : undefined} 
+        />
+      )}
+      {modal === "coding" && (
+        <CodingModal 
+          onSave={saveQuestion as (q: CodingQuestion) => void} 
+          onClose={() => { setModal(null); setEditQ(null); }} 
+          initial={editQ?.type === "coding" ? editQ : undefined} 
+        />
+      )}
       <CompetitiveExamAIGenerator
         isOpen={showCompetitiveAiModal}
         onClose={() => setShowCompetitiveAiModal(false)}
@@ -1700,59 +2472,176 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
-      <div className="flex items-center gap-3 text-gray-500">
-        <Loader2 className="animate-spin" size={20}/><span className="text-sm">Loading exam...</span>
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+      <div className="flex items-center gap-3 text-slate-500 bg-white px-5 py-3 rounded-2xl border border-slate-200/80 shadow-xs">
+        <Loader2 className="animate-spin text-slate-700" size={20}/><span className="text-sm font-semibold">Loading exam...</span>
       </div>
     </div>
   )
 
   if (notFound) return (
-    <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
-      <div className="text-center">
-        <p className="text-2xl font-bold text-[#2D3A4A] mb-2">Exam Not Found</p>
-        <Link href="/admin/exams" className="px-5 py-2.5 bg-[#2D3A4A] text-white rounded-lg text-sm font-medium hover:bg-[#1e2a38]">Back to Exams</Link>
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+      <div className="text-center bg-white p-8 rounded-2xl border border-slate-200/80 shadow-xs max-w-md mx-auto">
+        <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3">
+          <AlertCircle size={24} />
+        </div>
+        <p className="text-xl font-bold text-slate-900 mb-1">Exam Not Found</p>
+        <p className="text-xs text-slate-500 mb-5">The exam you are trying to edit does not exist or may have been deleted.</p>
+        <Link href="/admin/exams" className="h-11 px-5 bg-[#1E293B] hover:bg-[#0F172A] text-white rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition-colors">
+          <ArrowLeft size={16} /> Back to Exams
+        </Link>
       </div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA]">
-      <div className="sticky top-0 z-40 bg-white border-b border-gray-100 px-4 sm:px-8 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-400 mb-0.5 sm:mb-1">
-            <button onClick={() => { toast.info("Changes discarded. Redirecting..."); setTimeout(() => router.push("/admin/exams"), 500) }} className="hover:text-[#10B981] bg-none border-none cursor-pointer font-inherit">Exams</button>
-            <span>/</span><span className="text-[#2D3A4A] font-medium">Edit Exam</span>
+    <div className="min-h-screen bg-[#F8FAFC] pb-16 pt-6 sm:pt-8">
+      <div className="mx-auto max-w-[1400px] px-3 sm:px-8 lg:px-10">
+        {/* ─── Breadcrumbs ─── */}
+        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-2">
+          <Link href="/admin/exams" className="hover:text-slate-900 transition-colors">
+            Exams
+          </Link>
+          <span>/</span>
+          <span className="text-slate-900 font-semibold">Edit Exam</span>
+        </div>
+
+        {/* ─── Header & Actions ─── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-xl sm:text-3xl font-semibold tracking-tight text-slate-900 truncate max-w-xl">
+              Edit: {step1.title || "Exam"}
+            </h1>
+            <p className="sm:hidden text-xs text-slate-500 mt-0.5">
+              Step {step} of 3: {step === 1 ? "Exam Details" : step === 2 ? "Settings" : "Questions"}
+            </p>
           </div>
-          <h1 className="text-lg sm:text-xl font-bold text-[#2D3A4A]">Edit: {step1.title}</h1>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0] text-[11px] sm:text-xs font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#059669]" />
+              <span>Proctored Exam</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] text-[11px] sm:text-xs font-medium">
+              <Zap className="w-3.5 h-3.5 text-[#2563EB]" />
+              <span>Auto-Grading</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[11px] sm:text-xs font-medium">
+              <Layers className="w-3.5 h-3.5 text-slate-600" />
+              <span>AI Question Studio</span>
+            </span>
+            <div className="hidden sm:flex items-center gap-2 ml-2 pl-2 border-l border-slate-200">
+              <button
+                type="button"
+                onClick={() => {
+                  toast.info("Changes discarded. Redirecting...")
+                  setTimeout(() => router.push("/admin/exams"), 400)
+                }}
+                className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs sm:text-sm font-semibold text-slate-700 transition-colors flex items-center shadow-2xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSubmit("draft")}
+                disabled={saving}
+                className="h-10 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs sm:text-sm font-semibold text-slate-800 transition-colors disabled:opacity-50 shadow-2xs cursor-pointer"
+              >
+                Save Draft
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-auto">
-          <button onClick={() => { toast.info("Changes discarded. Redirecting..."); setTimeout(() => router.push("/admin/exams"), 500) }} className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
-          <button onClick={() => handleSubmit("draft")} disabled={saving} className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-[#2D3A4A] text-[#2D3A4A] text-xs sm:text-sm font-medium hover:bg-gray-50 disabled:opacity-60 transition-colors">Save Draft</button>
-        </div>
-      </div>
 
-      <div className="sticky top-16 z-30 bg-white border-b border-gray-100 px-4 sm:px-8 py-4 sm:py-6">
-        <Stepper step={step} onStepClick={(targetStep) => setStep(targetStep)} />
-      </div>
+        {/* ─── Stepper ─── */}
+        <Stepper
+          step={step}
+          onStepClick={(s) => {
+            if (s < step) setStep(s)
+            else if (s === 2 && step === 1) handleNext()
+            else if (s === 3 && step === 2) handleNext()
+          }}
+        />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
-        {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 flex items-center gap-2"><AlertCircle size={14} className="shrink-0"/>{error}</div>}
-        {step === 1 && <Step1 form={step1} setForm={setStep1} />}
-        {step === 2 && <Step2 form={step2} setForm={setStep2} />}
-        {step === 3 && <Step3 questions={questions} setQuestions={setQuestions} />}
-
-        <div className="flex items-center justify-between gap-3 mt-5 sm:mt-6">
-          {step > 1 ? <button onClick={() => setStep(s => s - 1)} className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Back</button> : <div />}
-          {step < 3 ? (
-            <button onClick={handleNext} className="px-5 sm:px-6 py-2 sm:py-2.5 rounded-lg bg-[#2D3A4A] text-white text-xs sm:text-sm font-medium hover:bg-[#1e2a38] transition-colors">
-              {step === 1 ? "Next: Settings" : "Next: Questions"}
+        {/* ─── Error Notification ─── */}
+        {error && (
+          <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+              <span className="font-medium">{error}</span>
+            </div>
+            <button
+              onClick={() => setError("")}
+              className="text-red-500 hover:text-red-800 font-medium p-1 cursor-pointer"
+            >
+              <X size={16} />
             </button>
-          ) : (
-            <button onClick={() => handleSubmit("active")} disabled={saving} className="px-5 sm:px-6 py-2 sm:py-2.5 rounded-lg bg-[#2D3A4A] text-white text-xs sm:text-sm font-medium hover:bg-[#1e2a38] disabled:opacity-60 transition-colors">
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
-          )}
+          </div>
+        )}
+
+        {/* ─── Step Content ─── */}
+        <div className="space-y-6">
+          {step === 1 && <Step1 form={step1} setForm={setStep1} />}
+          {step === 2 && <Step2 form={step2} setForm={setStep2} />}
+          {step === 3 && <Step3 questions={questions} setQuestions={setQuestions} />}
+
+          {/* ─── Bottom Navigation Bar ─── */}
+          <div className="flex items-center justify-between pt-6 border-t border-slate-200/80 mt-8">
+            {step > 1 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(s => s - 1)
+                  window.scrollTo({ top: 0, behavior: "smooth" })
+                }}
+                className="h-11 sm:h-12 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold text-slate-700 transition-colors flex items-center gap-2 shadow-2xs cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  toast.info("Changes discarded. Redirecting...")
+                  setTimeout(() => router.push("/admin/exams"), 400)
+                }}
+                className="h-11 sm:h-12 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold text-slate-700 transition-colors flex items-center gap-2 shadow-2xs sm:hidden cursor-pointer"
+              >
+                Cancel
+              </button>
+            )}
+
+            {step < 3 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="ml-auto h-11 sm:h-12 px-7 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-[0.99]"
+              >
+                <span>{step === 1 ? "Next: Settings" : "Next: Questions"}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleSubmit("active")}
+                disabled={saving || questions.length === 0}
+                className="ml-auto h-11 sm:h-12 px-8 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99]"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving Changes...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Save Changes</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
