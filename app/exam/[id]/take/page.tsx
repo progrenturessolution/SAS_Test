@@ -73,13 +73,14 @@ export function getQuestionCategory(q: any): "mcq" | "assertion" | "fillblanks" 
 }
 
 export function getCategoryMeta(category: string) {
+  const activeTabColor = "bg-[#2D3A4A] text-white"
   switch (category) {
     case "assertion":
       return {
         label: "Assertion & Reason",
         shortLabel: "Assertion",
         badgeBg: "bg-purple-50 text-purple-700 border-purple-200",
-        activeTabBg: "bg-purple-700 text-white",
+        activeTabBg: activeTabColor,
         dotColor: "bg-purple-500",
       }
     case "fillblanks":
@@ -87,7 +88,7 @@ export function getCategoryMeta(category: string) {
         label: "Fill in the Blanks",
         shortLabel: "Fill Blanks",
         badgeBg: "bg-amber-50 text-amber-700 border-amber-200",
-        activeTabBg: "bg-amber-600 text-white",
+        activeTabBg: activeTabColor,
         dotColor: "bg-amber-500",
       }
     case "truefalse":
@@ -95,7 +96,7 @@ export function getCategoryMeta(category: string) {
         label: "True / False",
         shortLabel: "True/False",
         badgeBg: "bg-teal-50 text-teal-700 border-teal-200",
-        activeTabBg: "bg-teal-600 text-white",
+        activeTabBg: activeTabColor,
         dotColor: "bg-teal-500",
       }
     case "descriptive":
@@ -103,7 +104,7 @@ export function getCategoryMeta(category: string) {
         label: "Descriptive Questions",
         shortLabel: "Descriptive",
         badgeBg: "bg-rose-50 text-rose-700 border-rose-200",
-        activeTabBg: "bg-rose-600 text-white",
+        activeTabBg: activeTabColor,
         dotColor: "bg-rose-500",
       }
     case "coding":
@@ -111,7 +112,7 @@ export function getCategoryMeta(category: string) {
         label: "Coding Challenges",
         shortLabel: "Coding",
         badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
-        activeTabBg: "bg-emerald-600 text-white",
+        activeTabBg: activeTabColor,
         dotColor: "bg-emerald-500",
       }
     case "mcq":
@@ -120,7 +121,7 @@ export function getCategoryMeta(category: string) {
         label: "Multiple Choice Questions",
         shortLabel: "MCQ",
         badgeBg: "bg-blue-50 text-blue-700 border-blue-200",
-        activeTabBg: "bg-[#2D3A4A] text-white",
+        activeTabBg: activeTabColor,
         dotColor: "bg-blue-500",
       }
   }
