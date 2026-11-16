@@ -757,26 +757,6 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     return "not-visited"
   }
 
-  // ��─ Navigation ──────────────────────────────────────────────────
-  // goNext: Move to next question, but do NOT auto-submit after last question
-  const goNext = () => {
-    if (!exam) return
-    // Use filteredQuestions for navigation (handles coding/non-coding tabs)
-    if (currentQ < filteredQuestions.length - 1) {
-      setCurrentQ(currentQ + 1)
-    }
-    // If at last question, do nothing (user will see submit screen handled below)
-  }
-
-  const goPrev = () => {
-    if (!exam) return
-    if (currentQ > 0) { setCurrentQ(currentQ - 1) }
-    else if (currentSection > 0) {
-      setCurrentSection(currentSection - 1)
-      setCurrentQ(exam.sections[currentSection - 1].questions.length - 1)
-    }
-  }
-
   const handleSubmitExam = () => {
     setShowSubmitConfirm(true)
   }
@@ -1521,202 +1501,243 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         {sidebarOpen && <div className="fixed inset-0 bg-black/50 sm:hidden z-40 backdrop-blur-xs transition-opacity" onClick={() => setSidebarOpen(false)} />}
         {/* Main question area */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-5 pb-28 sm:pb-8">
-          {/* Section header and instructions */}
-          {currentSection === -1 && (
-            <div className="mb-3 flex items-center gap-2">
-              <span className="inline-flex items-center px-2 py-1 bg-accent text-white rounded-lg font-semibold text-xs"><svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>Q&A</span>
-            </div>
-          )}
-          {currentSection === -2 && (
-            <div className="mb-3 flex items-center gap-2">
-              <span className="inline-flex items-center px-2 py-1 bg-[#059669] text-white rounded-lg font-semibold text-xs"><Code className="w-4 h-4 mr-1" />Code</span>
-            </div>
-          )}
-          {/* Question meta */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
-                <span className="text-white font-bold text-xs">Q{currentQ + 1}</span>
-              </div>
-              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded-full uppercase">
-                {question.type === "fillblanks" ? "Fill Blanks" : question.type === "truefalse" ? "True/False" : question.type.toUpperCase()}
-              </span>
-              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded-full">
-                {question.marks} mark{question.marks > 1 ? "s" : ""}
-              </span>
-              {question.difficulty && (
-                <span className={`px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-full ${
-                  question.difficulty === "easy" ? "bg-green-100 text-green-700" :
-                  question.difficulty === "medium" ? "bg-blue-100 text-blue-700" :
-                  "bg-red-100 text-red-700"
-                }`}>
-                  {question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button
-                onClick={() => toggleReview(question._id, section?.type || question.type || "unknown")}
-                className={`flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold border rounded-xl transition-colors whitespace-nowrap text-center ${
-                  isReview(question._id)
-                    ? "border-[#F59E0B] bg-amber-50 text-[#F59E0B]"
-                    : "border-[#F59E0B] text-[#F59E0B] hover:bg-amber-50"
-                }`}
-              >
-                {isReview(question._id) ? "★ Marked" : "☆ Review"}
-                <span className="hidden sm:inline">{isReview(question._id) ? " for Review" : " for Review"}</span>
-              </button>
-              <button
-                onClick={() => setAnswer(question._id, "", section?.type || question.type || "unknown", true)}
-                className="flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors whitespace-nowrap text-center"
-              >
-                Clear<span className="hidden sm:inline"> Option</span>
-              </button>
-            </div>
-          </div>
+          {/* Question meta & Section badge */}
+          {(() => {
+            const isAssertion = activeQuestionCategory === "assertion";
+            const parsedAR = isAssertion && question ? parseAssertionReason(question.questionText) : null;
 
-          {/* Question text (non-coding) */}
-          {question.type !== "coding" && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-5 space-y-4">
-              <div className="text-foreground font-bold text-base leading-relaxed">
-                <MathRenderer content={question.questionText} />
-              </div>
-              {question.questionImage && (
-                <div className="relative w-full max-h-100 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shadow-sm flex items-center justify-center">
-                   <img src={question.questionImage} alt="Question" className="max-w-full max-h-100 object-contain" />
-                </div>
-              )}
-              {question.codeSnippet && (
-                <div className="bg-[#1e2a38] border border-gray-300 rounded-xl overflow-hidden">
-                  <div className="px-4 py-2 border-b border-gray-600 bg-[#151d2a]">
-                    <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Code Reference</p>
+            return (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center shrink-0 shadow-2xs">
+                      <span className="text-white font-black text-xs">Q{globalQuestionIndex + 1}</span>
+                    </div>
+                    {/* Section Context Pill */}
+                    <span className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border flex items-center gap-1.5 ${activeTabMeta.badgeBg}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${activeTabMeta.dotColor}`} />
+                      <span>{activeTab?.title || activeTabMeta.label}</span>
+                      <span className="opacity-70 font-semibold">({currentQ + 1} of {filteredQuestions.length})</span>
+                    </span>
+                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded-full">
+                      {question.marks} mark{question.marks > 1 ? "s" : ""}
+                    </span>
+                    {question.negativeMark ? (
+                      <span className="px-2 py-1 bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-semibold rounded-full">
+                        -{question.negativeMark} neg
+                      </span>
+                    ) : null}
+                    {question.difficulty && (
+                      <span className={`px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-full ${
+                        question.difficulty === "easy" ? "bg-green-100 text-green-700" :
+                        question.difficulty === "medium" ? "bg-blue-100 text-blue-700" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        {question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
+                      </span>
+                    )}
                   </div>
-                  <pre className="px-4 py-3 text-xs text-gray-200 font-mono overflow-x-auto">{question.codeSnippet}</pre>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={() => toggleReview(question._id, question.type)}
+                      className={`flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold border rounded-xl transition-colors whitespace-nowrap text-center cursor-pointer ${
+                        isReview(question._id)
+                          ? "border-[#F59E0B] bg-amber-50 text-[#F59E0B]"
+                          : "border-[#F59E0B] text-[#F59E0B] hover:bg-amber-50"
+                      }`}
+                    >
+                      {isReview(question._id) ? "★ Marked" : "☆ Review"}
+                      <span className="hidden sm:inline"> for Review</span>
+                    </button>
+                    <button
+                      onClick={() => setAnswer(question._id, "", question.type, true)}
+                      className="flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors whitespace-nowrap text-center cursor-pointer"
+                    >
+                      Clear<span className="hidden sm:inline"> Option</span>
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* MCQ */}
-          {question.type === "mcq" && question.options && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              {(question.shuffledOptionIndices || question.options!.map((_, i) => i)).map((shuffledIndex, oi) => {
-                const opt = question.options![shuffledIndex]
-                const optImg = question.optionImages?.[shuffledIndex]
-                const key = optionKeys[oi] || String(oi)
-                const originalKey = optionKeys[shuffledIndex] || String(shuffledIndex)
-                const selected = getAnswer(question._id)?.answer === originalKey
-                return (
-                  <button
-                    key={oi}
-                    onClick={() => setAnswer(question._id, originalKey, section?.type || question.type || "mcq", true)}
-                    className={`flex flex-col border-2 rounded-2xl text-left transition-all min-h-20 sm:min-h-auto ${
-                      selected ? "border-primary bg-blue-50/20" : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    {optImg && (
-                      <div className="w-full aspect-video bg-gray-50 border-b border-gray-100 flex items-center justify-center overflow-hidden">
-                         <img src={optImg} alt={`Option ${key}`} className="w-full h-full object-contain" />
+                {/* Question text (non-coding) */}
+                {question.type !== "coding" && (
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-5 space-y-4 shadow-2xs">
+                    {isAssertion && parsedAR ? (
+                      <div className="space-y-4">
+                        <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/50">
+                          <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-purple-600 text-white mb-2">
+                            Assertion (A)
+                          </span>
+                          <div className="text-foreground font-bold text-base leading-relaxed">
+                            <MathRenderer content={parsedAR.assertion} />
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50">
+                          <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-600 text-white mb-2">
+                            Reason (R)
+                          </span>
+                          <div className="text-foreground font-bold text-base leading-relaxed">
+                            <MathRenderer content={parsedAR.reason} />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-foreground font-bold text-base leading-relaxed">
+                        <MathRenderer content={question.questionText} />
                       </div>
                     )}
-                    <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4">
-                       <div className={`w-10 h-10 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center shrink-0 font-bold text-sm ${
-                         selected ? "border-primary bg-primary text-white" : "border-gray-300 text-gray-500"
-                       }`}>{key}</div>
-                       <div className={`font-bold text-sm sm:text-base flex-1 ${selected ? "text-foreground" : "text-gray-600"}`}>
-                         <MathRenderer content={opt} />
-                       </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
 
-          {/* True / False */}
-          {question.type === "truefalse" && (
-            <div className="flex gap-3 sm:gap-4">
-              {["True", "False"].map((val) => {
-                const selected = getAnswer(question._id)?.answer === val
-                return (
-                  <button
-                    key={val}
-                    onClick={() => setAnswer(question._id, val, section?.type || question.type)}
-                    className={`flex-1 py-4 sm:py-6 border-2 rounded-2xl text-center font-bold text-base sm:text-lg transition-all ${
-                      selected ? "border-[#2D3A4A] bg-[#2D3A4A] text-white shadow-sm" : "border-gray-200 bg-white hover:border-gray-300 text-gray-700"
-                    }`}
-                  >
-                    {val}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Descriptive */}
-          {question.type === "descriptive" && (
-            <div>
-              <textarea
-                rows={6}
-                placeholder="Write your answer here..."
-                value={(getAnswer(question._id)?.answer as string) || ""}
-                onChange={(e) => setAnswer(question._id, e.target.value, section?.type || question.type)}
-                className="w-full border-2 border-gray-200 rounded-2xl p-4 text-base sm:text-sm text-[#1a2535] focus:outline-none focus:border-[#2D3A4A] resize-none transition-colors"
-              />
-              {question.wordLimit && (
-                <p className="text-xs text-gray-400 mt-1 text-right font-medium">
-                  {((getAnswer(question._id)?.answer as string) || "").trim().split(/\s+/).filter(Boolean).length} / {question.wordLimit} words
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Fill in the Blanks */}
-          {question.type === "fillblanks" && question.blanks && (
-            <div className="space-y-3 sm:space-y-4">
-              {question.blanks.map((blank, bi) => {
-                const inputs = blankInputs[question._id] || []
-                return (
-                  <div key={bi} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 sm:p-0 bg-gray-50 sm:bg-transparent rounded-xl border sm:border-0 border-gray-100">
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="w-7 h-7 rounded-full bg-[#F59E0B] text-white text-xs font-bold flex items-center justify-center shrink-0">{bi + 1}</span>
-                      <label className="text-xs sm:text-sm text-gray-700 font-semibold min-w-0 truncate">{blank.label || `Blank ${bi + 1}`}</label>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder={`Enter answer for blank ${bi + 1}...`}
-                      value={inputs[bi] || ""}
-                      onChange={(e) => {
-                        const updated = [...(blankInputs[question._id] || question.blanks!.map(() => ""))]
-                        updated[bi] = e.target.value
-                        setBlankInputs((prev) => ({ ...prev, [question._id]: updated }))
-                        setAnswer(question._id, updated, section?.type || question.type)
-                      }}
-                      className="w-full sm:flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-[#F59E0B] transition-colors bg-white"
-                    />
+                    {question.questionImage && (
+                      <div className="relative w-full max-h-100 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shadow-sm flex items-center justify-center">
+                         <img src={question.questionImage} alt="Question" className="max-w-full max-h-100 object-contain" />
+                      </div>
+                    )}
+                    {question.codeSnippet && (
+                      <div className="bg-[#1e2a38] border border-gray-300 rounded-xl overflow-hidden">
+                        <div className="px-4 py-2 border-b border-gray-600 bg-[#151d2a]">
+                          <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Code Reference</p>
+                        </div>
+                        <pre className="px-4 py-3 text-xs text-gray-200 font-mono overflow-x-auto">{question.codeSnippet}</pre>
+                      </div>
+                    )}
                   </div>
-                )
-              })}
-            </div>
-          )}
+                )}
+
+                {/* MCQ or Assertion (with choices) */}
+                {(question.type === "mcq" || isAssertion) && question.options && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                    {(question.shuffledOptionIndices || question.options!.map((_, i) => i)).map((shuffledIndex, oi) => {
+                      const opt = question.options![shuffledIndex];
+                      const optImg = question.optionImages?.[shuffledIndex];
+                      const key = optionKeys[oi] || String(oi);
+                      const originalKey = optionKeys[shuffledIndex] || String(shuffledIndex);
+                      const selected = getAnswer(question._id)?.answer === originalKey;
+                      return (
+                        <button
+                          key={oi}
+                          onClick={() => setAnswer(question._id, originalKey, question.type, true)}
+                          className={`flex flex-col border-2 rounded-2xl text-left transition-all min-h-20 sm:min-h-auto cursor-pointer ${
+                            selected ? "border-primary bg-blue-50/20" : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          {optImg && (
+                            <div className="w-full aspect-video bg-gray-50 border-b border-gray-100 flex items-center justify-center overflow-hidden">
+                               <img src={optImg} alt={`Option ${key}`} className="w-full h-full object-contain" />
+                            </div>
+                          )}
+                          <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4">
+                             <div className={`w-10 h-10 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center shrink-0 font-bold text-sm ${
+                               selected ? "border-primary bg-primary text-white" : "border-gray-300 text-gray-500"
+                             }`}>{key}</div>
+                             <div className={`font-bold text-sm sm:text-base flex-1 ${selected ? "text-foreground" : "text-gray-600"}`}>
+                               <MathRenderer content={opt} />
+                             </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* True / False */}
+                {question.type === "truefalse" && (
+                  <div className="flex gap-3 sm:gap-4">
+                    {["True", "False"].map((val) => {
+                      const selected = getAnswer(question._id)?.answer === val;
+                      return (
+                        <button
+                          key={val}
+                          onClick={() => setAnswer(question._id, val, question.type)}
+                          className={`flex-1 py-4 sm:py-6 border-2 rounded-2xl text-center font-bold text-base sm:text-lg transition-all cursor-pointer ${
+                            selected ? "border-[#2D3A4A] bg-[#2D3A4A] text-white shadow-sm" : "border-gray-200 bg-white hover:border-gray-300 text-gray-700"
+                          }`}
+                        >
+                          {val}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Descriptive */}
+                {question.type === "descriptive" && (
+                  <div>
+                    <textarea
+                      rows={6}
+                      placeholder="Write your answer here..."
+                      value={(getAnswer(question._id)?.answer as string) || ""}
+                      onChange={(e) => setAnswer(question._id, e.target.value, question.type)}
+                      className="w-full border-2 border-gray-200 rounded-2xl p-4 text-base sm:text-sm text-[#1a2535] focus:outline-none focus:border-[#2D3A4A] resize-none transition-colors"
+                    />
+                    {question.wordLimit && (
+                      <p className="text-xs text-gray-400 mt-1 text-right font-medium">
+                        {((getAnswer(question._id)?.answer as string) || "").trim().split(/\s+/).filter(Boolean).length} / {question.wordLimit} words
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Fill in the Blanks */}
+                {question.type === "fillblanks" && (
+                  <div className="space-y-3 sm:space-y-4">
+                    {question.blanks && question.blanks.length > 0 ? (
+                      question.blanks.map((blank, bi) => {
+                        const inputs = blankInputs[question._id] || [];
+                        return (
+                          <div key={bi} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 sm:p-0 bg-gray-50 sm:bg-transparent rounded-xl border sm:border-0 border-gray-100">
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="w-7 h-7 rounded-full bg-[#F59E0B] text-white text-xs font-bold flex items-center justify-center shrink-0">{bi + 1}</span>
+                              <label className="text-xs sm:text-sm text-gray-700 font-semibold min-w-0 truncate">{blank.label || `Blank ${bi + 1}`}</label>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder={`Enter answer for blank ${bi + 1}...`}
+                              value={inputs[bi] || ""}
+                              onChange={(e) => {
+                                const updated = [...(blankInputs[question._id] || question.blanks!.map(() => ""))];
+                                updated[bi] = e.target.value;
+                                setBlankInputs((prev) => ({ ...prev, [question._id]: updated }));
+                                setAnswer(question._id, updated, question.type);
+                              }}
+                              className="w-full sm:flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-[#F59E0B] transition-colors bg-white"
+                            />
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <label className="text-xs sm:text-sm text-gray-700 font-semibold shrink-0">Your Answer:</label>
+                        <input
+                          type="text"
+                          placeholder="Type the missing word or phrase..."
+                          value={(getAnswer(question._id)?.answer as string) || ""}
+                          onChange={(e) => setAnswer(question._id, e.target.value, question.type)}
+                          className="w-full sm:flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-[#F59E0B] transition-colors bg-white"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Coding — LeetCode-style layout */}
           {question.type === "coding" && (() => {
-            const qId = question._id
-            const lang = codeLanguage[qId] || "python"
-            const code = (getAnswer(qId)?.answer as string) || (question.codeTemplates && question.codeTemplates[lang]) || question.codeTemplate || ""
-            const visibleCases = (question.testCases || []).filter(tc => !tc.hidden)
-            const results = testCaseResults[qId] || []
-            const visibleResults = results.filter(r => !r.hidden)
-            const activeCase = activeTestCase[qId] ?? 0
-            const isRunning = testCaseRunning[qId]
-            const submitted = codeSubmitted[qId]
-            const allPassed = submitted && results.length > 0 && results.every(r => r.passed)
-            const passedCount = results.filter(r => r.passed).length
+            const qId = question._id;
+            const lang = codeLanguage[qId] || "python";
+            const code = (getAnswer(qId)?.answer as string) || (question.codeTemplates && question.codeTemplates[lang]) || question.codeTemplate || "";
+            const visibleCases = (question.testCases || []).filter(tc => !tc.hidden);
+            const results = testCaseResults[qId] || [];
+            const visibleResults = results.filter(r => !r.hidden);
+            const activeCase = activeTestCase[qId] ?? 0;
+            const isRunning = testCaseRunning[qId];
+            const submitted = codeSubmitted[qId];
+            const allPassed = submitted && results.length > 0 && results.every(r => r.passed);
+            const passedCount = results.filter(r => r.passed).length;
 
             const DIFF_COLOR: Record<string, string> = {
               easy: "text-green-400", medium: "text-yellow-400", hard: "text-red-400"
-            }
+            };
 
             return (
               <div className="flex flex-col gap-3">
@@ -1799,7 +1820,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                       {(() => {
                         const availableLangs = question.languages && question.languages.length > 0 
                           ? question.languages 
-                          : ["Python"]; // DEFAULT FALLBACK
+                          : ["Python"];
                         
                         return (
                           <div className="flex items-center gap-2">
@@ -1826,7 +1847,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                             </div>
                           </div>
-                        )
+                        );
                       })()}
                     </div>
                     <span className="text-[10px] text-gray-500 ml-auto flex items-center gap-1.5">
@@ -1847,7 +1868,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                         language={lang === "c++" ? "cpp" : lang === "c#" ? "csharp" : lang}
                         theme="vs-dark"
                         value={code}
-                        onChange={(val) => setAnswer(qId, val || "", section?.type || "coding")}
+                        onChange={(val) => setAnswer(qId, val || "", "coding")}
                         options={{
                           minimap: { enabled: false },
                           scrollBeyondLastLine: false,
@@ -1873,7 +1894,6 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                             showWords: false,
                             snippetsPreventQuickSuggestions: true,
                           },
-                          // Performance and Stability fixes for "ERR Canceled"
                           dragAndDrop: false,
                           links: false,
                           contextmenu: true,
@@ -1897,9 +1917,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
                       <div className="flex items-center gap-1">
-                        {/* Tab for each visible test case */}
                         {visibleCases.map((_, ti) => {
-                          const res = visibleResults[ti]
+                          const res = visibleResults[ti];
                           return (
                             <button key={ti}
                               onClick={() => setActiveTestCase(p => ({ ...p, [qId]: ti }))}
@@ -1912,7 +1931,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                               )}
                               Case {ti + 1}
                             </button>
-                          )
+                          );
                         })}
                         {submitted && results.some(r => r.hidden) && (
                           <span className="ml-2 text-xs text-gray-400">
@@ -2000,42 +2019,43 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
                 </div>
               </div>
-            )
+            );
           })()}
 
           {/* Navigation buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 sm:mt-8 pb-12 sm:pb-0">
             <button
               onClick={goPrev}
-              disabled={currentQ === 0 && (currentSection === 0 || currentSection === -1)}
-              className="hidden sm:block px-4 sm:px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              disabled={isFirstQuestionOverall || (currentQ === 0 && !prevSectionTab)}
+              className="hidden sm:block px-4 sm:px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               Previous
             </button>
             <div className="hidden sm:flex items-center gap-2">
               <button
-                onClick={async () => {
-                  await setAnswer(question._id, getAnswer(question._id)?.answer || "", section?.type || question.type, true);
-                  goNext();
-                }}
-                className="px-4 sm:px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                onClick={handleSkip}
+                className="px-4 sm:px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 Skip
               </button>
               <button
-                onClick={async () => {
-                  await setAnswer(question._id, getAnswer(question._id)?.answer || "", section?.type || question.type, true);
-                  if (currentQ === filteredQuestions.length - 1) {
-                    setShowSubmitConfirm(true);
-                  } else {
-                    goNext();
-                  }
-                }}
-                className={`px-5 py-2.5 text-white text-sm font-bold rounded-xl transition-colors shadow-sm ${
-                  currentQ === filteredQuestions.length - 1 ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#2D3A4A] hover:bg-[#1a2535]"
+                onClick={handleSaveAndNext}
+                className={`px-5 py-2.5 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2 cursor-pointer ${
+                  isLastQuestionOverall
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : isLastQuestionInSection && nextSectionTab
+                      ? "bg-purple-700 hover:bg-purple-800"
+                      : "bg-[#2D3A4A] hover:bg-[#1a2535]"
                 }`}
               >
-                {currentQ === filteredQuestions.length - 1 ? "Submit Exam" : "Save & Next"}
+                <span>
+                  {isLastQuestionOverall
+                    ? "Submit Exam"
+                    : isLastQuestionInSection && nextSectionTab
+                      ? `Next Section: ${nextSectionTab.shortTitle}`
+                      : "Save & Next"}
+                </span>
+                {isLastQuestionInSection && nextSectionTab ? <ArrowRight size={14} /> : null}
               </button>
             </div>
           </div>
@@ -2044,7 +2064,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-3 py-2.5 flex items-center justify-between gap-2 z-40 sm:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.08)] pb-[max(0.625rem,env(safe-area-inset-bottom))]">
             <button
               onClick={goPrev}
-              disabled={currentQ === 0 && (currentSection === 0 || currentSection === -1)}
+              disabled={isFirstQuestionOverall || (currentQ === 0 && !prevSectionTab)}
               className="flex items-center justify-center gap-1 py-2.5 px-3 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl active:bg-gray-100 disabled:opacity-30 transition-colors shrink-0"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -2056,29 +2076,32 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               title="Open Question Palette"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              Q {currentQ + 1}/{filteredQuestions.length}
+              {activeTab?.shortTitle} {currentQ + 1}/{filteredQuestions.length}
             </button>
             <button
-              onClick={async () => {
-                await setAnswer(question._id, getAnswer(question._id)?.answer || "", section?.type || question.type, true);
-                if (currentQ === filteredQuestions.length - 1) {
-                  setShowSubmitConfirm(true);
-                } else {
-                  goNext();
-                }
-              }}
+              onClick={handleSaveAndNext}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 text-white text-xs font-bold rounded-xl shadow-md transition-colors ${
-                currentQ === filteredQuestions.length - 1 ? "bg-emerald-600 active:bg-emerald-700" : "bg-[#2D3A4A] active:bg-[#1a2535]"
+                isLastQuestionOverall
+                  ? "bg-emerald-600 active:bg-emerald-700"
+                  : isLastQuestionInSection && nextSectionTab
+                    ? "bg-purple-700 active:bg-purple-800"
+                    : "bg-[#2D3A4A] active:bg-[#1a2535]"
               }`}
             >
-              <span>{currentQ === filteredQuestions.length - 1 ? "Submit Exam" : "Save & Next"}</span>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              <span>
+                {isLastQuestionOverall
+                  ? "Submit Exam"
+                  : isLastQuestionInSection && nextSectionTab
+                    ? `Next: ${nextSectionTab.shortTitle}`
+                    : "Save & Next"}
+              </span>
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </main>
 
         {/* Right sidebar — question palette */}
-        <aside className={`fixed sm:static inset-y-0 right-0 w-[82vw] max-w-xs sm:w-64 bg-white border-l border-gray-200 flex flex-col overflow-y-auto shrink-0 z-50 transition-transform duration-300 ease-in-out transform shadow-2xl sm:shadow-none ${
+        <aside className={`fixed sm:static inset-y-0 right-0 w-[85vw] max-w-xs sm:w-68 bg-white border-l border-gray-200 flex flex-col overflow-y-auto shrink-0 z-50 transition-transform duration-300 ease-in-out transform shadow-2xl sm:shadow-none ${
           sidebarOpen ? 'translate-x-0' : 'translate-x-full sm:translate-x-0'
         }`}>
           {/* Header on mobile */}
@@ -2107,108 +2130,94 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
           {/* Legend */}
           <div className="p-3 border-b border-gray-100">
-            <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Question Palette</p>
-            <div className="grid grid-cols-2 gap-1">
-              {(["answered", "not-answered", "review", "not-visited"] as QuestionStatus[]).map((s) => (
-                <div key={s} className="flex items-center gap-1">
-                  <span className={`w-2 h-2 rounded-sm ${statusColorMap[s]}`} />
-                  <span className="text-[9px] text-gray-500 capitalize">{s.replace("-", " ")}</span>
+            <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Question Legend</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(['answered', 'not-answered', 'review', 'not-visited'] as QuestionStatus[]).map((s) => (
+                <div key={s} className="flex items-center gap-1.5">
+                  <span className={`w-2.5 h-2.5 rounded-sm ${statusColorMap[s]}`} />
+                  <span className="text-[10px] text-gray-600 capitalize font-medium">{s.replace("-", " ")}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Per-section palette */}
-          <div className="p-3 flex-1 space-y-3">
-            {currentSection === -2 ? (
-              // Coding Problems tab: show only coding questions in palette
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider truncate">Coding Problems</p>
-                  <span className="text-xs text-[#10B981] font-semibold ml-1 shrink-0">
-                    {exam.sections.flatMap(sec => sec.questions.filter(q => q.type === "coding")).filter((q) => { const a = getAnswer(q._id); return Array.isArray(a?.answer) ? a!.answer.some(Boolean) : !!a?.answer }).length}
-                    /
-                    {exam.sections.flatMap(sec => sec.questions.filter(q => q.type === "coding")).length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
-                  {exam.sections.flatMap(sec => sec.questions.filter(q => q.type === "coding")).map((q, qi) => {
-                    const ans = getAnswer(q._id)?.answer
-                    const status = getAnswer(q._id)?.isMarkedForReview
-                      ? "review"
-                      : (Array.isArray(ans) ? ans.some(Boolean) : !!ans)
-                        ? "answered"
-                        : "not-answered"
-                    return (
-                      <button
-                        key={q._id}
-                        onClick={() => { setCurrentSection(-2); setCurrentQ(qi); setSidebarOpen(false) }}
-                        className={`w-9 h-9 sm:w-8 sm:h-8 rounded-full text-xs font-semibold transition-all ${currentSection === -2 && currentQ === qi ? "ring-2 ring-offset-1 ring-[#2D3A4A] " : ""}${statusColorMap[status]}`}
-                      >
-                        {qi + 1}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : (
-              // Default: show per-section palette for non-coding questions
-              exam.sections.map((sec, si) => {
-                const nonCodingQuestions = sec.questions.filter(q => q.type !== "coding")
-                if (nonCodingQuestions.length === 0) return null
-                return (
-                  <div key={si}>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider truncate">{sec.name}</p>
-                      <span className="text-xs text-[#10B981] font-semibold ml-1 shrink-0">
-                        {nonCodingQuestions.filter((q) => { const a = getAnswer(q._id); const ans = a?.answer; return Array.isArray(ans) ? ans.some(Boolean) : !!ans }).length}/{nonCodingQuestions.length}
-                      </span>
+          {/* Per-section palette grouped by section */}
+          <div className="p-3 flex-1 space-y-4">
+            {specificTabs.map((tab) => {
+              const isCurrentSec = activeTab?.id === tab.id;
+              const tabAnswered = tab.questions.filter((q) => {
+                const a = getAnswer(q._id);
+                return Array.isArray(a?.answer) ? a.answer.some(Boolean) : !!a?.answer;
+              }).length;
+
+              return (
+                <div key={tab.id} className="rounded-2xl border border-gray-200/80 p-3 bg-gray-50/50 space-y-2">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-gray-200/60">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${tab.dotColor}`} />
+                      <p className="text-xs font-bold text-gray-800 truncate">{tab.title}</p>
                     </div>
-                    <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 sm:gap-1.5">
-                      {nonCodingQuestions.map((q, qi) => {
-                        const ans = getAnswer(q._id)?.answer
-                        const status = getAnswer(q._id)?.isMarkedForReview
-                          ? "review"
-                          : (Array.isArray(ans) ? ans.some(Boolean) : !!ans)
-                            ? "answered"
-                            : "not-answered"
-                        return (
-                          <button
-                            key={q._id}
-                            onClick={() => { setCurrentSection(si); setCurrentQ(qi); setSidebarOpen(false) }}
-                            className={`w-9 h-9 sm:w-8 sm:h-8 rounded-full text-xs font-semibold transition-all ${si === currentSection && qi === currentQ ? "ring-2 ring-offset-1 ring-[#2D3A4A] " : ""}${statusColorMap[status]}`}
-                          >
-                            {qi + 1}
-                          </button>
-                        )
-                      })}
-                    </div>
+                    <span className="text-[10px] text-emerald-700 font-black shrink-0 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                      {tabAnswered}/{tab.questions.length}
+                    </span>
                   </div>
-                )
-              })
-            )}
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {tab.questions.map((q, qi) => {
+                      const ans = getAnswer(q._id)?.answer;
+                      const isMarked = getAnswer(q._id)?.isMarkedForReview;
+                      const hasAns = Array.isArray(ans) ? ans.some(Boolean) : !!ans;
+                      const isVisited = visitedQuestionIds.includes(q._id);
+                      const status = isMarked
+                        ? "review"
+                        : hasAns
+                          ? "answered"
+                          : isVisited
+                            ? "not-answered"
+                            : "not-visited";
+                      const isCurrentQ = isCurrentSec && currentQ === qi;
+                      return (
+                        <button
+                          key={q._id}
+                          onClick={() => {
+                            setActiveSectionId(tab.id);
+                            setCurrentQ(qi);
+                            setSectionPosMap(p => ({ ...p, [tab.id]: qi }));
+                            setSidebarOpen(false);
+                          }}
+                          className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                            isCurrentQ ? "ring-2 ring-offset-1 ring-[#2D3A4A] scale-105 shadow-xs" : ""
+                          } ${statusColorMap[status]}`}
+                        >
+                          {qi + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Summary + submit */}
-          <div className="p-3 border-t border-gray-100">
-            <div className="text-xs space-y-1 text-gray-600 mb-3">
+          <div className="p-3 border-t border-gray-100 bg-white sticky bottom-0">
+            <div className="text-xs space-y-1.5 text-gray-600 mb-3">
               {[
                 { label: "Answered", val: answers.filter((a) => Array.isArray(a.answer) ? a.answer.some(Boolean) : !!a.answer).length, color: "text-[#10B981]" },
                 { label: "Not Answered", val: totalQuestions - totalAnswered, color: "text-red-500" },
                 { label: "Marked for Review", val: answers.filter((a) => a.isMarkedForReview).length, color: "text-[#F59E0B]" },
               ].map(({ label, val, color }) => (
                 <div key={label} className="flex justify-between">
-                  <span>{label}</span>
-                  <span className={`font-semibold ${color}`}>{val}</span>
+                  <span className="font-medium">{label}</span>
+                  <span className={`font-bold ${color}`}>{val}</span>
                 </div>
               ))}
             </div>
             <button
               onClick={handleSubmitExam}
               disabled={submitting}
-              className="w-full py-2 bg-[#10B981] text-white text-xs font-bold rounded-lg hover:bg-[#059669] transition-colors disabled:opacity-60"
+              className="w-full py-2.5 bg-[#10B981] text-white text-xs font-bold rounded-xl hover:bg-[#059669] transition-colors disabled:opacity-60 cursor-pointer shadow-sm"
             >
-              {submitting ? "Submitting..." : "Submit"}
+              {submitting ? "Submitting..." : "Submit Exam"}
             </button>
           </div>
         </aside>
@@ -2237,6 +2246,22 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                   <p className="text-[10px] font-bold text-red-600 uppercase mb-1">Remaining</p>
                   <p className="text-2xl font-black text-red-700">{totalQuestions - totalAnswered}</p>
                 </div>
+              </div>
+
+              <div className="space-y-2 mb-4 p-3 bg-gray-50 rounded-2xl border border-gray-100 max-h-44 overflow-y-auto">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Section Progress</p>
+                {specificTabs.map((tab) => {
+                  const ansCount = tab.questions.filter((q) => {
+                    const a = getAnswer(q._id);
+                    return Array.isArray(a?.answer) ? a.answer.some(Boolean) : !!a?.answer;
+                  }).length;
+                  return (
+                    <div key={tab.id} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-white border border-gray-100">
+                      <span className="font-semibold text-gray-700 truncate mr-2">{tab.title}</span>
+                      <span className="font-bold text-emerald-600 shrink-0">{ansCount} / {tab.questions.length}</span>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="space-y-3 mb-8">
