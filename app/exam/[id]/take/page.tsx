@@ -1481,7 +1481,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               <button
                 key={tab.id}
                 onClick={() => handleSelectSectionTab(tab.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                   isActive
                     ? `${tab.activeColor} shadow-sm font-medium`
                     : "bg-white text-slate-700 hover:bg-gray-100 hover:text-gray-900 border border-gray-200/90"
@@ -1582,28 +1582,28 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
                 {/* Question text (non-coding) */}
                 {question.type !== "coding" && (
-                  <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-5 space-y-4 shadow-2xs">
+                  <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 mb-5 space-y-3.5 shadow-2xs">
                     {isAssertion && parsedAR ? (
-                      <div className="space-y-4">
-                        <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/50">
-                          <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-purple-600 text-white mb-2">
+                      <div className="space-y-3">
+                        <div className="p-3.5 rounded-xl border border-purple-200 bg-purple-50/50">
+                          <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider bg-purple-600 text-white mb-1.5">
                             Assertion (A)
                           </span>
-                          <div className="text-foreground font-bold text-base leading-relaxed">
+                          <div className="text-foreground font-normal text-sm sm:text-base leading-relaxed">
                             <MathRenderer content={parsedAR.assertion} />
                           </div>
                         </div>
-                        <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50">
-                          <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-600 text-white mb-2">
+                        <div className="p-3.5 rounded-xl border border-indigo-200 bg-indigo-50/50">
+                          <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider bg-indigo-600 text-white mb-1.5">
                             Reason (R)
                           </span>
-                          <div className="text-foreground font-bold text-base leading-relaxed">
+                          <div className="text-foreground font-normal text-sm sm:text-base leading-relaxed">
                             <MathRenderer content={parsedAR.reason} />
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-foreground font-bold text-base leading-relaxed">
+                      <div className="text-foreground font-normal text-sm sm:text-base leading-relaxed">
                         <MathRenderer content={question.questionText} />
                       </div>
                     )}
@@ -1624,7 +1624,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
                 {/* MCQ or Assertion or FIB with choices */}
                 {(question.type === "mcq" || isAssertion || (isFillBlanks && question.options && question.options.length > 0)) && question.options && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
                     {(question.shuffledOptionIndices || question.options!.map((_, i) => i)).map((shuffledIndex, oi) => {
                       const opt = question.options![shuffledIndex];
                       const optImg = question.optionImages?.[shuffledIndex];
@@ -1635,7 +1635,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                         <button
                           key={oi}
                           onClick={() => setAnswer(question._id, originalKey, question.type, true)}
-                          className={`flex flex-col border-2 rounded-2xl text-left transition-all min-h-20 sm:min-h-auto cursor-pointer ${
+                          className={`flex flex-col border-2 rounded-xl sm:rounded-2xl text-left transition-all min-h-16 sm:min-h-auto cursor-pointer ${
                             selected ? "border-primary bg-blue-50/20" : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
                           }`}
                         >
@@ -1644,11 +1644,11 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                                <img src={optImg} alt={`Option ${key}`} className="w-full h-full object-contain" />
                             </div>
                           )}
-                          <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4">
-                             <div className={`w-10 h-10 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center shrink-0 font-bold text-sm ${
+                          <div className="flex items-center gap-2.5 sm:gap-3.5 px-3.5 sm:px-4 py-2.5 sm:py-3">
+                             <div className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center shrink-0 font-medium text-xs ${
                                selected ? "border-primary bg-primary text-white" : "border-gray-300 text-gray-500"
                              }`}>{key}</div>
-                             <div className={`font-bold text-sm sm:text-base flex-1 ${selected ? "text-foreground" : "text-gray-600"}`}>
+                             <div className={`font-normal text-xs sm:text-sm flex-1 ${selected ? "text-foreground" : "text-gray-600"}`}>
                                <MathRenderer content={opt} />
                              </div>
                           </div>
@@ -1660,14 +1660,14 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
                 {/* True / False */}
                 {(question.type === "truefalse" || isTrueFalse) && (
-                  <div className="flex gap-3 sm:gap-4">
+                  <div className="flex gap-2.5 sm:gap-3">
                     {["True", "False"].map((val) => {
                       const selected = getAnswer(question._id)?.answer === val;
                       return (
                         <button
                           key={val}
                           onClick={() => setAnswer(question._id, val, question.type)}
-                          className={`flex-1 py-4 sm:py-6 border-2 rounded-2xl text-center font-bold text-base sm:text-lg transition-all cursor-pointer ${
+                          className={`flex-1 py-3 sm:py-4 border-2 rounded-xl sm:rounded-2xl text-center font-medium text-sm sm:text-base transition-all cursor-pointer ${
                             selected ? "border-[#2D3A4A] bg-[#2D3A4A] text-white shadow-sm" : "border-gray-200 bg-white hover:border-gray-300 text-gray-700"
                           }`}
                         >
