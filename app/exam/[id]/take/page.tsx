@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { getExamStartDateTime, getExamEndDateTime, formatCountdown, formatScheduleDateTime } from "@/lib/examSchedule"
 import { MathRenderer } from "@/components/exam/MathRenderer"
+import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
 
 // ─── Micro-toast types ────────────────────────────────────────────────────────
 interface Toast { id: number; message: string; type: "warn" | "info" | "danger" }
@@ -33,7 +34,7 @@ export function parseAssertionReason(text: string) {
   }
 }
 
-export function getQuestionCategory(q: any): "mcq" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding" {
+export function getQuestionCategory(q: any): "mcq" | "diagram" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding" {
   if (!q) return "mcq"
   if (
     q.questionFormat === "assertion" ||
@@ -68,6 +69,12 @@ export function getQuestionCategory(q: any): "mcq" | "assertion" | "fillblanks" 
   ) {
     return "truefalse"
   }
+  if (
+    q.questionFormat === "diagram" ||
+    Boolean(q.questionImage && String(q.questionImage).includes("<svg"))
+  ) {
+    return "diagram"
+  }
   if (q.type === "descriptive") return "descriptive"
   return "mcq"
 }
@@ -75,6 +82,14 @@ export function getQuestionCategory(q: any): "mcq" | "assertion" | "fillblanks" 
 export function getCategoryMeta(category: string) {
   const activeTabColor = "bg-[#2D3A4A] text-white"
   switch (category) {
+    case "diagram":
+      return {
+        label: "Diagram Based Questions",
+        shortLabel: "Diagram",
+        badgeBg: "bg-indigo-50 text-indigo-700 border-indigo-200",
+        activeTabBg: activeTabColor,
+        dotColor: "bg-indigo-500",
+      }
     case "assertion":
       return {
         label: "Assertion & Reason",
@@ -882,7 +897,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       globalIndex: number
       sectionIndex: number
       sectionName: string
-      category: "mcq" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding"
+      category: "mcq" | "diagram" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding"
     }[] = []
 
     exam.sections.forEach((sec, sIdx) => {
@@ -918,6 +933,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         const meta = getCategoryMeta(secCat)
         const isStandardTypeTitle = [
           "Multiple Choice Questions",
+          "Diagram Based Questions",
+          "Diagram & Visual Questions",
           "Assertion & Reason",
           "True / False Questions",
           "Fill in the Blanks",
@@ -939,8 +956,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         }
       }).filter(t => t.questions.length > 0)
     } else {
-      const categoriesOrder: ("mcq" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding")[] = [
+      const categoriesOrder: ("mcq" | "diagram" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding")[] = [
         "mcq",
+        "diagram",
         "assertion",
         "fillblanks",
         "truefalse",
@@ -1439,48 +1457,49 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       })()}
 
       {/* ─── Modern Responsive Section Navigation Bar ─── */}
-      <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-2.5 flex items-center gap-2 overflow-x-auto shrink-0 sticky top-0 z-20 shadow-2xs">
+      <div className="bg-white border-b border-gray-200 px-2 sm:px-6 py-2 sm:py-2.5 flex items-center gap-1.5 sm:gap-2 shrink-0 sticky top-0 z-20 shadow-2xs">
         {/* Mobile Question Palette Toggle */}
         <button
           onClick={() => setSidebarOpen(true)}
-          className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold shrink-0 transition-colors border border-gray-200 cursor-pointer"
+          className="sm:hidden flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-xs font-bold shrink-0 transition-colors border border-gray-200 cursor-pointer"
           title="Open Question Palette"
         >
-          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-          <span>Palette</span>
+          <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          <span className="text-[11px]">Palette</span>
         </button>
 
-        {/* Section Tabs */}
-        {sectionTabs.map((tab) => {
-          const isActive = activeSectionId === tab.id
-          const answeredCount = tab.questions.filter((q) => {
-            const a = getAnswer(q._id)
-            return Array.isArray(a?.answer) ? a.answer.some(Boolean) : !!a?.answer
-          }).length
+        {/* Section Tabs - horizontally scrollable container with hidden scrollbar */}
+        <div className="flex-1 flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-0.5">
+          {sectionTabs.map((tab) => {
+            const isActive = activeSectionId === tab.id
+            const answeredCount = tab.questions.filter((q) => {
+              const a = getAnswer(q._id)
+              return Array.isArray(a?.answer) ? a.answer.some(Boolean) : !!a?.answer
+            }).length
 
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleSelectSectionTab(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
-                isActive
-                  ? `${tab.activeColor} shadow-sm scale-[1.02]`
-                  : "bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900 border border-gray-200/80"
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${isActive ? "bg-white" : tab.dotColor}`} />
-              <span>{tab.shortTitle}</span>
-              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-                isActive ? "bg-white/20 text-white" : "bg-gray-200/70 text-gray-600"
-              }`}>
-                {answeredCount}/{tab.questions.length}
-              </span>
-            </button>
-          )
-        })}
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleSelectSectionTab(tab.id)}
+                className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
+                  isActive
+                    ? `${tab.activeColor} shadow-sm font-bold scale-[1.02]`
+                    : "bg-white text-slate-700 hover:bg-gray-100 hover:text-gray-900 border border-gray-200/90"
+                }`}
+              >
+                <span>{tab.shortTitle}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
+                }`}>
+                  {answeredCount}/{tab.questions.length}
+                </span>
+              </button>
+            )
+          })}
+        </div>
 
         {/* Overall progress on desktop */}
-        <div className="ml-auto flex items-center gap-3 shrink-0">
+        <div className="hidden sm:flex ml-auto items-center gap-3 shrink-0">
           <div className="hidden md:flex flex-col items-end">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
               Overall Progress
@@ -1519,7 +1538,6 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                     </div>
                     {/* Section Context Pill */}
                     <span className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border flex items-center gap-1.5 ${activeTabMeta.badgeBg}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${activeTabMeta.dotColor}`} />
                       <span>{activeTab?.title || activeTabMeta.label}</span>
                       <span className="opacity-70 font-semibold">({currentQ + 1} of {filteredQuestions.length})</span>
                     </span>
@@ -1591,9 +1609,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                     )}
 
                     {question.questionImage && (
-                      <div className="relative w-full max-h-100 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shadow-sm flex items-center justify-center">
-                         <img src={question.questionImage} alt="Question" className="max-w-full max-h-100 object-contain" />
-                      </div>
+                      <QuestionDiagram src={question.questionImage} />
                     )}
                     {question.codeSnippet && (
                       <div className="bg-[#1e2a38] border border-gray-300 rounded-xl overflow-hidden">
@@ -2028,20 +2044,23 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
 
           {/* Navigation buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 sm:mt-8 pb-12 sm:pb-0">
-            <button
-              onClick={goPrev}
-              disabled={isFirstQuestionOverall || (currentQ === 0 && !prevSectionTab)}
-              className="hidden sm:block px-4 sm:px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            >
-              Previous
-            </button>
             <div className="hidden sm:flex items-center gap-2">
+              <button
+                onClick={goPrev}
+                disabled={isFirstQuestionOverall || (currentQ === 0 && !prevSectionTab)}
+                className="px-4 sm:px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                Previous
+              </button>
               <button
                 onClick={handleSkip}
                 className="px-4 sm:px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 Skip
               </button>
+            </div>
+
+            <div className="hidden sm:flex items-center gap-3">
               <button
                 onClick={handleSaveAndNext}
                 className={`px-5 py-2.5 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2 cursor-pointer ${
@@ -2054,52 +2073,65 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               >
                 <span>
                   {isLastQuestionOverall
-                    ? "Submit Exam"
+                    ? "Save & Next"
                     : isLastQuestionInSection && nextSectionTab
                       ? `Next Section: ${nextSectionTab.shortTitle}`
                       : "Save & Next"}
                 </span>
                 {isLastQuestionInSection && nextSectionTab ? <ArrowRight size={14} /> : null}
               </button>
+
+              {/* Dedicated Submit Exam button on bottom for desktop */}
+              <button
+                onClick={handleSubmitExam}
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                title="Submit Examination"
+              >
+                <CheckCircle2 size={16} />
+                <span>Submit Exam</span>
+              </button>
             </div>
           </div>
 
           {/* Mobile Bottom Navigation Bar */}
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-3 py-2.5 flex items-center justify-between gap-2 z-40 sm:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.08)] pb-[max(0.625rem,env(safe-area-inset-bottom))]">
+            {/* Prev Button */}
             <button
               onClick={goPrev}
               disabled={isFirstQuestionOverall || (currentQ === 0 && !prevSectionTab)}
-              className="flex items-center justify-center gap-1 py-2.5 px-3 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl active:bg-gray-100 disabled:opacity-30 transition-colors shrink-0"
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl active:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
             >
-              <ChevronLeft className="w-4 h-4" />
-              Prev
+              <ChevronLeft className="w-4 h-4 shrink-0" />
+              <span>Prev</span>
             </button>
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-gray-100 text-gray-800 text-xs font-bold rounded-xl active:bg-gray-200 transition-colors shrink-0"
-              title="Open Question Palette"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              {activeTab?.shortTitle} {currentQ + 1}/{filteredQuestions.length}
-            </button>
+
+            {/* Next / Save & Next Button */}
             <button
               onClick={handleSaveAndNext}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 text-white text-xs font-bold rounded-xl shadow-md transition-colors ${
-                isLastQuestionOverall
-                  ? "bg-emerald-600 active:bg-emerald-700"
-                  : isLastQuestionInSection && nextSectionTab
-                    ? "bg-purple-700 active:bg-purple-800"
-                    : "bg-[#2D3A4A] active:bg-[#1a2535]"
+              className={`flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors truncate cursor-pointer ${
+                isLastQuestionInSection && nextSectionTab
+                  ? "bg-purple-700 active:bg-purple-800"
+                  : "bg-[#2D3A4A] active:bg-[#1a2535]"
               }`}
             >
-              <span>
+              <span className="truncate">
                 {isLastQuestionOverall
-                  ? "Submit Exam"
+                  ? "Next"
                   : isLastQuestionInSection && nextSectionTab
-                    ? `Next: ${nextSectionTab.shortTitle}`
+                    ? "Next Sec"
                     : "Save & Next"}
               </span>
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-4 h-4 shrink-0" />
+            </button>
+
+            {/* Submit Button */}
+            <button
+              onClick={handleSubmitExam}
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              title="Submit Examination"
+            >
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>Submit</span>
             </button>
           </div>
         </main>
@@ -2158,7 +2190,6 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 <div key={tab.id} className="rounded-2xl border border-gray-200/80 p-3 bg-gray-50/50 space-y-2">
                   <div className="flex items-center justify-between pb-1.5 border-b border-gray-200/60">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${tab.dotColor}`} />
                       <p className="text-xs font-bold text-gray-800 truncate">{tab.title}</p>
                     </div>
                     <span className="text-[10px] text-emerald-700 font-black shrink-0 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">

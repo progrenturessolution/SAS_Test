@@ -159,8 +159,9 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
   {
     "id": string (unique identifier like "pyq_1"),
     "type": "mcq",
-    "questionFormat": "mcq" | "assertion" | "fib" | "true_false",
+    "questionFormat": "mcq" | "diagram" | "assertion" | "fib" | "true_false",
     "questionText": string (clear question statement with proper LaTeX formatting),
+    "questionImage": string (optional complete valid SVG markup <svg viewBox='0 0 450 250' ...>...</svg> for questions with circuit diagrams, ray optics, graphs, pulleys, biological figures, or chemical structures),
     "difficulty": "easy" | "medium" | "hard",
     "marks": number (${marksPerQuestion}),
     "negativeMark": number (${negativeMarks}),
@@ -178,6 +179,40 @@ Return ONLY a valid JSON array of question objects (no markdown code blocks, no 
 All questions in this batch MUST be multiple-choice questions ("questionFormat": "mcq").
 Provide exactly 4 distinct answer options in the "options" array.
 "correctAnswer" MUST match one of the 4 options exactly.`,
+
+      diagram: `CRITICAL FORMAT REQUIREMENT (DIAGRAM / VISUAL / FIGURE-BASED QUESTION):
+All questions in this batch MUST be authentic Diagram / Figure-Based Questions ("questionFormat": "diagram").
+A valid, complete, professionally rendered inline SVG diagram MUST be provided in the "questionImage" field.
+
+1. "questionText":
+   - MUST explicitly refer to the diagram (e.g., "Refer to the given circuit diagram below: What is the equivalent resistance between terminals A and B?", "In the given ray diagram, find the position of the image formed by the concave mirror:", "Identify the labels (A), (B), and (C) in the given biological structure / cell diagram:", "In the given indicator (P-V) thermodynamic cycle, determine the net work done:").
+
+2. "questionImage":
+   - MUST be a valid, complete, high-contrast, scalable SVG string:
+     '<svg viewBox="0 0 450 250" xmlns="http://www.w3.org/2000/svg" style="background:#ffffff; font-family:sans-serif;">...</svg>'
+   - RULES TO MAKE THE DIAGRAM 100% PROPER & ACCURATE:
+     * Background: Always include a clean white background rect:
+       <rect width="450" height="260" fill="#ffffff" rx="10" stroke="#cbd5e1" stroke-width="1.5"/>
+     * Standard Dimensions: Use viewBox="0 0 450 250" with comfortable padding so no text or shape is cut off.
+     * High Contrast & Proper Colors:
+       - Outlines / Wires / Geometric boundaries: stroke="#1e293b" (dark slate), stroke-width="2.5"
+       - Incident rays / currents / vectors: stroke="#2563eb" (blue) or stroke="#dc2626" (red) with arrowheads
+       - Dimensions / Measurements / Focal points: stroke="#64748b" (slate), stroke-dasharray="4 3"
+       - Highlights / Labels / Question targets: fill="#f1f5f9" for boxes, stroke="#0284c7"
+     * Typography & Text Labels:
+       - Use clean sans-serif text: <text x="..." y="..." font-size="13" font-weight="bold" fill="#0f172a" text-anchor="middle">...</text>
+       - Label all critical values clearly (e.g. "R₁ = 6 Ω", "12 V", "F", "2F", "P (kPa)", "V (L)", "[A]", "[B]").
+     * Content by Subject:
+       - Physics: Electric circuits (resistors, batteries, capacitors, switches), ray optics (mirrors, lenses, light rays with directional arrows), mechanics (pulley systems, masses on ramps with friction/normal vectors), P-V cycle graphs (clockwise/counterclockwise loops with arrows).
+       - Biology: Plant/animal cell organelle callouts, nephron, reflex arc, human heart chambers, leaf transverse section with parts labeled (A), (B), (C), (D).
+       - Chemistry: Galvanic electrochemical cells (electrodes, salt bridge, voltmeter), unit cell lattices, organic reaction flowchart with missing compound [X], titration curve graph.
+       - Math: Coordinate geometry, circles with tangents, parabola/hyperbola, triangles with angles.
+     * Valid SVG: Close all tags properly (<line ... />, <circle ... />, <rect ... />, <path ... />). Never leave unclosed tags.
+     * JSON Escaping: In the JSON output, escape all double quotes inside the SVG string with \\" or use single quotes.
+
+3. "options": Exactly 4 distinct plausible options based on the diagram.
+4. "correctAnswer": Exactly matching one of the 4 options.
+5. "explanation": Thorough step-by-step solution referencing the diagram calculations.`,
 
       assertion: `CRITICAL FORMAT REQUIREMENT:
 All questions in this batch MUST be Assertion & Reason questions ("questionFormat": "assertion").
@@ -207,7 +242,7 @@ The "options" array MUST be exactly ["True", "False"].
     }
 
     interface GenerationTask {
-      formatId: "mcq" | "assertion" | "fib" | "true_false"
+      formatId: "mcq" | "assertion" | "fib" | "true_false" | "diagram"
       formatLabel: string
       targetCount: number
       marks: number
@@ -221,32 +256,84 @@ The "options" array MUST be exactly ["True", "False"].
         if (fmtCount <= 0) continue
 
         // Small chunks return the first questions much sooner and can run on separate API keys.
-        const chunkSize = 8
+        const chunkSize = fmt.id === "diagram" ? 4 : 8
         const numSubChunks = Math.ceil(fmtCount / chunkSize)
         const baseSub = Math.floor(fmtCount / numSubChunks)
         const remSub = fmtCount % numSubChunks
         for (let s = 0; s < numSubChunks; s++) {
           const subCount = baseSub + (s < remSub ? 1 : 0)
           generationTasks.push({
-            formatId: fmt.id,
+            formatId: fmt.id as any,
             formatLabel: fmt.label || fmt.id,
             targetCount: subCount,
             marks: Number(fmt.marks) || marksPerQuestion,
           })
         }
       }
-      } else {
-      const chunkSize = 8
-      const numSubChunks = Math.ceil(count / chunkSize)
-      const baseSub = Math.floor(count / numSubChunks)
-      const remSub = count % numSubChunks
-      for (let s = 0; s < numSubChunks; s++) {
+    } else {
+      if (questionPattern === "diagram_based" || questionPattern === "diagram") {
+        const chunkSize = 4
+        const numSubChunks = Math.ceil(count / chunkSize)
+        const baseSub = Math.floor(count / numSubChunks)
+        const remSub = count % numSubChunks
+        for (let s = 0; s < numSubChunks; s++) {
+          generationTasks.push({
+            formatId: "diagram",
+            formatLabel: "Diagram / Visual",
+            targetCount: baseSub + (s < remSub ? 1 : 0),
+            marks: marksPerQuestion,
+          })
+        }
+      } else if (questionPattern === "assertion_reason" || questionPattern === "assertion") {
+        const chunkSize = 8
+        const numSubChunks = Math.ceil(count / chunkSize)
+        const baseSub = Math.floor(count / numSubChunks)
+        const remSub = count % numSubChunks
+        for (let s = 0; s < numSubChunks; s++) {
+          generationTasks.push({
+            formatId: "assertion",
+            formatLabel: "Assertion & Reason",
+            targetCount: baseSub + (s < remSub ? 1 : 0),
+            marks: marksPerQuestion,
+          })
+        }
+      } else if (questionPattern === "mixed") {
+        // High quality mixed pattern with Diagrams, Assertion & MCQ
+        const diagramCount = Math.max(1, Math.round(count * 0.3))
+        const assertionCount = Math.max(1, Math.round(count * 0.3))
+        const mcqCount = Math.max(1, count - diagramCount - assertionCount)
+
+        generationTasks.push({
+          formatId: "diagram",
+          formatLabel: "Diagram / Visual",
+          targetCount: diagramCount,
+          marks: marksPerQuestion,
+        })
+        generationTasks.push({
+          formatId: "assertion",
+          formatLabel: "Assertion & Reason",
+          targetCount: assertionCount,
+          marks: marksPerQuestion,
+        })
         generationTasks.push({
           formatId: "mcq",
           formatLabel: "MCQ",
-          targetCount: baseSub + (s < remSub ? 1 : 0),
+          targetCount: mcqCount,
           marks: marksPerQuestion,
         })
+      } else {
+        const chunkSize = 8
+        const numSubChunks = Math.ceil(count / chunkSize)
+        const baseSub = Math.floor(count / numSubChunks)
+        const remSub = count % numSubChunks
+        for (let s = 0; s < numSubChunks; s++) {
+          generationTasks.push({
+            formatId: "mcq",
+            formatLabel: "MCQ",
+            targetCount: baseSub + (s < remSub ? 1 : 0),
+            marks: marksPerQuestion,
+          })
+        }
       }
     }
 
@@ -331,8 +418,14 @@ Return raw JSON array ONLY.`
           questionText.toLowerCase().includes("assertion:")
         )
 
+      const isDiagram =
+        forcedFormat === "diagram" ||
+        rawFormat === "diagram" ||
+        rawFormat === "diagram_based" ||
+        Boolean(q.questionImage && String(q.questionImage).includes("<svg"))
+
       const isFIB =
-        !isTF && !isAR && (
+        !isTF && !isAR && !isDiagram && (
           forcedFormat === "fib" ||
           rawFormat === "fib" ||
           rawFormat === "fill_in_the_blanks" ||
@@ -344,6 +437,8 @@ Return raw JSON array ONLY.`
         ? "true_false"
         : isAR
         ? "assertion"
+        : isDiagram
+        ? "diagram"
         : isFIB
         ? "fib"
         : "mcq"
@@ -381,11 +476,14 @@ Return raw JSON array ONLY.`
         ? Number(matchedBlueprint.marks)
         : Number(q.marks) || marksPerQuestion
 
+      const questionImage = normalizeGeneratedText(q.questionImage || q.diagramSvg || q.image || "")
+
       return {
         id: `pyq_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
         type: isTF ? "truefalse" : isAR ? "assertion" : isFIB ? "fillblanks" : "mcq",
         questionFormat: formatType,
         questionText,
+        questionImage: questionImage || undefined,
         difficulty: ["easy", "medium", "hard"].includes(q.difficulty) ? q.difficulty : "medium",
         marks: assignedMarks,
         negativeMark: Number(q.negativeMark ?? negativeMarks),
@@ -400,6 +498,7 @@ Return raw JSON array ONLY.`
     // Collect raw items per format
     const poolByFormat: Record<string, any[]> = {
       mcq: [],
+      diagram: [],
       assertion: [],
       fib: [],
       true_false: [],
@@ -418,12 +517,14 @@ Return raw JSON array ONLY.`
 
           const producedByFormat: Record<string, number> = {
             mcq: 0,
+            diagram: 0,
             assertion: 0,
             fib: 0,
             true_false: 0,
           }
           const requiredByFormat: Record<string, number> = {
             mcq: activeBlueprintFormats.length > 0 ? 0 : count,
+            diagram: 0,
             assertion: 0,
             fib: 0,
             true_false: 0,
@@ -623,7 +724,7 @@ Return raw JSON array ONLY.`
         const normalizedText = questionText.toLowerCase().replace(/[^a-z0-9]/g, "")
         if (seenTexts.has(normalizedText)) continue
         seenTexts.add(normalizedText)
-        finalQuestions.push(formatSingleQuestion(raw, finalQuestions.length, "mcq"))
+        finalQuestions.push(formatSingleQuestion(raw, finalQuestions.length, raw.questionFormat || undefined))
         if (finalQuestions.length >= count) break
       }
     }

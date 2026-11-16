@@ -2382,6 +2382,7 @@ function Step3({
           assertionText: parsed?.assertion || "",
           reasonText: parsed?.reason || "",
           questionText: q.questionText,
+          questionImage: q.questionImage,
           difficulty: q.difficulty,
           marks: q.marks,
           negativeMark: q.negativeMark,
@@ -2396,6 +2397,7 @@ function Step3({
           id: q.id,
           type: "fillblanks",
           questionText: q.questionText,
+          questionImage: q.questionImage,
           difficulty: q.difficulty,
           marks: q.marks,
           negativeMark: q.negativeMark,
@@ -2412,6 +2414,7 @@ function Step3({
           id: q.id,
           type: "truefalse",
           questionText: q.questionText,
+          questionImage: q.questionImage,
           difficulty: q.difficulty,
           marks: q.marks,
           negativeMark: q.negativeMark,
@@ -2423,7 +2426,9 @@ function Step3({
       return {
         id: q.id,
         type: "mcq",
+        questionFormat: q.questionFormat,
         questionText: q.questionText,
+        questionImage: q.questionImage,
         difficulty: q.difficulty,
         marks: q.marks,
         negativeMark: q.negativeMark,
@@ -2640,6 +2645,11 @@ function Step3({
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1.5">
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${TYPE_META[q.type].color} border-current opacity-90`}>{TYPE_META[q.type].label}</span>
+                  {q.questionImage && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      Diagram
+                    </span>
+                  )}
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${DIFFICULTY_COLORS[q.difficulty]} border-current opacity-90`}>{q.difficulty}</span>
                   <span className="sm:hidden text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-700 font-semibold rounded">
                     {q.marks} {q.marks === 1 ? "mark" : "marks"}

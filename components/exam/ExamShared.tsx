@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Clock, Camera } from "lucide-react"
+import { Clock, Camera, CheckCircle2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import * as faceDetection from "@mediapipe/face_detection"
 import * as cocoSsd from "@tensorflow-models/coco-ssd"
@@ -101,6 +101,16 @@ export function ExamHeader({
 
       {/* Right section: Profile and Stats */}
       <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
+        {onSubmit && (
+          <button
+            type="button"
+            onClick={onSubmit}
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-all cursor-pointer shrink-0"
+          >
+            <CheckCircle2 size={14} className="shrink-0" />
+            <span>Submit Exam</span>
+          </button>
+        )}
         {warningCount > 0 && (
           <div className="hidden sm:flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
             <span className="text-xs text-amber-700 font-semibold">Warnings: {warningCount}/{maxWarnings}</span>

@@ -35,12 +35,14 @@ import {
   Chapter,
 } from "@/lib/curriculumData"
 import { MathRenderer } from "./MathRenderer"
+import { QuestionDiagram } from "./QuestionDiagram"
 
 export interface GeneratedCompetitiveQuestion {
   id: string
   type: string
   questionFormat?: string
   questionText: string
+  questionImage?: string
   difficulty: "easy" | "medium" | "hard"
   marks: number
   negativeMark: number
@@ -93,7 +95,7 @@ export function CompetitiveExamAIGenerator({
   // Blueprint settings
   const [questionCount, setQuestionCount] = useState<number>(5)
   const [difficulty, setDifficulty] = useState<"balanced" | "easy" | "medium" | "hard">("balanced")
-  const [pattern, setPattern] = useState<"mcq_single" | "assertion_reason" | "mixed">("mcq_single")
+  const [pattern, setPattern] = useState<"mcq_single" | "diagram_based" | "assertion_reason" | "mixed">("mixed")
 
   // ─── Generation & Review States ───
   const [isGenerating, setIsGenerating] = useState(false)
@@ -896,9 +898,10 @@ export function CompetitiveExamAIGenerator({
                     onChange={(e) => setPattern(e.target.value as any)}
                     className="w-full py-1.5 px-3 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-800 focus:outline-none focus:border-[#2D3A4A]"
                   >
+                    <option value="mixed">Mixed Comprehensive Pattern (with Diagrams)</option>
+                    <option value="diagram_based">Diagram / Visual Based (Circuits, Optics, Graphs, Anatomy)</option>
                     <option value="mcq_single">Single Choice MCQ (4 Options)</option>
                     <option value="assertion_reason">Assertion & Reason Pattern</option>
-                    <option value="mixed">Mixed NTA Comprehensive Pattern</option>
                   </select>
                 </div>
               </div>
@@ -1046,9 +1049,16 @@ export function CompetitiveExamAIGenerator({
                       </div>
 
                       {/* Question Text with Math rendering */}
-                      <div className="text-[#2D3A4A] font-medium mb-4 pl-6">
+                      <div className="text-[#2D3A4A] font-medium mb-3 pl-6">
                         <MathRenderer content={q.questionText} />
                       </div>
+
+                      {/* Question Diagram / Visual */}
+                      {q.questionImage && (
+                        <div className="pl-6 mb-3 max-w-lg">
+                          <QuestionDiagram src={q.questionImage} />
+                        </div>
+                      )}
 
                       {/* 4 Options Grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pl-6 mb-3">
@@ -1164,6 +1174,26 @@ export function CompetitiveExamAIGenerator({
                 }
                 className="w-full p-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-800 font-mono focus:outline-none focus:border-[#2D3A4A]"
               />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-[#45505F] block mb-1">
+                Diagram / Figure (SVG Vector Markup or Image URL)
+              </label>
+              <textarea
+                rows={2}
+                value={editingQuestion.questionImage || ""}
+                onChange={(e) =>
+                  setEditingQuestion({ ...editingQuestion, questionImage: e.target.value })
+                }
+                placeholder="<svg ...>...</svg> or https://example.com/diagram.png"
+                className="w-full p-2 text-[11px] rounded-lg border border-gray-200 bg-white text-gray-800 font-mono focus:outline-none focus:border-[#2D3A4A]"
+              />
+              {editingQuestion.questionImage && (
+                <div className="mt-2 max-h-48 overflow-hidden rounded-xl border border-gray-200 p-2">
+                  <QuestionDiagram src={editingQuestion.questionImage} />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

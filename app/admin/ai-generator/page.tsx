@@ -49,12 +49,14 @@ import {
 } from "@/lib/curriculumData"
 import { MathRenderer } from "@/components/exam/MathRenderer"
 import { PrintableExamPaper } from "@/components/admin/PrintableExamPaper"
+import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
 
 export interface GeneratedCompetitiveQuestion {
   id: string
   type: "mcq"
-  questionFormat?: "mcq" | "assertion" | "fib" | "true_false" | string
+  questionFormat?: "mcq" | "diagram" | "assertion" | "fib" | "true_false" | string
   questionText: string
+  questionImage?: string
   difficulty: "easy" | "medium" | "hard"
   marks: number
   negativeMark: number
@@ -97,6 +99,7 @@ export default function AIGeneratorPage() {
   // Blueprint Format Matrix - Default to 10 MCQ questions
   const [blueprintFormats, setBlueprintFormats] = useState([
     { id: "mcq", label: "MCQ", checked: true, count: 10, marks: 4 },
+    { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 4 },
     { id: "assertion", label: "Assertion", checked: false, count: 0, marks: 4 },
     { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 2 },
     { id: "true_false", label: "True / False", checked: false, count: 0, marks: 2 },
@@ -259,6 +262,12 @@ export default function AIGeneratorPage() {
       return "assertion"
     }
     if (
+      q.questionFormat === "diagram" ||
+      Boolean(q.questionImage && String(q.questionImage).includes("<svg"))
+    ) {
+      return "diagram"
+    }
+    if (
       q.questionFormat === "fib" ||
       q.questionFormat === "fill_in_the_blanks" ||
       q.questionText?.includes("______")
@@ -282,7 +291,7 @@ export default function AIGeneratorPage() {
   }, [revealCount, filteredGeneratedQuestions.length])
 
   const formatCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: generatedQuestions.length, mcq: 0, assertion: 0, fib: 0, true_false: 0 }
+    const counts: Record<string, number> = { all: generatedQuestions.length, mcq: 0, diagram: 0, assertion: 0, fib: 0, true_false: 0 }
     generatedQuestions.forEach((q) => {
       const fmt = getQuestionFormat(q)
       if (counts[fmt] !== undefined) counts[fmt]++
@@ -865,6 +874,7 @@ export default function AIGeneratorPage() {
 
       const typeTitles: Record<string, string> = {
         mcq: "Multiple Choice Questions",
+        diagram: "Diagram & Visual Questions",
         assertion: "Assertion & Reason",
         truefalse: "True / False Questions",
         fillblanks: "Fill in the Blanks",
@@ -875,6 +885,7 @@ export default function AIGeneratorPage() {
         const isTF = fmt === "true_false"
         const isAR = fmt === "assertion"
         const isFIB = fmt === "fib"
+        const isDiagram = fmt === "diagram"
 
         let determinedType: "mcq" | "assertion" | "truefalse" | "fillblanks" = "mcq"
         if (isTF) determinedType = "truefalse"
@@ -890,10 +901,11 @@ export default function AIGeneratorPage() {
 
         return {
           type: determinedType,
-          questionFormat: isTF ? "true_false" : isAR ? "assertion" : isFIB ? "fib" : "mcq",
+          questionFormat: isTF ? "true_false" : isAR ? "assertion" : isFIB ? "fib" : isDiagram ? "diagram" : "mcq",
           assertionText: parsedAR?.assertion,
           reasonText: parsedAR?.reason,
           questionText: q.questionText,
+          questionImage: q.questionImage,
           difficulty: q.difficulty,
           marks: q.marks || currentExamMeta.defaultMarksPerQuestion,
           negativeMark:
@@ -1985,6 +1997,7 @@ export default function AIGeneratorPage() {
                       const formatLabel =
                         isTF ? "True / False" :
                         isAR ? "Assertion & Reason" :
+                        qFormat === "diagram" ? "Diagram Based" :
                         qFormat === "fib" ? "Fill in the Blanks" : "MCQ"
 
                       return (
@@ -2045,6 +2058,8 @@ export default function AIGeneratorPage() {
                                     ? "bg-amber-50 text-amber-800 border-amber-200"
                                     : qFormat === "fib"
                                     ? "bg-purple-50 text-purple-800 border-purple-200"
+                                    : qFormat === "diagram"
+                                    ? "bg-indigo-50 text-indigo-800 border-indigo-200"
                                     : isTF
                                     ? "bg-cyan-50 text-cyan-800 border-cyan-200"
                                     : "bg-blue-50 text-blue-800 border-blue-200"
@@ -2093,6 +2108,13 @@ export default function AIGeneratorPage() {
                           ) : (
                             <div className="text-xs sm:text-base font-normal text-slate-800 pl-0 sm:pl-8 mb-4 leading-relaxed overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                               <MathRenderer content={q.questionText} />
+                            </div>
+                          )}
+
+                          {/* Diagram / Figure reference */}
+                          {q.questionImage && (
+                            <div className="pl-0 sm:pl-8 mb-4 max-w-xl">
+                              <QuestionDiagram src={q.questionImage} />
                             </div>
                           )}
 

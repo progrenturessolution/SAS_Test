@@ -1,0 +1,120 @@
+"use client"
+
+import React, { useState } from "react"
+import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
+
+interface QuestionDiagramProps {
+  src?: string | null
+  alt?: string
+  className?: string
+  title?: string
+}
+
+export function QuestionDiagram({ src, alt = "Question Diagram", className = "", title }: QuestionDiagramProps) {
+  const [isZoomed, setIsZoomed] = useState(false)
+
+  if (!src || typeof src !== "string") return null
+  const trimmed = src.trim()
+  if (!trimmed) return null
+
+  // Check if string contains raw SVG markup
+  const isSvg = trimmed.startsWith("<svg") || (trimmed.includes("<svg") && trimmed.includes("</svg>"))
+
+  let cleanSvg = ""
+  if (isSvg) {
+    const match = trimmed.match(/<svg[\s\S]*?<\/svg>/i)
+    cleanSvg = match ? match[0] : trimmed
+  }
+
+  const imageSrc = !isSvg
+    ? trimmed.startsWith("data:") || trimmed.startsWith("http") || trimmed.startsWith("/")
+      ? trimmed
+      : `data:image/svg+xml;utf8,${encodeURIComponent(trimmed)}`
+    : ""
+
+  return (
+    <>
+      <div className={`my-4 p-3.5 sm:p-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col items-center justify-center max-w-full overflow-hidden group relative transition-all ${className}`}>
+        {/* Quick Zoom Trigger */}
+        <button
+          type="button"
+          onClick={() => setIsZoomed(true)}
+          className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs flex items-center gap-1 shadow-xs cursor-pointer z-10"
+          title="Zoom Diagram"
+        >
+          <Maximize2 size={13} />
+          <span className="text-[10px] font-bold">Zoom</span>
+        </button>
+
+        {isSvg ? (
+          <div
+            className="w-full flex items-center justify-center overflow-x-auto [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:max-h-72 sm:[&_svg]:max-h-84 select-none cursor-pointer"
+            onClick={() => setIsZoomed(true)}
+            dangerouslySetInnerHTML={{ __html: cleanSvg }}
+          />
+        ) : (
+          <img
+            src={imageSrc}
+            alt={alt}
+            className="max-w-full max-h-72 sm:max-h-84 object-contain rounded-lg select-none cursor-pointer"
+            onClick={() => setIsZoomed(true)}
+            loading="lazy"
+          />
+        )}
+
+        <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-slate-100 w-full justify-center">
+          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+            {title || "Diagram / Figure Reference"}
+          </span>
+        </div>
+      </div>
+
+      {/* Fullscreen Zoom Modal */}
+      {isZoomed && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-150"
+          onClick={() => setIsZoomed(false)}
+        >
+          <div
+            className="bg-white rounded-3xl p-5 sm:p-6 max-w-3xl w-full max-h-[90vh] overflow-auto shadow-2xl relative flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                {title || "Enlarged Diagram / Figure Reference"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsZoomed(false)}
+                className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-xl transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="w-full flex items-center justify-center py-2 overflow-auto">
+              {isSvg ? (
+                <div
+                  className="w-full flex items-center justify-center [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:max-h-[65vh]"
+                  dangerouslySetInnerHTML={{ __html: cleanSvg }}
+                />
+              ) : (
+                <img
+                  src={imageSrc}
+                  alt={alt}
+                  className="max-w-full max-h-[65vh] object-contain rounded-xl"
+                />
+              )}
+            </div>
+
+            <p className="text-[11px] text-slate-400 mt-3 text-center">
+              Click anywhere outside or close button to dismiss
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
