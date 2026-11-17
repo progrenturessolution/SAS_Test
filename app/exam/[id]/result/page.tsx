@@ -22,7 +22,15 @@ interface SectionResult {
 
 interface AttemptResult {
   _id: string
-  examId: { _id: string; title: string; totalMarks: number; passMarks: number; duration: number; sections?: any[] }
+  examId: {
+    _id: string
+    title: string
+    totalMarks: number
+    passMarks: number
+    duration: number
+    sections?: any[]
+    institute?: { name: string; code?: string; logo?: string | null; themeColor?: string }
+  }
   studentName: string
   rollNumber: string
   score: number
@@ -126,11 +134,32 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
     <div className="min-h-screen bg-[#F8FAFC]">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/exam" className="flex items-center gap-3">
-            <div className="scale-90 sm:scale-100 origin-left">
-              <ProcrentureLogo />
-            </div>
-          </Link>
+          <div className="flex items-center gap-3">
+            {result.examId?.institute?.logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={result.examId.institute.logo}
+                alt={result.examId.institute.name || "Institute"}
+                className="h-9 sm:h-11 max-w-[170px] sm:max-w-[220px] object-contain"
+              />
+            ) : result.examId?.institute?.name ? (
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0"
+                  style={{ backgroundColor: result.examId.institute.themeColor || "#2D3A4A" }}
+                >
+                  {result.examId.institute.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="font-bold text-sm sm:text-base text-gray-800 line-clamp-1">
+                  {result.examId.institute.name}
+                </span>
+              </div>
+            ) : (
+              <div className="scale-90 sm:scale-100 origin-left">
+                <ProcrentureLogo />
+              </div>
+            )}
+          </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
              <div className="flex flex-col items-end mr-1 sm:mr-2">

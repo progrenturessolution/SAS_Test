@@ -16,14 +16,25 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [examInfo, setExamInfo] = useState<{ title: string; subject: string } | null>(null)
+  const [examInfo, setExamInfo] = useState<{
+    title: string
+    subject: string
+    institute?: { name: string; logo?: string | null; themeColor?: string }
+  } | null>(null)
 
   useEffect(() => {
     fetch(`/api/exams/${id}`)
       .then(r => r.json())
       .then(data => {
         if (data.exam) {
-          setExamInfo({ title: data.exam.title, subject: data.exam.subject })
+          setExamInfo({
+            title: data.exam.title,
+            subject: data.exam.subject,
+            institute: data.exam.institute,
+          })
+          if (data.exam.institute?.themeColor) {
+            document.documentElement.style.setProperty("--primary", data.exam.institute.themeColor)
+          }
         } else {
           console.warn('No exam data returned')
         }
@@ -80,16 +91,27 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
 
       {/* ─── Header ───────────────────────────────────────────────────────── */}
       <header className="w-full px-8 py-4 flex items-center justify-between z-10">
-        <Link href="/" className="flex items-center gap-2">
-          <Image
-            src="/logo.png"
-            alt="Progrentures Solution"
-            width={72}
-            height={24}
-            priority
-            className="object-contain"
-          />
-        </Link>
+        <div className="flex items-center gap-2">
+          {examInfo?.institute?.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={examInfo.institute.logo}
+              alt={examInfo.institute.name || "Institute"}
+              className="h-8 max-w-[150px] object-contain"
+            />
+          ) : examInfo?.institute?.name ? (
+            <span className="font-bold text-sm text-gray-800">{examInfo.institute.name}</span>
+          ) : (
+            <Image
+              src="/logo.png"
+              alt="Progrentures Solution"
+              width={72}
+              height={24}
+              priority
+              className="object-contain"
+            />
+          )}
+        </div>
         <button className="px-5 py-2 bg-[#2D3A4A] text-white text-sm font-medium rounded-lg hover:bg-[#1e2a38] transition-colors">
           Need Help?
         </button>

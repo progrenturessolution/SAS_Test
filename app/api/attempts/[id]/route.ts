@@ -52,7 +52,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Invalid attempt ID format" }, { status: 400 })
     }
     
-    const attempt = (await Attempt.findById(id).populate("examId", "title totalMarks passMarks duration subject settings sections").lean()) as any
+    const attempt = (await Attempt.findById(id).populate("examId", "title totalMarks passMarks duration subject settings sections instituteId").lean()) as any
     if (!attempt) {
       return NextResponse.json({ error: "Attempt not found" }, { status: 404 })
     }
@@ -61,6 +61,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!attempt.examId) {
       console.error('Attempt found but examId missing:', id)
       return NextResponse.json({ error: "Exam data not found for this attempt" }, { status: 500 })
+    }
+
+    if ((attempt.examId as any)?.instituteId) {
+      try {
+        const Institute = (await import("@/models/Institute")).default
+        const inst: any = await Institute.findById((attempt.examId as any).instituteId).select("name code logo themeColor").lean()
+        if (inst) {
+          (attempt.examId as any).institute = {
+            name: inst.name,
+            code: inst.code,
+            logo: inst.logo || null,
+            themeColor: inst.themeColor || "#2D3A4A",
+          }
+        }
+      } catch {}
     }
     
     const examData = attempt.examId as Record<string, unknown> | null

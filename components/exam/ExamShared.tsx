@@ -10,9 +10,34 @@ import "@tensorflow/tfjs"
 
 // ─── Logo ────────────────────────────────────────────────────────────────────
 
-export function ProcrentureLogo({ small, large }: { small?: boolean; large?: boolean }) {
+export function ProcrentureLogo({
+  small,
+  large,
+  src,
+  alt,
+}: {
+  small?: boolean
+  large?: boolean
+  src?: string | null
+  alt?: string
+}) {
   const w = large ? 180 : (small ? 60 : 120)
   const h = large ? 60 : (small ? 20 : 40)
+
+  if (src) {
+    return (
+      <div className="flex items-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt || "Coaching Logo"}
+          style={{ maxHeight: h, maxWidth: w }}
+          className="object-contain"
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-center">
       <Image
@@ -42,6 +67,9 @@ interface ExamHeaderProps {
   warningCount?: number
   maxWarnings?: number
   endTimeLabel?: string
+  instituteLogo?: string | null
+  instituteName?: string
+  themeColor?: string
 }
 
 export function ExamHeader({
@@ -56,6 +84,9 @@ export function ExamHeader({
   warningCount = 0,
   maxWarnings = 3,
   endTimeLabel,
+  instituteLogo,
+  instituteName,
+  themeColor,
 }: ExamHeaderProps) {
   const hours = Math.floor(timeLeft / 3600)
   const mins = Math.floor((timeLeft % 3600) / 60).toString().padStart(2, "0")
@@ -75,12 +106,31 @@ export function ExamHeader({
     <header className="bg-white border-b border-gray-200 px-2 sm:px-6 py-1.5 sm:py-3 flex items-center justify-between shrink-0 h-14 sm:h-20 relative select-none">
       {/* Left section: Logo and Title */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-        <div className="sm:hidden">
-          <ProcrentureLogo small />
-        </div>
-        <div className="hidden sm:block">
-          <ProcrentureLogo />
-        </div>
+        {instituteLogo ? (
+          <div className="flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={instituteLogo}
+              alt={instituteName || "Institute Logo"}
+              className="h-7 sm:h-9 max-w-[130px] sm:max-w-[180px] object-contain"
+            />
+          </div>
+        ) : instituteName ? (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 border border-gray-200">
+            <span className="text-xs sm:text-sm font-bold text-gray-800 line-clamp-1 max-w-[140px] sm:max-w-[200px]">
+              {instituteName}
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="sm:hidden">
+              <ProcrentureLogo small />
+            </div>
+            <div className="hidden sm:block">
+              <ProcrentureLogo />
+            </div>
+          </>
+        )}
         <div className="hidden sm:block h-8 border-l border-gray-200 mx-1" />
         <div className="hidden sm:block">
           <p className="text-xs sm:text-sm font-bold text-foreground line-clamp-1">{title}</p>

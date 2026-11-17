@@ -25,6 +25,7 @@ interface ExamData {
   title: string
   duration: number
   sections: { name: string; type: string; questionRange: string; questions: CodingQuestion[] }[]
+  institute?: { name: string; code?: string; logo?: string | null; themeColor?: string }
   proctoring: { enabled: boolean; tabSwitch: boolean; fullscreenExit: boolean; faceDetection: boolean; maxWarnings: number }
 }
 
@@ -176,6 +177,9 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
         onSubmit={handleSubmitCode}
         warningCount={procState.warnings}
         maxWarnings={exam?.proctoring?.maxWarnings ?? 3}
+        instituteLogo={exam?.institute?.logo}
+        instituteName={exam?.institute?.name}
+        themeColor={exam?.institute?.themeColor}
       />
 
       <div className="flex-1 overflow-y-auto">

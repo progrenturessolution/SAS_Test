@@ -81,6 +81,12 @@ interface ExamFullData {
   passMarks: number
   duration: number
   sections: SectionData[]
+  institute?: {
+    name: string
+    code?: string
+    logo?: string | null
+    themeColor?: string
+  }
   settings?: {
     negativeMarking?: boolean
   }
@@ -753,12 +759,14 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
       </style>
     </head>
     <body>
-      <div class="header">
+      <div class="header" style="background:${examFull?.institute?.themeColor || '#2D3A4A'}">
         <div style="display:flex;align-items:center;gap:12px">
-          <img src="${window.location.origin}/logo.png" alt="Progrentures" style="height:32px;object-fit:contain;filter:brightness(10)" />
+          ${examFull?.institute?.logo
+            ? `<img src="${examFull.institute.logo}" alt="${escapeHtml(examFull.institute.name || 'Institute')}" style="height:36px;max-width:180px;object-fit:contain;background:white;padding:2px 8px;border-radius:6px;" />`
+            : `<div style="font-size:18px;font-weight:bold;color:white;">${escapeHtml(examFull?.institute?.name || 'Coaching Center')}</div>`}
           <div>
-            <h1>Progrentures Solution</h1>
-            <div class="sub">Exam Report</div>
+            <h1>${escapeHtml(examFull?.institute?.name || exam.title)}</h1>
+            <div class="sub">Performance Analytics Report</div>
           </div>
         </div>
         </div>
@@ -824,7 +832,18 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
       {/* ─── Top Header ───────────────────────────────────────────────────────── */}
       <header className="bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between sticky top-0 z-30 print:hidden">
         <div className="flex items-center gap-3">
-          <ProcrentureLogo />
+          {examFull?.institute?.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={examFull.institute.logo}
+              alt={examFull.institute.name || "Institute"}
+              className="h-8 max-w-[150px] object-contain"
+            />
+          ) : examFull?.institute?.name ? (
+            <span className="font-bold text-sm text-gray-800">{examFull.institute.name}</span>
+          ) : (
+            <ProcrentureLogo />
+          )}
           <span className="text-sm font-semibold text-[#1a2535] ml-2 hidden sm:inline">Exam Report</span>
         </div>
         <div className="flex items-center gap-2">

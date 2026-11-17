@@ -22,6 +22,7 @@ interface ExamData {
   title: string
   duration: number
   sections: { name: string; type: string; questionRange: string; questions: Question[] }[]
+  institute?: { name: string; code?: string; logo?: string | null; themeColor?: string }
   proctoring: { enabled: boolean; tabSwitch: boolean; fullscreenExit: boolean; faceDetection: boolean; maxWarnings: number }
 }
 
@@ -178,6 +179,9 @@ export default function DescriptivePage({ params }: { params: Promise<{ id: stri
         onSubmit={handleSubmitSection}
         warningCount={procState.warnings}
         maxWarnings={exam.proctoring?.maxWarnings ?? 3}
+        instituteLogo={exam.institute?.logo}
+        instituteName={exam.institute?.name}
+        themeColor={exam.institute?.themeColor}
       />
 
       {/* Section Tabs */}

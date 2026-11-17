@@ -22,6 +22,7 @@ export interface IInstitute extends Document {
   city?: string
   contactPerson?: string
   logo?: string
+  themeColor?: string
   limits: IInstituteLimits
   validUntil?: Date
   status: "active" | "suspended" | "expired"
@@ -40,6 +41,7 @@ const InstituteSchema = new Schema<IInstitute>(
     city: { type: String, trim: true },
     contactPerson: { type: String, trim: true },
     logo: { type: String },
+    themeColor: { type: String, default: "#2D3A4A" },
     limits: {
       maxStudents: { type: Number, default: 100 },
       maxExams: { type: Number, default: 20 },

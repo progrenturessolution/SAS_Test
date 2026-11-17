@@ -206,6 +206,12 @@ interface ExamData {
     }
   }
   instructions?: string[]
+  institute?: {
+    name: string
+    code?: string
+    logo?: string | null
+    themeColor?: string
+  }
   proctoring: {
     enabled: boolean
     faceDetection: boolean
@@ -453,6 +459,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           }))
         }
         setExam(examData)
+        if (examData?.institute?.themeColor) {
+          document.documentElement.style.setProperty("--primary", examData.institute.themeColor)
+        }
 
         let initialSection = 0
         const firstValidSection = examData.sections.findIndex((sec: any) => sec.questions.some((q: any) => q.type !== "coding"))
@@ -1517,6 +1526,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             warningCount={procState.warnings}
             maxWarnings={exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
             endTimeLabel={endTimeLabel}
+            instituteLogo={exam.institute?.logo}
+            instituteName={exam.institute?.name}
+            themeColor={exam.institute?.themeColor}
           />
         )
       })()}

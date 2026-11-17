@@ -19,6 +19,12 @@ interface ExamData {
   passMarks: number
   status: string
   sections: { name: string; questions: unknown[] }[]
+  institute?: {
+    name: string
+    code?: string
+    logo?: string | null
+    themeColor?: string
+  }
   settings?: {
     startDate?: string
     startTime?: string
@@ -74,6 +80,9 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
       setId(resolvedId)
       getExam(resolvedId).then((e) => {
         setExam(e)
+        if (e?.institute?.themeColor) {
+          document.documentElement.style.setProperty("--primary", e.institute.themeColor)
+        }
         setLoading(false)
         if (!e) setFetchError("Exam not found or has been removed.")
       })
@@ -191,7 +200,30 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       <header className="bg-white border-b border-gray-200 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 z-50">
-        <ProcrentureLogo />
+        {exam?.institute?.logo ? (
+          <div className="flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={exam.institute.logo}
+              alt={exam.institute.name || "Coaching Institute"}
+              className="h-8 sm:h-10 max-w-[150px] sm:max-w-[200px] object-contain"
+            />
+          </div>
+        ) : exam?.institute?.name ? (
+          <div className="flex items-center gap-2">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0"
+              style={{ backgroundColor: exam.institute.themeColor || "#2D3A4A" }}
+            >
+              {exam.institute.name.charAt(0).toUpperCase()}
+            </div>
+            <span className="font-bold text-sm sm:text-base text-gray-800 line-clamp-1">
+              {exam.institute.name}
+            </span>
+          </div>
+        ) : (
+          <ProcrentureLogo />
+        )}
         <button className="hidden sm:block px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors">
           Need Help?
         </button>

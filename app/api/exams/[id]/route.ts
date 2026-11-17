@@ -19,31 +19,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const exam: any = await Exam.findById(id).lean()
     if (!exam) return NextResponse.json({ error: "Exam not found" }, { status: 404 })
 
-    // Apply Global Proctoring Rules from Admin Settings
-    try {
-      const globalSettings = await GlobalSettings.findOne().lean()
-      if (globalSettings?.proctoring) {
-        const gp = globalSettings.proctoring
-        exam.proctoring = {
-          faceDetection: gp.faceDetection,
-          tabSwitch: gp.tabSwitch,
-          fullscreenExit: gp.fullscreen,
-          maxWarnings: gp.maxWarnings,
-          ...exam.proctoring,
-        }
-        if (exam.settings) {
-          exam.settings.proctoring = {
-            faceDetection: gp.faceDetection,
-            tabSwitch: gp.tabSwitch,
-            fullscreen: gp.fullscreen,
-            fullscreenExit: gp.fullscreen,
-            maxWarnings: gp.maxWarnings,
-            ...exam.settings.proctoring,
+    // Attach coaching institute branding (logo, themeColor, name)
+    if (exam.instituteId) {
+      try {
+        const Institute = (await import("@/models/Institute")).default
+        const inst: any = await Institute.findById(exam.instituteId).select("name code logo themeColor").lean()
+        if (inst) {
+          exam.institute = {
+            name: inst.name,
+            code: inst.code,
+            logo: inst.logo || null,
+            themeColor: inst.themeColor || "#2D3A4A",
           }
         }
+      } catch (instErr) {
+        console.warn("[GetExam] Could not load institute branding:", instErr)
       }
-    } catch (e) {
-      console.error("[GetExam] Failed to apply global proctoring rules:", e)
     }
 
     return NextResponse.json({ exam })

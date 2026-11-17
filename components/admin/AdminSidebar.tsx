@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   Lock,
+  Layers,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -41,6 +42,8 @@ export default function AdminSidebar({
   const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState(true)
   const [hasExamAccess, setHasExamAccess] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [instituteLogo, setInstituteLogo] = useState<string | null>(null)
+  const [themeColor, setThemeColor] = useState<string>("#2D3A4A")
 
   const isSuperAdmin = role === "super_admin" || (role === "admin" && !instituteName)
 
@@ -53,6 +56,7 @@ export default function AdminSidebar({
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Exams", href: "/admin/exams", icon: FileText },
     { label: "Competitive Test", href: "/admin/ai-generator", icon: GraduationCap },
+    { label: "Other Exams", href: "/admin/other-exams", icon: Layers, isWip: true },
     { label: "Question Bank", href: "/admin/questions", icon: BookOpen },
     { label: "Students", href: "/admin/students", icon: Users },
     { label: "Results", href: "/admin/results", icon: BarChart2 },
@@ -77,16 +81,26 @@ export default function AdminSidebar({
 
   useEffect(() => {
     if (isSuperAdmin) return
-    fetch("/api/admin/institute-access", { credentials: "include" })
-      .then((response) => response.json())
-      .then((data) => {
-        setHasCompetitiveAccess(data.hasCompetitiveAccess !== false)
-        setHasExamAccess(data.hasExamAccess !== false)
-      })
-      .catch(() => {
-        setHasCompetitiveAccess(true)
-        setHasExamAccess(true)
-      })
+    const loadAccess = () => {
+      fetch("/api/admin/institute-access", { credentials: "include" })
+        .then((response) => response.json())
+        .then((data) => {
+          setHasCompetitiveAccess(data.hasCompetitiveAccess !== false)
+          setHasExamAccess(data.hasExamAccess !== false)
+          if (data.logo) setInstituteLogo(data.logo)
+          if (data.themeColor) {
+            setThemeColor(data.themeColor)
+            document.documentElement.style.setProperty("--primary", data.themeColor)
+          }
+        })
+        .catch(() => {
+          setHasCompetitiveAccess(true)
+          setHasExamAccess(true)
+        })
+    }
+    loadAccess()
+    window.addEventListener("institute-settings-updated", loadAccess)
+    return () => window.removeEventListener("institute-settings-updated", loadAccess)
   }, [isSuperAdmin])
 
   const navItems = isSuperAdmin ? superAdminNavItems : instituteNavItems
@@ -119,16 +133,40 @@ export default function AdminSidebar({
           >
             <Menu size={22} />
           </button>
-          <Link href="/" className="inline-flex items-center">
-            <Image
-              src="/logo.png"
-              alt="Progrentures Testro Lab"
-              width={130}
-              height={40}
-              priority
-              className="object-contain"
-            />
-          </Link>
+          {isSuperAdmin ? (
+            <Link href="/" className="inline-flex items-center">
+              <Image
+                src="/logo.png"
+                alt="Progrentures Testro Lab"
+                width={130}
+                height={40}
+                priority
+                className="object-contain"
+              />
+            </Link>
+          ) : (
+            <div className="flex items-center gap-2">
+              {instituteLogo ? (
+                <img
+                  src={instituteLogo}
+                  alt={instituteName || "Coaching Logo"}
+                  className="h-8 max-w-[140px] w-auto object-contain"
+                />
+              ) : (
+                <div className="flex items-center gap-1.5 font-bold text-sm text-gray-800">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
+                    style={{ backgroundColor: themeColor }}
+                  >
+                    <Building2 size={15} />
+                  </div>
+                  <span className="truncate max-w-[140px] font-semibold text-gray-800">
+                    {instituteName || "Coaching Portal"}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -137,7 +175,10 @@ export default function AdminSidebar({
               {instituteCode}
             </span>
           )}
-          <div className="w-8 h-8 rounded-full bg-[#2D3A4A] text-white flex items-center justify-center text-xs font-medium shrink-0 shadow-2xs">
+          <div
+            className="w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-medium shrink-0 shadow-2xs"
+            style={{ backgroundColor: themeColor }}
+          >
             {userName?.charAt(0).toUpperCase() || "A"}
           </div>
         </div>
@@ -156,16 +197,40 @@ export default function AdminSidebar({
           <aside className="relative flex flex-col w-[280px] max-w-[85vw] h-full bg-white shadow-2xl z-50 animate-in slide-in-from-left duration-200">
             {/* Header inside drawer */}
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-              <Link href="/" onClick={() => setMobileOpen(false)} className="inline-flex items-center">
-                <Image
-                  src="/logo.png"
-                  alt="Progrentures Testro Lab"
-                  width={140}
-                  height={44}
-                  priority
-                  className="object-contain"
-                />
-              </Link>
+              {isSuperAdmin ? (
+                <Link href="/" onClick={() => setMobileOpen(false)} className="inline-flex items-center">
+                  <Image
+                    src="/logo.png"
+                    alt="Progrentures Testro Lab"
+                    width={140}
+                    height={44}
+                    priority
+                    className="object-contain"
+                  />
+                </Link>
+              ) : (
+                <div className="flex items-center gap-2">
+                  {instituteLogo ? (
+                    <img
+                      src={instituteLogo}
+                      alt={instituteName || "Coaching Logo"}
+                      className="h-9 max-w-[160px] w-auto object-contain"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 font-bold text-sm text-gray-800">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 shadow-xs"
+                        style={{ backgroundColor: themeColor }}
+                      >
+                        <Building2 size={16} />
+                      </div>
+                      <span className="truncate max-w-[150px] font-semibold text-gray-800">
+                        {instituteName || "Coaching Portal"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
@@ -186,7 +251,7 @@ export default function AdminSidebar({
               ) : (
                 <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-200">
                   <div className="flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-[#2D3A4A]" />
+                    <Building2 className="w-3.5 h-3.5" style={{ color: themeColor }} />
                     <span className="text-xs font-semibold text-[#45505F] truncate">
                       {instituteName || "Organization"}
                     </span>
@@ -211,6 +276,7 @@ export default function AdminSidebar({
                 const active = isActive(item.href)
                 const isCompetitiveItem = item.href === "/admin/ai-generator"
                 const isExamItem = item.href === "/admin/exams"
+                const isWip = Boolean((item as any).isWip)
                 const isRestricted = !isSuperAdmin && (
                   (isCompetitiveItem && !hasCompetitiveAccess) ||
                   (isExamItem && !hasExamAccess)
@@ -228,15 +294,21 @@ export default function AdminSidebar({
                         if (isRestricted) {
                           e.preventDefault()
                           toast.error(restrictedMessage)
+                        } else if (isWip) {
+                          toast.info("Other Exams: Work in progress soon! 🚀", {
+                            description: "Other exam modules and additional board formats are currently under development.",
+                          })
+                          setMobileOpen(false)
                         } else {
                           setMobileOpen(false)
                         }
                       }}
+                      style={{ backgroundColor: active ? themeColor : undefined }}
                       className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-colors ${
                         isRestricted
                           ? "opacity-60 cursor-not-allowed bg-gray-100/50 text-gray-500 hover:bg-gray-100/70"
                           : active
-                            ? "bg-[#2D3A4A] text-white shadow-xs"
+                            ? "text-white shadow-xs font-semibold"
                             : "text-gray-700 hover:bg-gray-100/70 hover:text-gray-900"
                       }`}
                     >
@@ -244,12 +316,16 @@ export default function AdminSidebar({
                         <Icon size={17} />
                         <span>{item.label}</span>
                       </div>
-                      {isRestricted && (
+                      {isRestricted ? (
                         <span className="flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded">
                           <Lock size={10} className="text-amber-600" />
                           <span>Locked</span>
                         </span>
-                      )}
+                      ) : isWip ? (
+                        <span className="flex items-center gap-1 text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-1.5 py-0.5 rounded-full">
+                          Soon
+                        </span>
+                      ) : null}
                     </Link>
 
                     {isRestricted && (
@@ -276,9 +352,10 @@ export default function AdminSidebar({
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
+                      style={{ backgroundColor: active ? themeColor : undefined }}
                       className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-colors ${
                         active
-                          ? "bg-[#2D3A4A] text-white shadow-xs"
+                          ? "text-white shadow-xs font-semibold"
                           : "text-gray-700 hover:bg-gray-100/70 hover:text-gray-900"
                       }`}
                     >
@@ -293,7 +370,10 @@ export default function AdminSidebar({
             {/* Footer inside drawer */}
             <div className="border-t border-gray-100 bg-gray-50/70 p-3 mt-auto">
               <div className="flex items-center gap-2.5 px-2 py-1.5">
-                <div className="w-8 h-8 rounded-full bg-[#2D3A4A] text-white flex items-center justify-center text-xs font-medium shrink-0">
+                <div
+                  className="w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-medium shrink-0"
+                  style={{ backgroundColor: themeColor }}
+                >
                   {userName?.charAt(0).toUpperCase() || "A"}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -318,16 +398,45 @@ export default function AdminSidebar({
       <aside className="hidden lg:flex w-[272px] h-screen shrink-0 flex-col border-r border-gray-200 bg-white">
         {/* Brand Header */}
         <div className="border-b border-gray-100 px-5 py-4">
-          <Link href="/" className="group inline-flex items-center">
-            <Image
-              src="/logo.png"
-              alt="Progrentures Testro Lab"
-              width={160}
-              height={50}
-              priority
-              className="object-contain group-hover:opacity-80 transition-opacity"
-            />
-          </Link>
+          {isSuperAdmin ? (
+            <Link href="/" className="group inline-flex items-center">
+              <Image
+                src="/logo.png"
+                alt="Progrentures Testro Lab"
+                width={160}
+                height={50}
+                priority
+                className="object-contain group-hover:opacity-80 transition-opacity"
+              />
+            </Link>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              {instituteLogo ? (
+                <img
+                  src={instituteLogo}
+                  alt={instituteName || "Coaching Logo"}
+                  className="max-h-12 max-w-[190px] w-auto object-contain"
+                />
+              ) : (
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
+                    style={{ backgroundColor: themeColor }}
+                  >
+                    <Building2 size={22} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-900 truncate leading-tight">
+                      {instituteName || "Coaching Portal"}
+                    </p>
+                    <p className="text-[10px] text-gray-400 font-mono mt-0.5">
+                      {instituteCode ? `Code: ${instituteCode}` : "Academic Center"}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Role / Tenant Badge */}
           <div className="mt-3">
@@ -339,7 +448,7 @@ export default function AdminSidebar({
             ) : (
               <div className="p-2 rounded-lg bg-gray-50 border border-gray-200">
                 <div className="flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-[#2D3A4A]" />
+                  <Building2 className="w-3.5 h-3.5" style={{ color: themeColor }} />
                   <span className="text-xs font-semibold text-[#45505F] truncate">
                     {instituteName || "Organization"}
                   </span>
@@ -365,6 +474,7 @@ export default function AdminSidebar({
             const active = isActive(item.href)
             const isCompetitiveItem = item.href === "/admin/ai-generator"
             const isExamItem = item.href === "/admin/exams"
+            const isWip = Boolean((item as any).isWip)
             const isRestricted = !isSuperAdmin && (
               (isCompetitiveItem && !hasCompetitiveAccess) ||
               (isExamItem && !hasExamAccess)
@@ -382,13 +492,18 @@ export default function AdminSidebar({
                     if (isRestricted) {
                       e.preventDefault()
                       toast.error(restrictedMessage)
+                    } else if (isWip) {
+                      toast.info("Other Exams: Work in progress soon! 🚀", {
+                        description: "Other exam modules and additional board formats are currently under development.",
+                      })
                     }
                   }}
+                  style={{ backgroundColor: active ? themeColor : undefined }}
                   className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-xs font-medium transition-colors ${
                     isRestricted
                       ? "opacity-60 cursor-not-allowed bg-gray-100/50 text-gray-500 hover:bg-gray-100/70"
                       : active
-                        ? "bg-[#2D3A4A] text-white font-medium shadow-xs"
+                        ? "text-white font-medium shadow-xs"
                         : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
                   }`}
                 >
@@ -396,12 +511,16 @@ export default function AdminSidebar({
                     <Icon size={16} />
                     <span>{item.label}</span>
                   </div>
-                  {isRestricted && (
+                  {isRestricted ? (
                     <span className="flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded">
                       <Lock size={10} className="text-amber-600" />
                       <span>Locked</span>
                     </span>
-                  )}
+                  ) : isWip ? (
+                    <span className="flex items-center gap-1 text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-1.5 py-0.5 rounded-full">
+                      Soon
+                    </span>
+                  ) : null}
                 </Link>
 
                 {isRestricted && (
@@ -426,9 +545,10 @@ export default function AdminSidebar({
               <Link
                 key={item.href}
                 href={item.href}
+                style={{ backgroundColor: active ? themeColor : undefined }}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
                   active
-                    ? "bg-[#2D3A4A] text-white font-medium shadow-xs"
+                    ? "text-white font-medium shadow-xs"
                     : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
                 }`}
               >
@@ -442,7 +562,10 @@ export default function AdminSidebar({
         {/* User & Logout Footer */}
         <div className="border-t border-gray-100 bg-gray-50/50 px-3 py-3 mt-auto">
           <div className="flex items-center gap-2.5 px-2 py-1.5">
-            <div className="w-8 h-8 rounded-full bg-[#2D3A4A] text-white flex items-center justify-center text-xs font-medium shrink-0">
+            <div
+              className="w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-medium shrink-0"
+              style={{ backgroundColor: themeColor }}
+            >
               {userName?.charAt(0).toUpperCase() || "A"}
             </div>
             <div className="flex-1 min-w-0">

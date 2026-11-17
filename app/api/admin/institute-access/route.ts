@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     }
 
     await connectDB()
-    const institute = await Institute.findById(session.instituteId).select("name code limits").lean()
+    const institute = await Institute.findById(session.instituteId).select("name code logo themeColor limits").lean()
     if (!institute) {
       return NextResponse.json({ error: "Institute not found" }, { status: 404 })
     }
@@ -49,6 +49,8 @@ export async function GET(req: Request) {
     return NextResponse.json({
       instituteName: institute.name || session.instituteName || "Coaching Institute",
       instituteCode: institute.code || session.instituteCode || "",
+      logo: institute.logo || null,
+      themeColor: institute.themeColor || "#2D3A4A",
       hasCompetitiveAccess,
       hasExamAccess,
       examTypes: rawExamTypes,

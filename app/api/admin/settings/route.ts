@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import connectDB from "@/lib/mongodb"
 import GlobalSettings from "@/models/GlobalSettings"
+import Institute from "@/models/Institute"
 
 // GET /api/admin/settings
 export async function GET(req: Request) {
@@ -16,23 +17,50 @@ export async function GET(req: Request) {
     }
 
     await connectDB()
+
+    // 1. If logged in as Coaching Institute, return coaching profile & branding
+    if (session.instituteId) {
+      const institute = await Institute.findById(session.instituteId)
+        .select("name code email phone address city contactPerson logo themeColor")
+        .lean()
+
+      if (!institute) {
+        return NextResponse.json({ error: "Institute not found" }, { status: 404 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        isInstitute: true,
+        institute: {
+          id: institute._id.toString(),
+          name: institute.name || "",
+          code: institute.code || "",
+          email: institute.email || "",
+          phone: institute.phone || "",
+          address: institute.address || "",
+          city: institute.city || "",
+          contactPerson: institute.contactPerson || "",
+          logo: institute.logo || "",
+          themeColor: institute.themeColor || "#2D3A4A",
+        },
+      })
+    }
+
+    // 2. If logged in as Super Admin, return global platform settings
     let settings = await GlobalSettings.findOne().lean()
     if (!settings) {
       settings = await GlobalSettings.create({
         platformName: "Progrentures Exam Platform",
         supportEmail: "support@progrentures.com",
         supportPhone: "+91 93094 70958",
-        proctoring: {
-          faceDetection: true,
-          tabSwitch: true,
-          fullscreen: true,
-          mobileFaceDetection: false,
-          maxWarnings: 3,
-        },
       })
     }
 
-    return NextResponse.json({ success: true, settings })
+    return NextResponse.json({
+      success: true,
+      isSuperAdmin: true,
+      settings,
+    })
   } catch (err: any) {
     console.error("[GetAdminSettings] Error:", err)
     return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 })
@@ -43,14 +71,54 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const session = await getSession(req)
-    if (!session || !["super_admin", "admin"].includes(session.role)) {
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     await connectDB()
     const body = await req.json()
-    const { platformName, supportEmail, supportPhone, proctoring } = body
 
+    // 1. Coaching Institute saves their profile, logo, and theme color
+    if (session.instituteId) {
+      const institute = await Institute.findById(session.instituteId)
+      if (!institute) {
+        return NextResponse.json({ error: "Institute not found" }, { status: 404 })
+      }
+
+      if (body.name !== undefined) institute.name = body.name.trim()
+      if (body.phone !== undefined) institute.phone = body.phone.trim()
+      if (body.address !== undefined) institute.address = body.address.trim()
+      if (body.city !== undefined) institute.city = body.city.trim()
+      if (body.contactPerson !== undefined) institute.contactPerson = body.contactPerson.trim()
+      if (body.logo !== undefined) institute.logo = body.logo
+      if (body.themeColor !== undefined) institute.themeColor = body.themeColor
+
+      await institute.save()
+
+      return NextResponse.json({
+        success: true,
+        isInstitute: true,
+        institute: {
+          id: institute._id.toString(),
+          name: institute.name,
+          code: institute.code,
+          email: institute.email,
+          phone: institute.phone || "",
+          address: institute.address || "",
+          city: institute.city || "",
+          contactPerson: institute.contactPerson || "",
+          logo: institute.logo || "",
+          themeColor: institute.themeColor || "#2D3A4A",
+        },
+      })
+    }
+
+    // 2. Super Admin saves platform configuration
+    if (!["super_admin", "admin"].includes(session.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { platformName, supportEmail, supportPhone } = body
     let settings = await GlobalSettings.findOne()
     if (!settings) {
       settings = new GlobalSettings()
@@ -59,16 +127,6 @@ export async function POST(req: Request) {
     if (platformName !== undefined) settings.platformName = platformName
     if (supportEmail !== undefined) settings.supportEmail = supportEmail
     if (supportPhone !== undefined) settings.supportPhone = supportPhone
-
-    if (proctoring) {
-      settings.proctoring = {
-        faceDetection: typeof proctoring.faceDetection === "boolean" ? proctoring.faceDetection : settings.proctoring.faceDetection,
-        tabSwitch: typeof proctoring.tabSwitch === "boolean" ? proctoring.tabSwitch : settings.proctoring.tabSwitch,
-        fullscreen: typeof proctoring.fullscreen === "boolean" ? proctoring.fullscreen : settings.proctoring.fullscreen,
-        mobileFaceDetection: typeof proctoring.mobileFaceDetection === "boolean" ? proctoring.mobileFaceDetection : settings.proctoring.mobileFaceDetection,
-        maxWarnings: typeof proctoring.maxWarnings === "number" ? proctoring.maxWarnings : (Number(proctoring.maxWarnings) || settings.proctoring.maxWarnings),
-      }
-    }
 
     await settings.save()
 
