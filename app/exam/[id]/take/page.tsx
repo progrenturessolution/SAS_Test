@@ -1015,22 +1015,6 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     }
   }, [question?._id, visitedQuestionIds])
 
-  // If exam has no questions at all
-  if (!question && allFlatQuestions.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4 text-foreground">No questions found for this exam.</h2>
-        <p className="mb-6 text-gray-600">Please contact your instructor or administrator.</p>
-        <button
-          onClick={() => router.push(`/exam/${id}`)}
-          className="px-8 py-3 bg-[#1E293B] text-white text-base font-bold rounded-xl hover:bg-[#0F172A] transition-colors"
-        >
-          Return to Exam Page
-        </button>
-      </div>
-    )
-  }
-
   const totalQuestions = allFlatQuestions.length
   const totalAnswered = answers.filter((a) => Array.isArray(a.answer) ? a.answer.some(Boolean) : !!a.answer).length
 
@@ -1395,6 +1379,22 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         )}
       </div>
     );
+  }
+
+  // If exam has no questions at all (checked AFTER loading is complete)
+  if (!question && allFlatQuestions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-gray-50">
+        <h2 className="text-xl font-medium mb-4 text-[#2D3A4A]">No questions found for this exam.</h2>
+        <p className="mb-6 text-gray-500 text-sm">Please contact your instructor or administrator.</p>
+        <button
+          onClick={() => router.push(`/exam/${id}`)}
+          className="px-8 py-3 bg-[#1E293B] text-white text-sm font-medium rounded-xl hover:bg-[#0F172A] transition-colors"
+        >
+          Return to Exam Page
+        </button>
+      </div>
+    )
   }
 
     return (
