@@ -14,8 +14,18 @@ export function QuestionDiagram({ src, alt = "Question Diagram", className = "",
   const [isZoomed, setIsZoomed] = useState(false)
 
   if (!src || typeof src !== "string") return null
-  const trimmed = src.trim()
+  let trimmed = src.trim()
   if (!trimmed) return null
+
+  // If SVG was HTML-escaped, unescape it
+  if (trimmed.includes("&lt;svg") && trimmed.includes("&gt;")) {
+    trimmed = trimmed
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&amp;/g, "&")
+  }
 
   // Check if string contains raw SVG markup
   const isSvg = trimmed.startsWith("<svg") || (trimmed.includes("<svg") && trimmed.includes("</svg>"))
@@ -24,6 +34,15 @@ export function QuestionDiagram({ src, alt = "Question Diagram", className = "",
   if (isSvg) {
     const match = trimmed.match(/<svg[\s\S]*?<\/svg>/i)
     cleanSvg = match ? match[0] : trimmed
+
+    // Ensure viewBox exists for responsive scaling if width and height are present
+    if (!cleanSvg.includes("viewBox") && !cleanSvg.includes("viewbox")) {
+      const wMatch = cleanSvg.match(/width=["']?(\d+)["']?/i)
+      const hMatch = cleanSvg.match(/height=["']?(\d+)["']?/i)
+      if (wMatch && hMatch) {
+        cleanSvg = cleanSvg.replace(/<svg\b/i, `<svg viewBox="0 0 ${wMatch[1]} ${hMatch[1]}"`)
+      }
+    }
   }
 
   const imageSrc = !isSvg
@@ -34,12 +53,12 @@ export function QuestionDiagram({ src, alt = "Question Diagram", className = "",
 
   return (
     <>
-      <div className={`my-4 p-3.5 sm:p-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col items-center justify-center max-w-full overflow-hidden group relative transition-all ${className}`}>
+      <div className={`my-4 p-3.5 sm:p-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col items-center justify-center max-w-full overflow-hidden group relative transition-all print:my-2 print:p-2 print:border-slate-300 print:shadow-none print-avoid-break ${className}`}>
         {/* Quick Zoom Trigger */}
         <button
           type="button"
           onClick={() => setIsZoomed(true)}
-          className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs flex items-center gap-1 shadow-xs cursor-pointer z-10"
+          className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs flex items-center gap-1 shadow-xs cursor-pointer z-10 print:hidden"
           title="Zoom Diagram"
         >
           <Maximize2 size={13} />
@@ -48,7 +67,7 @@ export function QuestionDiagram({ src, alt = "Question Diagram", className = "",
 
         {isSvg ? (
           <div
-            className="w-full flex items-center justify-center overflow-x-auto [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:max-h-72 sm:[&_svg]:max-h-84 select-none cursor-pointer"
+            className="w-full flex items-center justify-center overflow-x-auto [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:max-h-72 sm:[&_svg]:max-h-84 select-none cursor-pointer print:[&_svg]:max-h-56 print:cursor-default"
             onClick={() => setIsZoomed(true)}
             dangerouslySetInnerHTML={{ __html: cleanSvg }}
           />
@@ -56,15 +75,15 @@ export function QuestionDiagram({ src, alt = "Question Diagram", className = "",
           <img
             src={imageSrc}
             alt={alt}
-            className="max-w-full max-h-72 sm:max-h-84 object-contain rounded-lg select-none cursor-pointer"
+            className="max-w-full max-h-72 sm:max-h-84 object-contain rounded-lg select-none cursor-pointer print:max-h-56 print:cursor-default"
             onClick={() => setIsZoomed(true)}
             loading="lazy"
           />
         )}
 
-        <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-slate-100 w-full justify-center">
-          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+        <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-slate-100 w-full justify-center print:mt-1 print:pt-1">
+          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse print:hidden" />
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider print:text-[9px]">
             {title || "Diagram / Figure Reference"}
           </span>
         </div>

@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
 import { MathRenderer } from "@/components/exam/MathRenderer"
+import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
 import { ResultAnalyticsSkeleton } from "@/components/SkeletonLoaders"
 import katex from "katex"
 import "katex/dist/katex.min.css"
@@ -630,9 +631,36 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
             </div>`
           }).join("")}</div>`
         : ""
-      const questionImage = q.question.questionImage
-        ? `<img class="question-image" src="${escapeHtml(q.question.questionImage)}" alt="Question" />`
-        : ""
+      let questionImage = ""
+      if (q.question.questionImage) {
+        let trimmed = String(q.question.questionImage).trim()
+        if (trimmed.includes("&lt;svg") && trimmed.includes("&gt;")) {
+          trimmed = trimmed
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&#039;/g, "'")
+            .replace(/&amp;/g, "&")
+        }
+        const isSvg = trimmed.startsWith("<svg") || (trimmed.includes("<svg") && trimmed.includes("</svg>"))
+        if (isSvg) {
+          const match = trimmed.match(/<svg[\s\S]*?<\/svg>/i)
+          let cleanSvg = match ? match[0] : trimmed
+          if (!cleanSvg.includes("viewBox") && !cleanSvg.includes("viewbox")) {
+            const wMatch = cleanSvg.match(/width=["']?(\d+)["']?/i)
+            const hMatch = cleanSvg.match(/height=["']?(\d+)["']?/i)
+            if (wMatch && hMatch) {
+              cleanSvg = cleanSvg.replace(/<svg\b/i, `<svg viewBox="0 0 ${wMatch[1]} ${hMatch[1]}"`)
+            }
+          }
+          questionImage = `<div class="question-diagram-wrapper">${cleanSvg}</div>`
+        } else {
+          const imageSrc = trimmed.startsWith("data:") || trimmed.startsWith("http") || trimmed.startsWith("/")
+            ? trimmed
+            : `data:image/svg+xml;utf8,${encodeURIComponent(trimmed)}`
+          questionImage = `<div class="question-diagram-wrapper"><img class="question-image" src="${escapeHtml(imageSrc)}" alt="Question Diagram" /></div>`
+        }
+      }
       const codeSnippet = q.question.codeSnippet
         ? `<pre class="code-snippet">${escapeHtml(q.question.codeSnippet)}</pre>`
         : ""
@@ -707,6 +735,8 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         .text-content { white-space: pre-wrap; }
         .formula { display: inline-block; margin: 0 2px; }
         .display-formula { display: block; overflow-x: auto; text-align: center; margin: 8px 0; }
+        .question-diagram-wrapper { display: block; width: 100%; margin: 10px auto; text-align: center; page-break-inside: avoid; }
+        .question-diagram-wrapper svg { max-width: 100%; max-height: 240px; height: auto; margin: 0 auto; display: block; }
         .question-image { display: block; max-width: 100%; max-height: 240px; margin: 8px auto; object-fit: contain; }
         .code-snippet { overflow-x: auto; background: #1e2a38; color: #e5e7eb; border-radius: 8px; padding: 10px; margin: 8px 0; font: 11px monospace; white-space: pre-wrap; }
         .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
@@ -1178,12 +1208,8 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
                     <MathRenderer content={qa.question.questionText} />
                   </div>
                   {qa.question.questionImage && (
-                    <div className="mb-3 flex max-h-100 w-full items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
-                      <img
-                        src={qa.question.questionImage}
-                        alt="Question"
-                        className="max-h-100 max-w-full object-contain"
-                      />
+                    <div className="mb-4 max-w-2xl">
+                      <QuestionDiagram src={qa.question.questionImage} />
                     </div>
                   )}
                   {qa.question.codeSnippet && (

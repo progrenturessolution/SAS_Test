@@ -3,12 +3,14 @@
 import React, { useState } from "react"
 import { Printer, X, CheckCircle2, BookOpen, Clock, Award, FileText, Check, HelpCircle } from "lucide-react"
 import { MathRenderer } from "@/components/exam/MathRenderer"
+import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
 
 export interface GeneratedCompetitiveQuestion {
   id: string
-  type: "mcq"
-  questionFormat?: "mcq" | "assertion" | "fib" | "true_false" | string
+  type: "mcq" | string
+  questionFormat?: "mcq" | "diagram" | "assertion" | "fib" | "true_false" | string
   questionText: string
+  questionImage?: string
   difficulty: "easy" | "medium" | "hard"
   marks: number
   negativeMark: number
@@ -97,6 +99,12 @@ export function PrintableExamPaper({
       return "assertion"
     }
     if (
+      q.questionFormat === "diagram" ||
+      Boolean(q.questionImage && String(q.questionImage).includes("<svg"))
+    ) {
+      return "diagram"
+    }
+    if (
       q.questionFormat === "fib" ||
       q.questionFormat === "fill_in_the_blanks" ||
       q.questionText?.includes("______")
@@ -151,7 +159,7 @@ export function PrintableExamPaper({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex flex-col items-center p-0 sm:p-4 md:p-6">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex flex-col items-center p-0 sm:p-4 md:p-6 print:static print:inset-auto print:z-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
       {/* ─── Control Bar (Screen Only, Hidden on Print) ─── */}
       <div className="no-print w-full max-w-5xl bg-white border border-slate-200 rounded-b-2xl sm:rounded-2xl shadow-xl p-3 sm:p-4 mb-4 sticky top-0 sm:top-2 z-10 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
@@ -372,11 +380,13 @@ export function PrintableExamPaper({
             const isTF = qFormat === "true_false"
             const parsedAR = parseAssertionReason(q.questionText)
             const isAR = qFormat === "assertion" || Boolean(parsedAR)
+            const isDiagram = qFormat === "diagram" || Boolean(q.questionImage)
             const displayOptions = isTF ? ["True", "False"] : q.options || []
 
             const formatBadge =
               isTF ? "True / False" :
               isAR ? "Assertion & Reason" :
+              isDiagram ? "Diagram / Visual" :
               qFormat === "fib" ? "Fill in the Blank" : "MCQ"
 
             return (
@@ -428,6 +438,16 @@ export function PrintableExamPaper({
                 ) : (
                   <div className="text-xs sm:text-sm leading-relaxed text-slate-900 font-normal pl-1">
                     <MathRenderer content={q.questionText} />
+                  </div>
+                )}
+
+                {/* Diagram / Visual Figure */}
+                {q.questionImage && (
+                  <div className="my-2.5 max-w-lg mx-auto print:max-w-md flex flex-col items-center justify-center print-avoid-break">
+                    <QuestionDiagram
+                      src={q.questionImage}
+                      className="w-full print:my-1 print:p-2 print:border print:border-slate-300 print:shadow-none"
+                    />
                   </div>
                 )}
 

@@ -655,3 +655,4 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
     </div>
   )
 }
+
