@@ -958,6 +958,10 @@ export default function AIGeneratorPage() {
         })
       }
 
+      const selectedMinDurationMins = (parseInt(minDurationHours || "0", 10) * 60) + parseInt(minDurationMinutes || "0", 10)
+      const finalExamDuration = duration || Math.max(toSave.length * 2, 30)
+      const finalMinDuration = selectedMinDurationMins > 0 ? selectedMinDurationMins : Math.round(finalExamDuration * (2 / 3))
+
       const res = await fetch("/api/exams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -967,7 +971,8 @@ export default function AIGeneratorPage() {
           examType: selectedExam,
           subject: activeSubjectTab || selectedSubject,
           class: selectedGrade === "both" ? "11th + 12th" : `${selectedGrade}th`,
-          duration: duration || Math.max(toSave.length * 2, 30),
+          duration: finalExamDuration,
+          minDuration: finalMinDuration,
           totalMarks: examTotalMarks || totalMarks,
           passMarks: passMarks || Math.floor((examTotalMarks || totalMarks) * 0.4),
           questionsPerMin: questionsPerMinute ? Number(questionsPerMinute) : undefined,
@@ -988,6 +993,7 @@ export default function AIGeneratorPage() {
             endTime: formattedEndTime,
           },
           settings: {
+            minDuration: finalMinDuration,
             randomize: evalSettings.randomizeQuestions,
             showResults: evalSettings.showResultsImmediately,
             allowReview: evalSettings.allowReview,

@@ -35,6 +35,7 @@ export interface IExam extends Document {
   description: string
   instructions: string[]
   duration: number
+  minDuration?: number
   totalMarks: number
   passMarks: number
   status: "draft" | "active" | "closed"
@@ -54,6 +55,7 @@ export interface IExam extends Document {
     maxWarnings: number
   }
   settings: {
+    minDuration?: number
     randomize: boolean
     showResults: boolean
     allowReview: boolean
@@ -113,6 +115,7 @@ const ExamSchema = new Schema<IExam>(
     description: { type: String, default: "" },
     instructions: [String],
     duration: { type: Number, required: true },
+    minDuration: { type: Number },
     totalMarks: { type: Number, required: true },
     passMarks: { type: Number, required: true },
     status: { type: String, enum: ["draft", "active", "closed"], default: "draft" },
@@ -136,6 +139,7 @@ const ExamSchema = new Schema<IExam>(
       maxWarnings: { type: Number, default: 3 },
     },
     settings: {
+      minDuration: { type: Number },
       randomize: { type: Boolean, default: false },
       showResults: { type: Boolean, default: true },
       allowReview: { type: Boolean, default: false },
@@ -160,8 +164,9 @@ const ExamSchema = new Schema<IExam>(
 
 // Safe model registration: reuse an already-registered model to prevent
 // OverwriteModelError on hot-reloads and serverless cold-start race conditions.
-const Exam =
-  (mongoose.models.Exam as mongoose.Model<IExam>) ||
-  mongoose.model<IExam>("Exam", ExamSchema)
+if (mongoose.models.Exam) {
+  mongoose.deleteModel("Exam")
+}
+const Exam = mongoose.model<IExam>("Exam", ExamSchema)
 
 export default Exam

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Clock, Camera, CheckCircle2 } from "lucide-react"
+import { Clock, Camera, CheckCircle2, Calculator } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import * as faceDetection from "@mediapipe/face_detection"
 import * as cocoSsd from "@tensorflow-models/coco-ssd"
@@ -38,6 +38,7 @@ interface ExamHeaderProps {
   studentName: string
   rollNo: string
   onSubmit?: () => void
+  onToggleCalculator?: () => void
   warningCount?: number
   maxWarnings?: number
   endTimeLabel?: string
@@ -51,6 +52,7 @@ export function ExamHeader({
   studentName,
   rollNo,
   onSubmit,
+  onToggleCalculator,
   warningCount = 0,
   maxWarnings = 3,
   endTimeLabel,
@@ -100,7 +102,18 @@ export function ExamHeader({
       </div>
 
       {/* Right section: Profile and Stats */}
-      <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        {onToggleCalculator && (
+          <button
+            type="button"
+            onClick={onToggleCalculator}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#2D3A4A] text-xs font-bold shadow-2xs transition-colors cursor-pointer shrink-0"
+            title="Open Scientific Calculator (NPTEL / GATE style)"
+          >
+            <Calculator className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2D3A4A]" />
+            <span className="hidden sm:inline">Calculator</span>
+          </button>
+        )}
         {onSubmit && (
           <button
             type="button"

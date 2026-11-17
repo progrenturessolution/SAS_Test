@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, use, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Editor from "@monaco-editor/react"
 import { ExamHeader, ProctoringCamera, QuestionStatus, statusColorMap, ProcrentureLogo } from "@/components/exam/ExamShared"
-import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft, ChevronRight, Sparkles, LayoutGrid, Layers, ArrowRight, HelpCircle, BookOpen } from "lucide-react"
+import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft, ChevronRight, Sparkles, LayoutGrid, Layers, ArrowRight, HelpCircle, BookOpen, Lock, Calculator } from "lucide-react"
+import { ScientificCalculator } from "@/components/exam/ScientificCalculator"
 import { ProctoringWarning } from "@/components/exam/ProctoringWarning"
 import { useProctoring } from "@/hooks/use-proctoring"
 import { ExamTakingSkeleton } from "@/components/SkeletonLoaders"
@@ -180,6 +181,7 @@ interface ExamData {
   title: string
   subject: string
   duration: number
+  minDuration?: number
   totalMarks: number
   passMarks: number
   sections: Section[]
@@ -192,6 +194,7 @@ interface ExamData {
     showResults?: boolean;
     allowReview?: boolean;
     negativeMarking?: boolean;
+    minDuration?: number;
     proctoring?: {
       enabled?: boolean;
       faceDetection?: boolean;
@@ -271,6 +274,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const [camStatus, setCamStatus] = useState<"loading" | "active" | "denied" | "error">("loading")
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false) // Mobile sidebar toggle
+  const [showCalculator, setShowCalculator] = useState(false)
+  const [showEarlySubmitModal, setShowEarlySubmitModal] = useState(false)
 
   const addToast = useCallback((message: string, type: Toast["type"] = "warn") => {
     const id = ++_toastId
@@ -795,12 +800,61 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     return "not-visited"
   }
 
+  // Minimum duration logic (NPTEL / standard exam rule)
+  // Admin can set explicit minDuration in minutes. If unset or 0, default to 2/3 of exam.duration
+  // E.g. For 3 hours (180 mins) -> 2 hours (120 mins).
+  const totalDurationMinutes = exam?.duration || 0
+  const totalDurationSeconds = totalDurationMinutes * 60
+
+  const configuredMinDuration = exam?.settings?.minDuration ?? exam?.minDuration
+  const minRequiredMinutes = useMemo(() => {
+    if (!totalDurationMinutes) return 0
+    if (typeof configuredMinDuration === "number" && configuredMinDuration > 0) {
+      return Math.min(configuredMinDuration, totalDurationMinutes)
+    }
+    // Default: 2/3 of total exam duration
+    return Math.round(totalDurationMinutes * (2 / 3))
+  }, [configuredMinDuration, totalDurationMinutes])
+
+  const minRequiredSeconds = minRequiredMinutes * 60
+  const timeSpentSeconds = Math.max(0, totalDurationSeconds - timeLeft)
+  const remainingSecondsToUnlock = Math.max(0, minRequiredSeconds - timeSpentSeconds)
+  const canSubmitExam = timeLeft <= 1 || remainingSecondsToUnlock <= 0
+
+  const formatMinDurationLabel = useCallback((minutes: number) => {
+    const h = Math.floor(minutes / 60)
+    const m = minutes % 60
+    if (h > 0 && m > 0) return `${h} hr ${m} min`
+    if (h > 0) return `${h} hr${h > 1 ? "s" : ""}`
+    return `${m} min${m > 1 ? "s" : ""}`
+  }, [])
+
+  const formatCountdownTime = useCallback((totalSeconds: number) => {
+    const h = Math.floor(totalSeconds / 3600)
+    const m = Math.floor((totalSeconds % 3600) / 60)
+    const s = totalSeconds % 60
+    if (h > 0) {
+      return `${h}h ${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`
+    }
+    return `${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`
+  }, [])
+
   const handleSubmitExam = () => {
+    if (!canSubmitExam) {
+      setShowEarlySubmitModal(true)
+      addToast(`Submission locked: You can submit in ${formatCountdownTime(remainingSecondsToUnlock)}`, "warn")
+      return
+    }
     setShowSubmitConfirm(true)
   }
 
   const confirmSubmit = async () => {
     if (!attemptId) return
+    if (!canSubmitExam && timeLeft > 1) {
+      setShowSubmitConfirm(false)
+      setShowEarlySubmitModal(true)
+      return
+    }
     setSubmitting(true)
     setShowSubmitConfirm(false)
     try {
@@ -1061,7 +1115,12 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     if (!question) return
     await setAnswer(question._id, getAnswer(question._id)?.answer || "", question.type, true)
     if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
-      setShowSubmitConfirm(true)
+      if (!canSubmitExam) {
+        setShowEarlySubmitModal(true)
+        addToast(`Submission locked: Complete at least ${formatMinDurationLabel(minRequiredMinutes)} before submitting.`, "warn")
+      } else {
+        setShowSubmitConfirm(true)
+      }
     } else {
       goNext()
     }
@@ -1070,7 +1129,12 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const handleSkip = async () => {
     if (!question) return
     if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
-      setShowSubmitConfirm(true)
+      if (!canSubmitExam) {
+        setShowEarlySubmitModal(true)
+        addToast(`Submission locked: Complete at least ${formatMinDurationLabel(minRequiredMinutes)} before submitting.`, "warn")
+      } else {
+        setShowSubmitConfirm(true)
+      }
     } else {
       goNext()
     }
@@ -1125,7 +1189,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       "You can navigate between questions using the Previous and Next buttons. Questions can be answered in any order.",
       'Use the "Mark for Review" feature to flag questions you want to revisit before final submission.',
       "The timer will be displayed on the screen. Once time expires, your answers will be automatically submitted.",
-      "There is no negative marking. Attempt all questions to maximize your score.",
+      `Minimum exam duration required before submission: you must complete at least ${formatMinDurationLabel(minRequiredMinutes)} before submission is enabled.`,
+      "A virtual scientific calculator (NPTEL / GATE style) is available at the top of the screen during the examination.",
       "Review your answers carefully before clicking the Submit button. Once submitted, you cannot change your answers."
     ];
 
@@ -1448,6 +1513,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             duration={exam.duration * 60}
             studentName={studentName}
             rollNo={studentRoll}
+            onToggleCalculator={() => setShowCalculator(p => !p)}
             warningCount={procState.warnings}
             maxWarnings={exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
             endTimeLabel={endTimeLabel}
@@ -2116,11 +2182,24 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             {/* Submit Button */}
             <button
               onClick={handleSubmitExam}
-              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              className={`flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer ${
+                !canSubmitExam
+                  ? "bg-amber-600 hover:bg-amber-700 active:bg-amber-800"
+                  : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800"
+              }`}
               title="Submit Examination"
             >
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>Submit</span>
+              {!canSubmitExam ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Locked ({formatCountdownTime(remainingSecondsToUnlock)})</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>Submit</span>
+                </>
+              )}
             </button>
           </div>
         </main>
@@ -2239,10 +2318,26 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             <button
               onClick={handleSubmitExam}
               disabled={submitting}
-              className="w-full py-2.5 bg-[#10B981] text-white text-xs font-bold rounded-xl hover:bg-[#059669] transition-colors disabled:opacity-60 cursor-pointer shadow-sm"
+              className={`w-full py-2.5 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-60 cursor-pointer shadow-sm flex items-center justify-center gap-1.5 ${
+                !canSubmitExam
+                  ? "bg-amber-600 hover:bg-amber-700 active:bg-amber-800"
+                  : "bg-[#10B981] hover:bg-[#059669]"
+              }`}
             >
-              {submitting ? "Submitting..." : "Submit Exam"}
+              {!canSubmitExam ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 shrink-0" />
+                  <span>Submit Exam ({formatCountdownTime(remainingSecondsToUnlock)} left)</span>
+                </>
+              ) : (
+                <span>{submitting ? "Submitting..." : "Submit Exam"}</span>
+              )}
             </button>
+            {!canSubmitExam && (
+              <p className="text-[10px] text-amber-600 text-center font-medium mt-1.5">
+                Submissions unlock after {formatMinDurationLabel(minRequiredMinutes)}
+              </p>
+            )}
           </div>
         </aside>
       </div>
@@ -2323,6 +2418,84 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           </div>
         </div>
       )}
+
+      {/* Early Submit Warning / Locked Modal */}
+      {showEarlySubmitModal && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#1a2535]/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowEarlySubmitModal(false)} />
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
+            {/* Header */}
+            <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-6 text-white text-center relative overflow-hidden">
+              <div className="w-16 h-16 bg-white/15 backdrop-blur-xs rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+                <Lock size={30} className="text-white drop-shadow-sm" />
+              </div>
+              <h3 className="text-xl font-bold tracking-tight">Submission Locked</h3>
+              <p className="text-xs text-amber-100 mt-1 font-medium">Minimum exam duration required before submission</p>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {/* Live Remaining Time Counter */}
+              <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-4 text-center">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 mb-1 flex items-center justify-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  Time Left to Unlock Submit
+                </p>
+                <p className="text-3xl font-black text-amber-900 tabular-nums tracking-tight">
+                  {formatCountdownTime(remainingSecondsToUnlock)}
+                </p>
+                <div className="mt-3 w-full bg-amber-200/60 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-amber-600 h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, Math.max(0, Math.round((timeSpentSeconds / Math.max(1, minRequiredSeconds)) * 100)))}%`
+                    }}
+                  />
+                </div>
+                <p className="text-[10px] text-amber-700 font-semibold mt-1.5">
+                  {Math.min(100, Math.round((timeSpentSeconds / Math.max(1, minRequiredSeconds)) * 100))}% of minimum required time completed
+                </p>
+              </div>
+
+              {/* Exam Time Breakdown */}
+              <div className="space-y-2 bg-gray-50 rounded-2xl p-3.5 border border-gray-100 text-xs">
+                <div className="flex items-center justify-between text-gray-600">
+                  <span className="font-medium">Total Exam Duration:</span>
+                  <span className="font-bold text-[#1a2535]">{formatMinDurationLabel(totalDurationMinutes)}</span>
+                </div>
+                <div className="flex items-center justify-between text-gray-600">
+                  <span className="font-medium">Minimum Required Time:</span>
+                  <span className="font-bold text-amber-700">{formatMinDurationLabel(minRequiredMinutes)}</span>
+                </div>
+                <div className="flex items-center justify-between text-gray-600 border-t border-gray-200/60 pt-2">
+                  <span className="font-medium">Time Completed So Far:</span>
+                  <span className="font-bold text-emerald-700">{formatCountdownTime(timeSpentSeconds)}</span>
+                </div>
+              </div>
+
+              {/* Explanation Note */}
+              <p className="text-xs text-gray-500 leading-relaxed text-center font-normal">
+                As per examination rules, you can only submit this exam after completing at least <strong className="text-gray-700 font-semibold">{formatMinDurationLabel(minRequiredMinutes)}</strong>. Please review your questions and answers until the timer unlocks.
+              </p>
+
+              {/* Action Button */}
+              <button
+                type="button"
+                onClick={() => setShowEarlySubmitModal(false)}
+                className="w-full py-3 bg-[#2D3A4A] hover:bg-[#1a2535] active:bg-[#111927] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-colors cursor-pointer"
+              >
+                Return to Exam & Review
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Virtual Scientific Calculator (NPTEL / GATE style) */}
+      <ScientificCalculator
+        isOpen={showCalculator}
+        onClose={() => setShowCalculator(false)}
+      />
       {/* Micro-notification toasts */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none text-right">
         {toasts.map((t) => (
