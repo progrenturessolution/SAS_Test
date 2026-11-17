@@ -223,6 +223,7 @@ export default function AdminSidebar({
                   <div key={item.href} className="relative group">
                     <Link
                       href={item.href}
+                      title={isRestricted ? restrictedMessage : undefined}
                       onClick={(e) => {
                         if (isRestricted) {
                           e.preventDefault()
@@ -233,7 +234,7 @@ export default function AdminSidebar({
                       }}
                       className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-colors ${
                         isRestricted
-                          ? "opacity-55 cursor-not-allowed bg-gray-100/40 text-gray-400"
+                          ? "opacity-60 cursor-not-allowed bg-gray-100/50 text-gray-500 hover:bg-gray-100/70"
                           : active
                             ? "bg-[#2D3A4A] text-white shadow-xs"
                             : "text-gray-700 hover:bg-gray-100/70 hover:text-gray-900"
@@ -244,9 +245,21 @@ export default function AdminSidebar({
                         <span>{item.label}</span>
                       </div>
                       {isRestricted && (
-                        <Lock size={13} className="text-gray-400 shrink-0" />
+                        <span className="flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded">
+                          <Lock size={10} className="text-amber-600" />
+                          <span>Locked</span>
+                        </span>
                       )}
                     </Link>
+
+                    {isRestricted && (
+                      <div className="hidden group-hover:block mt-1 p-2 rounded-lg bg-[#1E293B] text-white text-[11px] leading-relaxed shadow-lg border border-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
+                        <div className="flex items-start gap-1.5">
+                          <Lock size={12} className="text-amber-400 mt-0.5 shrink-0" />
+                          <p className="text-slate-200 font-normal">{restrictedMessage}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -364,6 +377,7 @@ export default function AdminSidebar({
               <div key={item.href} className="relative group">
                 <Link
                   href={item.href}
+                  title={isRestricted ? restrictedMessage : undefined}
                   onClick={(e) => {
                     if (isRestricted) {
                       e.preventDefault()
@@ -372,7 +386,7 @@ export default function AdminSidebar({
                   }}
                   className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-xs font-medium transition-colors ${
                     isRestricted
-                      ? "opacity-55 cursor-not-allowed bg-gray-100/40 text-gray-400 hover:bg-gray-100/40 hover:text-gray-400"
+                      ? "opacity-60 cursor-not-allowed bg-gray-100/50 text-gray-500 hover:bg-gray-100/70"
                       : active
                         ? "bg-[#2D3A4A] text-white font-medium shadow-xs"
                         : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
@@ -383,14 +397,19 @@ export default function AdminSidebar({
                     <span>{item.label}</span>
                   </div>
                   {isRestricted && (
-                    <Lock size={12} className="text-gray-400 shrink-0" />
+                    <span className="flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded">
+                      <Lock size={10} className="text-amber-600" />
+                      <span>Locked</span>
+                    </span>
                   )}
                 </Link>
 
                 {isRestricted && (
-                  <div className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-2.5 py-1.5 text-[11px] text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
-                    <Lock size={12} className="text-amber-400 shrink-0" />
-                    <span>{restrictedMessage}</span>
+                  <div className="hidden group-hover:block mt-1 p-2 rounded-lg bg-[#1E293B] text-white text-[11px] leading-relaxed shadow-lg border border-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="flex items-start gap-1.5">
+                      <Lock size={12} className="text-amber-400 mt-0.5 shrink-0" />
+                      <p className="text-slate-200 font-normal">{restrictedMessage}</p>
+                    </div>
                   </div>
                 )}
               </div>
