@@ -100,7 +100,7 @@ export async function generateContentWithKeyRotation(
   }
 
   const models = options.models && options.models.length > 0 ? options.models : DEFAULT_GEMINI_MODELS
-  const timeoutMs = options.timeoutMs || 15000
+  const timeoutMs = options.timeoutMs || 25000
 
   // Determine starting key using round-robin pointer
   const startIndex = currentKeyPointer % keys.length
@@ -138,11 +138,13 @@ export async function generateContentWithKeyRotation(
           lastErrorMessage = errorMsg
           console.warn(`[GeminiPool] Key ${keyIndex + 1}/${keys.length} (${maskedKey}) on ${model} failed: ${errorMsg}`)
 
-          // If key is permanently deleted or disabled (HTTP 401), blacklist it immediately
+          // If key is permanently deleted, disabled, or project suspended, blacklist it immediately
           const isKeyInvalid = 
             res.status === 401 ||
             errorMsg.toLowerCase().includes("deleted") ||
             errorMsg.toLowerCase().includes("disabled") ||
+            errorMsg.toLowerCase().includes("suspended") ||
+            errorMsg.toLowerCase().includes("permission denied") ||
             errorMsg.toLowerCase().includes("service account")
 
           if (isKeyInvalid) {
