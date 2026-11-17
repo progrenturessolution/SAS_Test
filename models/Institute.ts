@@ -49,7 +49,6 @@ const InstituteSchema = new Schema<IInstitute>(
       },
       customQuestionTypes: {
         type: [String],
-        enum: ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"],
         default: ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"],
       },
       features: {
@@ -69,8 +68,9 @@ const InstituteSchema = new Schema<IInstitute>(
   { timestamps: true }
 )
 
-const Institute =
-  (mongoose.models.Institute as mongoose.Model<IInstitute>) ||
-  mongoose.model<IInstitute>("Institute", InstituteSchema)
+if (mongoose.models.Institute) {
+  mongoose.deleteModel("Institute")
+}
+const Institute = mongoose.model<IInstitute>("Institute", InstituteSchema)
 
 export default Institute
