@@ -137,7 +137,7 @@ export default function AIGeneratorPage() {
   // Generation & Status
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
-  const [revealCount, setRevealCount] = useState(6)
+  const [isGeneratingMissing, setIsGeneratingMissing] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   // Questions Review & Publishing
@@ -289,13 +289,6 @@ export default function AIGeneratorPage() {
     return generatedQuestions.filter((q) => getQuestionFormat(q) === formatFilter)
   }, [generatedQuestions, formatFilter])
 
-  useEffect(() => {
-    if (revealCount >= filteredGeneratedQuestions.length) return
-    const timer = window.setTimeout(() => {
-      setRevealCount((count) => Math.min(count + 4, filteredGeneratedQuestions.length))
-    }, 30)
-    return () => window.clearTimeout(timer)
-  }, [revealCount, filteredGeneratedQuestions.length])
 
   const formatCounts = useMemo(() => {
     const counts: Record<string, number> = { all: generatedQuestions.length, mcq: 0, diagram: 0, assertion: 0, fib: 0, true_false: 0 }
@@ -698,7 +691,6 @@ export default function AIGeneratorPage() {
     setGenerationStep(1)
     setGeneratedQuestions([])
     setSelectedQuestionIds(new Set())
-    setRevealCount(6)
     setFormatFilter("all")
 
     const timer1 = setTimeout(() => setGenerationStep(2), 1500)
@@ -796,6 +788,45 @@ export default function AIGeneratorPage() {
       if (received.length === 0) {
         throw new Error("No questions were created. Please click Create Questions again.")
       }
+
+      // Auto-fill gap if fewer questions were generated than requested
+      if (received.length < countToGenerate) {
+        const gap = countToGenerate - received.length
+        try {
+          const topUpRes = await fetch("/api/admin/generate-competitive-questions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              exam: selectedExam,
+              grade: selectedGrade,
+              subject: targetSubject,
+              chapters: selectedChapters,
+              topics: selectedTopics,
+              syllabusText: uploadedSyllabusText,
+              difficulty,
+              questionCount: gap,
+              questionPattern: pattern,
+              blueprintFormats: blueprintFormats.map((f) => ({
+                ...f,
+                count: Math.min(Number(f.count) || 0, gap),
+              })),
+              marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
+              negativeMarks: currentExamMeta.defaultNegativeMarks,
+              focusPYQ,
+              existingQuestions: received.map((q) => q.questionText),
+              stream: false,
+            }),
+          })
+          const topUpData = await topUpRes.json()
+          if (topUpData.success && Array.isArray(topUpData.questions) && topUpData.questions.length > 0) {
+            received = received.concat(topUpData.questions)
+            showQuestions(received)
+          }
+        } catch (gapErr) {
+          console.warn("[CompetitiveAI] Auto gap top-up non-blocking warning:", gapErr)
+        }
+      }
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred while generating.")
       window.scrollTo({ top: 0, behavior: "auto" })
@@ -804,6 +835,70 @@ export default function AIGeneratorPage() {
       clearTimeout(timer2)
       setIsGenerating(false)
       setGenerationStep(0)
+    }
+  }
+
+  // Generate missing questions to reach blueprint target
+  const handleGenerateMissing = async () => {
+    const missingCount = Math.max(0, totalQuestions - generatedQuestions.length)
+    if (missingCount <= 0 || isGeneratingMissing) return
+
+    setIsGeneratingMissing(true)
+    setErrorMsg(null)
+    const chapterTitle =
+      selectedChapters.length === 1
+        ? selectedChapters[0]
+        : selectedChapters.length > 1
+        ? `${selectedChapters[0]} & ${selectedChapters.length - 1} more`
+        : ""
+    const targetSubject = activeSubjectTab || selectedSubject
+    const nextTitle = `${selectedExam.replace("-", "_")} ${targetSubject}${chapterTitle ? ` - ${chapterTitle}` : ""}`
+    const existingTexts = generatedQuestions.map((q) => q.questionText)
+
+    try {
+      const res = await fetch("/api/admin/generate-competitive-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          exam: selectedExam,
+          grade: selectedGrade,
+          subject: targetSubject,
+          chapters: selectedChapters,
+          topics: selectedTopics,
+          syllabusText: uploadedSyllabusText,
+          difficulty,
+          questionCount: missingCount,
+          questionPattern: pattern,
+          blueprintFormats: blueprintFormats.map((f) => ({
+            ...f,
+            count: Math.min(Number(f.count) || 0, missingCount),
+          })),
+          marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
+          negativeMarks: currentExamMeta.defaultNegativeMarks,
+          focusPYQ,
+          existingQuestions: existingTexts,
+          stream: false,
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.success && Array.isArray(data.questions) && data.questions.length > 0) {
+        const updated = [...generatedQuestions, ...data.questions]
+        setGeneratedQuestions(updated)
+        setSelectedQuestionIds(new Set(updated.map((q) => q.id)))
+        setExamTitle(nextTitle)
+        const calculatedTotal = updated.reduce((sum, q) => sum + (q.marks || 4), 0) || totalMarks || 200
+        setExamTotalMarks(calculatedTotal)
+        setPassMarks(Math.round(calculatedTotal * 0.4))
+        toast.success(`Generated ${data.questions.length} more question(s)! Total: ${updated.length}/${totalQuestions}`)
+      } else {
+        toast.error("Could not generate remaining questions. Please try again.")
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to generate missing questions.")
+    } finally {
+      setIsGeneratingMissing(false)
     }
   }
 
@@ -2065,9 +2160,45 @@ export default function AIGeneratorPage() {
                     </div>
                   )}
 
+                  {!isGenerating && generatedQuestions.length > 0 && generatedQuestions.length < totalQuestions && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-xs font-medium text-slate-700 shadow-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#1E293B] text-white flex items-center justify-center shrink-0 shadow-xs">
+                          <Sparkles className="h-4 w-4 text-amber-300" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 text-xs sm:text-sm">
+                            {generatedQuestions.length} of {totalQuestions} Questions Ready
+                          </p>
+                          <p className="text-[11px] text-slate-600 font-normal mt-0.5">
+                            {totalQuestions - generatedQuestions.length} questions remaining to reach your target blueprint. Click below to generate the rest!
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGenerateMissing}
+                        disabled={isGeneratingMissing}
+                        className="self-end sm:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        {isGeneratingMissing ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-300" />
+                            <span>Generating {totalQuestions - generatedQuestions.length} Remaining...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-3.5 h-3.5 text-amber-300" />
+                            <span>Generate Remaining {totalQuestions - generatedQuestions.length} Questions</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
                   {/* Generated Questions List */}
                   <div className="space-y-4">
-                    {filteredGeneratedQuestions.slice(0, revealCount).map((q, idx) => {
+                    {filteredGeneratedQuestions.map((q, idx) => {
                       const isSelected = selectedQuestionIds.has(q.id)
                       const isExpanded = expandedSolutions.has(q.id)
                       const qFormat = getQuestionFormat(q)
@@ -2268,14 +2399,7 @@ export default function AIGeneratorPage() {
                         </div>
                       )
                     })}
-                    {revealCount < filteredGeneratedQuestions.length && (
-                      <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-medium text-slate-500">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>
-                          Showing {Math.min(revealCount, filteredGeneratedQuestions.length)} of {filteredGeneratedQuestions.length} questions
-                        </span>
-                      </div>
-                    )}
+
                   </div>
                 </>
               )}

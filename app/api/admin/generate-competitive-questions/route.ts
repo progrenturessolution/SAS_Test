@@ -258,8 +258,8 @@ The "options" array MUST be exactly ["True", "False"].
         const fmtCount = Number(fmt.count) || 0
         if (fmtCount <= 0) continue
 
-        // Fast chunks of 5 questions maximize parallel generation speed across keys
-        const chunkSize = fmt.id === "diagram" ? 3 : 5
+        // Fast chunks of 6 questions maximize parallel generation speed across keys
+        const chunkSize = fmt.id === "diagram" ? 3 : 6
         const numSubChunks = Math.ceil(fmtCount / chunkSize)
         const baseSub = Math.floor(fmtCount / numSubChunks)
         const remSub = fmtCount % numSubChunks
@@ -288,7 +288,7 @@ The "options" array MUST be exactly ["True", "False"].
           })
         }
       } else if (questionPattern === "assertion_reason" || questionPattern === "assertion") {
-        const chunkSize = 5
+        const chunkSize = 6
         const numSubChunks = Math.ceil(count / chunkSize)
         const baseSub = Math.floor(count / numSubChunks)
         const remSub = count % numSubChunks
@@ -325,7 +325,7 @@ The "options" array MUST be exactly ["True", "False"].
           marks: marksPerQuestion,
         })
       } else {
-        const chunkSize = 5
+        const chunkSize = 6
         const numSubChunks = Math.ceil(count / chunkSize)
         const baseSub = Math.floor(count / numSubChunks)
         const remSub = count % numSubChunks
@@ -378,7 +378,7 @@ Return raw JSON array ONLY.`
             responseMimeType: "application/json",
           }
         },
-        timeoutMs: Math.min(10000, 4000 + (requestedCount * 1200))
+        timeoutMs: 28000
       })
 
       return {
@@ -600,7 +600,7 @@ Return raw JSON array ONLY.`
                     contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
                     generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
                   },
-                  timeoutMs: 4000,
+                  timeoutMs: 15000,
                 })
                 const topUpParsed = robustJsonParse(topUpRes.text)
                 if (Array.isArray(topUpParsed)) {
@@ -708,7 +708,7 @@ Return raw JSON array ONLY.`
                 contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
                 generationConfig: { temperature: 0.4, responseMimeType: "application/json" }
               },
-              timeoutMs: 4000
+              timeoutMs: 15000
             })
             const topUpParsed = robustJsonParse(topUpRes.text)
             if (Array.isArray(topUpParsed)) {
