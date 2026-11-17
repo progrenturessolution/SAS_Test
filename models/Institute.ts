@@ -4,7 +4,7 @@ export interface IInstituteLimits {
   maxStudents: number
   maxExams: number
   examTypes: string[]
-  customQuestionTypes: ("mcq" | "truefalse" | "descriptive" | "fillblanks" | "coding")[]
+  customQuestionTypes: ("mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks" | "coding")[]
   features: {
     neetJeeGenerator: boolean
     aiProctoring: boolean
@@ -49,8 +49,8 @@ const InstituteSchema = new Schema<IInstitute>(
       },
       customQuestionTypes: {
         type: [String],
-        enum: ["mcq", "truefalse", "descriptive", "fillblanks", "coding"],
-        default: ["mcq", "truefalse", "descriptive", "fillblanks", "coding"],
+        enum: ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"],
+        default: ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"],
       },
       features: {
         neetJeeGenerator: { type: Boolean, default: true },
