@@ -55,6 +55,7 @@ export function PrintableExamPaper({
       : "COACHING INSTITUTE"
 
   const [customInstitute, setCustomInstitute] = useState(cleanInitialName)
+  const [customSubject, setCustomSubject] = useState(subject || "Physics")
   const [showAnswerKeyGrid, setShowAnswerKeyGrid] = useState(true)
 
   React.useEffect(() => {
@@ -62,6 +63,12 @@ export function PrintableExamPaper({
       setCustomInstitute(initialInstitute.trim())
     }
   }, [initialInstitute])
+
+  React.useEffect(() => {
+    if (subject) {
+      setCustomSubject(subject)
+    }
+  }, [subject])
 
   if (!isOpen) return null
 
@@ -229,7 +236,7 @@ export function PrintableExamPaper({
           </div>
 
           {/* Quick Configs */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1.5">
               <label className="text-slate-500 font-medium">Coaching Name:</label>
               <input
@@ -237,7 +244,18 @@ export function PrintableExamPaper({
                 value={customInstitute}
                 onChange={(e) => setCustomInstitute(e.target.value)}
                 placeholder="Enter coaching institute name..."
-                className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 bg-white text-slate-800 w-48 sm:w-64 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 bg-white text-slate-800 w-44 sm:w-56 focus:outline-none focus:ring-1 focus:ring-slate-900"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <label className="text-slate-500 font-medium">Subject Name:</label>
+              <input
+                type="text"
+                value={customSubject}
+                onChange={(e) => setCustomSubject(e.target.value)}
+                placeholder="Enter subject name..."
+                className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 bg-white text-slate-800 w-36 sm:w-48 focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
             </div>
 
@@ -271,7 +289,7 @@ export function PrintableExamPaper({
               {examTarget} EXAMINATION PREPARATION &amp; ASSESSMENT
             </div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900 pt-1">
-              {examTitle || `${examTarget} ${subject} Mock Examination`}
+              {examTitle ? (subject && examTitle.includes(subject) ? examTitle.replaceAll(subject, customSubject) : examTitle) : `${examTarget} ${customSubject} Mock Examination`}
             </h2>
           </div>
 
@@ -285,7 +303,7 @@ export function PrintableExamPaper({
           {/* Exam Meta Bar */}
           <div className="mt-4 pt-3 border-t border-slate-300 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-medium text-slate-800">
             <div>
-              <span className="text-slate-500">Subject:</span> <strong className="font-semibold">{subject}</strong>
+              <span className="text-slate-500">Subject:</span> <strong className="font-semibold">{customSubject}</strong>
             </div>
             <div>
               <span className="text-slate-500">Grade / Class:</span> <strong className="font-semibold">{grade === "both" ? "Class 11 & 12" : `Class ${grade}`}</strong>
@@ -523,7 +541,7 @@ export function PrintableExamPaper({
 
         {/* ─── Footer of Document ─── */}
         <footer className="mt-8 pt-4 border-t border-slate-300 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 print-avoid-break">
-          <span>{examTitle || `${examTarget} ${subject}`} · {printMode === "student" ? "Student Examination Booklet" : "Teacher Solution Key"}</span>
+          <span>{examTitle ? (subject && examTitle.includes(subject) ? examTitle.replaceAll(subject, customSubject) : examTitle) : `${examTarget} ${customSubject}`} · {printMode === "student" ? "Student Examination Booklet" : "Teacher Solution Key"}</span>
           <span className="font-medium text-slate-700">*** END OF QUESTION PAPER ***</span>
           <span>{customInstitute}</span>
         </footer>
