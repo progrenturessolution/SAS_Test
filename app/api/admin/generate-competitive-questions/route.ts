@@ -598,8 +598,8 @@ Return raw JSON array ONLY.`
                   const batch = takeQuestions(topUpParsed, formatId)
                   if (batch.length > 0) send({ type: "batch", questions: batch })
                 }
-              } catch (topUpErr) {
-                console.warn(`[CompetitiveAI] Stream top-up for ${formatId} skipped:`, topUpErr)
+              } catch (topUpErr: any) {
+                console.warn(`[CompetitiveAI] Stream top-up for ${formatId} skipped: ${topUpErr?.message || topUpErr}`)
               }
             }
 
@@ -712,8 +712,8 @@ Return raw JSON array ONLY.`
                 }
               }
             }
-          } catch (tErr) {
-            console.warn(`[CompetitiveAI] Top-up for ${fmt.id} skipped:`, tErr)
+          } catch (tErr: any) {
+            console.warn(`[CompetitiveAI] Top-up for ${fmt.id} skipped: ${tErr?.message || tErr}`)
           }
         }
 

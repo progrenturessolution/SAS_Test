@@ -16,10 +16,11 @@
  * 4. 20-second AbortController timeout to prevent hanging.
  */
 
-// Live verified Gemini models (no 2.5 models per user request)
+// Live verified Gemini models (in order of speed and stability, no 2.5 models per user request)
 export const DEFAULT_GEMINI_MODELS = [
   "gemini-3.5-flash-lite",
-  "gemini-3.5-flash",
+  "gemini-flash-lite-latest",
+  "gemini-3.1-flash-lite",
 ]
 
 /**
@@ -134,26 +135,21 @@ export async function generateContentWithKeyRotation(
           lastErrorMessage = errorMsg
           console.warn(`[GeminiPool] Key ${keyIndex + 1}/${keys.length} (${maskedKey}) on ${model} failed: ${errorMsg}`)
 
-          // If rate limit (429), quota exceeded, 503 high demand/spikes, 500 server error, or auth error, immediately failover to NEXT key
-          const isFailoverTrigger = 
+          // If rate limit (429), quota exceeded, or auth error on this key, switch to NEXT key
+          const isKeyExhausted = 
             res.status === 429 ||
             res.status === 403 ||
-            res.status === 503 ||
-            res.status === 500 ||
             errorMsg.toLowerCase().includes("quota") ||
             errorMsg.toLowerCase().includes("resource_exhausted") ||
-            errorMsg.toLowerCase().includes("demand") ||
-            errorMsg.toLowerCase().includes("spikes") ||
-            errorMsg.toLowerCase().includes("temporary") ||
-            errorMsg.toLowerCase().includes("overloaded") ||
             errorMsg.toLowerCase().includes("api_key")
 
-          if (isFailoverTrigger) {
-            console.warn(`[GeminiPool] Failover trigger (${res.status} / ${errorMsg.slice(0, 45)}) on Key ${keyIndex + 1}. Switching to next key in pool...`)
+          if (isKeyExhausted) {
+            console.warn(`[GeminiPool] Key ${keyIndex + 1} quota/auth limit hit (${res.status}). Switching to next key in pool...`)
             break // Break model loop, proceed immediately to NEXT key in pool!
           }
 
-          continue // Try fallback model with same key
+          // For 503 (high demand on specific model) or 500, try next fallback model on same key
+          continue
         }
 
         const data = await res.json()
