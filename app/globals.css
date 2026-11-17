@@ -324,13 +324,33 @@ html.lenis, html.lenis body {
   --tw-ring-color: var(--brand-theme, var(--primary)) !important;
 }
 
-/* 5. Tooltips: preserve dark slate background for pointer-events-none floating tooltips */
+/* 5. Text color for primary branding */
+.coaching-portal .text-primary {
+  color: var(--brand-theme, var(--primary)) !important;
+}
+
+/* 6. Stepper completed & active subtle shades */
+.coaching-portal .bg-primary\/10 {
+  background-color: color-mix(in srgb, var(--brand-theme, var(--primary)) 10%, transparent) !important;
+}
+.coaching-portal .bg-primary\/15 {
+  background-color: color-mix(in srgb, var(--brand-theme, var(--primary)) 15%, transparent) !important;
+}
+.coaching-portal .bg-primary\/20 {
+  background-color: color-mix(in srgb, var(--brand-theme, var(--primary)) 20%, transparent) !important;
+}
+.coaching-portal .border-primary\/25,
+.coaching-portal .border-primary\/30 {
+  border-color: color-mix(in srgb, var(--brand-theme, var(--primary)) 30%, transparent) !important;
+}
+
+/* 7. Tooltips: preserve dark slate background for pointer-events-none floating tooltips */
 .coaching-portal .pointer-events-none.bg-\[\#1E293B\],
 .coaching-portal .pointer-events-none.bg-\[\#2D3A4A\] {
   background-color: #1E293B !important;
 }
 
-/* 6. Code editors and syntax blocks: preserve dark navy background for coding */
+/* 8. Code editors and syntax blocks: preserve dark navy background for coding */
 .coaching-portal pre,
 .coaching-portal pre.bg-\[\#1e2a38\],
 .coaching-portal textarea.font-mono,

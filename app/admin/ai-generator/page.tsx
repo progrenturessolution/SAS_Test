@@ -1110,7 +1110,7 @@ export default function AIGeneratorPage() {
           {/* Step Info Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="w-6 h-6 rounded-lg bg-[#1E293B] text-white text-xs font-semibold flex items-center justify-center shadow-2xs">
+              <span className="w-6 h-6 rounded-lg bg-primary text-white text-xs font-semibold flex items-center justify-center shadow-2xs">
                 {currentStep}
               </span>
               <div>
@@ -1148,9 +1148,9 @@ export default function AIGeneratorPage() {
                   }}
                   className={`h-9 rounded-xl flex items-center justify-center text-xs font-medium transition-all cursor-pointer ${
                     isCurrent
-                      ? "bg-[#1E293B] text-white shadow-xs font-semibold ring-2 ring-slate-900/15"
+                      ? "bg-primary text-white shadow-xs font-semibold ring-2 ring-primary/25"
                       : isComplete
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                      ? "bg-primary/15 text-primary border border-primary/30 font-semibold"
                       : "bg-slate-50 text-slate-400 border border-slate-200/60 disabled:opacity-40 disabled:cursor-not-allowed"
                   }`}
                   title={s.label}
@@ -1182,9 +1182,9 @@ export default function AIGeneratorPage() {
                         }}
                         className={`flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
                           isCurrent
-                            ? "bg-[#1E293B] text-white shadow-sm"
+                            ? "bg-primary text-white shadow-sm ring-2 ring-primary/25 ring-offset-2"
                             : isComplete
-                            ? "bg-emerald-500 text-white"
+                            ? "bg-primary text-white shadow-sm"
                             : "bg-white text-slate-400 border border-slate-300"
                         }`}
                       >
@@ -1192,7 +1192,7 @@ export default function AIGeneratorPage() {
                       </button>
                       <span
                         className={`mt-1 text-[10px] sm:text-[11px] font-medium transition-colors text-center ${
-                          isCurrent ? "text-slate-900" : isComplete ? "text-emerald-700" : "text-slate-400"
+                          isCurrent ? "text-slate-900 font-semibold" : isComplete ? "text-primary font-medium" : "text-slate-400"
                         }`}
                       >
                         {s.label}
@@ -1201,7 +1201,7 @@ export default function AIGeneratorPage() {
                     {index < STEPS.length - 1 && (
                       <div
                         className={`h-[1.5px] w-full max-w-[120px] -mt-5 transition-colors ${
-                          s.step < currentStep ? "bg-emerald-400" : "bg-slate-200"
+                          s.step < currentStep ? "bg-primary" : "bg-slate-200"
                         }`}
                       />
                     )}
