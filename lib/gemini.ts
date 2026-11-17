@@ -23,6 +23,9 @@ export const DEFAULT_GEMINI_MODELS = [
   "gemini-3.5-flash-lite",
 ]
 
+// In-memory set of permanently disabled or deleted keys
+const disabledKeysSet = new Set<string>()
+
 /**
  * Reads all configured Gemini API keys from process.env
  */
@@ -52,7 +55,7 @@ export function getGeminiApiKeys(): string[] {
     }
   }
 
-  return keys
+  return keys.filter(k => !disabledKeysSet.has(k))
 }
 
 // Global round-robin index pointer (in-memory across server requests)
@@ -135,6 +138,19 @@ export async function generateContentWithKeyRotation(
           lastErrorMessage = errorMsg
           console.warn(`[GeminiPool] Key ${keyIndex + 1}/${keys.length} (${maskedKey}) on ${model} failed: ${errorMsg}`)
 
+          // If key is permanently deleted or disabled (HTTP 401), blacklist it immediately
+          const isKeyInvalid = 
+            res.status === 401 ||
+            errorMsg.toLowerCase().includes("deleted") ||
+            errorMsg.toLowerCase().includes("disabled") ||
+            errorMsg.toLowerCase().includes("service account")
+
+          if (isKeyInvalid) {
+            console.warn(`[GeminiPool] Key ${keyIndex + 1} (${maskedKey}) is permanently invalid/disabled (${errorMsg}). Removing from active pool.`)
+            disabledKeysSet.add(apiKey)
+            break // Switch to next key immediately
+          }
+
           // If rate limit (429), quota exceeded, or auth error on this key, switch to NEXT key
           const isKeyExhausted = 
             res.status === 429 ||
@@ -144,7 +160,7 @@ export async function generateContentWithKeyRotation(
             errorMsg.toLowerCase().includes("api_key")
 
           if (isKeyExhausted) {
-            console.warn(`[GeminiPool] Key ${keyIndex + 1} quota/auth limit hit (${res.status}). Switching to next key in pool...`)
+            console.warn(`[GeminiPool] Key ${keyIndex + 1} quota limit hit (${res.status}). Switching to next key in pool...`)
             break // Break model loop, proceed immediately to NEXT key in pool!
           }
 
