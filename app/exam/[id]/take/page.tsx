@@ -1448,7 +1448,6 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             duration={exam.duration * 60}
             studentName={studentName}
             rollNo={studentRoll}
-            onSubmit={handleSubmitExam}
             warningCount={procState.warnings}
             maxWarnings={exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
             endTimeLabel={endTimeLabel}
@@ -2079,16 +2078,6 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                       : "Save & Next"}
                 </span>
                 {isLastQuestionInSection && nextSectionTab ? <ArrowRight size={14} /> : null}
-              </button>
-
-              {/* Dedicated Submit Exam button on bottom for desktop */}
-              <button
-                onClick={handleSubmitExam}
-                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
-                title="Submit Examination"
-              >
-                <CheckCircle2 size={16} />
-                <span>Submit Exam</span>
               </button>
             </div>
           </div>

@@ -37,7 +37,7 @@ interface ExamHeaderProps {
   duration: number
   studentName: string
   rollNo: string
-  onSubmit: () => void
+  onSubmit?: () => void
   warningCount?: number
   maxWarnings?: number
   endTimeLabel?: string
