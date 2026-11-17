@@ -376,7 +376,7 @@ Return raw JSON array ONLY.`
             responseMimeType: "application/json",
           }
         },
-        timeoutMs: 40000
+        timeoutMs: Math.min(22000, 7000 + (requestedCount * 3000))
       })
 
       return {
@@ -698,7 +698,7 @@ Return raw JSON array ONLY.`
                 contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
                 generationConfig: { temperature: 0.4, responseMimeType: "application/json" }
               },
-              timeoutMs: 12000
+              timeoutMs: 8000
             })
             const topUpParsed = robustJsonParse(topUpRes.text)
             if (Array.isArray(topUpParsed)) {
