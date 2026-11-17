@@ -151,10 +151,11 @@ export default function SettingsPage() {
 
       if (isInstitute && themeColor) {
         document.documentElement.style.setProperty("--primary", themeColor)
+        document.documentElement.style.setProperty("--brand-theme", themeColor)
       }
 
-      // Notify sidebar to refresh logo and theme immediately
-      window.dispatchEvent(new Event("institute-settings-updated"))
+      // Notify sidebar and coaching theme wrapper to refresh logo and theme immediately
+      window.dispatchEvent(new CustomEvent("institute-settings-updated", { detail: { themeColor } }))
 
       setTimeout(() => setSaved(false), 3000)
     } catch (err: any) {

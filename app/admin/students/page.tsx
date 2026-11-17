@@ -70,7 +70,7 @@ export default function StudentsPage() {
           <h1 className="text-2xl font-bold text-primary">Students</h1>
           <p className="mt-1 text-xs text-gray-500">Only registered students can enter your institute exams.</p>
         </div>
-        <button type="button" onClick={() => setShowAddStudent(true)} className="flex items-center gap-2 rounded-lg bg-[#2D3A4A] px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#1e2a38]">
+        <button type="button" onClick={() => setShowAddStudent(true)} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-all cursor-pointer">
           <Plus className="h-4 w-4" /> Add Student
         </button>
         <div className="relative">
@@ -176,7 +176,7 @@ export default function StudentsPage() {
                 </label>
               ))}
             </div>
-            <button type="submit" disabled={savingStudent} className="mt-5 w-full rounded-lg bg-[#2D3A4A] py-2.5 text-sm font-semibold text-white hover:bg-[#1e2a38] disabled:opacity-60">
+            <button type="submit" disabled={savingStudent} className="mt-5 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60 transition-all cursor-pointer">
               {savingStudent ? "Adding..." : "Add Student"}
             </button>
           </form>

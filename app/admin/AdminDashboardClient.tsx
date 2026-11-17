@@ -154,7 +154,7 @@ export default function AdminDashboardClient() {
             {hasExamAccess ? (
               <Link
                 href="/admin/exams/create"
-                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-accent transition-colors text-center whitespace-nowrap shadow-xs block cursor-pointer"
+                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 shadow-sm transition-all text-center whitespace-nowrap block cursor-pointer"
               >
                 + Create Exam
               </Link>

@@ -42,7 +42,7 @@ export default function OtherExamsPage() {
       <div className="flex items-center gap-3">
         <Link
           href="/admin"
-          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#2D3A4A] text-white text-xs font-bold hover:bg-[#1f2937] transition-all shadow-sm cursor-pointer"
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:opacity-90 transition-all shadow-sm cursor-pointer"
         >
           <ArrowLeft size={14} />
           Back to Dashboard
@@ -57,3 +57,4 @@ export default function OtherExamsPage() {
     </div>
   )
 }
+

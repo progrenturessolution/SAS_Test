@@ -108,7 +108,7 @@ export default function ExamsListPage() {
             {hasCompetitiveAccess ? (
               <Link
                 href="/admin/ai-generator"
-                className="flex items-center gap-2 px-3.5 py-2 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-3.5 py-2 bg-primary hover:opacity-90 text-white rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
               >
                 <GraduationCap size={16} className="text-white" />
                 <span>Competitive Test</span>
@@ -138,7 +138,7 @@ export default function ExamsListPage() {
             {hasExamAccess ? (
               <Link
                 href="/admin/exams/create"
-                className="flex items-center gap-2 px-3.5 py-2 bg-[#45505F] text-white rounded-lg text-sm font-medium hover:bg-[#1e2a38] cursor-pointer"
+                className="flex items-center gap-2 px-3.5 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 shadow-sm transition-colors cursor-pointer"
               >
                 <Plus size={16} /> Create Exam
               </Link>

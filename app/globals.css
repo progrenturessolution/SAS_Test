@@ -275,3 +275,69 @@ html.lenis, html.lenis body {
   }
 }
 
+/* ─── Coaching Portal Custom Theme Scoping ─── */
+.coaching-portal {
+  --primary: var(--brand-theme, #2D3A4A);
+}
+
+/* 1. All primary background colors used across exam creation, editing, students, generator */
+.coaching-portal .bg-\[\#2D3A4A\],
+.coaching-portal .bg-\[\#1E293B\],
+.coaching-portal .bg-\[\#45505F\],
+.coaching-portal .bg-\[\#0B192C\],
+.coaching-portal .bg-primary,
+.coaching-portal [data-theme-btn] {
+  background-color: var(--brand-theme, var(--primary)) !important;
+}
+
+/* 2. Hover states for primary buttons and interactive elements */
+.coaching-portal button.bg-\[\#2D3A4A\]:hover,
+.coaching-portal button.bg-\[\#1E293B\]:hover,
+.coaching-portal button.bg-\[\#45505F\]:hover,
+.coaching-portal button.bg-\[\#0B192C\]:hover,
+.coaching-portal button.bg-primary:hover,
+.coaching-portal a.bg-\[\#2D3A4A\]:hover,
+.coaching-portal a.bg-\[\#1E293B\]:hover,
+.coaching-portal a.bg-\[\#45505F\]:hover,
+.coaching-portal a.bg-\[\#0B192C\]:hover,
+.coaching-portal a.bg-primary:hover,
+.coaching-portal .hover\:bg-\[\#1e2a38\]:hover,
+.coaching-portal .hover\:bg-\[\#0F172A\]:hover {
+  background-color: var(--brand-theme, var(--primary)) !important;
+  filter: brightness(0.88) !important;
+}
+
+/* 3. Border colors that used dark slate/navy */
+.coaching-portal .border-\[\#1E293B\],
+.coaching-portal .border-\[\#2D3A4A\],
+.coaching-portal .border-\[\#45505F\],
+.coaching-portal .border-primary {
+  border-color: var(--brand-theme, var(--primary)) !important;
+}
+
+/* 4. Ring/focus outlines */
+.coaching-portal .ring-\[\#1E293B\],
+.coaching-portal .ring-\[\#2D3A4A\],
+.coaching-portal .ring-primary,
+.coaching-portal .ring-slate-900\/15,
+.coaching-portal .ring-slate-900\/20 {
+  --tw-ring-color: var(--brand-theme, var(--primary)) !important;
+}
+
+/* 5. Tooltips: preserve dark slate background for pointer-events-none floating tooltips */
+.coaching-portal .pointer-events-none.bg-\[\#1E293B\],
+.coaching-portal .pointer-events-none.bg-\[\#2D3A4A\] {
+  background-color: #1E293B !important;
+}
+
+/* 6. Code editors and syntax blocks: preserve dark navy background for coding */
+.coaching-portal pre,
+.coaching-portal pre.bg-\[\#1e2a38\],
+.coaching-portal textarea.font-mono,
+.coaching-portal textarea.bg-\[\#1e2a38\],
+.coaching-portal code {
+  background-color: #1e2a38 !important;
+  color: #ffffff !important;
+}
+
+

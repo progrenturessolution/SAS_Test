@@ -28,6 +28,7 @@ interface AdminSidebarProps {
   role?: string
   instituteName?: string
   instituteCode?: string
+  initialThemeColor?: string
 }
 
 export default function AdminSidebar({
@@ -36,6 +37,7 @@ export default function AdminSidebar({
   role = "super_admin",
   instituteName,
   instituteCode,
+  initialThemeColor,
 }: AdminSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -43,7 +45,7 @@ export default function AdminSidebar({
   const [hasExamAccess, setHasExamAccess] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [instituteLogo, setInstituteLogo] = useState<string | null>(null)
-  const [themeColor, setThemeColor] = useState<string>("#2D3A4A")
+  const [themeColor, setThemeColor] = useState<string>(initialThemeColor || "#2D3A4A")
 
   const isSuperAdmin = role === "super_admin" || (role === "admin" && !instituteName)
 

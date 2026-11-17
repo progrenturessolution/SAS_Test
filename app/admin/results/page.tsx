@@ -96,7 +96,7 @@ function ResultsPageInner() {
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 copied
                   ? "bg-green-50 text-[#10B981] border border-green-200"
-                  : "bg-primary text-white hover:bg-accent shadow-sm hover:shadow-md"
+                  : "bg-primary text-white hover:opacity-90 shadow-sm hover:shadow-md transition-all"
               }`}
             >
               {copied ? (

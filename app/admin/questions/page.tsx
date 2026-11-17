@@ -80,7 +80,7 @@ export default function QuestionsPage() {
         </div>
         <Link
           href="/admin/exams/create"
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-accent transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:opacity-90 shadow-sm transition-all"
         >
           <Plus size={15} />
           Add via New Exam

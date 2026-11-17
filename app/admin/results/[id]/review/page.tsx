@@ -168,7 +168,7 @@ export default function GradeAttemptPage({ params }: { params: Promise<{ id: str
           <button onClick={resetToAuto} className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition-all">
             <History size={14} /> Reset to Auto
           </button>
-          <button onClick={saveGrades} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-accent transition-all shadow-md active:scale-95 disabled:opacity-50">
+          <button onClick={saveGrades} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer">
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? "Saving..." : "Submit Grades"}
           </button>
