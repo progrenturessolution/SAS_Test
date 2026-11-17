@@ -284,7 +284,7 @@ export function CompetitiveExamAIGenerator({
     handleRemovePdf()
   }
 
-  // ─── Generate Questions via API ───
+  // ─── Generate Questions via API (Parallel Concurrent Chunking - Zero Vercel Timeout) ───
   const handleGenerate = async () => {
     if (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) {
       setErrorMsg("Please add at least one chapter, topic, or upload a syllabus PDF.")
@@ -295,42 +295,109 @@ export function CompetitiveExamAIGenerator({
     setIsGenerating(true)
     setGenerationStep(1)
 
-    const timer1 = setTimeout(() => setGenerationStep(2), 2000)
-    const timer2 = setTimeout(() => setGenerationStep(3), 5000)
+    const timer1 = setTimeout(() => setGenerationStep(2), 1500)
+    const timer2 = setTimeout(() => setGenerationStep(3), 3500)
 
     try {
-      const existingQuestionTexts = generatedList.map((q) => q.questionText)
-
-      const res = await fetch("/api/admin/generate-competitive-questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          exam: selectedExam,
-          grade: selectedGrade,
-          subject: selectedSubject,
-          chapters: selectedChapters,
-          topics: selectedTopics,
-          syllabusText: uploadedSyllabusText,
-          difficulty,
-          questionCount,
-          questionPattern: pattern,
-          marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
-          negativeMarks: currentExamMeta.defaultNegativeMarks,
-          focusPYQ,
-          existingQuestions: existingQuestionTexts,
-          stream: false,
-        }),
-      })
-
-      const data = await res.json()
-      if (!res.ok || !data.success || !Array.isArray(data.questions) || data.questions.length === 0) {
-        throw new Error(data.error || "Failed to generate exam questions")
+      const isDiagram = pattern === "diagram_based" || (pattern as string) === "diagram"
+      const chunkSize = isDiagram ? 2 : 3
+      const batches: number[] = []
+      let rem = questionCount
+      while (rem > 0) {
+        const take = Math.min(rem, chunkSize)
+        batches.push(take)
+        rem -= take
       }
 
-      setGeneratedList(data.questions)
-      // Auto-select all generated questions
-      setSelectedQuestionIds(new Set(data.questions.map((q: GeneratedCompetitiveQuestion) => q.id)))
+      const queue = [...batches]
+      let allGenerated: GeneratedCompetitiveQuestion[] = []
+      const seenTexts = new Set<string>()
+      const batchErrors: string[] = []
+
+      // Concurrency 2 ensures parallel fast requests (~2s each) across Gemini API key pool
+      const CONCURRENCY = 2
+
+      const runWorker = async () => {
+        while (queue.length > 0) {
+          const batchCount = queue.shift()
+          if (!batchCount) break
+
+          let retries = 1
+          let batchSuccess = false
+
+          while (retries >= 0 && !batchSuccess) {
+            try {
+              const existingQuestionTexts = allGenerated.map((q) => q.questionText).slice(-20)
+
+              const res = await fetch("/api/admin/generate-competitive-questions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                  exam: selectedExam,
+                  grade: selectedGrade,
+                  subject: selectedSubject,
+                  chapters: selectedChapters,
+                  topics: selectedTopics,
+                  syllabusText: uploadedSyllabusText,
+                  difficulty,
+                  questionCount: batchCount,
+                  questionPattern: pattern,
+                  marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
+                  negativeMarks: currentExamMeta.defaultNegativeMarks,
+                  focusPYQ,
+                  existingQuestions: existingQuestionTexts,
+                  stream: false,
+                }),
+              })
+
+              if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || `Server error ${res.status}`)
+              }
+
+              const data = await res.json()
+              if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
+                const uniqueNew: GeneratedCompetitiveQuestion[] = []
+                for (const q of data.questions) {
+                  const norm = (q.questionText || "").toLowerCase().replace(/[^a-z0-9]/g, "")
+                  if (norm && !seenTexts.has(norm)) {
+                    seenTexts.add(norm)
+                    uniqueNew.push(q)
+                  }
+                }
+
+                if (uniqueNew.length > 0) {
+                  allGenerated = [...allGenerated, ...uniqueNew]
+                  setGeneratedList([...allGenerated])
+                  setSelectedQuestionIds(new Set(allGenerated.map((q) => q.id)))
+                }
+                batchSuccess = true
+              } else {
+                throw new Error("No questions in batch response")
+              }
+            } catch (err: any) {
+              retries--
+              if (retries < 0) {
+                console.warn("[CompetitiveExamAIGenerator] Batch failed permanently:", err.message)
+                batchErrors.push(err.message)
+              }
+            }
+          }
+        }
+      }
+
+      const workers = Array.from(
+        { length: Math.min(CONCURRENCY, queue.length) },
+        () => runWorker()
+      )
+
+      await Promise.all(workers)
+
+      if (allGenerated.length === 0) {
+        throw new Error(batchErrors[0] || "Failed to generate exam questions. Please try again.")
+      }
+
       modalBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" })
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred while generating.")
@@ -950,8 +1017,11 @@ export function CompetitiveExamAIGenerator({
                     ✓
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-[#45505F]">
-                      Generated {generatedList.length} Non-Repeating Questions for {selectedExam} ({selectedSubject})
+                    <h3 className="text-sm font-bold text-[#45505F] flex items-center gap-2">
+                      <span>
+                        Generated {generatedList.length} of {questionCount} Non-Repeating Questions for {selectedExam} ({selectedSubject})
+                      </span>
+                      {isGenerating && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />}
                     </h3>
                     <p className="text-xs text-gray-500">
                       Based on real entrance exam PYQs & syllabus requirements. Review and insert into exam.
@@ -963,10 +1033,12 @@ export function CompetitiveExamAIGenerator({
                   <button
                     type="button"
                     onClick={() => {
+                      if (isGenerating) return
                       setGeneratedList([])
                       setSelectedQuestionIds(new Set())
                     }}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 cursor-pointer"
+                    disabled={isGenerating}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Generate New Batch</span>
@@ -975,11 +1047,20 @@ export function CompetitiveExamAIGenerator({
                   <button
                     type="button"
                     onClick={handleAddToExam}
-                    disabled={selectedQuestionIds.size === 0}
-                    className="px-4 py-1.5 text-xs font-medium rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    disabled={isGenerating || selectedQuestionIds.size === 0}
+                    className="px-4 py-1.5 text-xs font-medium rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white shadow-sm flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add {selectedQuestionIds.size} Questions</span>
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-300" />
+                        <span>Generating ({generatedList.length}/{questionCount})...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add {selectedQuestionIds.size} Questions</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

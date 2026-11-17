@@ -674,7 +674,7 @@ export default function AIGeneratorPage() {
     setPdfError(null)
   }
 
-  // Generate Questions via API (Fast Parallel Key Rotation)
+  // Generate Questions via API (Fast Parallel Concurrent Chunking - Zero Vercel Timeout)
   const handleGenerate = async () => {
     if (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) {
       setErrorMsg("Please select at least one chapter from the list below to begin.")
@@ -706,6 +706,8 @@ export default function AIGeneratorPage() {
     const examCode = selectedExam.replace("-", "_")
     const nextTitle = `${examCode} ${targetSubject}${chapterTitle ? ` - ${chapterTitle}` : ""}`
 
+    const countToGenerate = Math.max(1, Number(totalQuestions) || Number(questionCount) || 10)
+
     const showQuestions = (questions: GeneratedCompetitiveQuestion[]) => {
       setGeneratedQuestions(questions)
       setSelectedQuestionIds(new Set(questions.map((q) => q.id)))
@@ -718,80 +720,161 @@ export default function AIGeneratorPage() {
     }
 
     try {
-      const existingQuestionTexts = generatedQuestions.map((q) => q.questionText)
-      const countToGenerate = Math.max(1, Number(totalQuestions) || Number(questionCount) || 10)
-
-      const res = await fetch("/api/admin/generate-competitive-questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          exam: selectedExam,
-          grade: selectedGrade,
-          subject: targetSubject,
-          chapters: selectedChapters,
-          topics: selectedTopics,
-          syllabusText: uploadedSyllabusText,
-          difficulty,
-          questionCount: countToGenerate,
-          questionPattern: pattern,
-          blueprintFormats: blueprintFormats,
-          marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
-          negativeMarks: currentExamMeta.defaultNegativeMarks,
-          focusPYQ,
-          existingQuestions: existingQuestionTexts,
-          stream: true,
-        }),
-      })
-
-      const contentType = res.headers.get("content-type") || ""
-      if (!res.ok || !contentType.includes("ndjson") || !res.body) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || "Failed to generate exam questions")
+      // Build micro-batches (max 3 questions, 2 for diagram) so each HTTP request finishes in ~2s
+      interface BatchItem {
+        id: string
+        formatId: string
+        formatLabel: string
+        count: number
+        marks: number
       }
 
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ""
-      let received: GeneratedCompetitiveQuestion[] = []
+      const activeFormats = blueprintFormats.filter((f) => f.checked && Number(f.count) > 0)
+      const batches: BatchItem[] = []
+
+      if (activeFormats.length > 0) {
+        for (const fmt of activeFormats) {
+          let remaining = Number(fmt.count) || 0
+          const marks = Number(fmt.marks) || currentExamMeta.defaultMarksPerQuestion
+          const chunkSize = fmt.id === "diagram" ? 2 : 3
+          while (remaining > 0) {
+            const take = Math.min(remaining, chunkSize)
+            batches.push({
+              id: `${fmt.id}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
+              formatId: fmt.id,
+              formatLabel: fmt.label || fmt.id,
+              count: take,
+              marks,
+            })
+            remaining -= take
+          }
+        }
+      } else {
+        let remaining = countToGenerate
+        while (remaining > 0) {
+          const isDiagram = (pattern as string) === "diagram" || (pattern as string) === "diagram_based"
+          const isAssertion = pattern === "assertion_reason" || (pattern as string) === "assertion"
+          const chunkSize = isDiagram ? 2 : 3
+          const take = Math.min(remaining, chunkSize)
+          batches.push({
+            id: `batch_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
+            formatId: isDiagram ? "diagram" : isAssertion ? "assertion" : "mcq",
+            formatLabel: isDiagram ? "Diagram / Visual" : isAssertion ? "Assertion & Reason" : "MCQ",
+            count: take,
+            marks: currentExamMeta.defaultMarksPerQuestion,
+          })
+          remaining -= take
+        }
+      }
+
+      const queue = [...batches]
+      let allGenerated: GeneratedCompetitiveQuestion[] = []
+      const seenTexts = new Set<string>()
       let openedReview = false
+      const batchErrors: string[] = []
 
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split("\n")
-        buffer = lines.pop() || ""
+      // Concurrency 2: Dispatches 2 parallel lightweight requests at a time across Gemini API key pool
+      const CONCURRENCY = 2
 
-        for (const line of lines) {
-          if (!line.trim()) continue
-          try {
-            const event = JSON.parse(line)
-            if (event.type === "ping") continue
-            if (event.type === "error") {
-              throw new Error(event.error || "Failed to generate exam questions")
-            }
-            if (event.type === "batch" && Array.isArray(event.questions) && event.questions.length > 0) {
-              received = received.concat(event.questions)
-              showQuestions(received)
-              if (!openedReview) {
-                openedReview = true
-                window.scrollTo({ top: 0, behavior: "auto" })
+      const runWorker = async () => {
+        while (queue.length > 0) {
+          const batch = queue.shift()
+          if (!batch) break
+
+          let retries = 1
+          let batchSuccess = false
+
+          while (retries >= 0 && !batchSuccess) {
+            try {
+              const existingTexts = allGenerated.map((q) => q.questionText).slice(-25)
+
+              const res = await fetch("/api/admin/generate-competitive-questions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                  exam: selectedExam,
+                  grade: selectedGrade,
+                  subject: targetSubject,
+                  chapters: selectedChapters,
+                  topics: selectedTopics,
+                  syllabusText: uploadedSyllabusText,
+                  difficulty,
+                  questionCount: batch.count,
+                  questionPattern: pattern,
+                  blueprintFormats: [
+                    {
+                      id: batch.formatId,
+                      label: batch.formatLabel,
+                      count: batch.count,
+                      marks: batch.marks,
+                      checked: true,
+                    },
+                  ],
+                  marksPerQuestion: batch.marks || currentExamMeta.defaultMarksPerQuestion,
+                  negativeMarks: currentExamMeta.defaultNegativeMarks,
+                  focusPYQ,
+                  existingQuestions: existingTexts,
+                  stream: false,
+                }),
+              })
+
+              if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || `Server error ${res.status}`)
+              }
+
+              const data = await res.json()
+              if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
+                const uniqueNew: GeneratedCompetitiveQuestion[] = []
+                for (const q of data.questions) {
+                  const norm = (q.questionText || "").toLowerCase().replace(/[^a-z0-9]/g, "")
+                  if (norm && !seenTexts.has(norm)) {
+                    seenTexts.add(norm)
+                    uniqueNew.push(q)
+                  }
+                }
+
+                if (uniqueNew.length > 0) {
+                  allGenerated = [...allGenerated, ...uniqueNew]
+                  showQuestions(allGenerated)
+
+                  if (!openedReview) {
+                    openedReview = true
+                    window.scrollTo({ top: 0, behavior: "auto" })
+                  }
+                }
+                batchSuccess = true
+              } else {
+                throw new Error("No questions in batch response")
+              }
+            } catch (bErr: any) {
+              retries--
+              if (retries < 0) {
+                console.warn("[CompetitiveAI] Batch permanently failed:", batch.formatId, bErr.message)
+                batchErrors.push(bErr.message)
               }
             }
-          } catch (pErr: any) {
-            if (pErr?.message?.includes("Failed to generate")) throw pErr
           }
         }
       }
 
-      if (received.length === 0) {
-        throw new Error("No questions were created. Please click Create Questions again.")
+      const activeWorkers = Array.from(
+        { length: Math.min(CONCURRENCY, queue.length) },
+        () => runWorker()
+      )
+
+      await Promise.all(activeWorkers)
+
+      if (allGenerated.length === 0) {
+        throw new Error(
+          batchErrors[0] || "No questions were created. Please verify your connection and click Create Questions again."
+        )
       }
 
-      // Auto-fill gap if fewer questions were generated than requested
-      if (received.length < countToGenerate) {
-        const gap = countToGenerate - received.length
+      // Quick 1-batch top-up if deficit exists
+      if (allGenerated.length < countToGenerate) {
+        const gap = countToGenerate - allGenerated.length
         try {
           const topUpRes = await fetch("/api/admin/generate-competitive-questions", {
             method: "POST",
@@ -805,7 +888,7 @@ export default function AIGeneratorPage() {
               topics: selectedTopics,
               syllabusText: uploadedSyllabusText,
               difficulty,
-              questionCount: gap,
+              questionCount: Math.min(gap, 3),
               questionPattern: pattern,
               blueprintFormats: blueprintFormats.map((f) => ({
                 ...f,
@@ -814,19 +897,27 @@ export default function AIGeneratorPage() {
               marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
               negativeMarks: currentExamMeta.defaultNegativeMarks,
               focusPYQ,
-              existingQuestions: received.map((q) => q.questionText),
+              existingQuestions: allGenerated.map((q) => q.questionText).slice(-30),
               stream: false,
             }),
           })
           const topUpData = await topUpRes.json()
           if (topUpData.success && Array.isArray(topUpData.questions) && topUpData.questions.length > 0) {
-            received = received.concat(topUpData.questions)
-            showQuestions(received)
+            for (const q of topUpData.questions) {
+              const norm = (q.questionText || "").toLowerCase().replace(/[^a-z0-9]/g, "")
+              if (norm && !seenTexts.has(norm)) {
+                seenTexts.add(norm)
+                allGenerated.push(q)
+              }
+            }
+            showQuestions(allGenerated)
           }
         } catch (gapErr) {
-          console.warn("[CompetitiveAI] Auto gap top-up non-blocking warning:", gapErr)
+          console.warn("[CompetitiveAI] Final gap top-up non-blocking warning:", gapErr)
         }
       }
+
+      toast.success(`Generated ${allGenerated.length} questions successfully!`)
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred while generating.")
       window.scrollTo({ top: 0, behavior: "auto" })
@@ -856,6 +947,7 @@ export default function AIGeneratorPage() {
     const existingTexts = generatedQuestions.map((q) => q.questionText)
 
     try {
+      const requestCount = Math.min(missingCount, 3)
       const res = await fetch("/api/admin/generate-competitive-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -868,16 +960,16 @@ export default function AIGeneratorPage() {
           topics: selectedTopics,
           syllabusText: uploadedSyllabusText,
           difficulty,
-          questionCount: missingCount,
+          questionCount: requestCount,
           questionPattern: pattern,
           blueprintFormats: blueprintFormats.map((f) => ({
             ...f,
-            count: Math.min(Number(f.count) || 0, missingCount),
+            count: Math.min(Number(f.count) || 0, requestCount),
           })),
           marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
           negativeMarks: currentExamMeta.defaultNegativeMarks,
           focusPYQ,
-          existingQuestions: existingTexts,
+          existingQuestions: existingTexts.slice(-30),
           stream: false,
         }),
       })

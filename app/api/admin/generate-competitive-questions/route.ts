@@ -378,7 +378,7 @@ Return raw JSON array ONLY.`
             responseMimeType: "application/json",
           }
         },
-        timeoutMs: 28000
+        timeoutMs: 12000
       })
 
       return {
@@ -600,7 +600,7 @@ Return raw JSON array ONLY.`
                     contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
                     generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
                   },
-                  timeoutMs: 15000,
+                  timeoutMs: 10000,
                 })
                 const topUpParsed = robustJsonParse(topUpRes.text)
                 if (Array.isArray(topUpParsed)) {
@@ -708,7 +708,7 @@ Return raw JSON array ONLY.`
                 contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
                 generationConfig: { temperature: 0.4, responseMimeType: "application/json" }
               },
-              timeoutMs: 15000
+              timeoutMs: 10000
             })
             const topUpParsed = robustJsonParse(topUpRes.text)
             if (Array.isArray(topUpParsed)) {
