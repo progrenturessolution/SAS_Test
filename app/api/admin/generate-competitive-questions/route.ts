@@ -258,8 +258,8 @@ The "options" array MUST be exactly ["True", "False"].
         const fmtCount = Number(fmt.count) || 0
         if (fmtCount <= 0) continue
 
-        // Small chunks return the first questions much sooner and can run on separate API keys.
-        const chunkSize = fmt.id === "diagram" ? 4 : 8
+        // Fast chunks of 5 questions maximize parallel generation speed across keys
+        const chunkSize = fmt.id === "diagram" ? 3 : 5
         const numSubChunks = Math.ceil(fmtCount / chunkSize)
         const baseSub = Math.floor(fmtCount / numSubChunks)
         const remSub = fmtCount % numSubChunks
@@ -275,7 +275,7 @@ The "options" array MUST be exactly ["True", "False"].
       }
     } else {
       if (questionPattern === "diagram_based" || questionPattern === "diagram") {
-        const chunkSize = 4
+        const chunkSize = 3
         const numSubChunks = Math.ceil(count / chunkSize)
         const baseSub = Math.floor(count / numSubChunks)
         const remSub = count % numSubChunks
@@ -288,7 +288,7 @@ The "options" array MUST be exactly ["True", "False"].
           })
         }
       } else if (questionPattern === "assertion_reason" || questionPattern === "assertion") {
-        const chunkSize = 8
+        const chunkSize = 5
         const numSubChunks = Math.ceil(count / chunkSize)
         const baseSub = Math.floor(count / numSubChunks)
         const remSub = count % numSubChunks
@@ -325,7 +325,7 @@ The "options" array MUST be exactly ["True", "False"].
           marks: marksPerQuestion,
         })
       } else {
-        const chunkSize = 8
+        const chunkSize = 5
         const numSubChunks = Math.ceil(count / chunkSize)
         const baseSub = Math.floor(count / numSubChunks)
         const remSub = count % numSubChunks
@@ -345,6 +345,8 @@ The "options" array MUST be exactly ["True", "False"].
     // Dispatch all format tasks simultaneously across the key pool with buffer to absorb deduplication
     const chunkPromises = generationTasks.map(async (task, taskIdx) => {
       const requestedCount = task.targetCount
+      // Buffer of +1 ensures Gemini generates enough questions to satisfy count without slow top-up calls
+      const promptCount = requestedCount + (requestedCount <= 5 ? 1 : 2)
       
       // Distribute chapters across tasks if multiple chapters exist
       let taskChapters = chaptersList
@@ -355,7 +357,7 @@ The "options" array MUST be exactly ["True", "False"].
         }
       }
 
-      const taskPrompt = `Generate exactly ${requestedCount} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${taskChapters}.
+      const taskPrompt = `Generate exactly ${promptCount} authentic, distinct, non-repeating Previous Years Questions (PYQs) for ${exam} (${subject}) on: ${taskChapters}.
 
 ${formatDirectives[task.formatId] || formatDirectives.mcq}
 
@@ -376,7 +378,7 @@ Return raw JSON array ONLY.`
             responseMimeType: "application/json",
           }
         },
-        timeoutMs: Math.min(22000, 7000 + (requestedCount * 3000))
+        timeoutMs: Math.min(10000, 4000 + (requestedCount * 1200))
       })
 
       return {
@@ -515,8 +517,15 @@ Return raw JSON array ONLY.`
       const readable = new ReadableStream({
         async start(controller) {
           const send = (payload: unknown) => {
-            controller.enqueue(encoder.encode(`${JSON.stringify(payload)}\n`))
+            try {
+              controller.enqueue(encoder.encode(`${JSON.stringify(payload)}\n`))
+            } catch {}
           }
+
+          // Active heartbeat prevents Vercel idle connection drop
+          const heartbeat = setInterval(() => {
+            send({ type: "ping" })
+          }, 2000)
 
           const producedByFormat: Record<string, number> = {
             mcq: 0,
@@ -591,7 +600,7 @@ Return raw JSON array ONLY.`
                     contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
                     generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
                   },
-                  timeoutMs: 25000,
+                  timeoutMs: 4000,
                 })
                 const topUpParsed = robustJsonParse(topUpRes.text)
                 if (Array.isArray(topUpParsed)) {
@@ -611,6 +620,7 @@ Return raw JSON array ONLY.`
           } catch (streamErr: any) {
             send({ type: "error", error: streamErr?.message || "Failed to generate questions." })
           } finally {
+            clearInterval(heartbeat)
             controller.close()
           }
         },
@@ -698,7 +708,7 @@ Return raw JSON array ONLY.`
                 contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${topUpPrompt}` }] }],
                 generationConfig: { temperature: 0.4, responseMimeType: "application/json" }
               },
-              timeoutMs: 8000
+              timeoutMs: 4000
             })
             const topUpParsed = robustJsonParse(topUpRes.text)
             if (Array.isArray(topUpParsed)) {

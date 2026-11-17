@@ -18,9 +18,9 @@
 
 // Live verified Gemini models (in order of speed and stability, no 2.5 models per user request)
 export const DEFAULT_GEMINI_MODELS = [
-  "gemini-3.5-flash-lite",
-  "gemini-flash-lite-latest",
   "gemini-3.1-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash-lite",
 ]
 
 /**

@@ -681,57 +681,7 @@ export default function AIGeneratorPage() {
     setPdfError(null)
   }
 
-  // Split blueprint format requests into micro-batches of max 3 questions (avoids Vercel 15s timeout)
-  const createBlueprintBatches = (
-    formats: Array<{ id: string; label?: string; checked?: boolean; count: number; marks?: number }>,
-    defaultCount: number,
-    batchSize = 3
-  ) => {
-    const activeFormats = (formats || []).filter((f) => f.checked && Number(f.count) > 0)
-
-    if (activeFormats.length === 0) {
-      const total = Math.max(1, defaultCount || 10)
-      const batches: Array<{ blueprintFormats: Array<{ id: string; label: string; checked: boolean; count: number; marks: number }>; count: number }> = []
-      let remaining = total
-      while (remaining > 0) {
-        const take = Math.min(remaining, batchSize)
-        batches.push({
-          blueprintFormats: [{ id: "mcq", label: "MCQ", checked: true, count: take, marks: 4 }],
-          count: take,
-        })
-        remaining -= take
-      }
-      return batches
-    }
-
-    const units: Array<{ id: string; label: string; marks: number }> = []
-    for (const fmt of activeFormats) {
-      const c = Number(fmt.count) || 0
-      for (let i = 0; i < c; i++) {
-        units.push({ id: fmt.id, label: fmt.label || fmt.id, marks: Number(fmt.marks) || 4 })
-      }
-    }
-
-    const batches: Array<{ blueprintFormats: Array<{ id: string; label: string; checked: boolean; count: number; marks: number }>; count: number }> = []
-    for (let i = 0; i < units.length; i += batchSize) {
-      const slice = units.slice(i, i + batchSize)
-      const groupMap: Record<string, { id: string; label: string; checked: boolean; count: number; marks: number }> = {}
-      for (const u of slice) {
-        if (!groupMap[u.id]) {
-          groupMap[u.id] = { id: u.id, label: u.label, checked: true, count: 0, marks: u.marks }
-        }
-        groupMap[u.id].count += 1
-      }
-      batches.push({
-        blueprintFormats: Object.values(groupMap),
-        count: slice.length,
-      })
-    }
-
-    return batches
-  }
-
-  // Generate Questions via Micro-Batches API (100% Free, Zero Timeout)
+  // Generate Questions via API (Fast Parallel Key Rotation)
   const handleGenerate = async () => {
     if (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) {
       setErrorMsg("Please select at least one chapter from the list below to begin.")
@@ -751,8 +701,8 @@ export default function AIGeneratorPage() {
     setRevealCount(6)
     setFormatFilter("all")
 
-    const timer1 = setTimeout(() => setGenerationStep(2), 2200)
-    const timer2 = setTimeout(() => setGenerationStep(3), 5500)
+    const timer1 = setTimeout(() => setGenerationStep(2), 1500)
+    const timer2 = setTimeout(() => setGenerationStep(3), 3500)
 
     const chapterTitle =
       selectedChapters.length === 1
@@ -776,85 +726,76 @@ export default function AIGeneratorPage() {
     }
 
     try {
+      const existingQuestionTexts = generatedQuestions.map((q) => q.questionText)
       const countToGenerate = Math.max(1, Number(totalQuestions) || Number(questionCount) || 10)
-      const batches = createBlueprintBatches(blueprintFormats, countToGenerate, 3)
 
-      let allGenerated: GeneratedCompetitiveQuestion[] = []
+      const res = await fetch("/api/admin/generate-competitive-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          exam: selectedExam,
+          grade: selectedGrade,
+          subject: targetSubject,
+          chapters: selectedChapters,
+          topics: selectedTopics,
+          syllabusText: uploadedSyllabusText,
+          difficulty,
+          questionCount: countToGenerate,
+          questionPattern: pattern,
+          blueprintFormats: blueprintFormats,
+          marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
+          negativeMarks: currentExamMeta.defaultNegativeMarks,
+          focusPYQ,
+          existingQuestions: existingQuestionTexts,
+          stream: true,
+        }),
+      })
+
+      const contentType = res.headers.get("content-type") || ""
+      if (!res.ok || !contentType.includes("ndjson") || !res.body) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to generate exam questions")
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
+      let received: GeneratedCompetitiveQuestion[] = []
       let openedReview = false
 
-      for (let bIdx = 0; bIdx < batches.length; bIdx++) {
-        const currentBatch = batches[bIdx]
-        const existingQuestionTexts = allGenerated.map((q) => q.questionText)
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() || ""
 
-        let batchSuccess = false
-        let lastBatchErr = ""
-
-        // Retry up to 2 times for transient network/rate-limit recovery
-        for (let attempt = 1; attempt <= 2 && !batchSuccess; attempt++) {
+        for (const line of lines) {
+          if (!line.trim()) continue
           try {
-            const res = await fetch("/api/admin/generate-competitive-questions", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({
-                exam: selectedExam,
-                grade: selectedGrade,
-                subject: targetSubject,
-                chapters: selectedChapters,
-                topics: selectedTopics,
-                syllabusText: uploadedSyllabusText,
-                difficulty,
-                questionCount: currentBatch.count,
-                questionPattern: pattern,
-                blueprintFormats: currentBatch.blueprintFormats,
-                marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
-                negativeMarks: currentExamMeta.defaultNegativeMarks,
-                focusPYQ,
-                existingQuestions: existingQuestionTexts,
-                stream: false,
-              }),
-            })
-
-            const data = await res.json()
-            if (!res.ok || !data.success || !Array.isArray(data.questions)) {
-              throw new Error(data.error || `Batch ${bIdx + 1} failed`)
+            const event = JSON.parse(line)
+            if (event.type === "ping") continue
+            if (event.type === "error") {
+              throw new Error(event.error || "Failed to generate exam questions")
             }
-
-            if (data.questions.length > 0) {
-              allGenerated = [...allGenerated, ...data.questions]
-              setGeneratedQuestions(allGenerated)
-              setSelectedQuestionIds(new Set(allGenerated.map((q) => q.id)))
-
+            if (event.type === "batch" && Array.isArray(event.questions) && event.questions.length > 0) {
+              received = received.concat(event.questions)
+              showQuestions(received)
               if (!openedReview) {
                 openedReview = true
-                setExamTitle(nextTitle)
-                const calculatedTotal = allGenerated.reduce((sum, q) => sum + (q.marks || 4), 0) || totalMarks || 200
-                setExamTotalMarks(calculatedTotal)
-                setPassMarks(Math.round(calculatedTotal * 0.4))
-                setDuration(30)
-                setCurrentStep(3)
                 window.scrollTo({ top: 0, behavior: "auto" })
               }
             }
-            batchSuccess = true
-          } catch (bErr: any) {
-            lastBatchErr = bErr?.message || "Batch generation error"
-            if (attempt < 2) {
-              await new Promise((resolve) => setTimeout(resolve, 1200))
-            }
+          } catch (pErr: any) {
+            if (pErr?.message?.includes("Failed to generate")) throw pErr
           }
         }
-
-        if (!batchSuccess && allGenerated.length === 0) {
-          throw new Error(lastBatchErr || "Failed to generate exam questions. Please try again.")
-        }
       }
 
-      if (allGenerated.length === 0) {
+      if (received.length === 0) {
         throw new Error("No questions were created. Please click Create Questions again.")
       }
-
-      showQuestions(allGenerated)
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred while generating.")
       window.scrollTo({ top: 0, behavior: "auto" })

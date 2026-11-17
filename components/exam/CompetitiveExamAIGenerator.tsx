@@ -299,71 +299,38 @@ export function CompetitiveExamAIGenerator({
     const timer2 = setTimeout(() => setGenerationStep(3), 5000)
 
     try {
-      const totalToGenerate = Math.max(1, Number(questionCount) || 5)
-      const batchSize = 3
-      const numBatches = Math.ceil(totalToGenerate / batchSize)
-      let allGenerated: GeneratedCompetitiveQuestion[] = []
+      const existingQuestionTexts = generatedList.map((q) => q.questionText)
 
-      for (let bIdx = 0; bIdx < numBatches; bIdx++) {
-        const remaining = totalToGenerate - allGenerated.length
-        const currentBatchCount = Math.min(remaining, batchSize)
-        if (currentBatchCount <= 0) break
+      const res = await fetch("/api/admin/generate-competitive-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          exam: selectedExam,
+          grade: selectedGrade,
+          subject: selectedSubject,
+          chapters: selectedChapters,
+          topics: selectedTopics,
+          syllabusText: uploadedSyllabusText,
+          difficulty,
+          questionCount,
+          questionPattern: pattern,
+          marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
+          negativeMarks: currentExamMeta.defaultNegativeMarks,
+          focusPYQ,
+          existingQuestions: existingQuestionTexts,
+          stream: false,
+        }),
+      })
 
-        const existingQuestionTexts = allGenerated.map((q) => q.questionText)
-        let batchSuccess = false
-        let lastBatchErr = ""
-
-        // Try up to 2 times for transient network/rate-limit recovery
-        for (let attempt = 1; attempt <= 2 && !batchSuccess; attempt++) {
-          try {
-            const res = await fetch("/api/admin/generate-competitive-questions", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({
-                exam: selectedExam,
-                grade: selectedGrade,
-                subject: selectedSubject,
-                chapters: selectedChapters,
-                topics: selectedTopics,
-                syllabusText: uploadedSyllabusText,
-                difficulty,
-                questionCount: currentBatchCount,
-                questionPattern: pattern,
-                marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
-                negativeMarks: currentExamMeta.defaultNegativeMarks,
-                focusPYQ,
-                existingQuestions: existingQuestionTexts,
-                stream: false,
-              }),
-            })
-
-            const data = await res.json()
-            if (!res.ok || !data.success || !Array.isArray(data.questions)) {
-              throw new Error(data.error || "Failed to generate exam questions")
-            }
-
-            allGenerated = [...allGenerated, ...data.questions]
-            setGeneratedList(allGenerated)
-            setSelectedQuestionIds(new Set(allGenerated.map((q: GeneratedCompetitiveQuestion) => q.id)))
-            batchSuccess = true
-          } catch (bErr: any) {
-            lastBatchErr = bErr?.message || "Batch generation error"
-            if (attempt < 2) {
-              await new Promise((resolve) => setTimeout(resolve, 1200))
-            }
-          }
-        }
-
-        if (!batchSuccess && allGenerated.length === 0) {
-          throw new Error(lastBatchErr || "Failed to generate exam questions. Please try again.")
-        }
+      const data = await res.json()
+      if (!res.ok || !data.success || !Array.isArray(data.questions) || data.questions.length === 0) {
+        throw new Error(data.error || "Failed to generate exam questions")
       }
 
-      if (allGenerated.length === 0) {
-        throw new Error("No questions were generated. Please try again.")
-      }
-
+      setGeneratedList(data.questions)
+      // Auto-select all generated questions
+      setSelectedQuestionIds(new Set(data.questions.map((q: GeneratedCompetitiveQuestion) => q.id)))
       modalBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" })
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred while generating.")
@@ -956,9 +923,7 @@ export function CompetitiveExamAIGenerator({
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
                       <span>
-                        {generatedList.length > 0
-                          ? `Generating: ${generatedList.length} of ${questionCount} questions ready...`
-                          : generationStep === 1
+                        {generationStep === 1
                           ? "Analyzing PYQ Papers & Syllabus Material..."
                           : generationStep === 2
                           ? "Parallel Generation across API Keys..."
