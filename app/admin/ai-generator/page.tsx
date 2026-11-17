@@ -1133,7 +1133,7 @@ export default function AIGeneratorPage() {
             {STEPS.map((s) => {
               const isCurrent = s.step === currentStep
               const isComplete = s.step < currentStep
-              const isClickable = s.step <= currentStep || (generatedQuestions.length > 0 && s.step <= 6)
+              const isClickable = !isGenerating && (s.step <= currentStep || (generatedQuestions.length > 0 && s.step <= 6))
 
               return (
                 <button
@@ -1175,7 +1175,7 @@ export default function AIGeneratorPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (s.step <= currentStep || (generatedQuestions.length > 0 && s.step <= 6)) {
+                          if (!isGenerating && (s.step <= currentStep || (generatedQuestions.length > 0 && s.step <= 6))) {
                             setCurrentStep(s.step)
                             window.scrollTo({ top: 0, behavior: "smooth" })
                           }
@@ -1787,8 +1787,9 @@ export default function AIGeneratorPage() {
                         <div className="relative">
                           <button
                             type="button"
-                            onClick={() => setPrintDropdownOpen((prev) => !prev)}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs sm:text-sm font-medium shadow-xs transition-all cursor-pointer"
+                            onClick={() => !isGenerating && setPrintDropdownOpen((prev) => !prev)}
+                            disabled={isGenerating}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs sm:text-sm font-medium shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Print Question Paper"
                           >
                             <Printer className="w-4 h-4 text-slate-700" />
@@ -1796,7 +1797,7 @@ export default function AIGeneratorPage() {
                             <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
                           </button>
 
-                          {printDropdownOpen && (
+                          {printDropdownOpen && !isGenerating && (
                             <div className="absolute right-0 mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-20">
                               <button
                                 type="button"
@@ -1843,14 +1844,24 @@ export default function AIGeneratorPage() {
                         <button
                           type="button"
                           onClick={() => {
+                            if (isGenerating) return
                             setCurrentStep(4)
                             window.scrollTo({ top: 0, behavior: "smooth" })
                           }}
-                          disabled={selectedQuestionIds.size === 0}
-                          className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-medium shadow-sm disabled:opacity-40 transition-all cursor-pointer"
+                          disabled={isGenerating || selectedQuestionIds.size === 0}
+                          className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-medium shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                         >
-                          <span>Proceed to Exam Details</span>
-                          <ArrowRight className="w-4 h-4" />
+                          {isGenerating ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                              <span>Generating ({generatedQuestions.length}/{totalQuestions})...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Proceed to Exam Details</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -1901,7 +1912,8 @@ export default function AIGeneratorPage() {
                           setPrintMode("student")
                           setPrintModalOpen(true)
                         }}
-                        className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/70 text-blue-800 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        disabled={isGenerating}
+                        className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/70 text-blue-800 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         title="Print clean question paper for students"
                       >
                         <Printer className="w-3.5 h-3.5 text-blue-600" />
@@ -1914,7 +1926,8 @@ export default function AIGeneratorPage() {
                           setPrintMode("teacher")
                           setPrintModalOpen(true)
                         }}
-                        className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/70 text-emerald-800 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        disabled={isGenerating}
+                        className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/70 text-emerald-800 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         title="Print complete solutions and answer key for teachers"
                       >
                         <FileText className="w-3.5 h-3.5 text-emerald-600" />
@@ -1925,14 +1938,24 @@ export default function AIGeneratorPage() {
                       <button
                         type="button"
                         onClick={() => {
+                          if (isGenerating) return
                           setCurrentStep(4)
                           window.scrollTo({ top: 0, behavior: "smooth" })
                         }}
-                        disabled={selectedQuestionIds.size === 0}
-                        className="sm:hidden flex-1 px-3.5 py-2 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-medium shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-40 transition-all cursor-pointer"
+                        disabled={isGenerating || selectedQuestionIds.size === 0}
+                        className="sm:hidden flex-1 px-3.5 py-2 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-medium shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                       >
-                        <span>Next: Details</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-300" />
+                            <span>Generating ({generatedQuestions.length}/{totalQuestions})...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Next: Details</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -2007,9 +2030,33 @@ export default function AIGeneratorPage() {
                   )}
 
                   {isGenerating && (
-                    <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-medium text-slate-600 shadow-xs">
-                      <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
-                      <span>Questions are still being created. The ones below are ready to review.</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-xs font-medium text-slate-700 shadow-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#1E293B] text-white flex items-center justify-center shrink-0 shadow-xs">
+                          <Loader2 className="h-4 w-4 animate-spin text-amber-300" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 text-xs sm:text-sm">
+                            Creating Questions in Progress ({generatedQuestions.length} of {totalQuestions} completed)...
+                          </p>
+                          <p className="text-[11px] text-slate-600 font-normal mt-0.5">
+                            Please wait while AI generates all questions. Proceeding to the next step will unlock once all {totalQuestions} questions are ready.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                        <div className="w-28 sm:w-36 h-2 bg-amber-200/80 rounded-full overflow-hidden">
+                          <div
+                            className="bg-[#1E293B] h-full rounded-full transition-all duration-300"
+                            style={{
+                              width: `${Math.min(100, Math.round((generatedQuestions.length / Math.max(1, totalQuestions)) * 100))}%`
+                            }}
+                          />
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-900 tabular-nums">
+                          {Math.min(100, Math.round((generatedQuestions.length / Math.max(1, totalQuestions)) * 100))}%
+                        </span>
+                      </div>
                     </div>
                   )}
 
@@ -3119,7 +3166,8 @@ export default function AIGeneratorPage() {
                     setPrintMode("student")
                     setPrintModalOpen(true)
                   }}
-                  className="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                  disabled={isGenerating || generatedQuestions.length === 0}
+                  className="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Print question paper for students (Without Solutions)"
                 >
                   <Printer className="w-4 h-4 text-blue-600" />
@@ -3132,7 +3180,8 @@ export default function AIGeneratorPage() {
                     setPrintMode("teacher")
                     setPrintModalOpen(true)
                   }}
-                  className="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                  disabled={isGenerating || generatedQuestions.length === 0}
+                  className="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Print question paper with complete solutions and answer key"
                 >
                   <FileText className="w-4 h-4 text-emerald-600" />
@@ -3142,14 +3191,24 @@ export default function AIGeneratorPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (isGenerating) return
                     setCurrentStep(4)
                     window.scrollTo({ top: 0, behavior: "smooth" })
                   }}
-                  disabled={selectedQuestionIds.size === 0}
+                  disabled={isGenerating || selectedQuestionIds.size === 0}
                   className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
                 >
-                  <span>Next: Exam Details</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                      <span>Generating ({generatedQuestions.length}/{totalQuestions})...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Next: Exam Details</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </div>
             )}
