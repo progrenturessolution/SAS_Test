@@ -37,17 +37,36 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     if (body.limits) {
+      let finalExamTypes = institute.limits.examTypes
+      let hasComp = institute.limits.features?.neetJeeGenerator ?? true
+
+      if (Array.isArray(body.limits.examTypes)) {
+        const incomingTypes = body.limits.examTypes
+        hasComp = incomingTypes.some((t: string) =>
+          ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(t).toUpperCase())
+        )
+        const hasExam = incomingTypes.some((t: string) =>
+          ["EXAM", "CUSTOM"].includes(String(t).toUpperCase())
+        )
+
+        finalExamTypes = []
+        if (hasComp) {
+          finalExamTypes.push("COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD")
+        }
+        if (hasExam) {
+          finalExamTypes.push("EXAM", "CUSTOM")
+        }
+      }
+
       institute.limits = {
         maxStudents: Number(body.limits.maxStudents ?? institute.limits.maxStudents),
         maxExams: Number(body.limits.maxExams ?? institute.limits.maxExams),
-        examTypes: Array.isArray(body.limits.examTypes)
-          ? body.limits.examTypes
-          : institute.limits.examTypes,
-        customQuestionTypes: Array.isArray(body.limits.customQuestionTypes)
+        examTypes: finalExamTypes,
+        customQuestionTypes: Array.isArray(body.limits.customQuestionTypes) && body.limits.customQuestionTypes.length > 0
           ? body.limits.customQuestionTypes
           : institute.limits.customQuestionTypes,
         features: {
-          neetJeeGenerator: body.limits.features?.neetJeeGenerator ?? institute.limits.features.neetJeeGenerator,
+          neetJeeGenerator: hasComp,
           aiProctoring: body.limits.features?.aiProctoring ?? institute.limits.features.aiProctoring,
           pdfImport: body.limits.features?.pdfImport ?? institute.limits.features.pdfImport,
         },

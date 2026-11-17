@@ -17,7 +17,9 @@ import {
   Shield,
   Menu,
   X,
+  Lock,
 } from "lucide-react"
+import { toast } from "sonner"
 
 interface AdminSidebarProps {
   userName: string
@@ -36,7 +38,8 @@ export default function AdminSidebar({
 }: AdminSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [canUseQuestionStudio, setCanUseQuestionStudio] = useState(true)
+  const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState(true)
+  const [hasExamAccess, setHasExamAccess] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const isSuperAdmin = role === "super_admin" || (role === "admin" && !instituteName)
@@ -75,14 +78,18 @@ export default function AdminSidebar({
   useEffect(() => {
     if (isSuperAdmin) return
     fetch("/api/admin/institute-access", { credentials: "include" })
-      .then(response => response.json())
-      .then(data => setCanUseQuestionStudio(data.features?.neetJeeGenerator !== false))
-      .catch(() => setCanUseQuestionStudio(false))
+      .then((response) => response.json())
+      .then((data) => {
+        setHasCompetitiveAccess(data.hasCompetitiveAccess !== false)
+        setHasExamAccess(data.hasExamAccess !== false)
+      })
+      .catch(() => {
+        setHasCompetitiveAccess(true)
+        setHasExamAccess(true)
+      })
   }, [isSuperAdmin])
 
-  const navItems = isSuperAdmin
-    ? superAdminNavItems
-    : instituteNavItems.filter(item => item.href !== "/admin/ai-generator" || canUseQuestionStudio)
+  const navItems = isSuperAdmin ? superAdminNavItems : instituteNavItems
 
   const settingsItems = [
     { label: "Settings", href: "/admin/settings", icon: Settings },
@@ -202,20 +209,45 @@ export default function AdminSidebar({
               {navItems.map((item) => {
                 const Icon = item.icon
                 const active = isActive(item.href)
+                const isCompetitiveItem = item.href === "/admin/ai-generator"
+                const isExamItem = item.href === "/admin/exams"
+                const isRestricted = !isSuperAdmin && (
+                  (isCompetitiveItem && !hasCompetitiveAccess) ||
+                  (isExamItem && !hasExamAccess)
+                )
+                const restrictedMessage = isCompetitiveItem
+                  ? "Access Restricted: You do not have permission to create Competitive Tests. Contact administrator."
+                  : "Access Restricted: You do not have permission to create Exams. Contact administrator."
+
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-colors ${
-                      active
-                        ? "bg-[#2D3A4A] text-white shadow-xs"
-                        : "text-gray-700 hover:bg-gray-100/70 hover:text-gray-900"
-                    }`}
-                  >
-                    <Icon size={17} />
-                    <span>{item.label}</span>
-                  </Link>
+                  <div key={item.href} className="relative group">
+                    <Link
+                      href={item.href}
+                      onClick={(e) => {
+                        if (isRestricted) {
+                          e.preventDefault()
+                          toast.error(restrictedMessage)
+                        } else {
+                          setMobileOpen(false)
+                        }
+                      }}
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-colors ${
+                        isRestricted
+                          ? "opacity-55 cursor-not-allowed bg-gray-100/40 text-gray-400"
+                          : active
+                            ? "bg-[#2D3A4A] text-white shadow-xs"
+                            : "text-gray-700 hover:bg-gray-100/70 hover:text-gray-900"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon size={17} />
+                        <span>{item.label}</span>
+                      </div>
+                      {isRestricted && (
+                        <Lock size={13} className="text-gray-400 shrink-0" />
+                      )}
+                    </Link>
+                  </div>
                 )
               })}
 
@@ -318,21 +350,50 @@ export default function AdminSidebar({
           {navItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)
+            const isCompetitiveItem = item.href === "/admin/ai-generator"
+            const isExamItem = item.href === "/admin/exams"
+            const isRestricted = !isSuperAdmin && (
+              (isCompetitiveItem && !hasCompetitiveAccess) ||
+              (isExamItem && !hasExamAccess)
+            )
+            const restrictedMessage = isCompetitiveItem
+              ? "Access Restricted: You do not have permission to create Competitive Tests. Contact administrator."
+              : "Access Restricted: You do not have permission to create Exams. Contact administrator."
+
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-xs font-medium transition-colors ${
-                  active
-                    ? "bg-[#2D3A4A] text-white font-medium shadow-xs"
-                    : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Icon size={16} />
-                  <span>{item.label}</span>
-                </div>
-              </Link>
+              <div key={item.href} className="relative group">
+                <Link
+                  href={item.href}
+                  onClick={(e) => {
+                    if (isRestricted) {
+                      e.preventDefault()
+                      toast.error(restrictedMessage)
+                    }
+                  }}
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-xs font-medium transition-colors ${
+                    isRestricted
+                      ? "opacity-55 cursor-not-allowed bg-gray-100/40 text-gray-400 hover:bg-gray-100/40 hover:text-gray-400"
+                      : active
+                        ? "bg-[#2D3A4A] text-white font-medium shadow-xs"
+                        : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon size={16} />
+                    <span>{item.label}</span>
+                  </div>
+                  {isRestricted && (
+                    <Lock size={12} className="text-gray-400 shrink-0" />
+                  )}
+                </Link>
+
+                {isRestricted && (
+                  <div className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-2.5 py-1.5 text-[11px] text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
+                    <Lock size={12} className="text-amber-400 shrink-0" />
+                    <span>{restrictedMessage}</span>
+                  </div>
+                )}
+              </div>
             )
           })}
 

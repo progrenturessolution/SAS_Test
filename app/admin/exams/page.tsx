@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Plus, Share2, GraduationCap } from "lucide-react"
+import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Plus, Share2, GraduationCap, Lock } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { ExamActionMenu } from "@/components/ExamActionMenu"
+import { toast } from "sonner"
 
 interface Exam {
   _id: string
@@ -23,11 +24,21 @@ export default function ExamsListPage() {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState<string | null>(null)
   const [filter, setFilter] = useState("all")
+  const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState(true)
+  const [hasExamAccess, setHasExamAccess] = useState(true)
 
   useEffect(() => {
     fetch("/api/exams", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => { setExams(d.exams || []); setLoading(false) })
+    
+    fetch("/api/admin/institute-access", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => {
+        setHasCompetitiveAccess(d.hasCompetitiveAccess !== false)
+        setHasExamAccess(d.hasExamAccess !== false)
+      })
+      .catch(() => {})
   }, [])
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
@@ -92,16 +103,64 @@ export default function ExamsListPage() {
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">View and manage all exams generated in your organization</p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <Link
-            href="/admin/ai-generator"
-            className="flex items-center gap-2 px-3.5 py-2 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
-          >
-            <GraduationCap size={16} className="text-white" />
-            <span>Competitive Test</span>
-          </Link>
-          <Link href="/admin/exams/create" className="flex items-center gap-2 px-3.5 py-2 bg-[#45505F] text-white rounded-lg text-sm font-medium hover:bg-[#1e2a38]">
-            <Plus size={16} /> Create Exam
-          </Link>
+          {/* Competitive Test Button */}
+          <div className="relative group">
+            {hasCompetitiveAccess ? (
+              <Link
+                href="/admin/ai-generator"
+                className="flex items-center gap-2 px-3.5 py-2 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
+              >
+                <GraduationCap size={16} className="text-white" />
+                <span>Competitive Test</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  toast.error("Access Restricted: You do not have permission to create Competitive Tests. Contact administrator.")
+                }
+                className="flex items-center gap-2 px-3.5 py-2 bg-gray-100 text-gray-400 border border-gray-200 rounded-lg text-sm font-medium cursor-not-allowed shadow-none"
+              >
+                <Lock size={15} className="text-gray-400" />
+                <span>Competitive Test</span>
+              </button>
+            )}
+            {!hasCompetitiveAccess && (
+              <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
+                <Lock size={12} className="text-amber-400 shrink-0" />
+                <span>Access Restricted: You do not have permission to create Competitive Tests.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Create Exam Button */}
+          <div className="relative group">
+            {hasExamAccess ? (
+              <Link
+                href="/admin/exams/create"
+                className="flex items-center gap-2 px-3.5 py-2 bg-[#45505F] text-white rounded-lg text-sm font-medium hover:bg-[#1e2a38] cursor-pointer"
+              >
+                <Plus size={16} /> Create Exam
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  toast.error("Access Restricted: You do not have permission to create Exams. Contact administrator.")
+                }
+                className="flex items-center gap-2 px-3.5 py-2 bg-gray-100 text-gray-400 border border-gray-200 rounded-lg text-sm font-medium cursor-not-allowed"
+              >
+                <Lock size={15} className="text-gray-400" />
+                <span>Create Exam</span>
+              </button>
+            )}
+            {!hasExamAccess && (
+              <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
+                <Lock size={12} className="text-amber-400 shrink-0" />
+                <span>Access Restricted: You do not have permission to create Exams.</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

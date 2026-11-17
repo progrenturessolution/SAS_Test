@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Eye, Pencil, Trash2, Link2, BarChart2, UserCheck, FileText, PlayCircle, HelpCircle, Users, Building2, ShieldAlert } from "lucide-react"
+import { Eye, Pencil, Trash2, Link2, BarChart2, UserCheck, FileText, PlayCircle, HelpCircle, Users, Building2, ShieldAlert, Lock } from "lucide-react"
 import { ExamActionMenu } from "@/components/ExamActionMenu"
+import { toast } from "sonner"
 
 interface Stats {
   isSuperAdmin?: boolean
@@ -42,8 +43,16 @@ export default function AdminDashboardClient() {
   const [exams, setExams] = useState<Exam[]>([])
   const [search, setSearch] = useState("")
   const [copied, setCopied] = useState<string | null>(null)
+  const [hasExamAccess, setHasExamAccess] = useState(true)
 
   useEffect(() => {
+    fetch("/api/admin/institute-access", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => {
+        setHasExamAccess(d.hasExamAccess !== false)
+      })
+      .catch(() => {})
+
     fetch("/api/admin/stats")
       .then((r) => {
         if (r.status === 401 || r.status === 403) {
@@ -141,12 +150,33 @@ export default function AdminDashboardClient() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <Link
-            href="/admin/exams/create"
-            className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-accent transition-colors text-center whitespace-nowrap shadow-xs"
-          >
-            + Create Exam
-          </Link>
+          <div className="relative group">
+            {hasExamAccess ? (
+              <Link
+                href="/admin/exams/create"
+                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-accent transition-colors text-center whitespace-nowrap shadow-xs block cursor-pointer"
+              >
+                + Create Exam
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  toast.error("Access Restricted: You do not have permission to create Exams. Contact administrator.")
+                }
+                className="px-4 py-2 bg-gray-100 text-gray-400 border border-gray-200 rounded-lg text-sm font-medium text-center whitespace-nowrap flex items-center gap-1.5 cursor-not-allowed"
+              >
+                <Lock size={14} className="text-gray-400" />
+                <span>+ Create Exam</span>
+              </button>
+            )}
+            {!hasExamAccess && (
+              <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
+                <Lock size={12} className="text-amber-400 shrink-0" />
+                <span>Access Restricted: You do not have permission to create Exams.</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

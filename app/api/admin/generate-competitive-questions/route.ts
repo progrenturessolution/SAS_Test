@@ -52,9 +52,12 @@ export async function POST(req: Request) {
         const allowedExamTypes = Array.isArray(inst?.limits?.examTypes)
           ? inst.limits.examTypes.map((type) => String(type).trim().toUpperCase())
           : ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM"]
-        if (!allowedExamTypes.includes(examType.trim().toUpperCase())) {
+        const hasCompetitiveAccess = allowedExamTypes.some((type) =>
+          ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(type).trim().toUpperCase())
+        )
+        if (!hasCompetitiveAccess) {
           return NextResponse.json(
-            { error: `Your institute does not have access to ${String(exam).replaceAll("_", " ")} question generation.` },
+            { error: "Your institute does not have access to Competitive question generation. Contact administrator." },
             { status: 403 }
           )
         }

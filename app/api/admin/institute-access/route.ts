@@ -22,6 +22,8 @@ export async function GET(req: Request) {
       return NextResponse.json({
         instituteName: session.instituteName || session.name || "Coaching Institute",
         instituteCode: session.instituteCode || "",
+        hasCompetitiveAccess: true,
+        hasExamAccess: true,
         examTypes: ALL_EXAM_TYPES,
         features: {},
         customQuestionTypes: ALL_CUSTOM_QUESTION_TYPES,
@@ -34,12 +36,22 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Institute not found" }, { status: 404 })
     }
 
+    const rawExamTypes = Array.isArray(institute.limits?.examTypes)
+      ? institute.limits.examTypes.map((type) => String(type).trim().toUpperCase())
+      : LEGACY_INSTITUTE_EXAM_TYPES
+
+    const hasCompetitiveAccess = rawExamTypes.some((t) =>
+      ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(t)
+    ) && institute.limits?.features?.neetJeeGenerator !== false
+
+    const hasExamAccess = rawExamTypes.some((t) => ["EXAM", "CUSTOM"].includes(t))
+
     return NextResponse.json({
       instituteName: institute.name || session.instituteName || "Coaching Institute",
       instituteCode: institute.code || session.instituteCode || "",
-      examTypes: Array.isArray(institute.limits?.examTypes)
-        ? institute.limits.examTypes.map((type) => String(type).trim().toUpperCase())
-        : LEGACY_INSTITUTE_EXAM_TYPES,
+      hasCompetitiveAccess,
+      hasExamAccess,
+      examTypes: rawExamTypes,
       features: institute.limits?.features || {},
       customQuestionTypes: Array.isArray(institute.limits?.customQuestionTypes)
         ? institute.limits.customQuestionTypes

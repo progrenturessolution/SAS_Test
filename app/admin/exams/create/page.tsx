@@ -8,7 +8,7 @@ import {
   Check, Upload, Plus, X, Trash2, Search, AlertCircle,
   FileText, CheckSquare, List, Code2, AlignLeft, Info, Pencil, MoreVertical,
   Shield, Camera, Maximize, AlertTriangle, Sparkles, Loader2, Clock, GraduationCap,
-  ArrowRight, ArrowLeft, CheckCircle2, Zap, Layers
+  ArrowRight, ArrowLeft, CheckCircle2, Zap, Layers, Lock
 } from "lucide-react"
 import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
@@ -2777,12 +2777,14 @@ export default function CreateExamPage() {
     pdfImport: true,
   })
   const [allowedCustomQuestionTypes, setAllowedCustomQuestionTypes] = useState<QuestionType[]>([])
+  const [hasExamAccess, setHasExamAccess] = useState<boolean | null>(null)
 
   // Load global proctoring defaults from admin settings
   useEffect(() => {
     fetch("/api/admin/institute-access", { credentials: "include" })
       .then((response) => response.json())
       .then((data) => {
+        setHasExamAccess(data.hasExamAccess !== false)
         if (data.features) {
           const features = {
             neetJeeGenerator: data.features.neetJeeGenerator !== false,
@@ -2801,7 +2803,9 @@ export default function CreateExamPage() {
           }
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        setHasExamAccess(true)
+      })
   }, [])
 
   useEffect(() => {
@@ -2957,6 +2961,26 @@ export default function CreateExamPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (hasExamAccess === false) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center bg-[#F8FAFC]">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 border border-amber-200 shadow-sm">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[#2D3A4A] mb-2">Access Restricted</h2>
+        <p className="text-gray-500 max-w-md text-sm mb-6 leading-relaxed">
+          Your coaching institute does not have permission to create standard Exams. Please contact your administrator to enable this module.
+        </p>
+        <Link
+          href="/admin/exams"
+          className="px-6 py-2.5 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-xl text-sm font-medium transition-colors shadow-sm"
+        >
+          Return to Exams
+        </Link>
+      </div>
+    )
   }
 
   return (

@@ -38,6 +38,7 @@ import {
   ChevronRight,
   BarChart2,
   Printer,
+  Lock,
 } from "lucide-react"
 import {
   EXAM_TARGETS,
@@ -151,6 +152,7 @@ export default function AIGeneratorPage() {
   const [printMode, setPrintMode] = useState<"student" | "teacher">("student")
   const [printDropdownOpen, setPrintDropdownOpen] = useState(false)
   const [coachingName, setCoachingName] = useState<string>("")
+  const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState<boolean | null>(null)
 
   // Fetch logged-in coaching institute name
   useEffect(() => {
@@ -160,8 +162,12 @@ export default function AIGeneratorPage() {
         if (data?.instituteName && !data.instituteName.toLowerCase().includes("progrentures")) {
           setCoachingName(data.instituteName)
         }
+        setHasCompetitiveAccess(data.hasCompetitiveAccess !== false)
       })
-      .catch((err) => console.error("Error fetching coaching institute name:", err))
+      .catch((err) => {
+        console.error("Error fetching coaching institute name:", err)
+        setHasCompetitiveAccess(true)
+      })
   }, [])
 
   // Step 4: Exam Details States
@@ -1015,6 +1021,26 @@ export default function AIGeneratorPage() {
     } finally {
       setCreatingExam(false)
     }
+  }
+
+  if (hasCompetitiveAccess === false) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 border border-amber-200 shadow-sm">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[#2D3A4A] mb-2">Access Restricted</h2>
+        <p className="text-gray-500 max-w-md text-sm mb-6 leading-relaxed">
+          Your coaching institute does not have permission to access the Competitive Test Studio. Please contact your administrator to enable this module.
+        </p>
+        <Link
+          href="/admin"
+          className="px-6 py-2.5 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-xl text-sm font-medium transition-colors shadow-sm"
+        >
+          Return to Dashboard
+        </Link>
+      </div>
+    )
   }
 
   return (

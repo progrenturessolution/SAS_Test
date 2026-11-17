@@ -74,14 +74,29 @@ export async function POST(req: Request) {
           )
       }
       const examType = String(body.examType || "CUSTOM").trim().toUpperCase()
-        const allowedExamTypes = Array.isArray(institute.limits?.examTypes)
-          ? institute.limits.examTypes.map((type) => String(type).trim().toUpperCase())
-          : ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM"]
-      if (!allowedExamTypes.includes(examType)) {
-          return NextResponse.json(
-            { error: `This institute is not permitted to conduct ${examType.replaceAll("_", " ")} exams.` },
-            { status: 403 }
-          )
+      const allowedExamTypes = Array.isArray(institute.limits?.examTypes)
+        ? institute.limits.examTypes.map((type) => String(type).trim().toUpperCase())
+        : ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "EXAM", "COMPETITIVE"]
+
+      const isCompetitive = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "COMPETITIVE"].includes(examType)
+      const isStandardExam = ["CUSTOM", "EXAM"].includes(examType)
+
+      const hasCompAccess = allowedExamTypes.some((t) =>
+        ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(t)
+      ) && institute.limits?.features?.neetJeeGenerator !== false
+      const hasExamAccess = allowedExamTypes.some((t) => ["EXAM", "CUSTOM"].includes(t))
+
+      if (isCompetitive && !hasCompAccess) {
+        return NextResponse.json(
+          { error: "Your institute does not have permission to create Competitive Tests." },
+          { status: 403 }
+        )
+      }
+      if (isStandardExam && !hasExamAccess) {
+        return NextResponse.json(
+          { error: "Your institute does not have permission to create standard Exams." },
+          { status: 403 }
+        )
       }
       body.examType = examType
       if (examType === "CUSTOM") {

@@ -128,6 +128,23 @@ export async function POST(req: Request) {
       )
     }
 
+    // Determine expanded exam types based on the two access options
+    const rawIncomingTypes = Array.isArray(examTypes) ? examTypes : ["COMPETITIVE", "EXAM"]
+    const hasCompetitive = rawIncomingTypes.some((t: string) =>
+      ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(t).toUpperCase())
+    )
+    const hasExam = rawIncomingTypes.some((t: string) =>
+      ["EXAM", "CUSTOM"].includes(String(t).toUpperCase())
+    )
+
+    const finalExamTypes: string[] = []
+    if (hasCompetitive) {
+      finalExamTypes.push("COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD")
+    }
+    if (hasExam) {
+      finalExamTypes.push("EXAM", "CUSTOM")
+    }
+
     // 1. Create Institute document
     const newInstitute = await Institute.create({
       name: name.trim(),
@@ -140,16 +157,14 @@ export async function POST(req: Request) {
       limits: {
         maxStudents: Number(maxStudents) || 100,
         maxExams: Number(maxExams) || 20,
-        examTypes: Array.isArray(examTypes)
-          ? examTypes
-          : ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM"],
-        customQuestionTypes: Array.isArray(customQuestionTypes)
+        examTypes: finalExamTypes,
+        customQuestionTypes: Array.isArray(customQuestionTypes) && customQuestionTypes.length > 0
           ? customQuestionTypes
-          : ["mcq", "truefalse", "descriptive", "fillblanks", "coding"],
+          : ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"],
         features: {
-          neetJeeGenerator: features.neetJeeGenerator ?? true,
-          aiProctoring: features.aiProctoring ?? true,
-          pdfImport: features.pdfImport ?? true,
+          neetJeeGenerator: hasCompetitive,
+          aiProctoring: features?.aiProctoring ?? true,
+          pdfImport: features?.pdfImport ?? true,
         },
       },
       validUntil: validUntil ? new Date(validUntil) : undefined,

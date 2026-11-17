@@ -41,13 +41,28 @@ interface InstituteLimits {
 }
 
 const EXAM_ACCESS_OPTIONS = [
-  { value: "NEET", label: "NEET (UG)" },
-  { value: "JEE_MAIN", label: "JEE Main" },
-  { value: "JEE_ADVANCED", label: "JEE Advanced" },
-  { value: "MHT_CET", label: "MHT-CET" },
-  { value: "CBSE_BOARD", label: "CBSE Board" },
-  { value: "CUSTOM", label: "Custom Tests" },
+  {
+    value: "COMPETITIVE",
+    label: "Competitive Test",
+    description: "Access to AI Competitive Test Studio (NEET, JEE, MHT-CET, etc.)",
+  },
+  {
+    value: "EXAM",
+    label: "Exam",
+    description: "Access to Standard Exam creation and manual question paper generator",
+  },
 ] as const
+
+function normalizeExamTypes(rawTypes: string[] = []): string[] {
+  const result: string[] = []
+  const hasComp = rawTypes.some((t) =>
+    ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(t).toUpperCase())
+  )
+  const hasExam = rawTypes.some((t) => ["EXAM", "CUSTOM"].includes(String(t).toUpperCase()))
+  if (hasComp) result.push("COMPETITIVE")
+  if (hasExam) result.push("EXAM")
+  return result
+}
 
 const CUSTOM_QUESTION_TYPE_OPTIONS = [
   { value: "mcq", label: "MCQ" },
@@ -115,7 +130,7 @@ export default function InstitutesManagementPage() {
   const [formContactPerson, setFormContactPerson] = useState("")
   const [formMaxStudents, setFormMaxStudents] = useState(100)
   const [formMaxExams, setFormMaxExams] = useState(20)
-  const [formExamTypes, setFormExamTypes] = useState<string[]>(EXAM_ACCESS_OPTIONS.map((option) => option.value))
+  const [formExamTypes, setFormExamTypes] = useState<string[]>(["COMPETITIVE", "EXAM"])
   const [formCustomQuestionTypes, setFormCustomQuestionTypes] = useState<string[]>(ALL_CUSTOM_QUESTION_TYPES)
   const [formPdfImport, setFormPdfImport] = useState(true)
   const [formValidUntil, setFormValidUntil] = useState("")
@@ -200,7 +215,7 @@ export default function InstitutesManagementPage() {
       setFormContactPerson("")
       setFormMaxStudents(100)
       setFormMaxExams(20)
-      setFormExamTypes(EXAM_ACCESS_OPTIONS.map((option) => option.value))
+      setFormExamTypes(["COMPETITIVE", "EXAM"])
       setFormCustomQuestionTypes(ALL_CUSTOM_QUESTION_TYPES)
       setFormValidUntil("")
       await fetchInstitutes()
@@ -216,7 +231,7 @@ export default function InstitutesManagementPage() {
     setShowEditLimitsModal(inst)
     setEditMaxStudents(inst.limits?.maxStudents ?? 100)
     setEditMaxExams(inst.limits?.maxExams ?? 20)
-    setEditExamTypes(inst.limits?.examTypes ?? EXAM_ACCESS_OPTIONS.map((option) => option.value))
+    setEditExamTypes(normalizeExamTypes(inst.limits?.examTypes ?? []))
     setEditCustomQuestionTypes(inst.limits?.customQuestionTypes ?? ALL_CUSTOM_QUESTION_TYPES)
     setEditPdfImport(inst.limits?.features?.pdfImport ?? true)
     setEditStatus(inst.status === "suspended" ? "suspended" : "active")
@@ -843,13 +858,16 @@ export default function InstitutesManagementPage() {
                     </span>
                   ))}
                 </div>
-                <p className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Allowed exam categories</p>
+                <p className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Allowed Exam Creation</p>
                 <div className="flex flex-wrap gap-2">
-                  {(selectedInstitute.limits?.examTypes || []).map((examType) => (
-                    <span key={examType} className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-                      {EXAM_ACCESS_OPTIONS.find(option => option.value === examType)?.label || examType}
+                  {normalizeExamTypes(selectedInstitute.limits?.examTypes || []).map((type) => (
+                    <span key={type} className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+                      {type === "COMPETITIVE" ? "Competitive Test" : "Exam"}
                     </span>
                   ))}
+                  {normalizeExamTypes(selectedInstitute.limits?.examTypes || []).length === 0 && (
+                    <span className="text-xs text-gray-400">No exam creation access granted</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1042,49 +1060,42 @@ export default function InstitutesManagementPage() {
 
                 <div>
                   <span className="font-semibold text-gray-700 block mb-1.5">
-                    Competitive Exam Access
+                    Exam Creation Access
                   </span>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {EXAM_ACCESS_OPTIONS.map((option) => (
-                      <label key={option.value} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formExamTypes.includes(option.value)}
-                          onChange={(e) => setFormExamTypes((current) => e.target.checked
-                            ? [...current, option.value]
-                            : current.filter((value) => value !== option.value))}
-                          className="rounded text-[#2D3A4A]"
-                        />
-                        <span className="text-[11px] font-medium text-gray-700">{option.label}</span>
-                      </label>
-                    ))}
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    {EXAM_ACCESS_OPTIONS.map((option) => {
+                      const isChecked = formExamTypes.includes(option.value)
+                      return (
+                        <label
+                          key={option.value}
+                          className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-all ${
+                            isChecked
+                              ? "border-[#2D3A4A] bg-[#2D3A4A]/5 shadow-xs"
+                              : "border-gray-200 bg-white hover:bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) =>
+                              setFormExamTypes((current) =>
+                                e.target.checked
+                                  ? [...current, option.value]
+                                  : current.filter((value) => value !== option.value)
+                              )
+                            }
+                            className="mt-0.5 rounded text-[#2D3A4A]"
+                          />
+                          <div className="flex-1">
+                            <span className="text-xs font-semibold text-gray-800 block">{option.label}</span>
+                            <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">{option.description}</span>
+                          </div>
+                        </label>
+                      )
+                    })}
                   </div>
-                  <span className="mt-1 block text-[10px] text-gray-400">
-                    Select the competitive exam formats this institute can conduct. Custom Tests are configured below.
-                  </span>
-                </div>
-
-                <div>
-                  <span className="font-semibold text-gray-700 block mb-1.5">
-                    Custom Test Question-Type Access
-                  </span>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {CUSTOM_QUESTION_TYPE_OPTIONS.map((option) => (
-                      <label key={option.value} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formCustomQuestionTypes.includes(option.value)}
-                          onChange={(e) => setFormCustomQuestionTypes((current) => e.target.checked
-                            ? [...current, option.value]
-                            : current.filter((value) => value !== option.value))}
-                          className="rounded text-[#2D3A4A]"
-                        />
-                        <span className="text-[11px] font-medium text-gray-700">{option.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <span className="mt-1 block text-[10px] text-gray-400">
-                    These question types will be available only when creating a Custom Test.
+                  <span className="mt-1.5 block text-[10px] text-gray-400">
+                    Select which test creation modules this institute can access. Unchecked options will remain visible but disabled.
                   </span>
                 </div>
               </div>
@@ -1193,41 +1204,41 @@ export default function InstitutesManagementPage() {
                 </div>
 
                 <div>
-                  <label className="font-bold text-gray-700 block mb-2">Competitive Exam Access</label>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {EXAM_ACCESS_OPTIONS.map((option) => (
-                      <label key={option.value} className="flex items-center gap-2 rounded-lg border border-gray-200 p-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editExamTypes.includes(option.value)}
-                          onChange={(e) => setEditExamTypes((current) => e.target.checked
-                            ? [...current, option.value]
-                            : current.filter((value) => value !== option.value))}
-                        />
-                        <span className="text-xs font-medium text-gray-700">{option.label}</span>
-                      </label>
-                    ))}
+                  <label className="font-bold text-gray-700 block mb-2">Exam Creation Access</label>
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    {EXAM_ACCESS_OPTIONS.map((option) => {
+                      const isChecked = editExamTypes.includes(option.value)
+                      return (
+                        <label
+                          key={option.value}
+                          className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-all ${
+                            isChecked
+                              ? "border-[#2D3A4A] bg-[#2D3A4A]/5 shadow-xs"
+                              : "border-gray-200 bg-white hover:bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) =>
+                              setEditExamTypes((current) =>
+                                e.target.checked
+                                  ? [...current, option.value]
+                                  : current.filter((value) => value !== option.value)
+                              )
+                            }
+                            className="mt-0.5 rounded text-[#2D3A4A]"
+                          />
+                          <div className="flex-1">
+                            <span className="text-xs font-semibold text-gray-800 block">{option.label}</span>
+                            <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">{option.description}</span>
+                          </div>
+                        </label>
+                      )
+                    })}
                   </div>
-                </div>
-
-                <div>
-                  <label className="font-bold text-gray-700 block mb-2">Custom Test Question-Type Access</label>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {CUSTOM_QUESTION_TYPE_OPTIONS.map((option) => (
-                      <label key={option.value} className="flex items-center gap-2 rounded-lg border border-gray-200 p-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editCustomQuestionTypes.includes(option.value)}
-                          onChange={(e) => setEditCustomQuestionTypes((current) => e.target.checked
-                            ? [...current, option.value]
-                            : current.filter((value) => value !== option.value))}
-                        />
-                        <span className="text-xs font-medium text-gray-700">{option.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <span className="mt-1 block text-[10px] text-gray-400">
-                    These question types will be available only for Custom Tests.
+                  <span className="mt-1.5 block text-[10px] text-gray-400">
+                    Control which test creation modules this institute can access. Unchecked options will remain visible but disabled.
                   </span>
                 </div>
               </div>
