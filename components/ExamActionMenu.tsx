@@ -5,12 +5,15 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Share2, MoreVertical, Check } from "lucide-react"
 import { toast } from "sonner"
+import { getExamEditUrl } from "@/lib/examEditHelper"
 
 interface ExamActionMenuProps {
   exam: {
     _id: string
     title: string
     status: string
+    examType?: string
+    subject?: string
   }
   onToggleStatus: (id: string, status: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
@@ -250,7 +253,7 @@ export function ExamActionMenu({
 
           {/* Edit */}
           <Link
-            href={`/admin/exams/${exam._id}/edit`}
+            href={getExamEditUrl(exam)}
             onClick={() => setOpen(false)}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
           >

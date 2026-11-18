@@ -3,12 +3,14 @@
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { ShieldAlert, CheckCircle, XCircle, Eye, Share2, Check, AlertTriangle, Filter } from "lucide-react"
+import { Filter, Share2, Check } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { Toaster } from "@/components/ui/toaster"
+import { ResultActionMenu } from "@/components/ResultActionMenu"
 
 interface Result {
   _id: string
+  examId?: string
   examTitle: string
   examSubject: string
   studentName: string
@@ -71,18 +73,24 @@ function ResultsPageInner() {
   const passed = results.filter((r) => r.passed).length
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-foreground">
-          {examId ? "Exam Results" : "All Results"}
-        </h1>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
-            <Filter size={16} className="text-gray-400" />
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            {examId ? "Exam Results" : "All Results"}
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Real-time candidate submissions, proctoring alerts, and automated scoring analysis
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3.5 py-2 shadow-2xs hover:border-slate-300 transition-colors">
+            <Filter size={15} className="text-slate-400" />
             <select 
               value={examId || "all"} 
               onChange={(e) => handleExamChange(e.target.value)}
-              className="bg-transparent border-none text-sm font-medium focus:ring-0 cursor-pointer text-gray-700 min-w-[200px]"
+              className="bg-transparent border-none text-xs sm:text-sm font-semibold focus:ring-0 cursor-pointer text-slate-800 min-w-[180px] sm:min-w-[220px] outline-none"
             >
               <option value="all">All Exams</option>
               {exams.map(e => (
@@ -93,37 +101,75 @@ function ResultsPageInner() {
           {examId && (
             <button
               onClick={copyShareLink}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer ${
                 copied
-                  ? "bg-green-50 text-[#10B981] border border-green-200"
-                  : "bg-primary text-white hover:opacity-90 shadow-sm hover:shadow-md transition-all"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs"
+                  : "bg-[#1E293B] hover:bg-[#0F172A] text-white hover:shadow-md"
               }`}
             >
               {copied ? (
-                <><Check size={15} /> Link Copied!</>
+                <><Check size={14} className="stroke-[2.5]" /> Link Copied!</>
               ) : (
-                <><Share2 size={15} /> Share Results Link</>
+                <><Share2 size={14} /> Share Results Link</>
               )}
             </button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-5 mb-6">
-        {[
-          { label: "Total Attempts", value: results.length, color: "text-blue-500", bg: "bg-blue-50" },
-          { label: "Passed", value: passed, color: "text-green-500", bg: "bg-green-50" },
-          { label: "Failed", value: results.length - passed, color: "text-red-500", bg: "bg-red-50" },
-          { label: "Avg Score", value: `${avg}%`, color: "text-purple-500", bg: "bg-purple-50" },
-        ].map((s) => (
-          <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-5">
-            <div className={`w-8 h-8 ${s.bg} rounded-lg flex items-center justify-center mb-2`}>
-              <span className={`text-sm font-bold ${s.color}`}>#</span>
-            </div>
-            <p className={`text-xs ${s.bg}`}>{s.label}</p>
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
+      {/* Top Clean Minimalist Metric Cards (No Emojis / No Icons) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {/* Card 1: Total Submissions */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-sm transition-all">
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+            Total Attempts
+          </p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+            {results.length}
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            {examId ? "Selected exam" : "Across all active exams"}
+          </p>
+        </div>
+
+        {/* Card 2: Passed */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-sm transition-all">
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+            Passed Students
+          </p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+            {passed}
+          </p>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            {results.length > 0 ? `${Math.round((passed / results.length) * 100)}% Pass Rate` : "No attempts yet"}
+          </p>
+        </div>
+
+        {/* Card 3: Failed / Retake */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-sm transition-all">
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+            Failed / Retake
+          </p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+            {results.length - passed}
+          </p>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            {results.length > 0 ? `${Math.round(((results.length - passed) / results.length) * 100)}% Below Passing` : "0% Fail Rate"}
+          </p>
+        </div>
+
+        {/* Card 4: Average Score */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-sm transition-all">
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+            Average Score
+          </p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+            {avg}%
+          </p>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            Mean score of attempts
+          </p>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-auto custom-scrollbar max-h-[calc(100vh-320px)] shadow-sm">
@@ -134,7 +180,7 @@ function ResultsPageInner() {
             <thead className="sticky top-0 bg-white z-10 shadow-sm">
               <tr className="border-b border-gray-100">
                 {["Student", "Exam", "Score", "Result", "Grading", "Warnings", "Submitted", "Actions"].map((h) => (
-                  <th key={h} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-4">{h}</th>
+                  <th key={h} className={`text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-4 ${h === "Actions" ? "text-right" : "text-left"}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -168,41 +214,36 @@ function ResultsPageInner() {
                   </td>
                   <td className="px-5 py-4">
                     {r.passed ? (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full w-fit border border-green-100">
-                        <CheckCircle size={11} /> Pass
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full w-fit border border-emerald-100">
+                        Pass
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded-full w-fit border border-red-100">
-                        <XCircle size={11} /> Fail
+                      <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full w-fit border border-rose-100">
+                        Fail
                       </span>
                     )}
                   </td>
                   <td className="px-5 py-4">
                     {r.isGraded ? (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full w-fit border border-blue-100">
-                        <CheckCircle size={11} /> Graded
+                      <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full w-fit border border-slate-200">
+                        Graded
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full w-fit border border-orange-100">
-                        <AlertTriangle size={11} /> Pending
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full w-fit border border-amber-200/70">
+                        Pending
                       </span>
                     )}
                   </td>
                   <td className="px-5 py-4">
-                    <span className={`flex items-center gap-1 text-[10px] font-bold w-fit px-2 py-1 rounded-full border ${r.proctoring.warnings > 0 ? "text-orange-600 bg-orange-50 border-orange-100" : "text-gray-400 bg-gray-50 border-gray-100"}`}>
-                      <ShieldAlert size={11} /> {r.proctoring.warnings}
+                    <span className={`text-[10px] font-bold w-fit px-2.5 py-1 rounded-full border ${r.proctoring.warnings > 0 ? "text-amber-800 bg-amber-50 border-amber-200/80" : "text-gray-500 bg-gray-50 border-gray-100"}`}>
+                      {r.proctoring.warnings} warnings
                     </span>
                   </td>
                   <td className="px-5 py-4 text-[11px] font-medium text-gray-500">
                     {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                   </td>
-                  <td className="px-5 py-4 flex items-center gap-2">
-                    <Link href={`/admin/results/${r._id}/review`} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-[10px] font-bold rounded-lg hover:bg-accent transition-all">
-                      Review & Grade
-                    </Link>
-                    <Link href={`/admin/results/${r._id}`} title="View proctoring log" className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-                      <Eye size={15} className="text-gray-400 hover:text-blue-500" />
-                    </Link>
+                  <td className="px-5 py-4 text-right">
+                    <ResultActionMenu result={r} />
                   </td>
                 </tr>
               ))}

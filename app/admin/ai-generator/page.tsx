@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo, useRef, useEffect, KeyboardEvent } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useMemo, useRef, useEffect, KeyboardEvent, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
   GraduationCap,
@@ -55,8 +55,8 @@ import { toast } from "sonner"
 
 export interface GeneratedCompetitiveQuestion {
   id: string
-  type: "mcq"
-  questionFormat?: "mcq" | "diagram" | "assertion" | "fib" | "true_false" | string
+  type: "mcq" | "descriptive"
+  questionFormat?: "mcq" | "diagram" | "assertion" | "fib" | "true_false" | "descriptive" | string
   questionText: string
   questionImage?: string
   difficulty: "easy" | "medium" | "hard"
@@ -67,10 +67,15 @@ export interface GeneratedCompetitiveQuestion {
   explanation: string
   chapter: string
   pyqReference?: string
+  wordLimit?: number
 }
 
-export default function AIGeneratorPage() {
+function AIGeneratorContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editExamId = searchParams.get("edit")
+  const [editingExamId, setEditingExamId] = useState<string | null>(editExamId)
+  const [isLoadingExistingExam, setIsLoadingExistingExam] = useState(false)
 
   // ─── Filter & Selection States ───
   const [selectedExam, setSelectedExam] = useState<ExamTarget>("NEET")
@@ -105,6 +110,7 @@ export default function AIGeneratorPage() {
     { id: "assertion", label: "Assertion", checked: false, count: 0, marks: 4 },
     { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 2 },
     { id: "true_false", label: "True / False", checked: false, count: 0, marks: 2 },
+    { id: "descriptive", label: "Descriptive", checked: false, count: 0, marks: 5 },
   ])
 
   // Chapter Selection
@@ -154,29 +160,120 @@ export default function AIGeneratorPage() {
   const [coachingName, setCoachingName] = useState<string>("")
   const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState<boolean | null>(null)
 
-  // Fetch logged-in coaching institute name
+  // Load existing exam for editing if ?edit=<id> is present
   useEffect(() => {
-    fetch("/api/admin/institute-access", { credentials: "include" })
+    if (!editExamId) return
+    setIsLoadingExistingExam(true)
+    fetch(`/api/exams/${editExamId}`, { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
-        if (data?.instituteName && !data.instituteName.toLowerCase().includes("progrentures")) {
-          setCoachingName(data.instituteName)
+        if (!data?.exam) {
+          toast.error("Exam not found")
+          setIsLoadingExistingExam(false)
+          return
         }
-        setHasCompetitiveAccess(data.hasCompetitiveAccess !== false)
+        const exam = data.exam
+        setEditingExamId(exam._id)
+        if (exam.title) setExamTitle(exam.title)
+        if (exam.examType && ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET"].includes(exam.examType)) {
+          setSelectedExam(exam.examType as ExamTarget)
+        }
+        if (exam.subject) {
+          setSelectedSubject(exam.subject as CompetitiveSubject)
+          setSelectedSubjects([exam.subject as CompetitiveSubject])
+          setActiveSubjectTab(exam.subject as CompetitiveSubject)
+        }
+        if (exam.class) {
+          if (exam.class.includes("11") && exam.class.includes("12")) {
+            setSelectedGrade("both")
+          } else if (exam.class.includes("11")) {
+            setSelectedGrade("11")
+          } else if (exam.class.includes("12")) {
+            setSelectedGrade("12")
+          }
+        }
+        if (exam.duration) setDuration(exam.duration)
+        if (exam.totalMarks) setExamTotalMarks(exam.totalMarks)
+        if (exam.passMarks) setPassMarks(exam.passMarks)
+        if (exam.questionsPerMin) setQuestionsPerMinute(String(exam.questionsPerMin))
+        if (Array.isArray(exam.instructions)) {
+          setInstructions(exam.instructions)
+        } else if (typeof exam.instructions === "string") {
+          setInstructions(exam.instructions.split("\n").filter(Boolean))
+        }
+
+        // Schedule
+        if (exam.schedule?.startDate || exam.settings?.startDate) {
+          const raw = exam.schedule?.startDate || exam.settings?.startDate
+          const d = new Date(raw)
+          if (!isNaN(d.getTime())) setStartDate(d.toISOString().split("T")[0])
+        }
+        if (exam.schedule?.endDate || exam.settings?.endDate) {
+          const raw = exam.schedule?.endDate || exam.settings?.endDate
+          const d = new Date(raw)
+          if (!isNaN(d.getTime())) setEndDate(d.toISOString().split("T")[0])
+        }
+
+        // Eval & proctoring
+        if (exam.settings) {
+          setEvalSettings((prev) => ({
+            ...prev,
+            randomizeQuestions: exam.settings.randomize ?? prev.randomizeQuestions,
+            showResultsImmediately: exam.settings.showResults ?? prev.showResultsImmediately,
+            allowReview: exam.settings.allowReview ?? prev.allowReview,
+            enableNegativeMarking: exam.settings.negativeMarking ?? prev.enableNegativeMarking,
+          }))
+          if (exam.settings.proctoring) {
+            setProctoringSettings((prev) => ({
+              ...prev,
+              faceDetection: exam.settings.proctoring.faceDetection ?? prev.faceDetection,
+              tabSwitchPrevention: exam.settings.proctoring.tabSwitch ?? exam.settings.proctoring.tabSwitchPrevention ?? prev.tabSwitchPrevention,
+              enforceFullscreen: exam.settings.proctoring.fullscreen ?? exam.settings.proctoring.enforceFullscreen ?? prev.enforceFullscreen,
+              aiStatusAnalysis: exam.settings.proctoring.aiProctoring ?? exam.settings.proctoring.aiStatusAnalysis ?? prev.aiStatusAnalysis,
+            }))
+          }
+        }
+
+        // Questions mapping
+        const loadedQuestions: GeneratedCompetitiveQuestion[] = (exam.sections || []).flatMap((sec: any) =>
+          (sec.questions || []).map((q: any, idx: number) => ({
+            id: q.id || `loaded_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+            type: q.type === "descriptive" || q.questionFormat === "descriptive" ? ("descriptive" as const) : ("mcq" as const),
+            questionFormat: q.questionFormat || q.type || "mcq",
+            questionText: q.questionText || "",
+            questionImage: q.questionImage,
+            difficulty: q.difficulty || "medium",
+            marks: q.marks || (q.type === "descriptive" ? 5 : 4),
+            negativeMark: q.type === "descriptive" ? 0 : (q.negativeMark || (exam.settings?.negativeMarking ? 1 : 0)),
+            options: Array.isArray(q.options) ? q.options : [],
+            correctAnswer: q.correctAnswer || "",
+            explanation: q.explanation || "",
+            chapter: q.chapter || exam.subject || "General",
+            pyqReference: q.pyqReference,
+            wordLimit: q.wordLimit,
+          }))
+        )
+
+        if (loadedQuestions.length > 0) {
+          setGeneratedQuestions(loadedQuestions)
+          setSelectedQuestionIds(new Set(loadedQuestions.map((q) => q.id)))
+          setCurrentStep(3) // Jump directly to Questions step so user can edit right away!
+        }
+        setIsLoadingExistingExam(false)
+        toast.success(`Loaded "${exam.title}" for editing`)
       })
       .catch((err) => {
-        console.error("Error fetching coaching institute name:", err)
-        setHasCompetitiveAccess(true)
+        console.error("Failed to load existing exam:", err)
+        toast.error("Failed to load exam")
+        setIsLoadingExistingExam(false)
       })
-  }, [])
+  }, [editExamId])
 
   // Step 4: Exam Details States
   const [duration, setDuration] = useState<number>(30)
   const [examTotalMarks, setExamTotalMarks] = useState<number>(200)
   const [passMarks, setPassMarks] = useState<number>(80)
   const [questionsPerMinute, setQuestionsPerMinute] = useState<string>("")
-  const [minDurationHours, setMinDurationHours] = useState<string>("2")
-  const [minDurationMinutes, setMinDurationMinutes] = useState<string>("00")
   const [instructions, setInstructions] = useState<string[]>([
     "Read each question carefully before submitting your answer.",
     "Each question carries 2 marks.",
@@ -254,6 +351,13 @@ export default function AIGeneratorPage() {
 
   const getQuestionFormat = (q: GeneratedCompetitiveQuestion): string => {
     if (
+      q.type === "descriptive" ||
+      q.questionFormat === "descriptive" ||
+      (!q.options || q.options.length === 0)
+    ) {
+      return "descriptive"
+    }
+    if (
       q.questionFormat === "true_false" ||
       q.questionText?.toLowerCase().startsWith("true or false") ||
       q.questionText?.toLowerCase().startsWith("true/false") ||
@@ -291,7 +395,7 @@ export default function AIGeneratorPage() {
 
 
   const formatCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: generatedQuestions.length, mcq: 0, diagram: 0, assertion: 0, fib: 0, true_false: 0 }
+    const counts: Record<string, number> = { all: generatedQuestions.length, mcq: 0, diagram: 0, assertion: 0, fib: 0, true_false: 0, descriptive: 0 }
     generatedQuestions.forEach((q) => {
       const fmt = getQuestionFormat(q)
       if (counts[fmt] !== undefined) counts[fmt]++
@@ -349,6 +453,7 @@ export default function AIGeneratorPage() {
     if (formatCounts.assertion > 0) parts.push(`Assertion: ${formatCounts.assertion}`)
     if (formatCounts.fib > 0) parts.push(`Fill in the Blanks: ${formatCounts.fib}`)
     if (formatCounts.true_false > 0) parts.push(`True / False: ${formatCounts.true_false}`)
+    if (formatCounts.descriptive > 0) parts.push(`Descriptive: ${formatCounts.descriptive}`)
 
     if (parts.length > 0) return parts.join(" | ")
 
@@ -1077,21 +1182,24 @@ export default function AIGeneratorPage() {
         assertion: "Assertion & Reason",
         truefalse: "True / False Questions",
         fillblanks: "Fill in the Blanks",
+        descriptive: "Descriptive Questions",
       }
 
       const mappedQuestions = toSave.map((q) => {
         const fmt = getQuestionFormat(q)
+        const isDescriptive = fmt === "descriptive" || q.type === "descriptive"
         const isTF = fmt === "true_false"
         const isAR = fmt === "assertion"
         const isFIB = fmt === "fib"
         const isDiagram = fmt === "diagram"
 
-        let determinedType: "mcq" | "assertion" | "truefalse" | "fillblanks" = "mcq"
-        if (isTF) determinedType = "truefalse"
+        let determinedType: "mcq" | "assertion" | "truefalse" | "fillblanks" | "descriptive" = "mcq"
+        if (isDescriptive) determinedType = "descriptive"
+        else if (isTF) determinedType = "truefalse"
         else if (isAR) determinedType = "assertion"
         else if (isFIB) determinedType = "fillblanks"
 
-        const options = isTF ? ["True", "False"] : q.options
+        const options = isDescriptive ? [] : isTF ? ["True", "False"] : q.options || []
         const correctAnswer = isTF
           ? (String(q.correctAnswer).toLowerCase().includes("false") || q.correctAnswer === "Option B" ? "False" : "True")
           : q.correctAnswer
@@ -1100,24 +1208,26 @@ export default function AIGeneratorPage() {
 
         return {
           type: determinedType,
-          questionFormat: isTF ? "true_false" : isAR ? "assertion" : isFIB ? "fib" : isDiagram ? "diagram" : "mcq",
+          questionFormat: isDescriptive ? "descriptive" : isTF ? "true_false" : isAR ? "assertion" : isFIB ? "fib" : isDiagram ? "diagram" : "mcq",
           assertionText: parsedAR?.assertion,
           reasonText: parsedAR?.reason,
           questionText: q.questionText,
           questionImage: q.questionImage,
           difficulty: q.difficulty,
-          marks: q.marks || currentExamMeta.defaultMarksPerQuestion,
-          negativeMark:
-            q.negativeMark !== undefined
+          marks: q.marks || (isDescriptive ? 5 : currentExamMeta.defaultMarksPerQuestion),
+          negativeMark: isDescriptive
+            ? 0
+            : (q.negativeMark !== undefined
               ? q.negativeMark
-              : defaultNegMark,
+              : defaultNegMark),
           options,
           correctAnswer,
           explanation: q.explanation,
+          wordLimit: q.wordLimit || 150,
         }
       })
 
-      const typeOrder: ("mcq" | "assertion" | "truefalse" | "fillblanks")[] = ["mcq", "assertion", "truefalse", "fillblanks"]
+      const typeOrder: ("mcq" | "assertion" | "truefalse" | "fillblanks" | "descriptive")[] = ["mcq", "assertion", "truefalse", "fillblanks", "descriptive"]
       const groupedTypes = typeOrder.filter(t => mappedQuestions.some(q => q.type === t))
 
       let sections: any[] = []
@@ -1150,12 +1260,13 @@ export default function AIGeneratorPage() {
         })
       }
 
-      const selectedMinDurationMins = (parseInt(minDurationHours || "0", 10) * 60) + parseInt(minDurationMinutes || "0", 10)
       const finalExamDuration = duration || Math.max(toSave.length * 2, 30)
-      const finalMinDuration = selectedMinDurationMins > 0 ? selectedMinDurationMins : Math.round(finalExamDuration * (2 / 3))
 
-      const res = await fetch("/api/exams", {
-        method: "POST",
+      const endpoint = editingExamId ? `/api/exams/${editingExamId}` : "/api/exams"
+      const method = editingExamId ? "PUT" : "POST"
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
@@ -1164,7 +1275,6 @@ export default function AIGeneratorPage() {
           subject: activeSubjectTab || selectedSubject,
           class: selectedGrade === "both" ? "11th + 12th" : `${selectedGrade}th`,
           duration: finalExamDuration,
-          minDuration: finalMinDuration,
           totalMarks: examTotalMarks || totalMarks,
           passMarks: passMarks || Math.floor((examTotalMarks || totalMarks) * 0.4),
           questionsPerMin: questionsPerMinute ? Number(questionsPerMinute) : undefined,
@@ -1185,7 +1295,6 @@ export default function AIGeneratorPage() {
             endTime: formattedEndTime,
           },
           settings: {
-            minDuration: finalMinDuration,
             randomize: evalSettings.randomizeQuestions,
             showResults: evalSettings.showResultsImmediately,
             allowReview: evalSettings.allowReview,
@@ -1211,7 +1320,7 @@ export default function AIGeneratorPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to publish exam")
 
-      toast.success("Exam paper published successfully!")
+      toast.success(editingExamId ? "Exam paper updated successfully!" : "Exam paper published successfully!")
       router.push("/admin/exams")
     } catch (err: any) {
       toast.error(err.message || "Failed to publish exam")
@@ -1279,6 +1388,27 @@ export default function AIGeneratorPage() {
             </span>
           </div>
         </div>
+
+        {editingExamId && (
+          <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>
+                <strong>Editing Mode:</strong> Updating existing exam <strong>&quot;{examTitle}&quot;</strong>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingExamId(null)
+                router.push("/admin/ai-generator")
+              }}
+              className="text-amber-700 hover:text-amber-900 font-semibold underline cursor-pointer text-xs"
+            >
+              Cancel Edit
+            </button>
+          </div>
+        )}
 
         <div className="space-y-6">
         {/* Error Notification */}
@@ -1561,18 +1691,13 @@ export default function AIGeneratorPage() {
             <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-8 shadow-xs">
               {/* Top Header inside card */}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-100">
-                <div className="flex items-center gap-3 sm:gap-3.5">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700 shadow-2xs shrink-0">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-base sm:text-lg font-medium tracking-tight text-slate-900">
-                      Content &amp; Blueprint
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Select chapters and set question format, marks and difficulty level.
-                    </p>
-                  </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900">
+                    Content &amp; Blueprint
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Select chapters and set question format, marks and difficulty level.
+                  </p>
                 </div>
 
                 {/* Selected Summary Badges & Edit Icon */}
@@ -1906,14 +2031,9 @@ export default function AIGeneratorPage() {
 
               {/* Bottom Section: Difficulty Level */}
               <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-                    <BarChart2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs sm:text-sm font-medium text-slate-900">Difficulty Level</p>
-                    <p className="text-[11px] text-slate-400">Choose the challenge level for learners.</p>
-                  </div>
+                <div>
+                  <p className="text-xs sm:text-sm font-semibold text-slate-900">Difficulty Level</p>
+                  <p className="text-[11px] text-slate-400">Choose the challenge level for learners.</p>
                 </div>
 
                 <div className="md:w-80">
@@ -2218,6 +2338,19 @@ export default function AIGeneratorPage() {
                           True / False ({formatCounts.true_false})
                         </button>
                       )}
+                      {formatCounts.descriptive > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFormatFilter("descriptive")}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer whitespace-nowrap ${
+                            formatFilter === "descriptive"
+                              ? "bg-emerald-600 text-white shadow-xs"
+                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Descriptive ({formatCounts.descriptive})
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -2294,16 +2427,18 @@ export default function AIGeneratorPage() {
                       const isSelected = selectedQuestionIds.has(q.id)
                       const isExpanded = expandedSolutions.has(q.id)
                       const qFormat = getQuestionFormat(q)
+                      const isDescriptive = qFormat === "descriptive" || q.type === "descriptive"
                       const isTF = qFormat === "true_false"
                       const parsedAR = parseAssertionReason(q.questionText)
                       const isAR = qFormat === "assertion" || Boolean(parsedAR)
 
-                      const displayOptions = isTF ? ["True", "False"] : q.options
+                      const displayOptions = isTF ? ["True", "False"] : (q.options || [])
                       const displayCorrectAnswer = isTF
                         ? (String(q.correctAnswer).toLowerCase().includes("false") || q.correctAnswer === "Option B" ? "False" : "True")
                         : q.correctAnswer
 
                       const formatLabel =
+                        isDescriptive ? "Descriptive" :
                         isTF ? "True / False" :
                         isAR ? "Assertion & Reason" :
                         qFormat === "diagram" ? "Diagram Based" :
@@ -2371,6 +2506,8 @@ export default function AIGeneratorPage() {
                                     ? "bg-indigo-50 text-indigo-800 border-indigo-200"
                                     : isTF
                                     ? "bg-cyan-50 text-cyan-800 border-cyan-200"
+                                    : isDescriptive
+                                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                                     : "bg-blue-50 text-blue-800 border-blue-200"
                               }`}>
                                 {formatLabel}
@@ -2427,46 +2564,76 @@ export default function AIGeneratorPage() {
                             </div>
                           )}
 
-                          {/* Options Grid */}
-                          <div className={`grid gap-2.5 sm:gap-3 pl-0 sm:pl-8 mb-4 ${isTF ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
-                            {displayOptions.map((opt, oi) => {
-                              const isCorrect = opt === displayCorrectAnswer
-                              const label = isTF ? (opt === "True" ? "T" : "F") : ["A", "B", "C", "D"][oi]
-
-                              return (
-                                <div
-                                  key={oi}
-                                  className={`p-3 sm:p-3.5 rounded-xl border flex items-start gap-2.5 sm:gap-3 transition-all ${
-                                    isCorrect
-                                      ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-normal shadow-2xs"
-                                      : "bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white"
-                                  }`}
-                                >
-                                  <span
-                                    className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg text-xs font-medium flex items-center justify-center shrink-0 mt-0.5 ${
-                                      isCorrect
-                                        ? "bg-emerald-600 text-white shadow-2xs"
-                                        : isTF
-                                        ? "bg-slate-200 text-slate-700"
-                                        : "bg-white border border-slate-200 text-slate-700"
-                                    }`}
-                                  >
-                                    {isCorrect ? "✓" : label}
+                          {/* Descriptive Model Answer & Rubric OR MCQ Options Grid */}
+                          {isDescriptive ? (
+                            <div className="space-y-3 pl-0 sm:pl-8 mb-4">
+                              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                                <div className="flex items-center justify-between gap-2 mb-1.5">
+                                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-700">
+                                    Model / Reference Answer
                                   </span>
-
-                                  <div className="flex-1 text-xs sm:text-sm font-normal pt-0.5 leading-relaxed overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                                    <MathRenderer content={opt} />
-                                  </div>
-
-                                  {isCorrect && (
-                                    <span className="text-[10px] font-medium text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-1.5 py-0.5 rounded shrink-0 self-start mt-0.5">
-                                      Correct
+                                  {q.wordLimit && (
+                                    <span className="text-[11px] text-slate-500 font-medium bg-white border border-slate-200 px-2 py-0.5 rounded">
+                                      Word Limit: ~{q.wordLimit} words
                                     </span>
                                   )}
                                 </div>
-                              )
-                            })}
-                          </div>
+                                <div className="text-xs sm:text-sm font-normal text-slate-800 leading-relaxed overflow-x-auto">
+                                  <MathRenderer content={q.correctAnswer || "Model answer / key concepts to be evaluated by AI."} />
+                                </div>
+                              </div>
+                              {q.explanation && (
+                                <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-200/60">
+                                  <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-900 block mb-1">
+                                    Scoring Rubric &amp; Key Evaluation Points
+                                  </span>
+                                  <div className="text-xs sm:text-sm font-normal text-emerald-950 leading-relaxed overflow-x-auto">
+                                    <MathRenderer content={q.explanation} />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className={`grid gap-2.5 sm:gap-3 pl-0 sm:pl-8 mb-4 ${isTF ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
+                              {displayOptions.map((opt, oi) => {
+                                const isCorrect = opt === displayCorrectAnswer
+                                const label = isTF ? (opt === "True" ? "T" : "F") : ["A", "B", "C", "D"][oi]
+
+                                return (
+                                  <div
+                                    key={oi}
+                                    className={`p-3 sm:p-3.5 rounded-xl border flex items-start gap-2.5 sm:gap-3 transition-all ${
+                                      isCorrect
+                                        ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-normal shadow-2xs"
+                                        : "bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white"
+                                    }`}
+                                  >
+                                    <span
+                                      className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg text-xs font-medium flex items-center justify-center shrink-0 mt-0.5 ${
+                                        isCorrect
+                                          ? "bg-emerald-600 text-white shadow-2xs"
+                                          : isTF
+                                          ? "bg-slate-200 text-slate-700"
+                                          : "bg-white border border-slate-200 text-slate-700"
+                                      }`}
+                                    >
+                                      {isCorrect ? "✓" : label}
+                                    </span>
+
+                                    <div className="flex-1 text-xs sm:text-sm font-normal pt-0.5 leading-relaxed overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                                      <MathRenderer content={opt} />
+                                    </div>
+
+                                    {isCorrect && (
+                                      <span className="text-[10px] font-medium text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-1.5 py-0.5 rounded shrink-0 self-start mt-0.5">
+                                        Correct
+                                      </span>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
 
                           {/* Solution Accordion */}
                           <div className="pl-0 sm:pl-8 pt-1">
@@ -2569,55 +2736,18 @@ export default function AIGeneratorPage() {
                       </div>
                     </div>
 
-                    {/* Row 2: Questions Per Minute & Minimum Exam Duration */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-medium text-slate-500 mb-1.5">
-                          Questions Per Minute <span className="text-slate-400 font-normal">(Optional)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={questionsPerMinute}
-                          onChange={(e) => setQuestionsPerMinute(e.target.value)}
-                          placeholder="e.g., 1.5"
-                          className="w-full px-3.5 py-2 text-xs font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-medium text-slate-500 mb-1.5">
-                          Minimum Exam Duration <span className="text-red-500">*</span>
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="relative">
-                            <select
-                              value={minDurationHours}
-                              onChange={(e) => setMinDurationHours(e.target.value)}
-                              className="w-full appearance-none px-3.5 py-2 text-xs font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-8"
-                            >
-                              <option value="0">0 Hr</option>
-                              <option value="1">1 Hr</option>
-                              <option value="2">2 Hr</option>
-                              <option value="3">3 Hr</option>
-                            </select>
-                            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                          </div>
-
-                          <div className="relative">
-                            <select
-                              value={minDurationMinutes}
-                              onChange={(e) => setMinDurationMinutes(e.target.value)}
-                              className="w-full appearance-none px-3.5 py-2 text-xs font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-8"
-                            >
-                              <option value="00">00 Min</option>
-                              <option value="15">15 Min</option>
-                              <option value="30">30 Min</option>
-                              <option value="45">45 Min</option>
-                            </select>
-                            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                          </div>
-                        </div>
-                      </div>
+                    {/* Row 2: Questions Per Minute */}
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-500 mb-1.5">
+                        Questions Per Minute <span className="text-slate-400 font-normal">(Optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={questionsPerMinute}
+                        onChange={(e) => setQuestionsPerMinute(e.target.value)}
+                        placeholder="e.g., 1.5"
+                        className="w-full px-3.5 py-2 text-xs font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
+                      />
                     </div>
 
                     {/* Instructions Section */}
@@ -3301,10 +3431,10 @@ export default function AIGeneratorPage() {
                   {creatingExam ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
-                      <span>Publishing...</span>
+                      <span>{editingExamId ? "Updating..." : "Publishing..."}</span>
                     </>
                   ) : (
-                    <span>Publish Exam</span>
+                    <span>{editingExamId ? "Update Exam Paper" : "Publish Exam"}</span>
                   )}
                 </button>
               </div>
@@ -3348,34 +3478,74 @@ export default function AIGeneratorPage() {
                     {errorMsg}
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={
-                    isGenerating ||
-                    (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
-                    totalQuestions === 0
-                  }
-                  className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
-                      <span>
-                        {generationStep === 1
-                          ? "Analyzing PYQs..."
-                          : generationStep === 2
-                          ? "Generating Parallel Batches (Fast AI)..."
-                          : "Validating Questions & LaTeX..."}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 text-amber-300" />
-                      <span>Create Questions ({totalQuestions})</span>
-                    </>
-                  )}
-                </button>
+                {generatedQuestions.length > 0 ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      disabled={
+                        isGenerating ||
+                        (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
+                        totalQuestions === 0
+                      }
+                      className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-xs active:scale-[0.99]"
+                      title="Re-run AI question generation"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                          <span>Generating ({totalQuestions})...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 text-amber-500" />
+                          <span>Regenerate Questions ({totalQuestions})</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentStep(3)
+                        window.scrollTo({ top: 0, behavior: "smooth" })
+                      }}
+                      className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
+                    >
+                      <span>Next: View Questions ({generatedQuestions.length})</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={
+                      isGenerating ||
+                      (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
+                      totalQuestions === 0
+                    }
+                    className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                        <span>
+                          {generationStep === 1
+                            ? "Analyzing PYQs..."
+                            : generationStep === 2
+                            ? "Generating Parallel Batches (Fast AI)..."
+                            : "Validating Questions & LaTeX..."}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>Create Questions ({totalQuestions})</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             )}
 
@@ -3494,50 +3664,97 @@ export default function AIGeneratorPage() {
               />
             </div>
 
-            <div className="space-y-2.5">
-              <label className="text-xs font-medium text-gray-700 block">
-                Options &amp; Correct Answer:
-              </label>
-              {editingQuestion.options.map((opt, i) => (
-                <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <div className="flex items-center gap-2 flex-1">
-                    <span className="w-6 text-xs font-medium text-gray-500 shrink-0">
-                      {["A", "B", "C", "D"][i]}:
-                    </span>
+            {(editingQuestion.type === "descriptive" || getQuestionFormat(editingQuestion) === "descriptive") ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-700 block mb-1">
+                    Model / Reference Answer (Evaluated by AI Examiner):
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={editingQuestion.correctAnswer || ""}
+                    onChange={(e) =>
+                      setEditingQuestion({ ...editingQuestion, correctAnswer: e.target.value })
+                    }
+                    placeholder="Provide the expected theoretical concepts, derivation steps, or key points..."
+                    className="w-full p-3 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 text-[#1E293B] font-mono focus:outline-none focus:border-[#2D3A4A]"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                      Marks:
+                    </label>
                     <input
-                      type="text"
-                      value={opt}
-                      onChange={(e) => {
-                        const newOpts = [...editingQuestion.options]
-                        newOpts[i] = e.target.value
-                        setEditingQuestion({
-                          ...editingQuestion,
-                          options: newOpts,
-                          correctAnswer:
-                            editingQuestion.correctAnswer === opt
-                              ? e.target.value
-                              : editingQuestion.correctAnswer,
-                        })
-                      }}
-                      className="flex-1 p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#1E293B] font-mono focus:outline-none focus:border-[#2D3A4A]"
+                      type="number"
+                      value={editingQuestion.marks || 5}
+                      onChange={(e) =>
+                        setEditingQuestion({ ...editingQuestion, marks: Number(e.target.value) || 0 })
+                      }
+                      className="w-full p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#1E293B] focus:outline-none focus:border-[#2D3A4A]"
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditingQuestion({ ...editingQuestion, correctAnswer: opt })
-                    }
-                    className={`self-end sm:self-auto px-3 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer shrink-0 ${
-                      editingQuestion.correctAnswer === opt
-                        ? "bg-emerald-600 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    {editingQuestion.correctAnswer === opt ? "Correct Answer" : "Set Correct"}
-                  </button>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                      Approx. Word Limit:
+                    </label>
+                    <input
+                      type="number"
+                      value={editingQuestion.wordLimit || 150}
+                      onChange={(e) =>
+                        setEditingQuestion({ ...editingQuestion, wordLimit: Number(e.target.value) || 0 })
+                      }
+                      className="w-full p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#1E293B] focus:outline-none focus:border-[#2D3A4A]"
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                <label className="text-xs font-medium text-gray-700 block">
+                  Options &amp; Correct Answer:
+                </label>
+                {(editingQuestion.options || []).map((opt, i) => (
+                  <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="w-6 text-xs font-medium text-gray-500 shrink-0">
+                        {["A", "B", "C", "D"][i]}:
+                      </span>
+                      <input
+                        type="text"
+                        value={opt}
+                        onChange={(e) => {
+                          const newOpts = [...(editingQuestion.options || [])]
+                          newOpts[i] = e.target.value
+                          setEditingQuestion({
+                            ...editingQuestion,
+                            options: newOpts,
+                            correctAnswer:
+                              editingQuestion.correctAnswer === opt
+                                ? e.target.value
+                                : editingQuestion.correctAnswer,
+                          })
+                        }}
+                        className="flex-1 p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#1E293B] font-mono focus:outline-none focus:border-[#2D3A4A]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditingQuestion({ ...editingQuestion, correctAnswer: opt })
+                      }
+                      className={`self-end sm:self-auto px-3 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer shrink-0 ${
+                        editingQuestion.correctAnswer === opt
+                          ? "bg-emerald-600 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      {editingQuestion.correctAnswer === opt ? "Correct Answer" : "Set Correct"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div>
               <label className="text-xs font-medium text-gray-700 block mb-1">
@@ -3593,5 +3810,22 @@ export default function AIGeneratorPage() {
         />
       )}
     </div>
+  )
+}
+
+export default function AIGeneratorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
+          <div className="flex items-center gap-3 text-gray-500">
+            <Loader2 className="animate-spin text-slate-700" size={24} />
+            <span className="text-sm font-medium">Loading Competitive Test Studio...</span>
+          </div>
+        </div>
+      }
+    >
+      <AIGeneratorContent />
+    </Suspense>
   )
 }

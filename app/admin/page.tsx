@@ -5,9 +5,9 @@ import AdminDashboardClient from "./AdminDashboardClient"
 export default async function AdminPage() {
   const session = await getSession()
 
-  // If not logged in, redirect to admin login form
+  // If not logged in, redirect to institute login form
   if (!session) {
-    redirect("/admin/login")
+    redirect("/institute/login")
   }
 
   // If super admin, redirect to institutes management portal

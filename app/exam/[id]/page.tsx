@@ -450,7 +450,17 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
             </div>
 
             {errors.submit && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 font-medium">{errors.submit}</div>
+              <div className="p-4 bg-red-50/95 border border-red-200 rounded-xl text-sm text-red-700 flex items-start gap-3 shadow-xs">
+                <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-semibold leading-relaxed">{errors.submit}</p>
+                  {errors.submit.toLowerCase().includes("deactivat") && (
+                    <p className="text-xs text-red-600/90">
+                      If you believe this is an error, please reach out to your coaching institute administrator.
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
             {existingAttempt && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">

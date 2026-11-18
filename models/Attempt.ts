@@ -18,6 +18,17 @@ export interface IAttempt extends Document {
     totalPassed?: number
     totalCases?: number
     manualScore?: number
+    earnedMarks?: number
+    isCorrect?: boolean
+    feedback?: string
+    aiEvaluation?: {
+      score?: number
+      maxScore?: number
+      verdict?: string
+      whyRight?: string
+      whyWrong?: string
+      feedback?: string
+    }
   }[]
   score?: number
   manualScore?: number
@@ -80,6 +91,17 @@ const AttemptSchema = new Schema<IAttempt>(
         totalPassed: Number,
         totalCases: Number,
         manualScore: { type: Number },
+        earnedMarks: { type: Number },
+        isCorrect: { type: Boolean },
+        feedback: { type: String },
+        aiEvaluation: {
+          score: Number,
+          maxScore: Number,
+          verdict: String,
+          whyRight: String,
+          whyWrong: String,
+          feedback: String,
+        },
       },
     ],
     score: Number,

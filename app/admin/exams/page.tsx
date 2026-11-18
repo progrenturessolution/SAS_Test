@@ -6,6 +6,7 @@ import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Plus, Share2, Graduation
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { ExamActionMenu } from "@/components/ExamActionMenu"
 import { toast } from "sonner"
+import { getExamEditUrl } from "@/lib/examEditHelper"
 
 interface Exam {
   _id: string
@@ -17,6 +18,7 @@ interface Exam {
   status: string
   createdAt: string
   proctoring: { enabled: boolean; maxWarnings: number }
+  examType?: string
 }
 
 export default function ExamsListPage() {
@@ -259,7 +261,7 @@ export default function ExamsListPage() {
                         <span className="truncate">{copied === exam._id ? "Copied!" : "Copy Link"}</span>
                       </button>
                       <Link
-                        href={`/admin/exams/${exam._id}/edit`}
+                        href={getExamEditUrl(exam)}
                         className="flex-1 py-1.5 px-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1.5 transition-colors text-center"
                       >
                         <Pencil size={13} className="text-emerald-500 shrink-0" />

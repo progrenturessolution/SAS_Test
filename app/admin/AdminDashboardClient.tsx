@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Eye, Pencil, Trash2, Link2, BarChart2, UserCheck, FileText, PlayCircle, HelpCircle, Users, Building2, ShieldAlert, Lock } from "lucide-react"
 import { ExamActionMenu } from "@/components/ExamActionMenu"
 import { toast } from "sonner"
+import { getExamEditUrl } from "@/lib/examEditHelper"
 
 interface Stats {
   isSuperAdmin?: boolean
@@ -35,6 +36,7 @@ interface Exam {
   duration: number
   status: string
   createdAt: string
+  examType?: string
 }
 
 export default function AdminDashboardClient() {
@@ -56,7 +58,7 @@ export default function AdminDashboardClient() {
     fetch("/api/admin/stats")
       .then((r) => {
         if (r.status === 401 || r.status === 403) {
-          router.replace("/admin/login")
+          router.replace("/institute/login")
           return null
         }
         return r.json()
@@ -69,7 +71,7 @@ export default function AdminDashboardClient() {
         }
       })
       .catch(() => {
-        router.replace("/admin/login")
+        router.replace("/institute/login")
       })
     fetch("/api/exams").then((r) => r.json()).then((d) => setExams(d.exams || []))
   }, [router])
@@ -325,7 +327,7 @@ export default function AdminDashboardClient() {
                     <span className="truncate">{copied === exam._id ? "Copied!" : "Copy Link"}</span>
                   </button>
                   <Link
-                    href={`/admin/exams/${exam._id}/edit`}
+                    href={getExamEditUrl(exam)}
                     className="flex-1 py-1.5 px-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1.5 transition-colors text-center"
                   >
                     <Pencil size={13} className="text-emerald-500 shrink-0" />

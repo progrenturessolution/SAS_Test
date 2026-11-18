@@ -24,16 +24,47 @@ export async function POST(req: Request) {
 
     if (exam.instituteId) {
       const student = await User.findOne({
-        email: normalizedEmail,
-        rollNumber: normalizedRollNumber,
         role: "student",
         instituteId: exam.instituteId,
+        $or: [
+          { email: normalizedEmail },
+          { rollNumber: normalizedRollNumber },
+        ],
       })
-      if (!student || !password || !(await student.comparePassword(password))) {
+
+      if (!student) {
         return NextResponse.json(
           { error: "Only students registered by this coaching institute can enter this exam." },
           { status: 403 }
         )
+      }
+
+      if (student.status === "deactivated" || (student as any).isActive === false) {
+        const reason =
+          (student as any).deactivationReason?.trim() ||
+          "Your student account has been deactivated. Please contact your coaching administrator."
+        return NextResponse.json({ error: reason }, { status: 403 })
+      }
+
+      if (!password || !(await student.comparePassword(password))) {
+        return NextResponse.json(
+          { error: "Invalid student credentials or password." },
+          { status: 403 }
+        )
+      }
+    } else {
+      const student = await User.findOne({
+        role: "student",
+        $or: [
+          { email: normalizedEmail },
+          { rollNumber: normalizedRollNumber },
+        ],
+      })
+      if (student && (student.status === "deactivated" || (student as any).isActive === false)) {
+        const reason =
+          (student as any).deactivationReason?.trim() ||
+          "Your student account has been deactivated. Please contact your coaching administrator."
+        return NextResponse.json({ error: reason }, { status: 403 })
       }
     }
 

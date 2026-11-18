@@ -3,18 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  Layers,
-  Users,
-  BarChart2,
-  Home,
-  ArrowRight,
-  Loader2,
-} from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 interface AdminLoginClientProps {
   portalType: "institute" | "admin"
@@ -120,20 +109,11 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
 
             {/* 3 Feature Pills */}
             <div className="mt-9 flex flex-wrap items-center gap-3.5 text-xs font-semibold text-[#1e293b] sm:text-[13px]">
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-[#475569]" />
-                <span>Create Exams</span>
-              </div>
+              <div>Create Exams</div>
               <span className="text-gray-300">|</span>
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-[#475569]" />
-                <span>Manage Students</span>
-              </div>
+              <div>Manage Students</div>
               <span className="text-gray-300">|</span>
-              <div className="flex items-center gap-2">
-                <BarChart2 className="h-4 w-4 text-[#475569]" />
-                <span>Track Performance</span>
-              </div>
+              <div>Track Performance</div>
             </div>
           </div>
 
@@ -157,8 +137,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-3.5">
               {/* Email Input */}
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <div>
                 <input
                   id="login-email"
                   type="email"
@@ -166,13 +145,12 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={isInstitute ? "Organization Email" : "Admin Email"}
                   required
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-[#0f172a] placeholder:text-gray-400 outline-none transition focus:border-[#0f172a] focus:ring-1 focus:ring-[#0f172a]"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3.5 text-sm text-[#0f172a] placeholder:text-gray-400 outline-none transition focus:border-[#0f172a] focus:ring-1 focus:ring-[#0f172a]"
                 />
               </div>
 
               {/* Password Input */}
               <div className="relative">
-                <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
@@ -180,15 +158,15 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
                   required
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-10 text-sm text-[#0f172a] placeholder:text-gray-400 outline-none transition focus:border-[#0f172a] focus:ring-1 focus:ring-[#0f172a]"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3.5 pr-14 text-sm text-[#0f172a] placeholder:text-gray-400 outline-none transition focus:border-[#0f172a] focus:ring-1 focus:ring-[#0f172a]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 hover:text-gray-800 cursor-pointer select-none"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
 
@@ -214,10 +192,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <span>Sign In</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </>
+                  <span>Sign In</span>
                 )}
               </button>
             </form>
@@ -240,7 +215,6 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
                 className="font-bold text-[#0f172a] hover:underline cursor-pointer inline-flex items-center gap-1"
               >
                 <span>Contact Platform Admin</span>
-                <ArrowRight className="h-3 w-3 inline" />
               </button>
             </div>
           </div>
@@ -258,10 +232,9 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
 
           <Link
             href="/"
-            className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-[#475569] shadow-2xs hover:bg-gray-50 hover:text-[#0f172a] transition-colors"
+            className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-[#475569] shadow-2xs hover:bg-gray-50 hover:text-[#0f172a] transition-colors"
           >
-            <Home className="h-3.5 w-3.5" />
-            <span>Home</span>
+            Home
           </Link>
         </div>
       </footer>

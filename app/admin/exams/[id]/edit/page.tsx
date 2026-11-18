@@ -2784,6 +2784,15 @@ function EditExamContent({ params }: { params: Promise<{ id: string }> }) {
       .then(data => {
         if (!data.exam) { setNotFound(true); setLoading(false); return }
         const exam = data.exam
+        const examTypeStr = String(exam.examType || "").trim().toUpperCase()
+        if (examTypeStr === "OTHER") {
+          router.replace(`/admin/other-exams?edit=${id}`)
+          return
+        }
+        if (["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "COMPETITIVE", "CUET", "NDA", "BITSAT"].includes(examTypeStr)) {
+          router.replace(`/admin/ai-generator?edit=${id}`)
+          return
+        }
         setStep1({
           title: exam.title || "",
           duration: String(exam.duration || ""),

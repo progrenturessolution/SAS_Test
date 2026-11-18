@@ -9,11 +9,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Shield,
   Trash2,
   Info,
   Database,
-  Eye,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -51,12 +49,6 @@ export default function SettingsPage() {
   const [platformName, setPlatformName] = useState("Progrentures Exam Platform")
   const [supportEmail, setSupportEmail] = useState("support@progrentures.com")
   const [supportPhone, setSupportPhone] = useState("+91 93094 70958")
-
-  // Password change state
-  const [passForm, setPassForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" })
-  const [passwordError, setPasswordError] = useState("")
-  const [passwordSuccess, setPasswordSuccess] = useState("")
-  const [passwordChanging, setPasswordChanging] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -166,53 +158,9 @@ export default function SettingsPage() {
     }
   }
 
-  // Handle Password Change
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setPasswordError("")
-    setPasswordSuccess("")
-
-    if (passForm.newPassword !== passForm.confirmPassword) {
-      setPasswordError("New passwords do not match")
-      return
-    }
-
-    if (passForm.newPassword.length < 6) {
-      setPasswordError("New password must be at least 6 characters long")
-      return
-    }
-
-    setPasswordChanging(true)
-    try {
-      const res = await fetch("/api/admin/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          currentPassword: passForm.currentPassword,
-          newPassword: passForm.newPassword,
-        }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        setPasswordError(data.error || "Failed to update password")
-        toast.error(data.error || "Failed to update password")
-      } else {
-        setPasswordSuccess("Password updated successfully!")
-        toast.success("Password updated successfully!")
-        setPassForm({ currentPassword: "", newPassword: "", confirmPassword: "" })
-      }
-    } catch {
-      setPasswordError("An unexpected error occurred")
-    } finally {
-      setPasswordChanging(false)
-    }
-  }
-
   if (loading) {
     return (
-      <div className="p-8 max-w-5xl flex items-center justify-center min-h-[50vh]">
+      <div className="p-8 max-w-7xl mx-auto flex items-center justify-center min-h-[50vh]">
         <div className="flex items-center gap-3 text-sm font-semibold text-gray-500">
           <Loader2 size={18} className="animate-spin text-[#2D3A4A]" /> Loading settings...
         </div>
@@ -221,16 +169,16 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-6 sm:p-8 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            {isInstitute ? "Coaching Settings & Branding" : "Platform Settings"}
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+            {isInstitute ? "Coaching Branding & Theme" : "Platform Settings"}
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
             {isInstitute
-              ? "Upload your coaching logo, customize brand theme color, and manage organization details."
+              ? "Upload your coaching logo and customize the brand theme color across your portal and student exams."
               : "Manage global platform credentials and operational preferences."}
           </p>
         </div>
@@ -246,46 +194,46 @@ export default function SettingsPage() {
 
       {isInstitute ? (
         /* ═══════════════════════════════════════════════════════════════════
-           COACHING INSTITUTE SETTINGS VIEW
+           COACHING INSTITUTE BRANDING & THEME VIEW (FULL WIDTH)
         ═══════════════════════════════════════════════════════════════════ */
-        <div className="space-y-6">
+        <div className="space-y-6 sm:space-y-8">
           {/* 1. Brand Logo Upload Card */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-2xs">
-            <div className="flex items-center justify-between mb-5">
+          <div className="bg-white rounded-2xl border border-gray-200/90 p-6 sm:p-8 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
                   style={{ backgroundColor: themeColor }}
                 >
-                  <Building2 size={18} />
+                  <Building2 size={20} />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">Coaching Institute Logo</h2>
-                  <p className="text-xs text-gray-500">
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900">Coaching Institute Logo</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Your logo replaces the default platform logo in your portal header and on all student exam screens.
                   </p>
                 </div>
               </div>
-              <span className="text-[10px] font-bold text-blue-700 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200/80">
+              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full border border-slate-200 w-fit">
                 White-Label Branding
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
               {/* Preview Box */}
-              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/60 min-h-[160px]">
+              <div className="lg:col-span-5 flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/60 min-h-[190px] w-full">
                 {logo ? (
                   <div className="space-y-3 text-center">
-                    <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-2xs inline-block">
+                    <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-2xs inline-block">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={logo}
                         alt="Uploaded Coaching Logo"
-                        className="max-h-20 max-w-[240px] w-auto object-contain mx-auto"
+                        className="max-h-24 max-w-[280px] w-auto object-contain mx-auto"
                       />
                     </div>
                     <div className="flex items-center justify-center gap-2">
-                      <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                         Active Brand Logo
                       </span>
                       <button
@@ -295,7 +243,7 @@ export default function SettingsPage() {
                           if (fileInputRef.current) fileInputRef.current.value = ""
                           toast.info("Logo removed. Click 'Save All Changes' to confirm.")
                         }}
-                        className="text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-0.5 rounded transition-colors inline-flex items-center gap-1 cursor-pointer"
+                        className="text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-0.5 rounded transition-colors inline-flex items-center gap-1 cursor-pointer"
                       >
                         <Trash2 size={12} /> Remove
                       </button>
@@ -320,7 +268,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Upload Controls */}
-              <div className="space-y-4">
+              <div className="lg:col-span-7 space-y-4">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -333,10 +281,10 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <label
                     htmlFor="logo-upload-input"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-xs font-bold shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white text-xs sm:text-sm font-bold shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer"
                     style={{ backgroundColor: themeColor }}
                   >
-                    <Upload size={15} />
+                    <Upload size={16} />
                     {logo ? "Upload / Replace Logo" : "Upload Coaching Logo"}
                   </label>
                   <p className="text-[11px] text-gray-400 leading-relaxed">
@@ -344,7 +292,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200/70 text-[11px] text-amber-800 leading-relaxed">
+                <div className="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200/70 text-xs text-amber-800 leading-relaxed">
                   <strong>Student Exam Visibility:</strong> When students open or submit tests created by your coaching, your logo will appear on their exam header instead of any platform branding.
                 </div>
               </div>
@@ -352,36 +300,36 @@ export default function SettingsPage() {
           </div>
 
           {/* 2. Brand Theme Color Customizer Card */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-2xs">
-            <div className="flex items-center justify-between mb-5">
+          <div className="bg-white rounded-2xl border border-gray-200/90 p-6 sm:p-8 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
                   style={{ backgroundColor: themeColor }}
                 >
-                  <Palette size={18} />
+                  <Palette size={20} />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">Theme & Brand Color</h2>
-                  <p className="text-xs text-gray-500">
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900">Theme & Brand Color</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Customize your coaching portal and student exam accent colors to match your institute branding.
                   </p>
                 </div>
               </div>
               <div
-                className="flex items-center gap-2 px-3 py-1 rounded-lg border text-white text-xs font-mono font-bold shadow-2xs"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-white text-xs font-mono font-bold shadow-2xs w-fit"
                 style={{ backgroundColor: themeColor, borderColor: themeColor }}
               >
                 <span>{themeColor}</span>
               </div>
             </div>
 
-            {/* Presets Grid */}
-            <div className="space-y-4 mb-6">
+            {/* Presets Grid - Wide 8 Columns on Large Screens */}
+            <div className="space-y-3 mb-6">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                 Choose Brand Palette Preset
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-3.5">
                 {THEME_PRESETS.map((preset) => {
                   const isSelected = themeColor.toLowerCase() === preset.hex.toLowerCase()
                   return (
@@ -413,8 +361,8 @@ export default function SettingsPage() {
             </div>
 
             {/* Custom Color Input & Live Preview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100 items-center">
-              <div className="space-y-2">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-5 border-t border-gray-100 items-center">
+              <div className="lg:col-span-6 space-y-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                   Or Pick Custom Hex Color
                 </label>
@@ -445,110 +393,31 @@ export default function SettingsPage() {
               </div>
 
               {/* Live Preview Card */}
-              <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
+              <div className="lg:col-span-6 p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
                 <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                   Live UI Element Preview
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    className="px-3.5 py-1.5 rounded-lg text-white text-xs font-bold shadow-2xs"
+                    className="px-4 py-2 rounded-lg text-white text-xs font-bold shadow-2xs"
                     style={{ backgroundColor: themeColor }}
                   >
                     Primary Button
                   </button>
                   <span
-                    className="text-xs font-bold px-2.5 py-1 rounded-md text-white shadow-2xs"
+                    className="text-xs font-bold px-3 py-1.5 rounded-md text-white shadow-2xs"
                     style={{ backgroundColor: themeColor }}
                   >
                     Active Tab
                   </span>
                   <div
-                    className="w-7 h-7 rounded-lg text-white flex items-center justify-center text-xs font-bold shadow-2xs"
+                    className="w-8 h-8 rounded-lg text-white flex items-center justify-center text-xs font-bold shadow-2xs"
                     style={{ backgroundColor: themeColor }}
                   >
                     A
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Institute Contact & Profile Details Card */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-2xs">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
-                <Info size={16} />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-gray-900">Institute Profile & Contact</h2>
-                <p className="text-xs text-gray-500">Official information shown on exam papers and printable copies.</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Coaching / Institute Name</label>
-                <input
-                  type="text"
-                  value={instituteName}
-                  onChange={(e) => setInstituteName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 font-semibold text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Official Email</label>
-                <input
-                  type="email"
-                  disabled
-                  value={email}
-                  className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl font-medium text-sm text-gray-500 cursor-not-allowed"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Contact Phone</label>
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 XXXXX XXXXX"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 font-medium text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Contact Person</label>
-                <input
-                  type="text"
-                  value={contactPerson}
-                  onChange={(e) => setContactPerson(e.target.value)}
-                  placeholder="Director / Coordinator"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 font-medium text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">City</label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="e.g. Pune, Mumbai, Delhi"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 font-medium text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Address</label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Branch / Campus Address"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 font-medium text-sm"
-                />
               </div>
             </div>
           </div>
@@ -612,72 +481,6 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-
-      {/* 4. Change Account Password Card */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-2xs">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600">
-            <Shield size={16} />
-          </div>
-          <div>
-            <h2 className="font-bold text-gray-900">Change Account Password</h2>
-            <p className="text-xs text-gray-500">Update your login security credentials.</p>
-          </div>
-        </div>
-
-        <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
-          {passwordError && (
-            <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold flex items-center gap-2">
-              <AlertCircle size={14} /> {passwordError}
-            </div>
-          )}
-          {passwordSuccess && (
-            <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-semibold flex items-center gap-2 border border-emerald-200">
-              <CheckCircle2 size={14} /> {passwordSuccess}
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Password</label>
-            <input
-              type="password"
-              required
-              value={passForm.currentPassword}
-              onChange={(e) => setPassForm((f) => ({ ...f, currentPassword: e.target.value }))}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 text-sm font-semibold"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">New Password</label>
-            <input
-              type="password"
-              required
-              value={passForm.newPassword}
-              onChange={(e) => setPassForm((f) => ({ ...f, newPassword: e.target.value }))}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 text-sm font-semibold"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Confirm New Password</label>
-            <input
-              type="password"
-              required
-              value={passForm.confirmPassword}
-              onChange={(e) => setPassForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 text-sm font-semibold"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={passwordChanging}
-            style={{ backgroundColor: themeColor }}
-            className="px-6 py-2.5 text-white text-xs font-bold rounded-xl uppercase tracking-wider hover:opacity-90 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-          >
-            {passwordChanging ? "Updating..." : "Update Password"}
-          </button>
-        </form>
-      </div>
 
       {saveError && (
         <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold flex items-center gap-2">

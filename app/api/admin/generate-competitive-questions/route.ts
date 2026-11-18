@@ -104,26 +104,31 @@ export async function POST(req: Request) {
           .join("\n")
       : ""
 
+    const isMedicalEngg = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "BITSAT", "VITEEE"].includes(String(exam).toUpperCase())
+    const examSpecialization = isMedicalEngg
+      ? "NTA NEET (UG), JEE Main, JEE Advanced, and State MHT-CET entrance examinations"
+      : `${exam} (${subject}) and standard Indian national, state, and academic competitive examinations`
+
     const systemInstruction = `
-You are a senior National Examination Paper Setter and competitive entrance examination researcher specializing in NTA NEET (UG), JEE Main, JEE Advanced, and State MHT-CET.
-Your task is to generate ${count} authentic examination questions for the specified chapter(s): ${chaptersList}.
+You are a senior National Examination Paper Setter and competitive entrance examination researcher specializing in ${examSpecialization}.
+Your task is to generate ${count} authentic examination questions for the specified target: ${exam} (${subject}) on: ${chaptersList}.
 ${topicsList ? `SPECIFIC TOPICS / CONCEPTS TO FOCUS ON: ${topicsList}\n` : ""}
 ${syllabusText ? `UPLOADED SYLLABUS / STUDY MATERIAL EXTRACT:\n${syllabusText.substring(0, 4000)}\n(CRITICAL INSTRUCTION: Formulate questions directly testing the above uploaded syllabus material!)\n` : ""}
 
 CORE REQUIREMENT 1: PREVIOUS YEARS QUESTIONS (PYQs) & MOST FREQUENTLY ASKED CONCEPTS:
-- Base the questions directly on real Previous Years Questions (PYQs) from NEET (2015-2024), JEE Main (2018-2025), JEE Advanced, and MHT-CET, or the most frequently asked, highest-yield repeated question models from these chapters.
-- Ensure the questions reflect actual questions asked by NTA and State boards.
-- For each question, provide an authentic "pyqReference" tag (e.g. "NEET 2023", "NEET 2021 (Repeated Pattern)", "JEE Main 2024 Shift 1", "JEE Main 2022", "MHT-CET 2022", "High Frequency PYQ").
+- Base the questions directly on authentic Previous Years Questions (PYQs) or the most frequently asked, highest-yield repeated question models for ${exam} (${subject}).
+- Ensure the questions reflect actual questions asked in official national and state examination boards.
+- For each question, provide an authentic "pyqReference" tag (e.g. "${exam} 2023", "${exam} 2022", "Repeated PYQ Pattern", "Official Model Pattern").
 
 CORE REQUIREMENT 2: ABSOLUTE ZERO REPETITION / NEVER DUPLICATE:
-- DO NOT REPEAT ANY QUESTIONS. Every single question generated MUST test a distinct concept, different formula, different calculation, or different scientific phenomenon.
+- DO NOT REPEAT ANY QUESTIONS. Every single question generated MUST test a distinct concept, different formula, different rule, or different phenomenon.
 - Never generate two questions with similar numerical values, phrasing, or identical problem statements.
 ${existingListText ? `- STRICT: DO NOT REPEAT OR DUPLICATE ANY OF THESE PREVIOUSLY GENERATED QUESTIONS:\n${existingListText}\n` : ""}
 
 EXAMINATION TARGET: ${exam}
-CLASS / GRADE: Class ${grade === "both" ? "11 & 12 (Full Syllabus)" : grade}
-SUBJECT: ${subject}
-CHAPTERS COVERED: ${chaptersList}
+CLASS / STAGE / LEVEL: ${grade === "both" ? "Full Syllabus" : grade}
+SUBJECT / DOMAIN: ${subject}
+CHAPTERS / TOPICS COVERED: ${chaptersList}
 ${topics ? `SPECIFIC TOPICS / NOTES: ${topics}` : ""}
 DIFFICULTY LEVEL: ${difficulty.toUpperCase()}
 QUESTION PATTERN: ${questionPattern.toUpperCase()}
@@ -237,15 +242,74 @@ The "questionText" MUST contain a fill-in-the-blank "______" or ask to compute a
 Provide 4 distinct choices in the "options" array to fill the blank.
 "correctAnswer" MUST match one of the 4 options.`,
 
+      descriptive: `CRITICAL FORMAT REQUIREMENT (DESCRIPTIVE QUESTIONS):
+All questions in this batch MUST be in-depth Descriptive Questions ("questionFormat": "descriptive", "type": "descriptive").
+Formulate a rich conceptual, theoretical, or mathematical derivation problem (e.g. explain a mechanism, derive a fundamental equation, state laws with proof, or discuss key biological/chemical/physical processes).
+Provide:
+- "correctAnswer": A comprehensive model/reference answer outlining the ideal complete response.
+- "explanation": A detailed scoring rubric listing point-by-point key concepts, formulas, and criteria required for marks.
+- "wordLimit": Recommended word limit between 150 and 250 words.
+- "options": Empty array [].`,
+
       true_false: `CRITICAL FORMAT REQUIREMENT:
 All questions in this batch MUST be True or False questions ("questionFormat": "true_false").
 The "questionText" must start with "True or False: " followed by a clear conceptual statement.
 The "options" array MUST be exactly ["True", "False"].
-"correctAnswer" MUST be either "True" or "False".`
+"correctAnswer" MUST be either "True" or "False".`,
+
+      mcq_multiple: `CRITICAL FORMAT REQUIREMENT (MULTIPLE CORRECT OPTIONS):
+All questions in this batch MUST be Multiple Choice with One or More than One Correct Options ("questionFormat": "mcq_multiple").
+Provide 4 distinct answer choices in the "options" array (A, B, C, D).
+"correctAnswer" MUST list the correct option combinations (e.g. "(A) and (C) only" or the exact matching text).`,
+
+      match_following: `CRITICAL FORMAT REQUIREMENT:
+All questions in this batch MUST be Match the Following questions ("questionFormat": "match_following").
+In "questionText", format two distinct columns:
+List-I:
+(P) ...
+(Q) ...
+(R) ...
+(S) ...
+List-II:
+(1) ...
+(2) ...
+(3) ...
+(4) ...
+Provide 4 distinct matching code combinations in "options" (e.g. "P-2, Q-3, R-4, S-1").
+"correctAnswer" MUST match one of the 4 options.`,
+
+      numerical: `CRITICAL FORMAT REQUIREMENT:
+All questions in this batch MUST be Numerical Answer / Integer Type questions ("questionFormat": "numerical").
+The question statement must ask for a precise numerical or integer calculation.
+Provide 4 distinct numerical answer options in "options".
+"correctAnswer" MUST match one of the 4 options.`,
+
+      short_answer: `CRITICAL FORMAT REQUIREMENT:
+All questions in this batch MUST be Short Conceptual Answer questions ("questionFormat": "short_answer").
+Formulate a direct, high-yield question.
+Provide 4 succinct, definitive options.
+"correctAnswer" MUST match one of the 4 options.`,
+
+      long_descriptive: `CRITICAL FORMAT REQUIREMENT:
+All questions in this batch MUST be Comprehensive / Descriptive Case questions ("questionFormat": "long_descriptive").
+Formulate an in-depth analytical question.
+Provide 4 distinct structured conclusions or solutions in "options".
+"correctAnswer" MUST match one of the 4 options.`,
+
+      case_passage: `CRITICAL FORMAT REQUIREMENT:
+All questions in this batch MUST be Case Study / Passage-Based questions ("questionFormat": "case_passage").
+The "questionText" MUST begin with a concise case scenario or comprehension passage (1-2 paragraphs), followed by a specific analytical question testing it.
+Provide 4 distinct options.
+"correctAnswer" MUST match one of the 4 options.`,
+
+      coding_essay: `CRITICAL FORMAT REQUIREMENT:
+All questions in this batch MUST be Analytical / Writing / Evaluation questions ("questionFormat": "coding_essay").
+Provide 4 structured evaluation choices in "options".
+"correctAnswer" MUST match one of the 4 options.`
     }
 
     interface GenerationTask {
-      formatId: "mcq" | "assertion" | "fib" | "true_false" | "diagram"
+      formatId: string
       formatLabel: string
       targetCount: number
       marks: number
@@ -423,14 +487,23 @@ Return raw JSON array ONLY.`
           questionText.toLowerCase().includes("assertion:")
         )
 
+      const isDescriptive =
+        forcedFormat === "descriptive" ||
+        rawFormat === "descriptive" ||
+        q.type === "descriptive" ||
+        forcedFormat === "short_answer" ||
+        forcedFormat === "long_descriptive"
+
       const isDiagram =
-        forcedFormat === "diagram" ||
-        rawFormat === "diagram" ||
-        rawFormat === "diagram_based" ||
-        Boolean(q.questionImage && String(q.questionImage).includes("<svg"))
+        !isDescriptive && (
+          forcedFormat === "diagram" ||
+          rawFormat === "diagram" ||
+          rawFormat === "diagram_based" ||
+          Boolean(q.questionImage && String(q.questionImage).includes("<svg"))
+        )
 
       const isFIB =
-        !isTF && !isAR && !isDiagram && (
+        !isDescriptive && !isTF && !isAR && !isDiagram && (
           forcedFormat === "fib" ||
           rawFormat === "fib" ||
           rawFormat === "fill_in_the_blanks" ||
@@ -438,7 +511,9 @@ Return raw JSON array ONLY.`
           questionText.includes("______")
         )
 
-      const formatType = isTF
+      const formatType = isDescriptive
+        ? "descriptive"
+        : isTF
         ? "true_false"
         : isAR
         ? "assertion"
@@ -451,7 +526,10 @@ Return raw JSON array ONLY.`
       let options: string[] = []
       let correctAnswer = ""
 
-      if (formatType === "true_false") {
+      if (formatType === "descriptive") {
+        options = []
+        correctAnswer = normalizeGeneratedText(q.correctAnswer || "Model reference solution outlining key concepts and derivations.")
+      } else if (formatType === "true_false") {
         options = ["True", "False"]
         const rawAns = String(q.correctAnswer || "").toLowerCase().trim()
         if (rawAns === "false" || rawAns === "f" || rawAns === "option b" || rawAns.includes("false")) {
@@ -479,24 +557,25 @@ Return raw JSON array ONLY.`
       const matchedBlueprint = activeBlueprintFormats.find((b: any) => b.id === formatType)
       const assignedMarks = matchedBlueprint && Number(matchedBlueprint.marks) > 0
         ? Number(matchedBlueprint.marks)
-        : Number(q.marks) || marksPerQuestion
+        : Number(q.marks) || (isDescriptive ? 5 : marksPerQuestion)
 
       const questionImage = normalizeGeneratedText(q.questionImage || q.diagramSvg || q.image || "")
 
       return {
         id: `pyq_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
-        type: isTF ? "truefalse" : isAR ? "assertion" : isFIB ? "fillblanks" : "mcq",
+        type: isDescriptive ? "descriptive" : isTF ? "truefalse" : isAR ? "assertion" : isFIB ? "fillblanks" : "mcq",
         questionFormat: formatType,
         questionText,
         questionImage: questionImage || undefined,
         difficulty: ["easy", "medium", "hard"].includes(q.difficulty) ? q.difficulty : "medium",
         marks: assignedMarks,
-        negativeMark: Number(q.negativeMark ?? negativeMarks),
+        negativeMark: isDescriptive ? 0 : Number(q.negativeMark ?? negativeMarks),
         options,
         correctAnswer,
-        explanation: normalizeGeneratedText(q.explanation || "No explanation provided."),
+        explanation: normalizeGeneratedText(q.explanation || (isDescriptive ? "Comprehensive scoring rubric outlining essential theoretical derivation and steps." : "No explanation provided.")),
         chapter: String(q.chapter || chaptersArray[0] || "General"),
         pyqReference: String(q.pyqReference || `${exam} PYQ Trend`),
+        wordLimit: isDescriptive ? Number(q.wordLimit) || 200 : undefined,
       }
     }
 
@@ -507,6 +586,7 @@ Return raw JSON array ONLY.`
       assertion: [],
       fib: [],
       true_false: [],
+      descriptive: [],
     }
 
     let totalParsed = 0
@@ -533,6 +613,7 @@ Return raw JSON array ONLY.`
             assertion: 0,
             fib: 0,
             true_false: 0,
+            descriptive: 0,
           }
           const requiredByFormat: Record<string, number> = {
             mcq: activeBlueprintFormats.length > 0 ? 0 : count,
@@ -540,6 +621,7 @@ Return raw JSON array ONLY.`
             assertion: 0,
             fib: 0,
             true_false: 0,
+            descriptive: 0,
           }
           if (activeBlueprintFormats.length > 0) {
             for (const fmt of activeBlueprintFormats) {

@@ -90,6 +90,8 @@ export async function GET(
               autoScore = question.marks * (totalPassed / totalCases)
             }
           }
+        } else if (question.type === "descriptive") {
+          autoScore = ans.earnedMarks ?? ans.aiEvaluation?.score ?? ans.manualScore ?? 0
         }
       }
       

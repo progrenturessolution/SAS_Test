@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
     const exams = await Exam.find(
       query,
-      "title subject class duration status createdAt sections.name sections.title sections.questions._id sections.questions.title"
+      "title examType subject class duration status createdAt sections.name sections.title sections.questions._id sections.questions.title"
     )
       .sort({ createdAt: -1 })
       .lean()

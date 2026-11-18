@@ -7,7 +7,6 @@ import { useEffect, useState } from "react"
 import {
   LayoutDashboard,
   FileText,
-  BookOpen,
   Users,
   BarChart2,
   Settings,
@@ -57,9 +56,8 @@ export default function AdminSidebar({
   const instituteNavItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Exams", href: "/admin/exams", icon: FileText },
-    { label: "Competitive Test", href: "/admin/ai-generator", icon: GraduationCap },
-    { label: "Other Exams", href: "/admin/other-exams", icon: Layers, isWip: true },
-    { label: "Question Bank", href: "/admin/questions", icon: BookOpen },
+    { label: "Entrance Exams", href: "/admin/ai-generator", icon: GraduationCap },
+    { label: "Other Exams", href: "/admin/other-exams", icon: Layers },
     { label: "Students", href: "/admin/students", icon: Users },
     { label: "Results", href: "/admin/results", icon: BarChart2 },
   ]
@@ -118,7 +116,7 @@ export default function AdminSidebar({
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" })
-    router.push("/admin/login")
+    router.push(isSuperAdmin ? "/admin/login" : "/institute/login")
     router.refresh()
   }
 
@@ -284,7 +282,7 @@ export default function AdminSidebar({
                   (isExamItem && !hasExamAccess)
                 )
                 const restrictedMessage = isCompetitiveItem
-                  ? "Access Restricted: You do not have permission to create Competitive Tests. Contact administrator."
+                  ? "Access Restricted: You do not have permission to create Entrance Exams. Contact administrator."
                   : "Access Restricted: You do not have permission to create Exams. Contact administrator."
 
                 return (
@@ -482,7 +480,7 @@ export default function AdminSidebar({
               (isExamItem && !hasExamAccess)
             )
             const restrictedMessage = isCompetitiveItem
-              ? "Access Restricted: You do not have permission to create Competitive Tests. Contact administrator."
+              ? "Access Restricted: You do not have permission to create Entrance Exams. Contact administrator."
               : "Access Restricted: You do not have permission to create Exams. Contact administrator."
 
             return (

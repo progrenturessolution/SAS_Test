@@ -9,7 +9,7 @@ import {
 import {
   CheckCircle2, XCircle, BarChart2, ChevronDown,
   Download, Printer, Share2, HelpCircle, Target, FileText,
-  TrendingUp, EyeOff, LayoutDashboard, Mail, Calendar, Check, Bell, Award
+  TrendingUp, EyeOff, LayoutDashboard, Mail, Calendar, Check, Bell, Award, Sparkles
 } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
 import { MathRenderer } from "@/components/exam/MathRenderer"
@@ -49,7 +49,19 @@ interface AnswerData {
   sectionType: string
   answer: string | string[]
   correct?: boolean
+  isCorrect?: boolean
   marks?: number
+  manualScore?: number
+  earnedMarks?: number
+  feedback?: string
+  aiEvaluation?: {
+    score?: number
+    maxScore?: number
+    verdict?: string
+    whyRight?: string
+    whyWrong?: string
+    feedback?: string
+  }
 }
 
 interface AttemptResult {
@@ -112,6 +124,14 @@ interface QuestionAnalysis {
   isCorrect: boolean
   isSkipped: boolean
   marksEarned: number
+  aiEvaluation?: {
+    score?: number
+    maxScore?: number
+    verdict?: string
+    whyRight?: string
+    whyWrong?: string
+    feedback?: string
+  }
 }
 
 // ─── SVG Charts ────────────────────────────────────────────────────────────────
@@ -397,9 +417,19 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
             } else {
               sIncorrect++
             }
+          } else if (q.type === "descriptive") {
+            const earned = studentAns?.earnedMarks ?? studentAns?.manualScore ?? studentAns?.marks ?? 0
+            const aiEval = studentAns?.aiEvaluation
+            marksEarned = earned
+            isCorrect = studentAns?.isCorrect ?? (aiEval?.verdict === "Correct" || earned >= q.marks * 0.85)
+            if (isCorrect || (aiEval?.verdict === "Partially Correct" && earned > 0)) {
+              sCorrect++
+            } else {
+              sIncorrect++
+            }
           } else {
-            // descriptive/coding — can't auto-grade, treat as attempted
-            sCorrect++ // assume submitted = attempted
+            // coding or custom types
+            sCorrect++
             marksEarned = studentAns?.marks ?? 0
           }
           sMarks += marksEarned
@@ -412,6 +442,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
           isCorrect,
           isSkipped: isEmpty,
           marksEarned: Math.round(marksEarned * 100) / 100,
+          aiEvaluation: studentAns?.aiEvaluation,
         })
       }
 
@@ -827,345 +858,249 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
 
 
 
+  const solvedCount = analytics.totalQuestions - analytics.totalSkipped
+  const unsolvedCount = analytics.totalSkipped
+  const solvedPercent = analytics.totalQuestions > 0 ? Math.round((solvedCount / analytics.totalQuestions) * 100) : 0
+
   return (
-    <div className="min-h-screen bg-[#f8f9fc] font-sans">
+    <div className="min-h-screen bg-[#F8F9FD] text-slate-800 font-sans">
       {/* ─── Top Header ───────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between sticky top-0 z-30 print:hidden">
-        <div className="flex items-center gap-3">
+      <header className="bg-white border-b border-slate-100 px-3.5 sm:px-8 py-3 sm:py-3.5 flex items-center justify-between sticky top-0 z-30 print:hidden shadow-2xs">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {examFull?.institute?.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={examFull.institute.logo}
               alt={examFull.institute.name || "Institute"}
-              className="h-8 max-w-[150px] object-contain"
+              className="h-7 sm:h-8 max-w-[120px] sm:max-w-[150px] object-contain shrink-0"
             />
           ) : examFull?.institute?.name ? (
-            <span className="font-bold text-sm text-gray-800">{examFull.institute.name}</span>
+            <span className="font-bold text-xs sm:text-sm text-slate-900 truncate">{examFull.institute.name}</span>
           ) : (
-            <ProcrentureLogo />
+            <div className="scale-85 sm:scale-100 origin-left">
+              <ProcrentureLogo />
+            </div>
           )}
-          <span className="text-sm font-semibold text-[#1a2535] ml-2 hidden sm:inline">Exam Report</span>
+          <span className="text-xs font-semibold text-slate-400 pl-2 border-l border-slate-200 hidden md:inline">
+            Comprehensive Analysis
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <Link
+            href={`/exam/${id}/result?attemptId=${attemptId}`}
+            className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            ← <span className="hidden sm:inline">Back to </span>Summary
+          </Link>
           <button
             onClick={handleDownloadPDF}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           >
-            <Download size={14} /> Download
+            <Download size={13} /> <span className="hidden sm:inline">Download</span>
           </button>
-          {/* <button
-            onClick={() => { navigator.clipboard.writeText(window.location.href) }}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-[#2D3A4A] rounded-lg hover:bg-[#1e2a38] transition-colors"
-          >
-            <Share2 size={14} /> Share
-          </button> */}
         </div>
       </header>
 
-      <main className="max-w-[1100px] mx-auto px-6 py-8">
-        {/* ─── Hero Section ───────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Left: Donut + Exam Info */}
-            <div className="flex items-start gap-6 flex-1">
-              <div className="shrink-0">
-                <DonutChart
-                  segments={showResults ? [
-                  { value: analytics.totalCorrect, color: "#45505F", label: "Correct" },
-                  { value: analytics.totalIncorrect, color: "#94A7C5", label: "Incorrect" },
-                  { value: analytics.totalSkipped, color: "#2D3A4A", label: "Skipped" },
-                  ] : [
-                    { value: analytics.totalCorrect + analytics.totalIncorrect, color: "var(--primary)", label: "Attempted" },
-                    { value: analytics.totalSkipped, color: "#cbd5e1", label: "Skipped" },
-                  ]}
-                  size={140}
-                  strokeWidth={24}
-                  centerLabel={String(analytics.totalQuestions)}
-                  centerSub="Questions"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  {showResults ? (
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${passed ? "bg-[#45505F] text-white" : "bg-[#94A7C5] text-white"}`}>
-                      {passed ? "PASSED" : "FAILED"}
-                    </span>
-                  ) : (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary text-white">
-                      SUBMITTED
-                    </span>
-                  )}
-                  <span className="text-xs text-gray-400">{formattedDate}</span>
+      <main className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6">
+        {/* ─── Top Hero Card (Matching Screenshot) ────────────────────────────────── */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-[0_2px_16px_rgba(0,0,0,0.03)] p-4 sm:p-7">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-center">
+            {/* Left Column: Status, Title, Subtitle & 3 Metrics */}
+            <div className="lg:col-span-6 space-y-3.5 sm:space-y-4">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    passed ? "bg-emerald-600 text-white" : "bg-[#131B2A] text-white"
+                  }`}>
+                    {showResults ? (passed ? "PASSED" : "FAILED") : "SUBMITTED"}
+                  </span>
+                  <span className="text-[11px] sm:text-xs text-slate-400 font-medium">
+                    {formattedDate}
+                  </span>
                 </div>
-                <h1 className="text-xl font-extrabold text-[#1a2535] mb-0.5">{exam.title}</h1>
-                <p className="text-sm text-gray-400 mb-3">
+                <h1 className="text-sm sm:text-lg font-bold text-slate-900 mt-2 leading-snug break-words">
+                  {exam.title}
+                </h1>
+                <p className="text-[11px] sm:text-xs text-slate-400 font-medium mt-0.5">
                   {examFull.class ? `${examFull.class} — ` : ""}{examFull.subject || "Assessment"}
                 </p>
-                <div className="flex items-center gap-6 flex-wrap">
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">
-                      {showResults ? "Your Score" : "Status"}
-                    </p>
-                    <p className="text-lg font-extrabold text-[#1a2535]">
-                      {showResults ? `${displayScore} / ${totalScore}` : "Submitted"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Questions</p>
-                    <p className="text-lg font-extrabold text-[#1a2535]">{analytics.totalQuestions}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Time Taken</p>
-                    <p className="text-lg font-extrabold text-[#1a2535]">{timeTakenStr || "N/A"}</p>
-                  </div>
+              </div>
+
+              {/* 3 Metrics in a row with vertical dividers */}
+              <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-8 pt-1">
+                <div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">
+                    {showResults ? "Your Score" : "Status"}
+                  </p>
+                  <p className="text-sm sm:text-lg font-bold text-slate-900 mt-0.5">
+                    {showResults ? `${displayScore} / ${totalScore}` : "Submitted"}
+                  </p>
+                </div>
+                <div className="h-7 sm:h-8 w-px bg-slate-200" />
+                <div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Questions</p>
+                  <p className="text-sm sm:text-lg font-bold text-slate-900 mt-0.5">{analytics.totalQuestions}</p>
+                </div>
+                <div className="h-7 sm:h-8 w-px bg-slate-200" />
+                <div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Time Taken</p>
+                  <p className="text-sm sm:text-lg font-bold text-slate-900 mt-0.5">{timeTakenStr || "N/A"}</p>
                 </div>
               </div>
             </div>
 
-            {/* Right: Performance Summary */}
-            <div className="lg:w-[340px] shrink-0">
-              <h3 className="text-sm font-bold text-[#1a2535] mb-3">Performance Summary</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border bg-gray-50 border-gray-100">
-                  <CheckCircle2 size={16} className="text-[#45505F] shrink-0" />
-                  <span className="text-sm font-medium text-gray-600">{showResults ? "Correct" : "Attempted"}</span>
-                  <span className="ml-auto text-lg font-extrabold text-[#45505F]">
+            {/* Right Column: Performance Summary (4 boxes + Pass line banner) */}
+            <div className="lg:col-span-6 lg:border-l lg:border-slate-100 lg:pl-6 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100 space-y-3">
+              <h3 className="text-xs sm:text-sm font-bold text-slate-900">Performance Summary</h3>
+
+              {/* 4 horizontal metric pill boxes */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+                <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-2.5 sm:p-3 text-left">
+                  <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium block">
+                    {showResults ? "Correct" : "Attempted"}
+                  </span>
+                  <span className="text-sm sm:text-lg font-bold text-slate-900 mt-0.5 block">
                     {showResults ? analytics.totalCorrect : (analytics.totalCorrect + analytics.totalIncorrect)}
                   </span>
                 </div>
-                {showResults && (
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-lg border border-gray-100">
-                    <XCircle size={16} className="text-[#94A7C5] shrink-0" />
-                    <span className="text-sm font-medium text-gray-600">Incorrect</span>
-                    <span className="ml-auto text-lg font-extrabold text-[#94A7C5]">{analytics.totalIncorrect}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-lg border border-gray-100">
-                  <HelpCircle size={16} className="text-[#2D3A4A] shrink-0" />
-                  <span className="text-sm font-medium text-gray-600">Skipped</span>
-                  <span className="ml-auto text-lg font-extrabold text-[#2D3A4A]">{analytics.totalSkipped}</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-lg border border-gray-100">
-                  <Target size={16} className="text-[#45505F] shrink-0" />
-                  <span className="text-sm font-medium text-gray-600">Accuracy</span>
-                  <span className="ml-auto text-lg font-extrabold text-[#45505F]">
-                    {showResults ? `${analytics.accuracy}%` : "---"}
+
+                <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-2.5 sm:p-3 text-left">
+                  <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium block">Incorrect</span>
+                  <span className="text-sm sm:text-lg font-bold text-slate-900 mt-0.5 block">
+                    {showResults ? analytics.totalIncorrect : 0}
                   </span>
                 </div>
-                {showResults && (
-                  <div className="col-span-2 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
-                    <Award size={16} className="shrink-0 text-[#45505F]" />
-                    <span className="text-sm font-medium text-gray-600">Total Score</span>
-                    <span className="ml-auto text-lg font-extrabold text-[#45505F]">
-                      {displayScore} / {totalScore}
-                    </span>
-                  </div>
-                )}
+
+                <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-2.5 sm:p-3 text-left">
+                  <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium block">Skipped</span>
+                  <span className="text-sm sm:text-lg font-bold text-slate-900 mt-0.5 block">
+                    {analytics.totalSkipped}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-2.5 sm:p-3 text-left">
+                  <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium block">Accuracy</span>
+                  <span className="text-sm sm:text-lg font-bold text-slate-900 mt-0.5 block">
+                    {showResults ? `${analytics.accuracy}%` : "—"}
+                  </span>
+                </div>
               </div>
+
               {/* Pass/Fail Banner */}
               {showResults && (
-                <div className={`mt-3 px-4 py-2 rounded-lg text-center text-xs font-semibold ${
-                  passed ? "bg-gray-50 text-[#45505F] border border-gray-200" : "bg-gray-50 text-[#94A7C5] border border-gray-200"
-                }`}>
-                  Pass Marks: {exam.passMarks}/{exam.totalMarks} — You scored {Math.abs(passMarksDiff)} marks {passMarksDiff >= 0 ? "above" : "below"} pass line!
+                <div className="py-2 px-2.5 sm:px-3 rounded-xl bg-blue-50/40 border border-blue-100/60 text-center text-[11px] sm:text-xs text-slate-600 font-medium leading-relaxed">
+                  Pass Marks: {exam.passMarks}/{totalScore} — You scored {Math.abs(passMarksDiff)} marks {passMarksDiff >= 0 ? "above" : "below"} pass line!
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* ─── Score Trend Row (Recharts) ────────────────────────────────────────── */}
-        {showResults && history.length > 1 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-            <h3 className="text-base font-bold text-[#1a2535] mb-4 flex items-center gap-2">
-              <TrendingUp size={16} className="text-blue-500" />
-              Score Trend
-            </h3>
-            <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={history.map((h, i) => ({
-                    name: `Attempt ${i + 1}`,
-                    score: h.score,
-                    percentage: h.percentage,
-                    date: new Date(h.submittedAt || h.startedAt || Date.now()).toLocaleDateString()
-                  }))}
-                  margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#94a3b8', fontSize: 12 }} 
-                    dy={10}
+        {/* ─── Middle Row: Solved vs Total & Section-wise Performance ───────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+          {/* Left Card: Solved vs. Total */}
+          <div className="lg:col-span-5 bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-[0_2px_16px_rgba(0,0,0,0.03)] p-4 sm:p-6 flex flex-col justify-between">
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-slate-900 mb-3 sm:mb-4">Solved vs. Total</h3>
+              
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden p-0.5">
+                  <div
+                    className="h-full bg-[#131B2A] rounded-full transition-all duration-700"
+                    style={{ width: `${solvedPercent}%` }}
                   />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#94a3b8', fontSize: 12 }}
-                    domain={[0, 100]}
-                    unit="%"
-                  />
-                  <RechartsTooltip 
-                    contentStyle={{ 
-                      borderRadius: '12px', 
-                      border: 'none', 
-                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="percentage" 
-                    stroke="#3b82f6" 
-                    strokeWidth={3}
-                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4, stroke: '#fff' }}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                    name="Score %"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="text-[11px] text-gray-400 mt-4 text-center">
-              This chart shows your performance across all {history.length} attempts for this exam.
-            </p>
-          </div>
-        )}
+                </div>
+                <span className="text-xs sm:text-sm font-bold text-slate-900 shrink-0">
+                  {solvedCount} / {analytics.totalQuestions}
+                </span>
+              </div>
 
-        {/* ─── Charts Row ─────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Answer Distribution */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h3 className="text-base font-bold text-[#1a2535] mb-4 flex items-center gap-2">
-              <BarChart2 size={16} className="text-gray-400" />
-              Solved vs. Total
-            </h3>
-            <div className="flex items-center justify-center">
-              <div className="relative">
-                <DonutChart
-                  segments={[
-                    { value: analytics.totalQuestions - analytics.totalSkipped, color: "#45505F", label: "Solved" },
-                    { value: analytics.totalSkipped, color: "#f1f5f9", label: "Remaining" },
-                  ]}
-                  size={180}
-                  strokeWidth={32}
-                  centerLabel={`${analytics.totalQuestions - analytics.totalSkipped}/${analytics.totalQuestions}`}
-                  centerSub="Questions Solved"
-                />
-              </div>
-            </div>
-            <div className="flex justify-center gap-6 mt-4">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#45505F]" />
-                <span className="text-xs text-gray-500">Solved ({analytics.totalQuestions - analytics.totalSkipped})</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-gray-100 border border-gray-200" />
-                <span className="text-xs text-gray-500">Skipped ({analytics.totalSkipped})</span>
+              <div className="flex items-center gap-4 mt-3.5 text-[10px] sm:text-[11px] text-slate-500 font-medium">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#131B2A]" />
+                  <span>Solved ({solvedCount})</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-slate-200" />
+                  <span>Unsolved ({unsolvedCount})</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Section-wise Performance Bar Chart */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h3 className="text-base font-bold text-[#1a2535] mb-4 flex items-center gap-2">
-              <BarChart2 size={16} className="text-gray-400" />
-              Section-wise Performance
-            </h3>
-            <BarChart
-              showResults={showResults}
-              data={analytics.sectionAnalyses.map((s, i) => ({
-                label: s.name,
-                value: s.percentage,
-                color: getSectionColor(i),
-              }))}
-            />
-          </div>
-        </div>
-
-        {/* ─── Section-wise Breakdown Table ────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-          <h3 className="text-base font-bold text-[#1a2535] mb-4">Section-wise Breakdown</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-3 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Section</th>
-                  <th className="text-center py-3 px-3 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Questions</th>
-                  {showResults ? (
-                    <>
-                      <th className="text-center py-3 px-3 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Correct</th>
-                      <th className="text-center py-3 px-3 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Incorrect</th>
-                    </>
-                  ) : (
-                    <th className="text-center py-3 px-3 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Attempted</th>
-                  )}
-                  <th className="text-center py-3 px-3 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Skipped</th>
-                  {showResults && <th className="text-center py-3 px-3 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Marks</th>}
-                  <th className="py-3 px-3 text-[10px] uppercase tracking-wider text-gray-400 font-semibold text-right w-[180px]">
-                    {showResults ? "Score" : "Completion"}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {analytics.sectionAnalyses.map((sec, i) => (
-                  <tr key={sec.name} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-1 h-6 rounded-full" style={{ backgroundColor: getSectionColor(i) }} />
-                        <span className="font-semibold text-[#1a2535]">{sec.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 text-center text-gray-600">{sec.totalQuestions}</td>
+          {/* Right Card: Section-wise Performance */}
+          <div className="lg:col-span-7 bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-[0_2px_16px_rgba(0,0,0,0.03)] p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs sm:text-sm font-bold text-slate-900">Section-wise Performance</h3>
+              <span className="text-[10px] text-slate-400 font-medium sm:hidden">Swipe table →</span>
+            </div>
+            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+              <table className="w-full text-xs min-w-[500px]">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[10px] uppercase tracking-wider">
+                    <th className="text-left pb-2 font-semibold">SECTION</th>
+                    <th className="text-center pb-2 font-semibold">QUESTIONS</th>
                     {showResults ? (
                       <>
-                        <td className="py-3 px-3 text-center font-semibold text-[#45505F]">{sec.correct}</td>
-                        <td className="py-3 px-3 text-center font-semibold text-[#94A7C5]">{sec.incorrect}</td>
+                        <th className="text-center pb-2 font-semibold">CORRECT</th>
+                        <th className="text-center pb-2 font-semibold">INCORRECT</th>
                       </>
                     ) : (
-                      <td className="py-3 px-3 text-center font-semibold text-primary">{sec.correct + sec.incorrect}</td>
+                      <th className="text-center pb-2 font-semibold">ATTEMPTED</th>
                     )}
-                    <td className="py-3 px-3 text-center font-semibold text-[#2D3A4A]">{sec.skipped}</td>
-                    {showResults && <td className="py-3 px-3 text-center text-gray-600">{sec.marksObtained} / {sec.maxMarks}</td>}
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-2 justify-end">
-                        <div className="w-24 bg-gray-100 rounded-full h-2">
-                          <div
-                            className="h-2 rounded-full transition-all duration-700"
-                            style={{
-                              width: `${sec.percentage}%`,
-                              backgroundColor: getSectionColor(i),
-                            }}
-                          />
-                        </div>
-                        {showResults && (
-                          <span className="text-xs font-bold min-w-[32px] text-right" style={{ color: getSectionColor(i) }}>
-                            {sec.percentage}%
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                    <th className="text-center pb-2 font-semibold">SKIPPED</th>
+                    {showResults && <th className="text-center pb-2 font-semibold">MARKS</th>}
+                    <th className="text-right pb-2 font-semibold">SCORE</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {analytics.sectionAnalyses.map((sec, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50">
+                      <td className="py-2.5 text-left font-semibold text-slate-800">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1 h-3.5 bg-[#131B2A] rounded-full inline-block shrink-0" />
+                          <span className="truncate max-w-[140px]">{sec.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 text-center text-slate-700 font-medium">{sec.totalQuestions}</td>
+                      {showResults ? (
+                        <>
+                          <td className="py-2.5 text-center text-slate-700 font-medium">{sec.correct}</td>
+                          <td className="py-2.5 text-center text-slate-700 font-medium">{sec.incorrect}</td>
+                        </>
+                      ) : (
+                        <td className="py-2.5 text-center text-slate-700 font-medium">{sec.correct + sec.incorrect}</td>
+                      )}
+                      <td className="py-2.5 text-center text-slate-700 font-medium">{sec.skipped}</td>
+                      {showResults && (
+                        <td className="py-2.5 text-center text-slate-700 font-medium">
+                          {sec.marksObtained} / {sec.maxMarks}
+                        </td>
+                      )}
+                      <td className="py-2.5 text-right font-bold text-slate-900">
+                        {sec.percentage}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         {/* ─── Question-wise Analysis ─────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-            <h3 className="text-base font-bold text-[#1a2535]">Question-wise Analysis</h3>
-            <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg p-0.5">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-[0_2px_16px_rgba(0,0,0,0.03)] p-4 sm:p-6 mb-6">
+          <div className="flex items-center justify-between mb-4 sm:mb-5 flex-wrap gap-2.5 sm:gap-3">
+            <h3 className="text-xs sm:text-base font-bold text-slate-900">Question-wise Analysis</h3>
+            <div className="flex items-center gap-1 bg-slate-100/80 rounded-xl p-1 overflow-x-auto max-w-full">
               {(showResults ? (["all", "correct", "incorrect", "skipped"] as const) : (["all", "attempted", "skipped"] as const)).map(filter => (
                 <button
                   key={filter}
                   onClick={() => { setQuestionFilter(filter); setShowAllQuestions(false) }}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md capitalize transition-colors ${
+                  className={`px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold rounded-lg capitalize transition-all cursor-pointer whitespace-nowrap ${
                     questionFilter === filter
-                      ? "bg-accent text-white shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
+                      ? "bg-[#131B2A] text-white shadow-xs"
+                      : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
                   {filter}
@@ -1174,70 +1109,69 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3.5 sm:space-y-4">
             {displayedQuestions.length === 0 && (
-              <p className="text-center text-gray-400 text-sm py-8">No questions match this filter.</p>
+              <p className="text-center text-slate-400 text-xs py-8 font-medium">No questions match this filter.</p>
             )}
             {displayedQuestions.map((qa, idx) => {
               const globalIdx = analytics.questionAnalyses.indexOf(qa) + 1
-              // If results are hidden, use neutral colors for attempted questions
-              const borderColor = !showResults 
-                ? (qa.isSkipped ? "#2D3A4A" : "#45505F") 
-                : (qa.isSkipped ? "#2D3A4A" : qa.isCorrect ? "#45505F" : "#94A7C5")
-              const bgColor = !showResults
-                ? (qa.isSkipped ? "bg-gray-50/40" : "bg-gray-50/40")
-                : (qa.isSkipped ? "bg-gray-50/40" : qa.isCorrect ? "bg-gray-50/40" : "bg-gray-50/40")
 
               return (
-                <div key={`${qa.question._id}-${idx}`} className={`rounded-xl border-l-4 p-4 ${bgColor}`} style={{ borderLeftColor: borderColor }}>
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold text-white" style={{ backgroundColor: borderColor }}>
+                <div
+                  key={`${qa.question._id}-${idx}`}
+                  className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 p-3.5 sm:p-5 shadow-2xs space-y-3 sm:space-y-3.5 transition-all"
+                >
+                  {/* Tier 1 Header */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                      <span className="inline-flex items-center justify-center px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-bold bg-[#131B2A] text-white">
                         Q{globalIdx}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${TYPE_COLORS[qa.question.type] || "bg-gray-100 text-gray-600"}`}>
+                      <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 uppercase">
                         {TYPE_LABELS[qa.question.type] || qa.question.type}
                       </span>
-                      {showResults && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500">
-                          {qa.question.marks} Mark{qa.question.marks !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={`text-xs font-semibold ${!showResults ? (qa.isSkipped ? "text-[#2D3A4A]" : "text-[#45505F]") : (qa.isSkipped ? "text-[#2D3A4A]" : qa.isCorrect ? "text-[#45505F]" : "text-[#94A7C5]")}`}>
-                        {showResults 
-                          ? (qa.isSkipped ? `Skipped — 0 marks` : qa.isCorrect ? `+${qa.marksEarned} marks earned` : `0 marks earned`)
-                          : (qa.isSkipped ? `Skipped` : "Attempted")
-                        }
+                      <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-slate-100 text-slate-600">
+                        {qa.question.marks} Mark{qa.question.marks !== 1 ? "s" : ""}
                       </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0 text-[11px] sm:text-xs font-semibold">
                       {qa.isSkipped ? (
-                        <span className="w-5 h-5 rounded-full bg-[#2D3A4A] flex items-center justify-center">
-                          <span className="text-white text-[10px] font-bold">—</span>
-                        </span>
+                        <span className="text-slate-500">Skipped — 0 marks</span>
                       ) : showResults ? (
-                        qa.isCorrect ? <CheckCircle2 size={18} className="text-[#45505F]" /> : <XCircle size={18} className="text-[#94A7C5]" />
+                        qa.isCorrect ? (
+                          <span className="text-emerald-700">+{qa.marksEarned} marks earned</span>
+                        ) : qa.marksEarned > 0 ? (
+                          <span className="text-blue-700">+{qa.marksEarned} marks earned</span>
+                        ) : (
+                          <span className="text-slate-500">0 marks earned</span>
+                        )
                       ) : (
-                        <CheckCircle2 size={18} className="text-[#45505F]" />
+                        <span className="text-slate-700">Attempted</span>
                       )}
                     </div>
                   </div>
 
-                  <div className="mb-3 text-sm font-medium text-[#1a2535]">
+                  {/* Question Text */}
+                  <div className="text-xs sm:text-sm text-slate-900 leading-relaxed overflow-x-auto break-words">
                     <MathRenderer content={qa.question.questionText} />
                   </div>
+
                   {qa.question.questionImage && (
-                    <div className="mb-4 max-w-2xl">
+                    <div className="max-w-xl">
                       <QuestionDiagram src={qa.question.questionImage} />
                     </div>
                   )}
+
                   {qa.question.codeSnippet && (
-                    <pre className="mb-3 overflow-x-auto rounded-xl border border-gray-300 bg-[#1e2a38] px-4 py-3 text-xs text-gray-200">
+                    <pre className="overflow-x-auto rounded-xl border border-slate-700 bg-[#131B2A] px-3.5 py-2.5 sm:px-4 sm:py-3 text-[11px] sm:text-xs text-slate-200">
                       {qa.question.codeSnippet}
                     </pre>
                   )}
+
+                  {/* Options (for MCQ / TrueFalse) */}
                   {qa.question.type === "mcq" && qa.question.options && (
-                    <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
                       {qa.question.options.map((option, optionIndex) => {
                         const optionKey = String.fromCharCode(65 + optionIndex)
                         const studentAnswer = Array.isArray(qa.studentAnswer)
@@ -1253,37 +1187,41 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
                         return (
                           <div
                             key={`${qa.question._id}-option-${optionKey}`}
-                            className={`flex items-start gap-3 rounded-xl border-2 p-3 ${
+                            className={`flex items-start gap-2 sm:gap-2.5 rounded-xl border p-2 sm:p-3 transition-all ${
                               isCorrect
-                                ? "border-emerald-500 bg-emerald-50"
+                                ? "border-emerald-500 bg-emerald-50/60 text-emerald-950"
                                 : isSelected
-                                  ? "border-blue-500 bg-blue-50"
-                                  : "border-gray-200 bg-white"
+                                ? "border-blue-500 bg-blue-50/60 text-blue-950"
+                                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50/50"
                             }`}
                           >
-                            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                              isCorrect
-                                ? "bg-emerald-600 text-white"
-                                : isSelected
+                            <span
+                              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md text-[11px] sm:text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 ${
+                                isCorrect
+                                  ? "bg-emerald-600 text-white"
+                                  : isSelected
                                   ? "bg-blue-600 text-white"
-                                  : "bg-gray-100 text-gray-600"
-                            }`}>
+                                  : "bg-slate-100 text-slate-700"
+                              }`}
+                            >
                               {optionKey}
                             </span>
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 text-xs sm:text-[13px] leading-relaxed pt-0.5 overflow-x-auto">
                               <MathRenderer content={option} />
                               {optionImage && (
                                 <img
                                   src={optionImage}
                                   alt={`Option ${optionKey}`}
-                                  className="mt-2 max-h-32 max-w-full rounded-lg object-contain"
+                                  className="mt-2 max-h-28 max-w-full rounded-lg object-contain"
                                 />
                               )}
                             </div>
                             {(isCorrect || isSelected) && (
-                              <span className={`shrink-0 text-[10px] font-bold uppercase ${
-                                isCorrect ? "text-emerald-700" : "text-blue-700"
-                              }`}>
+                              <span
+                                className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded self-start shrink-0 ${
+                                  isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
+                                }`}
+                              >
                                 {isCorrect ? "Correct" : "Selected"}
                               </span>
                             )}
@@ -1293,33 +1231,122 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
                     </div>
                   )}
 
-                    <div className="flex items-center gap-4 flex-wrap text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-gray-400">Your Answer:</span>
-                        {qa.isSkipped ? (
-                          <span className="px-2.5 py-1 rounded-md bg-gray-100 text-[#2D3A4A] font-semibold">Skipped</span>
-                        ) : (
-                          <div className={`rounded-md px-2.5 py-1 font-semibold ${showResults ? (qa.isCorrect ? "bg-gray-100 text-[#45505F]" : "bg-gray-100 text-[#94A7C5]") : "bg-gray-100 text-[#45505F]"}`}>
-                            {renderFormattedAnswer(qa.studentAnswer, qa.question)}
-                          </div>
-                        )}
+                  {/* Descriptive Questions Display with AI breakdown */}
+                  {qa.question.type === "descriptive" && (
+                    <div className="space-y-3 pt-1">
+                      <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50/80 border border-slate-200">
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                          Your Written Response:
+                        </span>
+                        <div className="text-xs sm:text-sm text-slate-800 whitespace-pre-wrap leading-relaxed break-words">
+                          {qa.isSkipped ? (
+                            <span className="italic text-slate-400">Question was skipped (no answer submitted).</span>
+                          ) : (
+                            String(qa.studentAnswer || "No answer text.")
+                          )}
+                        </div>
                       </div>
-                      {showResults && (qa.question.type === "mcq" || qa.question.type === "truefalse" || qa.question.type === "fillblanks") && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-gray-400">Correct Answer:</span>
-                          <div className="rounded-md bg-gray-100 px-2.5 py-1 font-semibold text-[#45505F]">
-                            <MathRenderer content={formatCorrectAnswer(qa.question)} />
+
+                      {showResults && (
+                        <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+                          <div className="px-3 sm:px-4 py-2 bg-[#131B2A] text-white flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
+                              <span className="text-[11px] sm:text-xs font-semibold tracking-wide">
+                                AI Examiner Verification &amp; Breakdown
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  qa.marksEarned >= qa.question.marks * 0.85
+                                    ? "bg-emerald-500 text-white"
+                                    : qa.marksEarned > 0
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-rose-500 text-white"
+                                }`}
+                              >
+                                {qa.aiEvaluation?.verdict || (qa.marksEarned > 0 ? "Evaluated" : "Needs Review")}
+                              </span>
+                              <span className="text-[11px] sm:text-xs font-bold text-slate-100 bg-slate-800 px-2 py-0.5 rounded-md">
+                                {qa.marksEarned} / {qa.question.marks} Marks
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="p-3 sm:p-3.5 space-y-2 sm:space-y-2.5">
+                            {qa.aiEvaluation?.whyRight && (
+                              <div className="p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200/80">
+                                <div className="flex items-center gap-1.5 mb-1 text-emerald-900 font-semibold text-[11px] sm:text-xs">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  <span>Why You Are Right (Key Concepts &amp; Points Hit)</span>
+                                </div>
+                                <p className="text-[11px] sm:text-xs text-emerald-950 leading-relaxed pl-4 sm:pl-5 break-words">
+                                  {qa.aiEvaluation.whyRight}
+                                </p>
+                              </div>
+                            )}
+
+                            {qa.aiEvaluation?.whyWrong && (
+                              <div className="p-2.5 rounded-lg bg-rose-50/70 border border-rose-200/80">
+                                <div className="flex items-center gap-1.5 mb-1 text-rose-900 font-semibold text-[11px] sm:text-xs">
+                                  <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                  <span>Why You Are Wrong / Missed Points</span>
+                                </div>
+                                <p className="text-[11px] sm:text-xs text-rose-950 leading-relaxed pl-4 sm:pl-5 break-words">
+                                  {qa.aiEvaluation.whyWrong}
+                                </p>
+                              </div>
+                            )}
+
+                            {qa.aiEvaluation?.feedback && (
+                              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-700 block mb-0.5">
+                                  Examiner Feedback &amp; Suggestions:
+                                </span>
+                                <p className="text-[11px] sm:text-xs text-slate-700 leading-relaxed break-words">
+                                  {qa.aiEvaluation.feedback}
+                                </p>
+                              </div>
+                            )}
+
+                            {qa.question.correctAnswer && (
+                              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-600 block mb-0.5">
+                                  Model / Reference Answer:
+                                </span>
+                                <div className="text-[11px] sm:text-xs text-slate-800 leading-relaxed overflow-x-auto break-words">
+                                  <MathRenderer content={String(qa.question.correctAnswer)} />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
                     </div>
+                  )}
 
-                  {/* Explanation */}
-                  {showResults && (qa.question as any).explanation && !qa.isCorrect && (
-                    <div className="mt-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                      <p className="text-xs text-[#45505F]">
-                        <span className="font-semibold">Explanation:</span> {(qa.question as any).explanation}
-                      </p>
+                  {/* Non-MCQ & Non-Descriptive Answer Row */}
+                  {qa.question.type !== "mcq" && qa.question.type !== "descriptive" && (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs pt-1 border-t border-slate-100">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-slate-400">Your Answer:</span>
+                        {qa.isSkipped ? (
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">Skipped</span>
+                        ) : (
+                          <div className="rounded px-2 py-0.5 font-semibold bg-slate-100 text-slate-800 break-words">
+                            {renderFormattedAnswer(qa.studentAnswer, qa.question)}
+                          </div>
+                        )}
+                      </div>
+                      {showResults && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-slate-400">Correct Answer:</span>
+                          <div className="rounded px-2 py-0.5 font-semibold bg-slate-100 text-slate-800 break-words">
+                            <MathRenderer content={formatCorrectAnswer(qa.question)} />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1332,9 +1359,9 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
             <div className="flex justify-center mt-5">
               <button
                 onClick={() => setShowAllQuestions(true)}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-[#1a2535] hover:bg-gray-100 transition-colors"
+                className="flex items-center gap-2 px-5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                View All {filteredQuestions.length} Questions
+                <span>View All {filteredQuestions.length} Questions</span>
                 <ChevronDown size={14} />
               </button>
             </div>
@@ -1342,7 +1369,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </main>
 
-      <footer className="text-center py-5 text-xs text-gray-400 border-t border-gray-100 mt-4">
+      <footer className="text-center py-5 text-xs text-slate-400 border-t border-slate-100 mt-4">
         Powered by Progrentures Solution — Empower Your Growth
       </footer>
     </div>

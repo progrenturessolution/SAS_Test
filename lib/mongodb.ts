@@ -76,11 +76,14 @@ async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      // Connection pool — reduces per-request overhead
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 8000,
-      socketTimeoutMS: 30000,
-      connectTimeoutMS: 10000,
+      // Optimized for Serverless & MongoDB Atlas Free Tier (M0)
+      // Keeps pool tight (3 conns per lambda) so concurrent submissions don't exhaust M0 limits
+      maxPoolSize: 3,
+      minPoolSize: 0,
+      maxIdleTimeMS: 10000,
+      serverSelectionTimeoutMS: 6000,
+      socketTimeoutMS: 20000,
+      connectTimeoutMS: 8000,
     }
     cached.promise = (async () => {
       const uri = await getEffectiveMongoUri(rawMongoUri)

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, use, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Editor from "@monaco-editor/react"
 import { ExamHeader, ProctoringCamera, QuestionStatus, statusColorMap, ProcrentureLogo } from "@/components/exam/ExamShared"
-import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft, ChevronRight, Sparkles, LayoutGrid, Layers, ArrowRight, HelpCircle, BookOpen, Lock, Calculator } from "lucide-react"
+import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft, ChevronRight, Sparkles, LayoutGrid, Layers, ArrowRight, HelpCircle, BookOpen, Calculator } from "lucide-react"
 import { ScientificCalculator } from "@/components/exam/ScientificCalculator"
 import { ProctoringWarning } from "@/components/exam/ProctoringWarning"
 import { useProctoring } from "@/hooks/use-proctoring"
@@ -281,7 +281,6 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false) // Mobile sidebar toggle
   const [showCalculator, setShowCalculator] = useState(false)
-  const [showEarlySubmitModal, setShowEarlySubmitModal] = useState(false)
 
   const addToast = useCallback((message: string, type: Toast["type"] = "warn") => {
     const id = ++_toastId
@@ -551,20 +550,61 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       .catch(() => router.push(`/exam/${id}`))
   }, [id, attemptId, router, addToast])
 
-  // Auto-submit
+  // Resilient submit with micro-jitter (to prevent 100+ students hitting server at the exact same millisecond)
+  // and 3x auto-retry with exponential backoff so zero student answers are ever lost.
+  const submitAttemptWithRetry = async (payload: { answers: Answer[]; autoSubmit: boolean; timeLeft: number }) => {
+    // If auto-submit, add a micro-jitter (0 to 1500ms) to spread simultaneous submissions across students
+    if (payload.autoSubmit) {
+      const jitterMs = Math.floor(Math.random() * 1500)
+      if (jitterMs > 0) await new Promise((res) => setTimeout(res, jitterMs))
+    }
+
+    // Always backup answers in localStorage before sending
+    try {
+      localStorage.setItem(`exam-pending-submit-${attemptId}`, JSON.stringify(payload))
+    } catch {}
+
+    let lastError: any = null
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch(`/api/attempts/${attemptId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.error || `HTTP ${res.status}`)
+        }
+
+        const data = await res.json()
+        // Successfully submitted - clean up local backup
+        try {
+          localStorage.removeItem(`exam-state-${id}`)
+          localStorage.removeItem(`exam-pending-submit-${attemptId}`)
+        } catch {}
+
+        return data
+      } catch (err: any) {
+        lastError = err
+        if (attempt < 3) {
+          // Exponential backoff with random jitter: ~800ms, ~1800ms
+          const backoff = (attempt * 800) + Math.floor(Math.random() * 400)
+          await new Promise((res) => setTimeout(res, backoff))
+        }
+      }
+    }
+
+    throw lastError || new Error("Failed to submit after 3 attempts")
+  }
+
+  // Auto-submit with thundering herd jitter & retry
   const handleAutoSubmit = useCallback(async () => {
     if (!attemptId || submitting) return
     setSubmitting(true)
     try {
-      const res = await fetch(`/api/attempts/${attemptId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers, autoSubmit: true, timeLeft }),
-      })
-      if (!res.ok) throw new Error('Network error')
-      const data = await res.json()
-      
-      try { localStorage.removeItem(`exam-state-${id}`) } catch (e) {}
+      const data = await submitAttemptWithRetry({ answers, autoSubmit: true, timeLeft })
 
       // Stop camera and exit fullscreen
       setExamSubmitted(true)
@@ -578,13 +618,10 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         router.push(`/exam/${id}/result/analytics?attemptId=${attemptId}`)
       }
     } catch (error) {
-      try {
-        localStorage.setItem(`exam-pending-submit-${attemptId}`, JSON.stringify({ answers, autoSubmit: true, timeLeft }))
-      } catch(e) {}
-      addToast("You are offline. Your exam state is saved locally. Please do not close the browser.", "danger")
+      addToast("Network issue during submission. Your responses are safely backed up locally. Retrying...", "danger")
       setSubmitting(false)
     }
-  }, [attemptId, submitting, answers, exam, timeLeft, id, router, addToast])
+  }, [attemptId, submitting, answers, timeLeft, id, router, addToast])
 
   const handleWarning = useCallback((type: string) => {
     setActiveWarning(type)
@@ -809,73 +846,17 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     return "not-visited"
   }
 
-  // Minimum duration logic (NPTEL / standard exam rule)
-  // Admin can set explicit minDuration in minutes. If unset or 0, default to 2/3 of exam.duration
-  // E.g. For 3 hours (180 mins) -> 2 hours (120 mins).
-  const totalDurationMinutes = exam?.duration || 0
-  const totalDurationSeconds = totalDurationMinutes * 60
-
-  const configuredMinDuration = exam?.settings?.minDuration ?? exam?.minDuration
-  const minRequiredMinutes = useMemo(() => {
-    if (!totalDurationMinutes) return 0
-    if (typeof configuredMinDuration === "number" && configuredMinDuration > 0) {
-      return Math.min(configuredMinDuration, totalDurationMinutes)
-    }
-    // Default: 2/3 of total exam duration
-    return Math.round(totalDurationMinutes * (2 / 3))
-  }, [configuredMinDuration, totalDurationMinutes])
-
-  const minRequiredSeconds = minRequiredMinutes * 60
-  const timeSpentSeconds = Math.max(0, totalDurationSeconds - timeLeft)
-  const remainingSecondsToUnlock = Math.max(0, minRequiredSeconds - timeSpentSeconds)
-  const canSubmitExam = timeLeft <= 1 || remainingSecondsToUnlock <= 0
-
-  const formatMinDurationLabel = useCallback((minutes: number) => {
-    const h = Math.floor(minutes / 60)
-    const m = minutes % 60
-    if (h > 0 && m > 0) return `${h} hr ${m} min`
-    if (h > 0) return `${h} hr${h > 1 ? "s" : ""}`
-    return `${m} min${m > 1 ? "s" : ""}`
-  }, [])
-
-  const formatCountdownTime = useCallback((totalSeconds: number) => {
-    const h = Math.floor(totalSeconds / 3600)
-    const m = Math.floor((totalSeconds % 3600) / 60)
-    const s = totalSeconds % 60
-    if (h > 0) {
-      return `${h}h ${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`
-    }
-    return `${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`
-  }, [])
-
   const handleSubmitExam = () => {
-    if (!canSubmitExam) {
-      setShowEarlySubmitModal(true)
-      addToast(`Submission locked: You can submit in ${formatCountdownTime(remainingSecondsToUnlock)}`, "warn")
-      return
-    }
     setShowSubmitConfirm(true)
   }
 
   const confirmSubmit = async () => {
     if (!attemptId) return
-    if (!canSubmitExam && timeLeft > 1) {
-      setShowSubmitConfirm(false)
-      setShowEarlySubmitModal(true)
-      return
-    }
     setSubmitting(true)
     setShowSubmitConfirm(false)
     try {
-      const res = await fetch(`/api/attempts/${attemptId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers, autoSubmit: false, timeLeft }),
-      })
-      if (!res.ok) throw new Error("Submit failed")
-      const data = await res.json()
-      // Clear saved state
-      try { localStorage.removeItem(`exam-state-${id}`) } catch {}
+      const data = await submitAttemptWithRetry({ answers, autoSubmit: false, timeLeft })
+
       // Stop camera and exit fullscreen
       setExamSubmitted(true)
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
@@ -885,7 +866,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         router.push(`/exam/${id}/result/analytics?attemptId=${attemptId}`)
       }
     } catch {
-      addToast("Submission failed. Please try again.", "danger")
+      addToast("Submission failed. Your answers are saved locally. Please click Submit again.", "danger")
       setSubmitting(false)
     }
   }
@@ -1124,12 +1105,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     if (!question) return
     await setAnswer(question._id, getAnswer(question._id)?.answer || "", question.type, true)
     if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
-      if (!canSubmitExam) {
-        setShowEarlySubmitModal(true)
-        addToast(`Submission locked: Complete at least ${formatMinDurationLabel(minRequiredMinutes)} before submitting.`, "warn")
-      } else {
-        setShowSubmitConfirm(true)
-      }
+      setShowSubmitConfirm(true)
     } else {
       goNext()
     }
@@ -1138,12 +1114,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const handleSkip = async () => {
     if (!question) return
     if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
-      if (!canSubmitExam) {
-        setShowEarlySubmitModal(true)
-        addToast(`Submission locked: Complete at least ${formatMinDurationLabel(minRequiredMinutes)} before submitting.`, "warn")
-      } else {
-        setShowSubmitConfirm(true)
-      }
+      setShowSubmitConfirm(true)
     } else {
       goNext()
     }
@@ -1198,7 +1169,6 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       "You can navigate between questions using the Previous and Next buttons. Questions can be answered in any order.",
       'Use the "Mark for Review" feature to flag questions you want to revisit before final submission.',
       "The timer will be displayed on the screen. Once time expires, your answers will be automatically submitted.",
-      `Minimum exam duration required before submission: you must complete at least ${formatMinDurationLabel(minRequiredMinutes)} before submission is enabled.`,
       "A virtual scientific calculator (NPTEL / GATE style) is available at the top of the screen during the examination.",
       "Review your answers carefully before clicking the Submit button. Once submitted, you cannot change your answers."
     ];
@@ -2194,24 +2164,11 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             {/* Submit Button */}
             <button
               onClick={handleSubmitExam}
-              className={`flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer ${
-                !canSubmitExam
-                  ? "bg-amber-600 hover:bg-amber-700 active:bg-amber-800"
-                  : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800"
-              }`}
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800"
               title="Submit Examination"
             >
-              {!canSubmitExam ? (
-                <>
-                  <Lock className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">Locked ({formatCountdownTime(remainingSecondsToUnlock)})</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>Submit</span>
-                </>
-              )}
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>Submit</span>
             </button>
           </div>
         </main>
@@ -2330,26 +2287,10 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             <button
               onClick={handleSubmitExam}
               disabled={submitting}
-              className={`w-full py-2.5 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-60 cursor-pointer shadow-sm flex items-center justify-center gap-1.5 ${
-                !canSubmitExam
-                  ? "bg-amber-600 hover:bg-amber-700 active:bg-amber-800"
-                  : "bg-[#10B981] hover:bg-[#059669]"
-              }`}
+              className="w-full py-2.5 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-60 cursor-pointer shadow-sm flex items-center justify-center gap-1.5 bg-[#10B981] hover:bg-[#059669]"
             >
-              {!canSubmitExam ? (
-                <>
-                  <Lock className="w-3.5 h-3.5 shrink-0" />
-                  <span>Submit Exam ({formatCountdownTime(remainingSecondsToUnlock)} left)</span>
-                </>
-              ) : (
-                <span>{submitting ? "Submitting..." : "Submit Exam"}</span>
-              )}
+              <span>{submitting ? "Submitting..." : "Submit Exam"}</span>
             </button>
-            {!canSubmitExam && (
-              <p className="text-[10px] text-amber-600 text-center font-medium mt-1.5">
-                Submissions unlock after {formatMinDurationLabel(minRequiredMinutes)}
-              </p>
-            )}
           </div>
         </aside>
       </div>
@@ -2357,146 +2298,95 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       {/* Submission Confirmation Modal */}
       {showSubmitConfirm && (
         <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#1a2535]/80 backdrop-blur-sm" onClick={() => setShowSubmitConfirm(false)} />
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-[#2D3A4A] p-6 text-white text-center">
-              <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <FileText size={32} />
-              </div>
-              <h3 className="text-xl font-bold">Ready to Submit?</h3>
-              <p className="text-sm opacity-70">Please review your attempt summary below.</p>
+          <div
+            className="absolute inset-0 bg-[#131B2A]/60 backdrop-blur-xs transition-opacity duration-200"
+            onClick={() => setShowSubmitConfirm(false)}
+          />
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl relative overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100 p-6 sm:p-8">
+            {/* Header */}
+            <div className="mb-6">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                Ready to Submit?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1 leading-relaxed">
+                Please review your attempt summary below before submitting the exam.
+              </p>
             </div>
-            
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
-                  <p className="text-[10px] font-bold text-green-600 uppercase mb-1">Answered</p>
-                  <p className="text-2xl font-black text-green-700">{totalAnswered}</p>
-                </div>
-                <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
-                  <p className="text-[10px] font-bold text-red-600 uppercase mb-1">Remaining</p>
-                  <p className="text-2xl font-black text-red-700">{totalQuestions - totalAnswered}</p>
-                </div>
+
+            {/* 3 Metric Cards */}
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mb-6">
+              {/* Answered */}
+              <div className="bg-[#F8F9FD] border border-slate-100/90 rounded-2xl p-3 sm:p-4 text-left">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-600 block">
+                  Answered
+                </span>
+                <span className="text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 block">
+                  {totalAnswered}
+                </span>
               </div>
 
-              <div className="space-y-2 mb-4 p-3 bg-gray-50 rounded-2xl border border-gray-100 max-h-44 overflow-y-auto">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Section Progress</p>
-                {specificTabs.map((tab) => {
-                  const ansCount = tab.questions.filter((q) => {
-                    const a = getAnswer(q._id);
-                    return Array.isArray(a?.answer) ? a.answer.some(Boolean) : !!a?.answer;
-                  }).length;
-                  return (
-                    <div key={tab.id} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-white border border-gray-100">
-                      <span className="font-semibold text-gray-700 truncate mr-2">{tab.title}</span>
-                      <span className="font-bold text-emerald-600 shrink-0">{ansCount} / {tab.questions.length}</span>
-                    </div>
-                  );
-                })}
+              {/* Remaining */}
+              <div className="bg-[#F8F9FD] border border-slate-100/90 rounded-2xl p-3 sm:p-4 text-left">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-600 block">
+                  Remaining
+                </span>
+                <span className="text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 block">
+                  {totalQuestions - totalAnswered}
+                </span>
               </div>
 
-              <div className="space-y-3 mb-8">
-                <div className="flex items-center justify-between text-sm py-2 border-b border-gray-100">
-                  <span className="text-gray-500 font-medium">Total Questions</span>
-                  <span className="font-bold text-[#1a2535]">{totalQuestions}</span>
+              {/* Total Questions */}
+              <div className="bg-[#F8F9FD] border border-slate-100/90 rounded-2xl p-3 sm:p-4 text-left">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-600 block">
+                  Total Questions
+                </span>
+                <span className="text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 block">
+                  {totalQuestions}
+                </span>
+              </div>
+            </div>
+
+            {/* Divider + Inline Metrics Row */}
+            <div className="border-t border-slate-100 pt-4 sm:pt-5 pb-6">
+              <div className="flex items-center justify-between text-xs sm:text-sm text-slate-700">
+                {/* Marked for Review */}
+                <div className="flex-1 flex items-center justify-between pr-3 sm:pr-6">
+                  <span className="font-semibold text-slate-700">Marked for Review</span>
+                  <span className="font-bold text-slate-900 text-sm sm:text-base">
+                    {answers.filter(a => a.isMarkedForReview).length}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between text-sm py-2 border-b border-gray-100">
-                  <span className="text-gray-500 font-medium">Marked for Review</span>
-                  <span className="font-bold text-amber-500">{answers.filter(a => a.isMarkedForReview).length}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm py-2 border-b border-gray-100">
-                  <span className="text-gray-500 font-medium">Proctoring Warnings</span>
-                  <span className={`font-bold ${procState.warnings > 0 ? "text-red-500" : "text-green-500"}`}>
-                    {procState.warnings} / {exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings}
+
+                {/* Vertical Divider */}
+                <div className="h-5 sm:h-6 w-px bg-slate-200 shrink-0" />
+
+                {/* Proctoring Warnings */}
+                <div className="flex-1 flex items-center justify-between pl-3 sm:pr-2 pl-3 sm:pl-6">
+                  <span className="font-semibold text-slate-700 truncate mr-2">Proctoring Warnings</span>
+                  <span className="font-bold text-slate-900 text-sm sm:text-base shrink-0">
+                    {procState.warnings} / {exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
                   </span>
                 </div>
               </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowSubmitConfirm(false)}
-                  className="flex-1 py-3 border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmSubmit}
-                  className="flex-1 py-3 bg-[#10B981] text-white font-bold rounded-xl hover:bg-[#059669] shadow-lg shadow-green-200 transition-colors"
-                >
-                  Confirm & Submit
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Early Submit Warning / Locked Modal */}
-      {showEarlySubmitModal && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#1a2535]/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowEarlySubmitModal(false)} />
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
-            {/* Header */}
-            <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-6 text-white text-center relative overflow-hidden">
-              <div className="w-16 h-16 bg-white/15 backdrop-blur-xs rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
-                <Lock size={30} className="text-white drop-shadow-sm" />
-              </div>
-              <h3 className="text-xl font-bold tracking-tight">Submission Locked</h3>
-              <p className="text-xs text-amber-100 mt-1 font-medium">Minimum exam duration required before submission</p>
             </div>
 
-            {/* Content */}
-            <div className="p-6 space-y-4">
-              {/* Live Remaining Time Counter */}
-              <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-4 text-center">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 mb-1 flex items-center justify-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" />
-                  Time Left to Unlock Submit
-                </p>
-                <p className="text-3xl font-black text-amber-900 tabular-nums tracking-tight">
-                  {formatCountdownTime(remainingSecondsToUnlock)}
-                </p>
-                <div className="mt-3 w-full bg-amber-200/60 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-amber-600 h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.min(100, Math.max(0, Math.round((timeSpentSeconds / Math.max(1, minRequiredSeconds)) * 100)))}%`
-                    }}
-                  />
-                </div>
-                <p className="text-[10px] text-amber-700 font-semibold mt-1.5">
-                  {Math.min(100, Math.round((timeSpentSeconds / Math.max(1, minRequiredSeconds)) * 100))}% of minimum required time completed
-                </p>
-              </div>
-
-              {/* Exam Time Breakdown */}
-              <div className="space-y-2 bg-gray-50 rounded-2xl p-3.5 border border-gray-100 text-xs">
-                <div className="flex items-center justify-between text-gray-600">
-                  <span className="font-medium">Total Exam Duration:</span>
-                  <span className="font-bold text-[#1a2535]">{formatMinDurationLabel(totalDurationMinutes)}</span>
-                </div>
-                <div className="flex items-center justify-between text-gray-600">
-                  <span className="font-medium">Minimum Required Time:</span>
-                  <span className="font-bold text-amber-700">{formatMinDurationLabel(minRequiredMinutes)}</span>
-                </div>
-                <div className="flex items-center justify-between text-gray-600 border-t border-gray-200/60 pt-2">
-                  <span className="font-medium">Time Completed So Far:</span>
-                  <span className="font-bold text-emerald-700">{formatCountdownTime(timeSpentSeconds)}</span>
-                </div>
-              </div>
-
-              {/* Explanation Note */}
-              <p className="text-xs text-gray-500 leading-relaxed text-center font-normal">
-                As per examination rules, you can only submit this exam after completing at least <strong className="text-gray-700 font-semibold">{formatMinDurationLabel(minRequiredMinutes)}</strong>. Please review your questions and answers until the timer unlocks.
-              </p>
-
-              {/* Action Button */}
+            {/* Action Buttons (Right-aligned) */}
+            <div className="flex items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setShowEarlySubmitModal(false)}
-                className="w-full py-3 bg-[#2D3A4A] hover:bg-[#1a2535] active:bg-[#111927] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-colors cursor-pointer"
+                onClick={() => setShowSubmitConfirm(false)}
+                className="px-5 sm:px-6 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-slate-800 text-xs sm:text-sm font-bold hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                Return to Exam & Review
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmSubmit}
+                disabled={submitting}
+                className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 rounded-xl bg-[#131B2A] hover:bg-[#1f293d] active:bg-[#0d131e] text-white text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
+              >
+                <span>{submitting ? "Submitting..." : "Confirm & Submit"}</span>
+                <span className="text-sm sm:text-base leading-none">→</span>
               </button>
             </div>
           </div>
