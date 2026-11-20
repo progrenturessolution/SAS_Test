@@ -429,31 +429,47 @@ export default function HomePage() {
             {/* Right Mockup Showcase */}
             <ScrollReveal direction="up" delay={150} className="relative mx-auto w-full max-w-[790px] pt-3 pb-4 sm:py-0 lg:translate-y-1">
               {/* Floating Badge 1 - Top Right */}
-              <div className="absolute -top-1.5 right-1 sm:-top-7 sm:right-0 z-20 flex min-w-0 sm:min-w-[195px] items-center gap-2 sm:gap-3 rounded-xl border border-[#d8e0e8] bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 text-[#314158] shadow-[0_12px_30px_rgba(27,42,61,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-top-right">
-                <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-[#eef2f6] text-xs">✦</span>
-                <span className="text-[10px] sm:text-[11px] font-semibold leading-tight">AI Question Generated<br /><small className="font-normal text-gray-400 text-[8px] sm:text-[9px]">Ready to review</small></span>
-                <span className="text-xs sm:text-sm font-bold text-emerald-600 ml-0.5">✓</span>
+              <div className="absolute -top-1.5 right-1 sm:-top-7 sm:right-0 z-20 flex min-w-0 sm:min-w-[195px] items-center gap-2 sm:gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.25)] scale-[0.84] xs:scale-90 sm:scale-100 origin-top-right">
+                <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-600 font-bold">✦</span>
+                <span className="text-[10px] sm:text-[11px] font-bold text-slate-900 leading-tight">AI Question Generated<br /><small className="font-semibold text-slate-500 text-[8px] sm:text-[9px]">Ready to review</small></span>
+                <span className="text-xs sm:text-sm font-black text-emerald-600 ml-0.5">✓</span>
               </div>
 
               {/* Offset decorative border frame */}
-              <div className="pointer-events-none absolute left-2 sm:left-[26px] top-[-6px] sm:top-[-26px] z-0 h-full w-[calc(100%-10px)] sm:w-full rounded-[18px] sm:rounded-[22px] border border-[#7890a9]/40" />
+              <div className="pointer-events-none absolute left-2 sm:left-[26px] top-[-6px] sm:top-[-26px] z-0 h-full w-[calc(100%-10px)] sm:w-full rounded-[18px] sm:rounded-[22px] border border-white/20 bg-white/5 backdrop-blur-xs" />
 
               {/* Mockup Card Main Window */}
-              <div className="relative z-10 overflow-hidden rounded-[16px] border border-[#93a6bc] bg-[#f7f9fb] shadow-[0_24px_50px_rgba(12,27,45,0.3)]">
+              <div className="relative z-10 overflow-hidden rounded-[16px] border border-slate-700/80 bg-white shadow-[0_24px_50px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.1)]">
+                {/* Window Header Bar */}
+                <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100/90 px-3 sm:px-4 py-2 select-none">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57] border border-[#e0443e]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e] border border-[#d89e24]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#28c840] border border-[#1aab29]" />
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-md bg-white border border-slate-200/80 px-2.5 py-0.5 text-[8.5px] sm:text-[10px] font-medium text-slate-600 shadow-2xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span>testrolab.progrentures.com/admin</span>
+                  </div>
+                  <div className="hidden xs:flex items-center text-[8.5px] font-bold text-slate-500">
+                    Admin Portal
+                  </div>
+                </div>
+
                 <div className="flex">
                   {/* Sidebar */}
-                  <aside className="w-[46px] xs:w-[54px] sm:w-[22%] lg:w-[20%] shrink-0 bg-[#304159] p-2 sm:p-4 text-white flex flex-col justify-between">
+                  <aside className="w-[48px] xs:w-[56px] sm:w-[24%] lg:w-[22%] shrink-0 bg-[#0f172a] p-2 sm:p-4 text-white flex flex-col justify-between border-r border-slate-800">
                     <div>
                       {/* Logo */}
                       <div className="mb-4 sm:mb-8 flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2">
-                        <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded bg-white text-[9px] sm:text-[10px] font-bold text-[#304159]">T</span>
-                        <div className="hidden sm:block text-[9px] sm:text-[10px] font-bold tracking-widest leading-none">
-                          TESTRO<br /><small className="text-[6.5px] tracking-[0.2em] text-[#93a6bc]">LAB</small>
+                        <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded bg-emerald-500 text-[9px] sm:text-[11px] font-black text-white shadow-xs">T</span>
+                        <div className="hidden sm:block text-[9.5px] sm:text-[11px] font-extrabold tracking-widest leading-none text-white">
+                          TESTRO<br /><small className="text-[7px] tracking-[0.22em] text-emerald-400 font-bold">LAB</small>
                         </div>
                       </div>
 
                       {/* Nav Items */}
-                      <div className="space-y-1.5 sm:space-y-3.5 text-[9px] text-[#d2dbe5] sm:text-[10px]">
+                      <div className="space-y-1 sm:space-y-2 text-[9px] sm:text-[10.5px]">
                         {[
                           { name: "Overview", icon: Layers },
                           { name: "Examinations", icon: FileText },
@@ -462,15 +478,18 @@ export default function HomePage() {
                           { name: "Results", icon: BarChart2 },
                         ].map((item, index) => {
                           const ItemIcon = item.icon
+                          const isActive = index === 0
                           return (
                             <div
                               key={item.name}
-                              className={`flex items-center justify-center sm:justify-start gap-2 rounded-md p-1.5 sm:px-2 sm:py-2 transition-colors ${
-                                index === 0 ? "bg-[#445872] text-white font-semibold" : "hover:bg-[#3a4d67]"
+                              className={`flex items-center justify-center sm:justify-start gap-2 rounded-md p-1.5 sm:px-2.5 sm:py-2 transition-colors cursor-pointer ${
+                                isActive
+                                  ? "bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30"
+                                  : "text-slate-300 hover:bg-slate-800 hover:text-white font-medium"
                               }`}
                               title={item.name}
                             >
-                              <ItemIcon className="h-3.5 w-3.5 shrink-0" />
+                              <ItemIcon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
                               <span className="hidden sm:inline-block truncate">{item.name}</span>
                             </div>
                           )
@@ -480,16 +499,18 @@ export default function HomePage() {
                   </aside>
 
                   {/* Main Content Area */}
-                  <div className="min-w-0 flex-1 p-3 sm:p-5 lg:p-6 text-[#33445a]">
+                  <div className="min-w-0 flex-1 bg-[#f8fafc] p-3 sm:p-5 lg:p-6 text-slate-800">
                     {/* Header */}
-                    <div className="flex items-start justify-between border-b border-gray-100 sm:border-0 pb-2 sm:pb-0">
+                    <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-3 mb-2.5 sm:mb-4">
                       <div>
-                        <p className="text-[8px] sm:text-[9px] text-gray-400 font-medium">Dashboard</p>
-                        <h2 className="mb-2 sm:mb-4 text-xs sm:text-base font-bold text-[#324158]">Good morning, Admin</h2>
+                        <p className="text-[8px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider">Dashboard</p>
+                        <h2 className="mb-0.5 text-xs sm:text-base font-extrabold text-slate-900 tracking-tight">Good morning, Admin</h2>
                       </div>
-                      <span className="flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-[#e7ecf1] text-[7px] sm:text-[8px] font-bold text-[#65758a]">
-                        AS
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-slate-900 text-[7px] sm:text-[9px] font-black text-white shadow-xs">
+                          AS
+                        </span>
+                      </div>
                     </div>
 
                     {/* Metric Cards - 2 cols on mobile, 4 on sm+ */}
@@ -500,9 +521,9 @@ export default function HomePage() {
                         { label: "Total Questions", value: "4,826" },
                         { label: "Students", value: "1,842" },
                       ].map((stat) => (
-                        <div key={stat.label} className="rounded-lg border border-gray-200/80 bg-white p-2 sm:p-2.5 shadow-2xs">
-                          <p className="text-[7.5px] sm:text-[8px] text-gray-400 leading-tight truncate">{stat.label}</p>
-                          <p className="mt-0.5 sm:mt-1 text-xs sm:text-base font-bold text-[#324158]">{stat.value}</p>
+                        <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs">
+                          <p className="text-[7.5px] sm:text-[8.5px] font-semibold text-slate-600 leading-tight truncate">{stat.label}</p>
+                          <p className="mt-0.5 sm:mt-1 text-xs sm:text-base font-black text-slate-900">{stat.value}</p>
                         </div>
                       ))}
                     </div>
@@ -510,27 +531,28 @@ export default function HomePage() {
                     {/* Widgets Grid - 1 col on mobile, 2 cols on sm+ */}
                     <div className="grid grid-cols-1 sm:grid-cols-[1.38fr_0.92fr] gap-2 sm:gap-3">
                       {/* Left: Recent Examinations */}
-                      <div className="rounded-lg border border-gray-200/80 bg-white p-2 sm:p-3 shadow-2xs">
-                        <div className="mb-2 sm:mb-3 flex items-center justify-between text-[8.5px] sm:text-[10px] font-bold text-[#324158]">
+                      <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs">
+                        <div className="mb-2 sm:mb-2.5 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold text-slate-900">
                           <span>Recent examinations</span>
-                          <span className="text-[7px] sm:text-[8px] font-normal text-gray-400">View all</span>
+                          <span className="text-[7px] sm:text-[8px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer">View all</span>
                         </div>
                         <div className="space-y-1 sm:space-y-1.5">
                           {[
-                            { name: "JEE Mock Test 08", status: "Live", badgeBg: "bg-[#e3f5ec] text-emerald-600" },
-                            { name: "Biology: Human Physiology", status: "Scheduled", badgeBg: "bg-[#eaf0f8] text-[#324158]" },
-                            { name: "MHT-CET Practice Set", status: "Completed", badgeBg: "bg-gray-100 text-gray-600" },
+                            { name: "JEE Mock Test 08", status: "Live", badgeBg: "bg-emerald-100 text-emerald-800 border-emerald-300 font-bold", dot: "bg-emerald-500" },
+                            { name: "Biology: Human Physiology", status: "Scheduled", badgeBg: "bg-blue-100 text-blue-800 border-blue-300 font-bold", dot: "bg-blue-500" },
+                            { name: "MHT-CET Practice Set", status: "Completed", badgeBg: "bg-slate-100 text-slate-800 border-slate-300 font-semibold", dot: "bg-slate-400" },
                           ].map((exam, index) => (
-                            <div key={exam.name} className="flex items-center justify-between border-t border-gray-100 pt-1.5 pb-0.5 text-[7.5px] sm:text-[8.5px]">
+                            <div key={exam.name} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/70 px-2 py-1 text-[7.5px] sm:text-[8.5px]">
                               <span className="flex items-center gap-1.5 truncate">
-                                <b className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded bg-gray-100 text-[6.5px] sm:text-[7px] font-bold text-gray-600">
+                                <b className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded bg-white border border-slate-200 text-[6.5px] sm:text-[7.5px] font-bold text-slate-700">
                                   {index + 1}
                                 </b>
-                                <span className="truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none text-[#33445a]">
+                                <span className="truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none font-semibold text-slate-800">
                                   {exam.name}
                                 </span>
                               </span>
-                              <span className={`shrink-0 rounded-full px-1.5 sm:px-2 py-0.5 text-[6.5px] sm:text-[7px] font-medium ${exam.badgeBg}`}>
+                              <span className={`shrink-0 flex items-center gap-1 rounded-full border px-1.5 sm:px-2 py-0.5 text-[6.5px] sm:text-[7.5px] ${exam.badgeBg}`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${exam.dot}`} />
                                 {exam.status}
                               </span>
                             </div>
@@ -539,18 +561,39 @@ export default function HomePage() {
                       </div>
 
                       {/* Right: Result Overview */}
-                      <div className="rounded-lg border border-gray-200/80 bg-white p-2 sm:p-3 shadow-2xs flex flex-col justify-between">
-                        <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-bold text-[#324158]">
+                      <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+                        <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold text-slate-900">
                           <span>Result overview</span>
-                          <span className="text-[7px] sm:text-[8px] font-normal text-gray-400">This month</span>
+                          <span className="text-[7px] sm:text-[8px] font-semibold text-slate-500">This month</span>
                         </div>
-                        <div className="my-1.5 sm:my-4 flex items-center justify-center">
-                          <div className="relative flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center rounded-full border-[6px] sm:border-[10px] border-[#344860] text-xs sm:text-sm font-bold text-[#324158]">
-                            84%
+                        <div className="my-1.5 sm:my-3 flex items-center justify-center">
+                          <div className="relative flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center">
+                            <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                              <path
+                                className="text-slate-100"
+                                strokeWidth="3.5"
+                                stroke="currentColor"
+                                fill="none"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              />
+                              <path
+                                className="text-emerald-500"
+                                strokeDasharray="84, 100"
+                                strokeWidth="3.5"
+                                strokeLinecap="round"
+                                stroke="currentColor"
+                                fill="none"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="text-xs sm:text-base font-black text-slate-900 leading-none">84%</span>
+                              <span className="text-[6.5px] sm:text-[7.5px] font-bold text-emerald-600 mt-0.5">Passed</span>
+                            </div>
                           </div>
                         </div>
-                        <p className="text-center text-[7px] sm:text-[8px] text-gray-400">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1" />
+                        <p className="border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold text-slate-600">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1 align-middle" />
                           Passed &nbsp;·&nbsp; Needs review
                         </p>
                       </div>
@@ -560,19 +603,19 @@ export default function HomePage() {
               </div>
 
               {/* Floating Badges Bottom */}
-              <div className="absolute -bottom-1.5 left-1 sm:-bottom-3 sm:-left-3 z-20 flex items-center gap-1.5 sm:gap-2 rounded-xl border border-[#d8e0e8] bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 text-[9px] sm:text-[10px] font-semibold text-[#314158] shadow-[0_12px_30px_rgba(27,42,61,0.2)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-left">
-                <span className="text-xs">⚙</span>
+              <div className="absolute -bottom-1.5 left-1 sm:-bottom-3 sm:-left-3 z-20 flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 text-[9px] sm:text-[10px] font-bold text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-left">
+                <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-blue-50 text-blue-600 text-xs font-bold border border-blue-200">⚙</span>
                 <div>
-                  <span>Face Detection Active</span>
-                  <small className="block font-normal text-gray-400 text-[7px] sm:text-[8px]">Session monitored <span className="text-emerald-500 font-bold">●</span></small>
+                  <span className="text-slate-900">Face Detection Active</span>
+                  <small className="block font-semibold text-slate-500 text-[7px] sm:text-[8px]">Session monitored <span className="text-emerald-500 font-bold">●</span></small>
                 </div>
               </div>
 
-              <div className="absolute -bottom-1.5 right-1 sm:-bottom-3 sm:-right-1 z-20 hidden xs:flex items-center gap-1.5 sm:gap-2 rounded-xl border border-[#d8e0e8] bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 text-[9px] sm:text-[10px] font-semibold text-[#314158] shadow-[0_12px_30px_rgba(27,42,61,0.2)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-right">
-                <span className="text-xs">▥</span>
+              <div className="absolute -bottom-1.5 right-1 sm:-bottom-3 sm:-right-1 z-20 hidden xs:flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 text-[9px] sm:text-[10px] font-bold text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-right">
+                <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-purple-50 text-purple-600 text-xs font-bold border border-purple-200">▥</span>
                 <div>
-                  <span>Exam Results Available</span>
-                  <small className="block font-normal text-gray-400 text-[7px] sm:text-[8px]">152 submissions</small>
+                  <span className="text-slate-900">Exam Results Available</span>
+                  <small className="block font-semibold text-slate-500 text-[7px] sm:text-[8px]">152 submissions</small>
                 </div>
               </div>
             </ScrollReveal>
@@ -1419,37 +1462,37 @@ export default function HomePage() {
 
           {/* 3D Dashboard Mockup Card */}
           <ScrollReveal direction="up" delay={150} className="relative flex items-center justify-center py-4">
-            <div className="relative w-full max-w-[390px] -rotate-[3.5deg] overflow-hidden rounded-xl border border-[#e2e8f0] bg-white shadow-[0_25px_50px_-12px_rgba(15,23,42,0.14),0_0_0_1px_rgba(226,232,240,0.8)] transition-transform duration-300 hover:rotate-0">
+            <div className="relative w-full max-w-[390px] -rotate-[3.5deg] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_25px_50px_-12px_rgba(15,23,42,0.18),0_0_0_1px_rgba(226,232,240,0.9)] transition-transform duration-300 hover:rotate-0">
               <div className="flex min-h-[225px]">
                 {/* Mini Sidebar */}
-                <aside className="w-[70px] shrink-0 bg-[#e8edf2] px-2.5 py-3 text-[#64748b]">
-                  <div className="flex items-center gap-1.5 text-[7px] font-bold text-[#324158]">
-                    <span className="flex h-3.5 w-3.5 items-center justify-center rounded bg-white text-[8px] font-black text-[#324158] shadow-xs">
+                <aside className="w-[72px] shrink-0 bg-[#0f172a] px-2.5 py-3 text-slate-300 border-r border-slate-800">
+                  <div className="flex items-center gap-1.5 text-[7px] font-bold text-white">
+                    <span className="flex h-3.5 w-3.5 items-center justify-center rounded bg-emerald-500 text-[8px] font-black text-white shadow-xs">
                       T
                     </span>
-                    <span className="tracking-wider">TESTRO</span>
+                    <span className="tracking-wider font-extrabold text-white">TESTRO</span>
                   </div>
-                  <div className="mt-4 space-y-2 text-[6.5px]">
-                    <span className="block rounded bg-[#d3dce4] px-1.5 py-1 font-semibold text-[#324158]">Dashboard</span>
-                    <span className="block px-1.5 py-0.5 text-[#64748b]">Exams</span>
-                    <span className="block px-1.5 py-0.5 text-[#64748b]">Questions</span>
-                    <span className="block px-1.5 py-0.5 text-[#64748b]">Students</span>
-                    <span className="block px-1.5 py-0.5 text-[#64748b]">Analytics</span>
+                  <div className="mt-4 space-y-1.5 text-[6.5px]">
+                    <span className="block rounded bg-emerald-500/20 px-1.5 py-1 font-bold text-emerald-300 border border-emerald-500/30">Dashboard</span>
+                    <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Exams</span>
+                    <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Questions</span>
+                    <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Students</span>
+                    <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Analytics</span>
                   </div>
                 </aside>
 
                 {/* Mini Content Area */}
-                <div className="flex-1 bg-[#f8fafc] p-3">
-                  <div className="flex items-center justify-between border-b border-[#e2e8f0] pb-2 text-[7px] text-[#64748b]">
-                    <b className="font-semibold text-[#324158]">Dashboard</b>
-                    <span>Good morning, Admin</span>
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#cbd5e1]" />
+                <div className="flex-1 bg-[#f8fafc] p-3 text-slate-800">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2 text-[7px] text-slate-600">
+                    <b className="font-extrabold text-slate-900">Dashboard</b>
+                    <span className="font-medium text-slate-700">Good morning, Admin</span>
+                    <span className="h-2.5 w-2.5 rounded-full bg-slate-900" />
                   </div>
 
                   {/* Metric Tiles */}
                   <div className="mt-2.5 grid grid-cols-4 gap-1.5">
                     {["248", "12", "4,826", "1,842"].map((val) => (
-                      <span key={val} className="rounded border border-[#e2e8f0] bg-white p-1.5 text-center text-[9px] font-bold text-[#324158] shadow-xs">
+                      <span key={val} className="rounded border border-slate-200 bg-white p-1.5 text-center text-[9px] font-black text-slate-900 shadow-2xs">
                         {val}
                       </span>
                     ))}
@@ -1458,19 +1501,19 @@ export default function HomePage() {
                   {/* 2-Col Widgets */}
                   <div className="mt-2.5 grid grid-cols-[1.4fr_1fr] gap-2">
                     {/* Left: Recent Contributions / Exams */}
-                    <div className="rounded border border-[#e2e8f0] bg-white p-2 shadow-xs">
-                      <span className="block text-[6px] font-medium text-[#64748b]">Recent examinations</span>
+                    <div className="rounded border border-slate-200 bg-white p-2 shadow-2xs">
+                      <span className="block text-[6.5px] font-bold text-slate-900">Recent examinations</span>
                       <div className="mt-2 space-y-1.5">
-                        <span className="block h-1 w-full rounded-full bg-[#cbd5e1]" />
-                        <span className="block h-1 w-[80%] rounded-full bg-[#e2e8f0]" />
-                        <span className="block h-1 w-[60%] rounded-full bg-[#e2e8f0]" />
+                        <span className="block h-1 w-full rounded-full bg-emerald-500/60" />
+                        <span className="block h-1 w-[80%] rounded-full bg-blue-500/60" />
+                        <span className="block h-1 w-[60%] rounded-full bg-slate-300" />
                       </div>
                     </div>
 
                     {/* Right: Circular Progress Ring */}
-                    <div className="flex flex-col items-center justify-center rounded border border-[#e2e8f0] bg-white p-2 shadow-xs">
-                      <span className="text-[6px] font-medium text-[#64748b]">Result overview</span>
-                      <div className="relative mt-1 flex h-10 w-10 items-center justify-center rounded-full border-[3.5px] border-[#334155] border-t-[#0284c7] text-[8px] font-bold text-[#324158]">
+                    <div className="flex flex-col items-center justify-center rounded border border-slate-200 bg-white p-2 shadow-2xs">
+                      <span className="text-[6.5px] font-bold text-slate-900">Result overview</span>
+                      <div className="relative mt-1 flex h-10 w-10 items-center justify-center rounded-full border-[3.5px] border-slate-200 border-t-emerald-500 border-r-emerald-500 text-[8px] font-black text-slate-900">
                         84%
                       </div>
                     </div>
