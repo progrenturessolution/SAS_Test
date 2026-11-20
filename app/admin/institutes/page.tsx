@@ -27,7 +27,6 @@ import {
   X,
   Loader2,
   Eye,
-  ArrowRight,
 } from "lucide-react"
 import { formatDateDDMMYYYY } from "@/lib/utils"
 
@@ -749,12 +748,6 @@ export default function InstitutesManagementPage() {
                       </p>
                     )}
                   </div>
-                </div>
-
-                {/* Footer View Action */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#324158] group-hover:text-[#1e2a38]">
-                  <span>View full details</span>
-                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                 </div>
               </article>
             )
