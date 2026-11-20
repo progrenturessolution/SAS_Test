@@ -294,7 +294,7 @@ export default function AdminSidebar({
                 const isExamItem = item.href === "/admin/exams"
                 const isOtherExamsItem = item.href === "/admin/other-exams"
                 const isWip = Boolean((item as any).isWip)
-                const isQuotaBlocked = isExamQuotaReached && (isCompetitiveItem || isOtherExamsItem)
+                const isQuotaBlocked = (isExamQuotaReached || (maxExams > 0 && examCount >= maxExams)) && (isCompetitiveItem || isOtherExamsItem || isExamItem)
                 const isRestricted = !isSuperAdmin && (
                   isQuotaBlocked ||
                   (isCompetitiveItem && !hasCompetitiveAccess) ||
@@ -503,7 +503,7 @@ export default function AdminSidebar({
             const isExamItem = item.href === "/admin/exams"
             const isOtherExamsItem = item.href === "/admin/other-exams"
             const isWip = Boolean((item as any).isWip)
-            const isQuotaBlocked = isExamQuotaReached && (isCompetitiveItem || isOtherExamsItem)
+            const isQuotaBlocked = (isExamQuotaReached || (maxExams > 0 && examCount >= maxExams)) && (isCompetitiveItem || isOtherExamsItem || isExamItem)
             const isRestricted = !isSuperAdmin && (
               isQuotaBlocked ||
               (isCompetitiveItem && !hasCompetitiveAccess) ||
