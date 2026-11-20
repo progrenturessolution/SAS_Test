@@ -153,3 +153,4 @@ Submitted via Progrentures Portal`
     return NextResponse.json({ error: error.message || "Failed to submit query" }, { status: 500 })
   }
 }
+

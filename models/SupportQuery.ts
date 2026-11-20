@@ -56,3 +56,4 @@ const SupportQuery =
   mongoose.model<ISupportQuery>("SupportQuery", SupportQuerySchema)
 
 export default SupportQuery
+
