@@ -27,7 +27,9 @@ import {
   X,
   Loader2,
   Eye,
+  AlertTriangle,
 } from "lucide-react"
+import { toast } from "sonner"
 import { formatDateDDMMYYYY } from "@/lib/utils"
 
 interface InstituteLimits {
@@ -128,6 +130,12 @@ export default function InstitutesManagementPage() {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState<Institute | null>(null)
   const [selectedInstitute, setSelectedInstitute] = useState<Institute | null>(null)
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null)
+
+  // 2-Step Delete Confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<Institute | null>(null)
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1)
+  const [deletingInstitute, setDeletingInstitute] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   // Registration Form state
   const [formName, setFormName] = useState("")
@@ -325,20 +333,35 @@ export default function InstitutesManagementPage() {
     }
   }
 
-  const handleDeleteInstitute = async (inst: Institute) => {
-    if (!confirm(`Delete "${inst.name}" permanently? This will remove the institute, admin login, all students, exams, attempts, and related records. This action cannot be undone.`)) {
-      return
-    }
+  const handleDeleteInstitute = (inst: Institute) => {
+    setDeleteTarget(inst)
+    setDeleteStep(1)
+  }
 
+  const confirmDeleteInstitute = async () => {
+    if (!deleteTarget) return
+    const inst = deleteTarget
+    setDeletingInstitute(true)
     try {
       const res = await fetch(`/api/admin/institutes/${inst._id}`, { method: "DELETE" })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to delete institute")
 
       setSelectedInstitute((current) => (current?._id === inst._id ? null : current))
+      setDeleteTarget(null)
+      setDeleteStep(1)
       await fetchInstitutes()
+
+      // Show prominent success notification
+      const msg = `Institute "${inst.name}" (${inst.code}) and all related records were successfully deleted.`
+      toast.success(msg)
+      setSuccessMessage(msg)
+      setTimeout(() => setSuccessMessage(null), 8000)
     } catch (err: any) {
+      toast.error(err.message || "Failed to delete institute")
       alert(err.message || "Failed to delete institute")
+    } finally {
+      setDeletingInstitute(false)
     }
   }
 
@@ -424,6 +447,29 @@ export default function InstitutesManagementPage() {
           <span>Register New Organization</span>
         </button>
       </div>
+
+      {/* Prominent Success Message Banner after Deletion or Updates */}
+      {successMessage && (
+        <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200/90 rounded-2xl shadow-xs text-emerald-900 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-emerald-950">Action Completed</p>
+              <p className="text-xs text-emerald-800 font-medium mt-0.5">{successMessage}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessMessage(null)}
+            className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100/60 rounded-xl transition-colors cursor-pointer"
+            aria-label="Dismiss message"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* 4 Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1523,6 +1569,125 @@ export default function InstitutesManagementPage() {
                 >
                   {resettingPassword ? "Updating..." : "Update Password"}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Modal 4: 2-Step Permanent Delete Confirmation ─── */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-rose-200/80 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-rose-100 bg-rose-50/50">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-xs">
+                    {deleteStep === 1 ? <Trash2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5 text-rose-600" />}
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                      Step {deleteStep} of 2 Confirmation
+                    </span>
+                    <h3 className="text-base font-bold text-slate-900 mt-1">
+                      {deleteStep === 1 ? "Delete Organization?" : "Final Permanent Warning"}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!deletingInstitute) {
+                      setDeleteTarget(null)
+                      setDeleteStep(1)
+                    }
+                  }}
+                  className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 text-xs">
+              {deleteStep === 1 ? (
+                <>
+                  <p className="text-slate-600 text-sm leading-relaxed">
+                    Are you sure you want to delete <strong className="text-slate-900 font-bold">{deleteTarget.name}</strong> (<span className="font-mono text-slate-700 font-semibold">{deleteTarget.code}</span>)?
+                  </p>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-1.5 text-slate-600">
+                    <p className="font-semibold text-slate-800">Please Note:</p>
+                    <p>• Organization admin login will be revoked immediately.</p>
+                    <p>• You will be asked for a second and final confirmation before any data is permanently erased.</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4 space-y-2.5 text-rose-900">
+                    <p className="font-bold text-sm text-rose-950 flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>This action CANNOT be undone!</span>
+                    </p>
+                    <p className="leading-relaxed text-rose-800">
+                      Deleting <strong className="font-bold">{deleteTarget.name}</strong> will <strong>permanently destroy</strong> all data associated with it:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 font-semibold text-rose-900 text-[11px] pl-1">
+                      <li>All exams, tests, and question papers</li>
+                      <li>All enrolled student accounts and credentials</li>
+                      <li>All student test attempts, scores, and analytics</li>
+                      <li>All proctoring logs and activity history</li>
+                    </ul>
+                  </div>
+                  <p className="text-slate-500 text-[11px] leading-relaxed">
+                    Click below only if you are 100% sure you want to permanently delete this organization and all its data.
+                  </p>
+                </>
+              )}
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
+                {deleteStep === 1 ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(null)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors cursor-pointer text-xs"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteStep(2)}
+                      className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition-colors cursor-pointer text-xs flex items-center gap-1.5 shadow-sm"
+                    >
+                      <span>Proceed to Final Warning</span>
+                      <span>→</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={deletingInstitute}
+                      onClick={() => setDeleteStep(1)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors cursor-pointer text-xs disabled:opacity-50"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingInstitute}
+                      onClick={confirmDeleteInstitute}
+                      className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition-all cursor-pointer text-xs flex items-center gap-2 shadow-sm disabled:opacity-60"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{deletingInstitute ? "Deleting permanently..." : "Confirm & Delete Permanently"}</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
