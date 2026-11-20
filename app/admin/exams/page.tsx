@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Plus, Share2, GraduationCap, Lock } from "lucide-react"
+import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Plus, Share2, GraduationCap, Lock, Layers } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { ExamActionMenu } from "@/components/ExamActionMenu"
 import { toast } from "sonner"
@@ -28,6 +28,7 @@ export default function ExamsListPage() {
   const [filter, setFilter] = useState("all")
   const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState(true)
   const [hasExamAccess, setHasExamAccess] = useState(true)
+  const [hasOtherExamsAccess, setHasOtherExamsAccess] = useState(true)
 
   useEffect(() => {
     fetch("/api/exams", { credentials: "include" })
@@ -39,6 +40,7 @@ export default function ExamsListPage() {
       .then((d) => {
         setHasCompetitiveAccess(d.hasCompetitiveAccess !== false)
         setHasExamAccess(d.hasExamAccess !== false)
+        setHasOtherExamsAccess(d.hasOtherExamsAccess !== false)
       })
       .catch(() => {})
   }, [])
@@ -131,6 +133,36 @@ export default function ExamsListPage() {
               <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
                 <Lock size={12} className="text-amber-400 shrink-0" />
                 <span>Access Restricted: You do not have permission to create Competitive Tests.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Other Exams Button */}
+          <div className="relative group">
+            {hasOtherExamsAccess ? (
+              <Link
+                href="/admin/other-exams"
+                className="flex items-center gap-2 px-3.5 py-2 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
+              >
+                <Layers size={16} className="text-white" />
+                <span>Other Exams</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  toast.error("Access Restricted: You do not have permission to create Other Exams. Contact administrator.")
+                }
+                className="flex items-center gap-2 px-3.5 py-2 bg-gray-100 text-gray-400 border border-gray-200 rounded-lg text-sm font-medium cursor-not-allowed shadow-none"
+              >
+                <Lock size={15} className="text-gray-400" />
+                <span>Other Exams</span>
+              </button>
+            )}
+            {!hasOtherExamsAccess && (
+              <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
+                <Lock size={12} className="text-amber-400 shrink-0" />
+                <span>Access Restricted: You do not have permission to create Other Exams.</span>
               </div>
             )}
           </div>

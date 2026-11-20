@@ -327,8 +327,22 @@ function OtherExamsContent() {
   const editExamId = searchParams.get("edit")
   const [editingExamId, setEditingExamId] = useState<string | null>(editExamId)
   const [isLoadingExistingExam, setIsLoadingExistingExam] = useState(false)
+  const [hasOtherExamsAccess, setHasOtherExamsAccess] = useState<boolean | null>(null)
   const [currentStep, setCurrentStep] = useState(1)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch("/api/admin/institute-access", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.hasOtherExamsAccess !== undefined) {
+          setHasOtherExamsAccess(data.hasOtherExamsAccess !== false)
+        } else {
+          setHasOtherExamsAccess(true)
+        }
+      })
+      .catch(() => setHasOtherExamsAccess(true))
+  }, [])
 
   // Step 1: Category
   const [selectedCategory, setSelectedCategory] = useState<string>("other_exams")
@@ -1153,6 +1167,26 @@ function OtherExamsContent() {
     setIsCustomExam(true)
     setSelectedExam("")
     setExamDropdownOpen(false)
+  }
+
+  if (hasOtherExamsAccess === false) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 border border-amber-200 shadow-sm">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[#2D3A4A] mb-2">Access Restricted</h2>
+        <p className="text-gray-500 max-w-md text-sm mb-6 leading-relaxed">
+          Your coaching institute does not have permission to access the Other Exams Studio. Please contact your administrator to enable this module.
+        </p>
+        <Link
+          href="/admin"
+          className="px-6 py-2.5 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-xl text-sm font-medium transition-colors shadow-sm"
+        >
+          Return to Dashboard
+        </Link>
+      </div>
+    )
   }
 
   return (

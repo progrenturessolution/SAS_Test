@@ -42,6 +42,7 @@ export default function AdminSidebar({
   const router = useRouter()
   const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState(true)
   const [hasExamAccess, setHasExamAccess] = useState(true)
+  const [hasOtherExamsAccess, setHasOtherExamsAccess] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [instituteLogo, setInstituteLogo] = useState<string | null>(null)
   const [themeColor, setThemeColor] = useState<string>(initialThemeColor || "#2D3A4A")
@@ -87,6 +88,7 @@ export default function AdminSidebar({
         .then((data) => {
           setHasCompetitiveAccess(data.hasCompetitiveAccess !== false)
           setHasExamAccess(data.hasExamAccess !== false)
+          setHasOtherExamsAccess(data.hasOtherExamsAccess !== false)
           if (data.logo) setInstituteLogo(data.logo)
           if (data.themeColor) {
             setThemeColor(data.themeColor)
@@ -96,6 +98,7 @@ export default function AdminSidebar({
         .catch(() => {
           setHasCompetitiveAccess(true)
           setHasExamAccess(true)
+          setHasOtherExamsAccess(true)
         })
     }
     loadAccess()
@@ -276,13 +279,17 @@ export default function AdminSidebar({
                 const active = isActive(item.href)
                 const isCompetitiveItem = item.href === "/admin/ai-generator"
                 const isExamItem = item.href === "/admin/exams"
+                const isOtherExamsItem = item.href === "/admin/other-exams"
                 const isWip = Boolean((item as any).isWip)
                 const isRestricted = !isSuperAdmin && (
                   (isCompetitiveItem && !hasCompetitiveAccess) ||
-                  (isExamItem && !hasExamAccess)
+                  (isExamItem && !hasExamAccess) ||
+                  (isOtherExamsItem && !hasOtherExamsAccess)
                 )
                 const restrictedMessage = isCompetitiveItem
                   ? "Access Restricted: You do not have permission to create Entrance Exams. Contact administrator."
+                  : isOtherExamsItem
+                  ? "Access Restricted: You do not have permission to create Other Exams. Contact administrator."
                   : "Access Restricted: You do not have permission to create Exams. Contact administrator."
 
                 return (
@@ -474,13 +481,17 @@ export default function AdminSidebar({
             const active = isActive(item.href)
             const isCompetitiveItem = item.href === "/admin/ai-generator"
             const isExamItem = item.href === "/admin/exams"
+            const isOtherExamsItem = item.href === "/admin/other-exams"
             const isWip = Boolean((item as any).isWip)
             const isRestricted = !isSuperAdmin && (
               (isCompetitiveItem && !hasCompetitiveAccess) ||
-              (isExamItem && !hasExamAccess)
+              (isExamItem && !hasExamAccess) ||
+              (isOtherExamsItem && !hasOtherExamsAccess)
             )
             const restrictedMessage = isCompetitiveItem
               ? "Access Restricted: You do not have permission to create Entrance Exams. Contact administrator."
+              : isOtherExamsItem
+              ? "Access Restricted: You do not have permission to create Other Exams. Contact administrator."
               : "Access Restricted: You do not have permission to create Exams. Contact administrator."
 
             return (

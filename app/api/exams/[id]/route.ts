@@ -84,9 +84,26 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const institute = await Institute.findById(session.instituteId).select("limits").lean()
       const allowedExamTypes = Array.isArray(institute?.limits?.examTypes)
         ? institute.limits.examTypes.map((type) => String(type).trim().toUpperCase())
-        : ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM"]
+        : ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "OTHER", "OTHER_EXAMS"]
       const examType = String(body.examType).trim().toUpperCase()
-      if (!allowedExamTypes.includes(examType)) {
+
+      const isCompetitive = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "COMPETITIVE"].includes(examType)
+      const isStandardExam = ["CUSTOM", "EXAM"].includes(examType)
+      const isOtherExam = ["OTHER", "OTHER_EXAMS"].includes(examType)
+
+      const hasCompAccess = allowedExamTypes.some((t) =>
+        ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(t)
+      )
+      const hasExamAccess = allowedExamTypes.some((t) => ["EXAM", "CUSTOM"].includes(t))
+      const hasOtherAccess = allowedExamTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(t))
+
+      const isAllowed =
+        (isCompetitive && hasCompAccess) ||
+        (isStandardExam && hasExamAccess) ||
+        (isOtherExam && hasOtherAccess) ||
+        allowedExamTypes.includes(examType)
+
+      if (!isAllowed) {
         return NextResponse.json(
           { error: `This institute is not permitted to conduct ${examType.replaceAll("_", " ")} exams.` },
           { status: 403 }

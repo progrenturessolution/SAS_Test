@@ -128,13 +128,16 @@ export async function POST(req: Request) {
       )
     }
 
-    // Determine expanded exam types based on the two access options
-    const rawIncomingTypes = Array.isArray(examTypes) ? examTypes : ["COMPETITIVE", "EXAM"]
+    // Determine expanded exam types based on the access options (Competitive, Standard Exam, Other Exams)
+    const rawIncomingTypes = Array.isArray(examTypes) ? examTypes : ["COMPETITIVE", "EXAM", "OTHER"]
     const hasCompetitive = rawIncomingTypes.some((t: string) =>
       ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(t).toUpperCase())
     )
     const hasExam = rawIncomingTypes.some((t: string) =>
       ["EXAM", "CUSTOM"].includes(String(t).toUpperCase())
+    )
+    const hasOther = rawIncomingTypes.some((t: string) =>
+      ["OTHER", "OTHER_EXAMS"].includes(String(t).toUpperCase())
     )
 
     const finalExamTypes: string[] = []
@@ -143,6 +146,9 @@ export async function POST(req: Request) {
     }
     if (hasExam) {
       finalExamTypes.push("EXAM", "CUSTOM")
+    }
+    if (hasOther) {
+      finalExamTypes.push("OTHER", "OTHER_EXAMS")
     }
 
     // 1. Create Institute document

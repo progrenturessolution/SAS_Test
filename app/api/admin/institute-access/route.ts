@@ -3,8 +3,8 @@ import { getSession } from "@/lib/auth"
 import connectDB from "@/lib/mongodb"
 import Institute from "@/models/Institute"
 
-const ALL_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "CODING"]
-const LEGACY_INSTITUTE_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM"]
+const ALL_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "CODING", "OTHER", "OTHER_EXAMS"]
+const LEGACY_INSTITUTE_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "OTHER", "OTHER_EXAMS"]
 const ALL_CUSTOM_QUESTION_TYPES = ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"]
 
 export async function GET(req: Request) {
@@ -24,6 +24,7 @@ export async function GET(req: Request) {
         instituteCode: session.instituteCode || "",
         hasCompetitiveAccess: true,
         hasExamAccess: true,
+        hasOtherExamsAccess: true,
         examTypes: ALL_EXAM_TYPES,
         features: {},
         customQuestionTypes: ALL_CUSTOM_QUESTION_TYPES,
@@ -46,6 +47,8 @@ export async function GET(req: Request) {
 
     const hasExamAccess = rawExamTypes.some((t) => ["EXAM", "CUSTOM"].includes(t))
 
+    const hasOtherExamsAccess = rawExamTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(t))
+
     return NextResponse.json({
       instituteName: institute.name || session.instituteName || "Coaching Institute",
       instituteCode: institute.code || session.instituteCode || "",
@@ -53,6 +56,7 @@ export async function GET(req: Request) {
       themeColor: institute.themeColor || "#2D3A4A",
       hasCompetitiveAccess,
       hasExamAccess,
+      hasOtherExamsAccess,
       examTypes: rawExamTypes,
       features: institute.limits?.features || {},
       customQuestionTypes: Array.isArray(institute.limits?.customQuestionTypes)

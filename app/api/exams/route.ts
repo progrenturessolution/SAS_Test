@@ -76,15 +76,17 @@ export async function POST(req: Request) {
       const examType = String(body.examType || "CUSTOM").trim().toUpperCase()
       const allowedExamTypes = Array.isArray(institute.limits?.examTypes)
         ? institute.limits.examTypes.map((type) => String(type).trim().toUpperCase())
-        : ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "EXAM", "COMPETITIVE"]
+        : ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "EXAM", "COMPETITIVE", "OTHER", "OTHER_EXAMS"]
 
       const isCompetitive = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "COMPETITIVE"].includes(examType)
       const isStandardExam = ["CUSTOM", "EXAM"].includes(examType)
+      const isOtherExam = ["OTHER", "OTHER_EXAMS"].includes(examType)
 
       const hasCompAccess = allowedExamTypes.some((t) =>
         ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(t)
       ) && institute.limits?.features?.neetJeeGenerator !== false
       const hasExamAccess = allowedExamTypes.some((t) => ["EXAM", "CUSTOM"].includes(t))
+      const hasOtherAccess = allowedExamTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(t))
 
       if (isCompetitive && !hasCompAccess) {
         return NextResponse.json(
@@ -95,6 +97,12 @@ export async function POST(req: Request) {
       if (isStandardExam && !hasExamAccess) {
         return NextResponse.json(
           { error: "Your institute does not have permission to create standard Exams." },
+          { status: 403 }
+        )
+      }
+      if (isOtherExam && !hasOtherAccess) {
+        return NextResponse.json(
+          { error: "Your institute does not have permission to create Other Exams." },
           { status: 403 }
         )
       }

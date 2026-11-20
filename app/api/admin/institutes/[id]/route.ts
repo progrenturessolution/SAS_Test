@@ -48,6 +48,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         const hasExam = incomingTypes.some((t: string) =>
           ["EXAM", "CUSTOM"].includes(String(t).toUpperCase())
         )
+        const hasOther = incomingTypes.some((t: string) =>
+          ["OTHER", "OTHER_EXAMS"].includes(String(t).toUpperCase())
+        )
 
         finalExamTypes = []
         if (hasComp) {
@@ -55,6 +58,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
         if (hasExam) {
           finalExamTypes.push("EXAM", "CUSTOM")
+        }
+        if (hasOther) {
+          finalExamTypes.push("OTHER", "OTHER_EXAMS")
         }
       }
 
