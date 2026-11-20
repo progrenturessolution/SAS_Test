@@ -51,6 +51,8 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "deactivated">("all")
+  const [feesFilter, setFeesFilter] = useState<"all" | "completed" | "pending">("all")
   const [themeColor, setThemeColor] = useState<string>("#1E293B")
 
   // Modals & Popups
@@ -434,13 +436,59 @@ export default function StudentsPage() {
     }
   }
 
-  const filtered = students.filter(
-    (s) =>
-      s.studentName?.toLowerCase().includes(search.toLowerCase()) ||
-      s.email?.toLowerCase().includes(search.toLowerCase()) ||
-      s.rollNumber?.toLowerCase().includes(search.toLowerCase()) ||
-      s.batch?.toLowerCase().includes(search.toLowerCase())
+  const activeCount = useMemo(
+    () => students.filter((s) => s.status !== "deactivated" && s.isActive !== false).length,
+    [students]
   )
+  const deactivatedCount = useMemo(
+    () => students.filter((s) => s.status === "deactivated" || s.isActive === false).length,
+    [students]
+  )
+  const completedFeesCount = useMemo(() => {
+    return students.filter((s) => {
+      const total = s.totalFees || 0
+      const completed = s.completedFees || 0
+      const pending = s.pendingFees !== undefined ? s.pendingFees : Math.max(0, total - completed)
+      return total > 0 && pending <= 0
+    }).length
+  }, [students])
+  const pendingFeesCount = useMemo(() => {
+    return students.filter((s) => {
+      const total = s.totalFees || 0
+      const completed = s.completedFees || 0
+      const pending = s.pendingFees !== undefined ? s.pendingFees : Math.max(0, total - completed)
+      return pending > 0
+    }).length
+  }, [students])
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return students.filter((s) => {
+      const matchesSearch =
+        !query ||
+        s.studentName?.toLowerCase().includes(query) ||
+        s.email?.toLowerCase().includes(query) ||
+        s.rollNumber?.toLowerCase().includes(query) ||
+        s.batch?.toLowerCase().includes(query)
+
+      if (!matchesSearch) return false
+
+      const isDeactivated = s.status === "deactivated" || s.isActive === false
+      if (statusFilter === "active" && isDeactivated) return false
+      if (statusFilter === "deactivated" && !isDeactivated) return false
+
+      const total = s.totalFees || 0
+      const completed = s.completedFees || 0
+      const pending = s.pendingFees !== undefined ? s.pendingFees : Math.max(0, total - completed)
+      const isFullPaid = total > 0 && pending <= 0
+      const hasPending = pending > 0
+
+      if (feesFilter === "completed" && !isFullPaid) return false
+      if (feesFilter === "pending" && !hasPending) return false
+
+      return true
+    })
+  }, [students, search, statusFilter, feesFilter])
 
   const totalFeesSum = students.reduce((sum, s) => sum + (s.totalFees || 0), 0)
   const totalCompletedSum = students.reduce((sum, s) => sum + (s.completedFees || 0), 0)
@@ -500,12 +548,31 @@ export default function StudentsPage() {
 
       {/* ── Stat Cards (2x2 on Mobile, 4 Cols on Desktop - NO ORANGE) ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all">
+        <button
+          type="button"
+          onClick={() => {
+            setStatusFilter("all")
+            setFeesFilter("all")
+          }}
+          className={`text-left bg-white rounded-2xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all cursor-pointer ${
+            statusFilter === "all" && feesFilter === "all"
+              ? "border-[#2D3A4A] ring-2 ring-[#2D3A4A]/10"
+              : "border-slate-200/80 hover:border-slate-300"
+          }`}
+        >
           <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Students</p>
           <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#324158] tracking-tight">{students.length}</p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all">
+        <button
+          type="button"
+          onClick={() => setFeesFilter(feesFilter === "completed" ? "all" : "completed")}
+          className={`text-left bg-white rounded-2xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all cursor-pointer ${
+            feesFilter === "completed"
+              ? "border-emerald-600 ring-2 ring-emerald-600/10"
+              : "border-slate-200/80 hover:border-slate-300"
+          }`}
+        >
           <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Fees Collected</p>
           <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
             <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-emerald-700 tracking-tight">
@@ -513,14 +580,22 @@ export default function StudentsPage() {
             </p>
             <span className="text-[10px] sm:text-xs text-slate-400 truncate">/ ₹{totalFeesSum.toLocaleString()}</span>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all">
+        <button
+          type="button"
+          onClick={() => setFeesFilter(feesFilter === "pending" ? "all" : "pending")}
+          className={`text-left bg-white rounded-2xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all cursor-pointer ${
+            feesFilter === "pending"
+              ? "border-amber-600 ring-2 ring-amber-600/10"
+              : "border-slate-200/80 hover:border-slate-300"
+          }`}
+        >
           <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Pending Fees</p>
           <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-800 tracking-tight">
             ₹{totalPendingSum.toLocaleString()}
           </p>
-        </div>
+        </button>
 
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all">
           <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Exam Attempts</p>
@@ -534,6 +609,111 @@ export default function StudentsPage() {
               </span>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* ── Filters Bar: Status & Fees Filters ── */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+        {/* Left: Filter Buttons */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Status Filters */}
+          <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200/70">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2">Status:</span>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                statusFilter === "all"
+                  ? "bg-[#2D3A4A] text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white"
+              }`}
+            >
+              All ({students.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("active")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                statusFilter === "active"
+                  ? "bg-emerald-700 text-white shadow-xs"
+                  : "text-slate-600 hover:text-emerald-700 hover:bg-white"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === "active" ? "bg-white" : "bg-emerald-500"}`} />
+              Active ({activeCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("deactivated")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                statusFilter === "deactivated"
+                  ? "bg-slate-700 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === "deactivated" ? "bg-white" : "bg-slate-400"}`} />
+              Deactivated ({deactivatedCount})
+            </button>
+          </div>
+
+          {/* Fees Filters */}
+          <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200/70">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2">Fees:</span>
+            <button
+              type="button"
+              onClick={() => setFeesFilter("all")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                feesFilter === "all"
+                  ? "bg-[#2D3A4A] text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white"
+              }`}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => setFeesFilter("completed")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                feesFilter === "completed"
+                  ? "bg-emerald-700 text-white shadow-xs"
+                  : "text-slate-600 hover:text-emerald-700 hover:bg-white"
+              }`}
+            >
+              Completed Fees ({completedFeesCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFeesFilter("pending")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                feesFilter === "pending"
+                  ? "bg-amber-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-amber-700 hover:bg-white"
+              }`}
+            >
+              Pending Fees ({pendingFeesCount})
+            </button>
+          </div>
+
+          {/* Reset Filters Button */}
+          {(statusFilter !== "all" || feesFilter !== "all" || search) && (
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter("all")
+                setFeesFilter("all")
+                setSearch("")
+              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <X size={12} />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
+
+        {/* Right: Counter */}
+        <div className="text-xs text-slate-500 font-medium">
+          Showing <span className="font-bold text-[#324158]">{filtered.length}</span> of {students.length} students
         </div>
       </div>
 
@@ -563,7 +743,24 @@ export default function StudentsPage() {
                   {filtered.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center py-16 text-gray-400 text-sm">
-                        {search ? "No students matching your search." : "No registered students found."}
+                        {search || statusFilter !== "all" || feesFilter !== "all" ? (
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <p className="font-medium text-slate-600">No students match the selected filter criteria.</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSearch("")
+                                setStatusFilter("all")
+                                setFeesFilter("all")
+                              }}
+                              className="text-xs text-[#2D3A4A] underline font-semibold hover:opacity-80 cursor-pointer"
+                            >
+                              Reset all filters
+                            </button>
+                          </div>
+                        ) : (
+                          "No registered students found."
+                        )}
                       </td>
                     </tr>
                   ) : (
@@ -781,7 +978,24 @@ export default function StudentsPage() {
             <div className="block md:hidden divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <div className="text-center py-12 px-4 text-gray-400 text-sm">
-                  {search ? "No students matching your search." : "No registered students found."}
+                  {search || statusFilter !== "all" || feesFilter !== "all" ? (
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <p className="font-medium text-slate-600">No students match the selected filter criteria.</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch("")
+                          setStatusFilter("all")
+                          setFeesFilter("all")
+                        }}
+                        className="text-xs text-[#2D3A4A] underline font-semibold hover:opacity-80 cursor-pointer"
+                      >
+                        Reset all filters
+                      </button>
+                    </div>
+                  ) : (
+                    "No registered students found."
+                  )}
                 </div>
               ) : (
                 filtered.map((s) => {
