@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback, use } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -219,7 +219,7 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
                 onClick={() => setActiveTab(tab)}
                 className={`pb-2 text-sm font-semibold transition-colors relative ${
                   activeTab === tab
-                    ? "text-[#2D3A4A]"
+                    ? "text-[#324158]"
                     : "text-gray-500 hover:text-gray-700"
                 } ${activeTab === tab ? "border-b-2 border-[#2D3A4A]" : ""}`}
               >
@@ -235,13 +235,13 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
           {activeTab === "problem" && question && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-lg font-bold text-[#1a2535] mb-3">Problem Description</h2>
+                <h2 className="text-lg font-bold text-[#324158] mb-3">Problem Description</h2>
                 <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{question.questionText}</p>
               </div>
 
               {testCases.filter((tc) => !tc.hidden).length > 0 && (
                 <div>
-                  <h3 className="text-sm font-bold text-[#1a2535] mb-3">Examples</h3>
+                  <h3 className="text-sm font-bold text-[#324158] mb-3">Examples</h3>
                   <div className="space-y-3">
                     {testCases.filter((tc) => !tc.hidden).map((tc, i) => (
                       <div key={i} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
@@ -258,7 +258,7 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
 
               {question.constraints && question.constraints.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-bold text-[#1a2535] mb-3">Constraints</h3>
+                  <h3 className="text-sm font-bold text-[#324158] mb-3">Constraints</h3>
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                     {question.constraints.map((c, i) => (
                       <p key={i} className="text-xs text-amber-700 font-medium">• {c}</p>

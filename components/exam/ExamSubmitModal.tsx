@@ -1,4 +1,4 @@
-import React from "react"
+﻿import React from "react"
 
 export interface ExamSubmitModalProps {
   isOpen: boolean
@@ -41,7 +41,7 @@ export function ExamSubmitModal({
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl sm:max-w-2xl relative overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200/80 p-6 sm:p-9">
         {/* Header */}
         <div className="mb-6">
-          <h3 className="text-2xl sm:text-[28px] font-bold text-[#0F172A] tracking-tight">
+          <h3 className="text-2xl sm:text-[28px] font-bold text-[#324158] tracking-tight">
             Ready to Submit?
           </h3>
           <p className="text-sm sm:text-base text-slate-500 font-normal mt-1.5 leading-relaxed">
@@ -56,7 +56,7 @@ export function ExamSubmitModal({
             <span className="text-xs sm:text-sm font-semibold text-slate-700 block">
               Answered
             </span>
-            <span className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] mt-2 block tracking-tight">
+            <span className="text-2xl sm:text-3xl font-extrabold text-[#324158] mt-2 block tracking-tight">
               {totalAnswered}
             </span>
           </div>
@@ -66,7 +66,7 @@ export function ExamSubmitModal({
             <span className="text-xs sm:text-sm font-semibold text-slate-700 block">
               Remaining
             </span>
-            <span className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] mt-2 block tracking-tight">
+            <span className="text-2xl sm:text-3xl font-extrabold text-[#324158] mt-2 block tracking-tight">
               {remaining}
             </span>
           </div>
@@ -76,7 +76,7 @@ export function ExamSubmitModal({
             <span className="text-xs sm:text-sm font-semibold text-slate-700 block">
               Total Questions
             </span>
-            <span className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] mt-2 block tracking-tight">
+            <span className="text-2xl sm:text-3xl font-extrabold text-[#324158] mt-2 block tracking-tight">
               {totalQuestions}
             </span>
           </div>
@@ -88,7 +88,7 @@ export function ExamSubmitModal({
             {/* Marked for Review */}
             <div className="flex-1 flex items-center justify-between pr-4 sm:pr-8">
               <span className="font-semibold text-slate-800">Marked for Review</span>
-              <span className="font-bold text-[#0F172A] text-sm sm:text-base">
+              <span className="font-bold text-[#324158] text-sm sm:text-base">
                 {markedForReview}
               </span>
             </div>
@@ -99,7 +99,7 @@ export function ExamSubmitModal({
             {/* Proctoring Warnings */}
             <div className="flex-1 flex items-center justify-between pl-4 sm:pl-8">
               <span className="font-semibold text-slate-800 truncate mr-2">Proctoring Warnings</span>
-              <span className="font-bold text-[#0F172A] text-sm sm:text-base shrink-0">
+              <span className="font-bold text-[#324158] text-sm sm:text-base shrink-0">
                 {warnings} / {maxWarnings}
               </span>
             </div>

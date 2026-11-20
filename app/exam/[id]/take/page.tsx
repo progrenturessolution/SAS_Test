@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback, use, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -1179,7 +1179,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         {/* Top Header */}
         <div className="max-w-6xl mx-auto w-full flex items-center justify-between mb-8">
           <ProcrentureLogo />
-          <Button variant="outline" className="rounded-xl font-bold text-[#2D3A4A] border-gray-200">
+          <Button variant="outline" className="rounded-xl font-bold text-[#324158] border-gray-200">
             need help ?
           </Button>
         </div>
@@ -1192,7 +1192,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             <span className="text-gray-600">General Instructions</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-black text-[#2D3A4A] mb-2 tracking-tight">General Instructions</h1>
+          <h1 className="text-2xl sm:text-4xl font-black text-[#324158] mb-2 tracking-tight">General Instructions</h1>
           <p className="text-xs sm:text-base text-gray-500 font-medium mb-6 sm:mb-8">Please read all instructions carefully before starting your exam</p>
 
           {/* Scheduled Status Banner */}
@@ -1204,7 +1204,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 </div>
                 <div>
                   <p className="text-xs font-bold text-red-600 uppercase tracking-wider">Examination Window Closed</p>
-                  <p className="text-xs sm:text-sm font-bold text-[#2D3A4A]">The scheduled time for this exam has ended. You can no longer start this exam.</p>
+                  <p className="text-xs sm:text-sm font-bold text-[#324158]">The scheduled time for this exam has ended. You can no longer start this exam.</p>
                 </div>
               </div>
             </div>
@@ -1218,7 +1218,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 </div>
                 <div>
                   <p className="text-xs font-black text-amber-600 uppercase tracking-widest">Scheduled Start Time</p>
-                  <p className="text-sm sm:text-base font-bold text-[#2D3A4A]">
+                  <p className="text-sm sm:text-base font-bold text-[#324158]">
                     Exam starts at {formatScheduleDateTime(getExamStartDateTime(exam.settings))}
                   </p>
                   <p className="text-xs text-gray-500 font-medium">Please review the rules below. The start button will automatically unlock at the exact start time.</p>
@@ -1252,7 +1252,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 <Clock className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Duration</p>
-                  <p className="text-sm sm:text-lg font-black text-[#2D3A4A]">{exam.duration} Mins</p>
+                  <p className="text-sm sm:text-lg font-black text-[#324158]">{exam.duration} Mins</p>
                 </div>
               </CardContent>
             </Card>
@@ -1261,7 +1261,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 <FileText className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Qs</p>
-                  <p className="text-sm sm:text-lg font-black text-[#2D3A4A]">{exam.sections.flatMap(s => s.questions).length} Qs</p>
+                  <p className="text-sm sm:text-lg font-black text-[#324158]">{exam.sections.flatMap(s => s.questions).length} Qs</p>
                 </div>
               </CardContent>
             </Card>
@@ -1270,7 +1270,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 <CheckCircle2 className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Marks</p>
-                  <p className="text-sm sm:text-lg font-black text-[#2D3A4A]">{exam.totalMarks} Marks</p>
+                  <p className="text-sm sm:text-lg font-black text-[#324158]">{exam.totalMarks} Marks</p>
                 </div>
               </CardContent>
             </Card>
@@ -1279,7 +1279,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Passing Score</p>
-                  <p className="text-sm sm:text-lg font-black text-[#2D3A4A]">{Math.round((exam.passMarks / exam.totalMarks) * 100)}%</p>
+                  <p className="text-sm sm:text-lg font-black text-[#324158]">{Math.round((exam.passMarks / exam.totalMarks) * 100)}%</p>
                 </div>
               </CardContent>
             </Card>
@@ -1291,7 +1291,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               <CardContent className="p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-1 h-6 bg-[#2D3A4A] rounded-full" />
-                  <h2 className="text-xl font-black text-[#2D3A4A]">Exam Rules & Guidelines</h2>
+                  <h2 className="text-xl font-black text-[#324158]">Exam Rules & Guidelines</h2>
                 </div>
                 <div className="space-y-4">
                   {rules.map((rule, i) => (
@@ -1311,7 +1311,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               <CardContent className="p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-1 h-6 bg-[#2D3A4A] rounded-full" />
-                  <h2 className="text-xl font-black text-[#2D3A4A]">Technical Requirements</h2>
+                  <h2 className="text-xl font-black text-[#324158]">Technical Requirements</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
@@ -1346,7 +1346,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                         <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${camStatus === "active" ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
                       </div>
                       <div className="flex-1 text-center md:text-left">
-                        <h4 className="font-black text-[#2D3A4A] mb-1">Camera Verification</h4>
+                        <h4 className="font-black text-[#324158] mb-1">Camera Verification</h4>
                         <p className="text-sm text-gray-500 font-medium mb-3">Please ensure your face is clearly visible in the preview box to enable the start button.</p>
                         <div className="flex flex-wrap justify-center md:justify-start gap-2">
                           <Badge variant="outline" className="bg-white text-[10px] font-bold text-gray-500 border-gray-200 uppercase tracking-tighter">GOOD LIGHTING</Badge>
@@ -1408,7 +1408,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               <div className="w-16 h-16 bg-emerald-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
                 <Shield size={32} className="text-emerald-500" />
               </div>
-              <h2 className="text-2xl font-black text-[#303e52] mb-3">Time to Start</h2>
+              <h2 className="text-2xl font-black text-[#324158] mb-3">Time to Start</h2>
               <p className="text-slate-400 text-sm font-medium mb-8">The examination is scheduled to begin now. Click below to enter the room.</p>
               <button
                 onClick={() => {
@@ -1430,7 +1430,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   if (!question && allFlatQuestions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-gray-50">
-        <h2 className="text-xl font-medium mb-4 text-[#2D3A4A]">No questions found for this exam.</h2>
+        <h2 className="text-xl font-medium mb-4 text-[#324158]">No questions found for this exam.</h2>
         <p className="mb-6 text-gray-500 text-sm">Please contact your instructor or administrator.</p>
         <button
           onClick={() => router.push(`/exam/${id}`)}
@@ -1734,7 +1734,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                       placeholder="Write your answer here..."
                       value={(getAnswer(question._id)?.answer as string) || ""}
                       onChange={(e) => setAnswer(question._id, e.target.value, question.type)}
-                      className="w-full border-2 border-gray-200 rounded-2xl p-4 text-base sm:text-sm text-[#1a2535] focus:outline-none focus:border-[#2D3A4A] resize-none transition-colors"
+                      className="w-full border-2 border-gray-200 rounded-2xl p-4 text-base sm:text-sm text-[#324158] focus:outline-none focus:border-[#2D3A4A] resize-none transition-colors"
                     />
                     {question.wordLimit && (
                       <p className="text-xs text-gray-400 mt-1 text-right font-medium">
@@ -1834,7 +1834,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                   <div className={`${showCodingDescription ? "flex" : "hidden sm:flex"} w-full sm:w-95 shrink-0 flex-col bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden`}>
                   <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#1a2535]">Problem</span>
+                      <span className="text-sm font-bold text-[#324158]">Problem</span>
                       <span className={`text-xs font-semibold capitalize ${DIFF_COLOR[question.difficulty || "medium"]}`}>
                         {question.difficulty || "medium"}
                       </span>
@@ -1842,7 +1842,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                     <span className="text-xs font-bold text-gray-400">{question.marks} pts</span>
                   </div>
                   <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-                    <p className="text-sm text-[#1a2535] leading-relaxed whitespace-pre-wrap">{question.questionText}</p>
+                    <p className="text-sm text-[#324158] leading-relaxed whitespace-pre-wrap">{question.questionText}</p>
                     {question.constraints && question.constraints.length > 0 && (
                       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                         <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1.5">Constraints</p>
@@ -2181,7 +2181,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           {/* Header on mobile */}
           <div className="sm:hidden flex items-center justify-between p-3.5 border-b border-gray-100 bg-gray-50/80 sticky top-0 z-10 backdrop-blur-xs">
             <div>
-              <p className="font-bold text-xs text-[#1a2535] uppercase tracking-wider">Question Palette</p>
+              <p className="font-bold text-xs text-[#324158] uppercase tracking-wider">Question Palette</p>
               <p className="text-[11px] text-gray-500">{totalAnswered} of {totalQuestions} answered</p>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors">

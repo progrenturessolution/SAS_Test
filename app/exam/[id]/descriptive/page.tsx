@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback, use } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -225,13 +225,13 @@ export default function DescriptivePage({ params }: { params: Promise<{ id: stri
 
           {/* Question */}
           <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-5">
-            <p className="text-[#1a2535] font-medium text-base leading-relaxed">{question?.questionText}</p>
+            <p className="text-[#324158] font-medium text-base leading-relaxed">{question?.questionText}</p>
           </div>
 
           {/* Answer Editor */}
           <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-5">
             <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
-              <p className="text-sm font-semibold text-[#1a2535]">Your Answer</p>
+              <p className="text-sm font-semibold text-[#324158]">Your Answer</p>
               <p className="text-sm text-gray-500">
                 Word Count:{" "}
                 <span className={`font-semibold ${wordCount > wordLimit ? "text-red-500" : "text-[#10B981]"}`}>

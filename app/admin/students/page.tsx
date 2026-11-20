@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState, useMemo } from "react"
 import {
@@ -502,7 +502,7 @@ export default function StudentsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all">
           <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Students</p>
-          <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#1E293B] tracking-tight">{students.length}</p>
+          <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#324158] tracking-tight">{students.length}</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all">
@@ -525,7 +525,7 @@ export default function StudentsPage() {
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all">
           <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Exam Attempts</p>
           <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#324158] tracking-tight">
               {students.reduce((s, st) => s + st.totalAttempts, 0)}
             </p>
             {students.length > 0 && (

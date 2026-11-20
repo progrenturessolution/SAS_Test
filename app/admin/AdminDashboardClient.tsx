@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -203,7 +203,7 @@ export default function AdminDashboardClient() {
         <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#45505F]">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#324158]">
                 {stats.institute.name}
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
@@ -236,14 +236,14 @@ export default function AdminDashboardClient() {
           <div className="flex items-center gap-6 text-xs bg-gray-50/70 p-3 rounded-lg border border-gray-200 shrink-0 w-full sm:w-auto justify-around sm:justify-start">
             <div>
               <span className="text-gray-500 text-[11px] block">Exams Quota</span>
-              <span className="font-bold text-[#2D3A4A] text-sm">
+              <span className="font-bold text-[#324158] text-sm">
                 {stats.totalExams} / {stats.institute.maxExams}
               </span>
             </div>
             <div className="w-px h-8 bg-gray-200" />
             <div>
               <span className="text-gray-500 text-[11px] block">Students Quota</span>
-              <span className="font-bold text-[#2D3A4A] text-sm">
+              <span className="font-bold text-[#324158] text-sm">
                 {stats.studentsEnrolled} / {stats.institute.maxStudents}
               </span>
             </div>

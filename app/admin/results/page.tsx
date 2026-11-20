@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -124,7 +124,7 @@ function ResultsPageInner() {
           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
             Total Attempts
           </p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#324158] tracking-tight">
             {results.length}
           </p>
           <p className="text-xs text-slate-500 mt-1">
@@ -137,7 +137,7 @@ function ResultsPageInner() {
           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
             Passed Students
           </p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#324158] tracking-tight">
             {passed}
           </p>
           <p className="text-xs text-slate-500 font-medium mt-1">
@@ -150,7 +150,7 @@ function ResultsPageInner() {
           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
             Failed / Retake
           </p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#324158] tracking-tight">
             {results.length - passed}
           </p>
           <p className="text-xs text-slate-500 font-medium mt-1">
@@ -163,7 +163,7 @@ function ResultsPageInner() {
           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
             Average Score
           </p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#324158] tracking-tight">
             {avg}%
           </p>
           <p className="text-xs text-slate-500 font-medium mt-1">

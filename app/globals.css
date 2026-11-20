@@ -9,12 +9,12 @@
   --card-foreground: #324158;
   --popover: #FFFFFF;
   --popover-foreground: #324158;
-  --primary: #303e52;
+  --primary: #324158;
   --primary-foreground: #FFFFFF;
   --secondary: #F5F6FA;
   --secondary-foreground: #324158;
   --muted: #F5F6FA;
-  --muted-foreground: #708090;
+  --muted-foreground: #324158;
   --accent: #324158;
   --accent-foreground: #FFFFFF;
   --destructive: oklch(0.577 0.245 27.325);
@@ -29,11 +29,11 @@
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-foreground: #324158;
+  --sidebar-primary: #324158;
+  --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-accent-foreground: #324158;
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
@@ -121,10 +121,16 @@
   html,
   body {
     @apply bg-background text-foreground;
+    color: #324158;
     font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Universal text color enforcement across all elements */
+  h1, h2, h3, h4, h5, h6, th, td, dt, dd, label, p, input, textarea, select {
+    color: #324158;
   }
 
   /* Keep all typography clean, sleek and simple without heavy bolding */
@@ -175,6 +181,53 @@
   .animate-ping { animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; }
   .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
   .animate-bounce { animation: bounce 1s infinite; }
+
+  /* ── Universal Brand Typography: All text forced to #324158 unless intentionally white or status colored ── */
+  .text-slate-950,
+  .text-slate-900,
+  .text-slate-800,
+  .text-slate-700,
+  .text-slate-600,
+  .text-gray-950,
+  .text-gray-900,
+  .text-gray-800,
+  .text-gray-700,
+  .text-gray-600,
+  .text-zinc-950,
+  .text-zinc-900,
+  .text-zinc-800,
+  .text-zinc-700,
+  .text-zinc-600,
+  .text-neutral-950,
+  .text-neutral-900,
+  .text-neutral-800,
+  .text-neutral-700,
+  .text-neutral-600,
+  .text-\[\#2D3A4A\],
+  .text-\[\#45505F\],
+  .text-\[\#1e293b\],
+  .text-\[\#1a2535\],
+  .text-\[\#304058\],
+  .text-\[\#0f172a\],
+  .text-\[\#0A1629\],
+  .text-\[\#0B1527\],
+  .text-\[\#131B2A\],
+  .text-\[\#1E293B\],
+  .text-\[\#1f2e43\],
+  .text-\[\#27364a\],
+  .text-\[\#303e52\] {
+    color: #324158 !important;
+  }
+
+  /* Preserve deliberate white text on dark buttons, badges, and icons */
+  .text-white,
+  .text-white *,
+  button.text-white,
+  button.text-white *,
+  a.text-white,
+  a.text-white * {
+    color: #ffffff !important;
+  }
 }
 
 /* ── Face Detection Scanner Animation ── */
@@ -277,7 +330,7 @@ html.lenis, html.lenis body {
 
 /* ─── Coaching Portal Custom Theme Scoping ─── */
 .coaching-portal {
-  --primary: var(--brand-theme, #2D3A4A);
+  --primary: var(--brand-theme, #324158);
 }
 
 /* 1. All primary background colors used across exam creation, editing, students, generator */

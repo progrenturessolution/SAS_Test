@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
@@ -1853,7 +1853,7 @@ function CodingModal({ onSave, onClose, initial }: {
                     type="button"
                     onClick={() => setActiveLang(lang.toLowerCase())}
                     className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
-                      activeLang === lang.toLowerCase() ? "bg-white text-[#45505F] shadow-sm" : "text-gray-400 hover:text-gray-600"
+                      activeLang === lang.toLowerCase() ? "bg-white text-[#324158] shadow-sm" : "text-gray-400 hover:text-gray-600"
                     }`}
                   >
                     {lang}
@@ -1889,7 +1889,7 @@ function CodingModal({ onSave, onClose, initial }: {
                        driverCode: { ...q.driverCode, [activeLang]: e.target.value }
                     })}
                     rows={4}
-                    className="w-full p-3 bg-gray-100 text-[#45505F] font-mono text-xs rounded-xl border border-gray-200 focus:outline-none"
+                    className="w-full p-3 bg-gray-100 text-[#324158] font-mono text-xs rounded-xl border border-gray-200 focus:outline-none"
                     placeholder={`Enter driver code to run test cases in ${activeLang}...`}
                   />
                   <p className="text-[9px] text-gray-400 mt-1.5">Use <code>stdin</code> to read inputs from test cases and print output for validation.</p>
@@ -2969,7 +2969,7 @@ export default function CreateExamPage() {
         <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 border border-amber-200 shadow-sm">
           <Lock className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-[#2D3A4A] mb-2">Access Restricted</h2>
+        <h2 className="text-xl font-bold text-[#324158] mb-2">Access Restricted</h2>
         <p className="text-gray-500 max-w-md text-sm mb-6 leading-relaxed">
           Your coaching institute does not have permission to create standard Exams. Please contact your administrator to enable this module.
         </p>

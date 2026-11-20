@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -258,7 +258,7 @@ export default function AdminSidebar({
                 <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-200">
                   <div className="flex items-center gap-1.5">
                     <Building2 className="w-3.5 h-3.5" style={{ color: themeColor }} />
-                    <span className="text-xs font-semibold text-[#45505F] truncate">
+                    <span className="text-xs font-semibold text-[#324158] truncate">
                       {instituteName || "Organization"}
                     </span>
                   </div>
@@ -462,7 +462,7 @@ export default function AdminSidebar({
               <div className="p-2 rounded-lg bg-gray-50 border border-gray-200">
                 <div className="flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5" style={{ color: themeColor }} />
-                  <span className="text-xs font-semibold text-[#45505F] truncate">
+                  <span className="text-xs font-semibold text-[#324158] truncate">
                     {instituteName || "Organization"}
                   </span>
                 </div>

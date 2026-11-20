@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -239,7 +239,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
             <span className="inline-block bg-primary/10 text-primary text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full mb-3 tracking-wider uppercase ring-1 ring-primary/20">
               Online Examination
             </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1a2535] mb-2 leading-tight">{exam.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#324158] mb-2 leading-tight">{exam.title}</h1>
             {exam.class && <p className="text-gray-500 font-medium">{exam.class}</p>}
             {exam.description && <p className="text-gray-500 text-sm mt-2 leading-relaxed">{exam.description}</p>}
           </div>
@@ -254,7 +254,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
               <div key={label} className={`border rounded-xl p-3 sm:p-4 ${highlight ? `${border} ${bg}` : "border-gray-100 bg-gray-50/50"}`}>
                 <Icon className={`w-4 h-4 sm:w-5 sm:h-5 mb-2 ${highlight ? color : "text-gray-400"}`} />
                 <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 font-bold uppercase tracking-wider">{label}</p>
-                <p className={`font-bold text-xs sm:text-sm ${highlight ? color : "text-[#1a2535]"}`}>
+                <p className={`font-bold text-xs sm:text-sm ${highlight ? color : "text-[#324158]"}`}>
                   <span className="sm:hidden">{value}</span>
                   <span className="hidden sm:inline">{fullValue}</span>
                 </p>
@@ -298,7 +298,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
           )}
 
           <div className="mb-8">
-            <h2 className="text-lg font-bold text-[#1a2535] mb-3">About This Exam</h2>
+            <h2 className="text-lg font-bold text-[#324158] mb-3">About This Exam</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
               {exam.description || `This examination covers the ${exam.subject} curriculum. The exam is designed to assess your understanding and problem-solving abilities.`}
             </p>
@@ -318,7 +318,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/5 flex items-center justify-center text-[10px] sm:text-xs font-black text-primary shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
                     {i + 1}
                   </div>
-                  <p className="text-xs sm:text-sm text-[#45505F] font-medium leading-relaxed pt-1 sm:pt-1.5">{text}</p>
+                  <p className="text-xs sm:text-sm text-[#324158] font-medium leading-relaxed pt-1 sm:pt-1.5">{text}</p>
                 </div>
               ))}
             </div>
@@ -327,7 +327,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
 
         {/* Right - Form */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 lg:sticky lg:top-24">
-          <h2 className="text-xl font-bold text-[#1a2535] mb-1">Student Registration</h2>
+          <h2 className="text-xl font-bold text-[#324158] mb-1">Student Registration</h2>
           <p className="text-sm text-gray-500 mb-6 font-medium">Please enter your details to start the exam</p>
 
           {/* Schedule Status Banner */}
@@ -420,7 +420,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
               { key: "password", label: "Exam Password", icon: LockKeyhole, type: "password", placeholder: "Enter the password given by your organization" },
             ].map(({ key, label, icon: Icon, type, placeholder }) => (
               <div key={key}>
-                <label className="block text-sm font-semibold text-[#1a2535] mb-1.5">
+                <label className="block text-sm font-semibold text-[#324158] mb-1.5">
                   {label} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">

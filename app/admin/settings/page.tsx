@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useRef } from "react"
 import {
@@ -170,7 +170,7 @@ export default function SettingsPage() {
     return (
       <div className="p-8 max-w-7xl mx-auto flex items-center justify-center min-h-[50vh]">
         <div className="flex items-center gap-3 text-sm font-semibold text-gray-500">
-          <Loader2 size={18} className="animate-spin text-[#2D3A4A]" /> Loading settings...
+          <Loader2 size={18} className="animate-spin text-[#324158]" /> Loading settings...
         </div>
       </div>
     )
@@ -253,19 +253,19 @@ export default function SettingsPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100 text-xs">
                 <div>
                   <span className="text-gray-400 block text-[11px]">Max Students</span>
-                  <span className="font-bold text-[#2D3A4A] text-sm mt-0.5 block">{limits.maxStudents ?? 100} Enrolled</span>
+                  <span className="font-bold text-[#324158] text-sm mt-0.5 block">{limits.maxStudents ?? 100} Enrolled</span>
                 </div>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Max Exams</span>
-                  <span className="font-bold text-[#2D3A4A] text-sm mt-0.5 block">{limits.maxExams ?? 20} Exams</span>
+                  <span className="font-bold text-[#324158] text-sm mt-0.5 block">{limits.maxExams ?? 20} Exams</span>
                 </div>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Paper Import</span>
-                  <span className="font-bold text-[#2D3A4A] text-sm mt-0.5 block">{limits.features?.pdfImport ? "Enabled" : "Disabled"}</span>
+                  <span className="font-bold text-[#324158] text-sm mt-0.5 block">{limits.features?.pdfImport ? "Enabled" : "Disabled"}</span>
                 </div>
                 <div>
                   <span className="text-gray-400 block text-[11px]">AI Generation</span>
-                  <span className="font-bold text-[#2D3A4A] text-sm mt-0.5 block">{limits.features?.neetJeeGenerator !== false ? "Enabled" : "Disabled"}</span>
+                  <span className="font-bold text-[#324158] text-sm mt-0.5 block">{limits.features?.neetJeeGenerator !== false ? "Enabled" : "Disabled"}</span>
                 </div>
               </div>
             )}

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useMemo, useRef, useEffect, KeyboardEvent, Suspense } from "react"
 import Link from "next/link"
@@ -1175,7 +1175,7 @@ function OtherExamsContent() {
         <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 border border-amber-200 shadow-sm">
           <Lock className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-[#2D3A4A] mb-2">Access Restricted</h2>
+        <h2 className="text-xl font-bold text-[#324158] mb-2">Access Restricted</h2>
         <p className="text-gray-500 max-w-md text-sm mb-6 leading-relaxed">
           Your coaching institute does not have permission to access the Other Exams Studio. Please contact your administrator to enable this module.
         </p>

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback, use } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -241,12 +241,12 @@ export default function FillBlanksPage({ params }: { params: Promise<{ id: strin
 
           {/* Passage */}
           <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6">
-            <p className="text-[#1a2535] font-medium text-base leading-relaxed">{question?.questionText}</p>
+            <p className="text-[#324158] font-medium text-base leading-relaxed">{question?.questionText}</p>
           </div>
 
           {/* Blank Inputs */}
           <div>
-            <p className="text-sm font-bold text-[#1a2535] mb-4">Your Answers:</p>
+            <p className="text-sm font-bold text-[#324158] mb-4">Your Answers:</p>
             <div className="space-y-5">
               {(question?.blanks ?? []).map((blank, bi) => {
                 const val = blanksForQ[bi] ?? ""

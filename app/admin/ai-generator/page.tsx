@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useMemo, useRef, useEffect, KeyboardEvent, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -1336,7 +1336,7 @@ function AIGeneratorContent() {
         <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 border border-amber-200 shadow-sm">
           <Lock className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-[#2D3A4A] mb-2">Access Restricted</h2>
+        <h2 className="text-xl font-bold text-[#324158] mb-2">Access Restricted</h2>
         <p className="text-gray-500 max-w-md text-sm mb-6 leading-relaxed">
           Your coaching institute does not have permission to access the Competitive Test Studio. Please contact your administrator to enable this module.
         </p>
@@ -1574,7 +1574,7 @@ function AIGeneratorContent() {
                             onClick={() => handleExamChange(exam.id)}
                             className={`w-full px-3 py-2 rounded-lg text-left text-xs sm:text-sm font-normal flex items-center justify-between transition-colors cursor-pointer ${
                               selectedExam === exam.id
-                                ? "bg-slate-100 text-[#1E293B] font-medium"
+                                ? "bg-slate-100 text-[#324158] font-medium"
                                 : "text-slate-700 hover:bg-slate-50"
                             }`}
                           >
@@ -1584,7 +1584,7 @@ function AIGeneratorContent() {
                                 {exam.badge}
                               </span>
                             </div>
-                            {selectedExam === exam.id && <Check className="w-3.5 h-3.5 text-[#1E293B] shrink-0" />}
+                            {selectedExam === exam.id && <Check className="w-3.5 h-3.5 text-[#324158] shrink-0" />}
                           </button>
                         ))}
                       </div>
@@ -1816,7 +1816,7 @@ function AIGeneratorContent() {
                                   class11Chapters.every((c) => selectedChapters.includes(c.name))
                                 }
                                 onChange={() => toggleAllClass("11")}
-                                className="w-4 h-4 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                                className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
                               />
                               <span className="font-medium text-slate-800 text-xs sm:text-sm">
                                 Class 11 ({class11Chapters.length} chapters)
@@ -1844,7 +1844,7 @@ function AIGeneratorContent() {
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={() => toggleChapter(ch.name)}
-                                    className="mt-0.5 w-3.5 h-3.5 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                                    className="mt-0.5 w-3.5 h-3.5 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
                                   />
                                   <span className="font-normal text-slate-700">
                                     <span className="text-slate-400 mr-1.5">{idx + 1}.</span>
@@ -1884,7 +1884,7 @@ function AIGeneratorContent() {
                                   class12Chapters.every((c) => selectedChapters.includes(c.name))
                                 }
                                 onChange={() => toggleAllClass("12")}
-                                className="w-4 h-4 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                                className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
                               />
                               <span className="font-medium text-slate-800 text-xs sm:text-sm">
                                 Class 12 ({class12Chapters.length} chapters)
@@ -1912,7 +1912,7 @@ function AIGeneratorContent() {
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={() => toggleChapter(ch.name)}
-                                    className="mt-0.5 w-3.5 h-3.5 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                                    className="mt-0.5 w-3.5 h-3.5 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
                                   />
                                   <span className="font-normal text-slate-700">
                                     <span className="text-slate-400 mr-1.5">{idx + 1}.</span>
@@ -1966,7 +1966,7 @@ function AIGeneratorContent() {
                                   type="checkbox"
                                   checked={f.checked}
                                   onChange={() => toggleFormatCheck(f.id)}
-                                  className="w-4 h-4 rounded text-[#1E293B] focus:ring-slate-900 border-slate-300 cursor-pointer shrink-0"
+                                  className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer shrink-0"
                                 />
                                 <span className="font-normal text-slate-800 text-xs truncate">
                                   {f.label}
@@ -2462,7 +2462,7 @@ function AIGeneratorContent() {
                                   type="checkbox"
                                   checked={isSelected}
                                   onChange={() => toggleQuestionSelection(q.id)}
-                                  className="w-4 h-4 rounded text-[#1E293B] focus:ring-[#1E293B] cursor-pointer accent-[#1E293B] shrink-0"
+                                  className="w-4 h-4 rounded text-[#324158] focus:ring-[#1E293B] cursor-pointer accent-[#1E293B] shrink-0"
                                 />
                                 <span className="w-6 h-6 rounded-lg bg-[#1E293B] text-white text-xs font-medium flex items-center justify-center shadow-2xs shrink-0">
                                   {idx + 1}
@@ -3641,7 +3641,7 @@ function AIGeneratorContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-2xl bg-white rounded-2xl p-4 sm:p-6 shadow-2xl border border-gray-200 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <h3 className="text-sm font-semibold text-[#1E293B]">Edit Question Details</h3>
+              <h3 className="text-sm font-semibold text-[#324158]">Edit Question Details</h3>
               <button
                 onClick={() => setEditingQuestion(null)}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer p-1"
@@ -3660,7 +3660,7 @@ function AIGeneratorContent() {
                 onChange={(e) =>
                   setEditingQuestion({ ...editingQuestion, questionText: e.target.value })
                 }
-                className="w-full p-3 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 text-[#1E293B] font-mono focus:outline-none focus:border-[#2D3A4A]"
+                className="w-full p-3 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 text-[#324158] font-mono focus:outline-none focus:border-[#2D3A4A]"
               />
             </div>
 
@@ -3677,7 +3677,7 @@ function AIGeneratorContent() {
                       setEditingQuestion({ ...editingQuestion, correctAnswer: e.target.value })
                     }
                     placeholder="Provide the expected theoretical concepts, derivation steps, or key points..."
-                    className="w-full p-3 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 text-[#1E293B] font-mono focus:outline-none focus:border-[#2D3A4A]"
+                    className="w-full p-3 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 text-[#324158] font-mono focus:outline-none focus:border-[#2D3A4A]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -3691,7 +3691,7 @@ function AIGeneratorContent() {
                       onChange={(e) =>
                         setEditingQuestion({ ...editingQuestion, marks: Number(e.target.value) || 0 })
                       }
-                      className="w-full p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#1E293B] focus:outline-none focus:border-[#2D3A4A]"
+                      className="w-full p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#324158] focus:outline-none focus:border-[#2D3A4A]"
                     />
                   </div>
                   <div>
@@ -3704,7 +3704,7 @@ function AIGeneratorContent() {
                       onChange={(e) =>
                         setEditingQuestion({ ...editingQuestion, wordLimit: Number(e.target.value) || 0 })
                       }
-                      className="w-full p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#1E293B] focus:outline-none focus:border-[#2D3A4A]"
+                      className="w-full p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#324158] focus:outline-none focus:border-[#2D3A4A]"
                     />
                   </div>
                 </div>
@@ -3735,7 +3735,7 @@ function AIGeneratorContent() {
                                 : editingQuestion.correctAnswer,
                           })
                         }}
-                        className="flex-1 p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#1E293B] font-mono focus:outline-none focus:border-[#2D3A4A]"
+                        className="flex-1 p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#324158] font-mono focus:outline-none focus:border-[#2D3A4A]"
                       />
                     </div>
                     <button
@@ -3766,7 +3766,7 @@ function AIGeneratorContent() {
                 onChange={(e) =>
                   setEditingQuestion({ ...editingQuestion, explanation: e.target.value })
                 }
-                className="w-full p-3 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 text-[#1E293B] font-mono focus:outline-none focus:border-[#2D3A4A]"
+                className="w-full p-3 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 text-[#324158] font-mono focus:outline-none focus:border-[#2D3A4A]"
               />
             </div>
 

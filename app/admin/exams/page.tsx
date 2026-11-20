@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -103,7 +103,7 @@ export default function ExamsListPage() {
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#45505F] tracking-tight">All Exams</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#324158] tracking-tight">All Exams</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">View and manage all exams generated in your organization</p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -228,7 +228,7 @@ export default function ExamsListPage() {
                   <div key={exam._id} className="p-4 hover:bg-gray-50/50 transition-colors">
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-[#45505F] text-sm leading-snug line-clamp-2">{exam.title}</p>
+                        <p className="font-semibold text-[#324158] text-sm leading-snug line-clamp-2">{exam.title}</p>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                           <span className="text-[11px] font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
                             {exam.subject}
@@ -329,7 +329,7 @@ export default function ExamsListPage() {
                   {filtered.map((exam) => (
                     <tr key={exam._id} className="border-b border-gray-50 hover:bg-gray-50/80 last:border-0 transition-colors">
                       <td className="px-4 sm:px-5 py-3.5 sm:py-4">
-                        <p className="font-medium text-[#45505F] text-sm line-clamp-1">{exam.title}</p>
+                        <p className="font-medium text-[#324158] text-sm line-clamp-1">{exam.title}</p>
                         {exam.class && <p className="text-xs text-gray-400 mt-0.5">{exam.class}</p>}
                       </td>
                       <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-sm text-gray-600">{exam.subject}</td>

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
@@ -234,7 +234,7 @@ export default function HomePage() {
                 />
               </svg>
               <span className="flex flex-col leading-none">
-                <span className="text-[14px] sm:text-[15px] font-bold tracking-[0.12em] text-[#304058]">
+                <span className="text-[14px] sm:text-[15px] font-bold tracking-[0.12em] text-[#324158]">
                   TESTRO
                 </span>
                 <span className="mt-1 text-[7.5px] sm:text-[8px] font-semibold tracking-[0.24em] text-[#64748b]">
@@ -245,7 +245,7 @@ export default function HomePage() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-6 xl:gap-7 text-[14px] xl:text-[15px] font-medium text-[#27364a] lg:flex">
+          <nav className="hidden items-center gap-6 xl:gap-7 text-[14px] xl:text-[15px] font-medium text-[#324158] lg:flex">
             {[
               { label: "Home", href: "/" },
               { label: "Features", href: "#features" },
@@ -264,7 +264,7 @@ export default function HomePage() {
                     handleAnchorClick(e, item.href)
                   }
                 }}
-                className="group relative py-1.5 text-[#27364a] transition-colors hover:text-[#1e293b] cursor-pointer"
+                className="group relative py-1.5 text-[#324158] transition-colors hover:text-[#324158] cursor-pointer"
               >
                 <span>{item.label}</span>
                 {/* Smooth Animated Hover Underline */}
@@ -286,7 +286,7 @@ export default function HomePage() {
             {/* Direct Login Button (Redirects to Institute Login) */}
             <Link
               href="/institute/login"
-              className="flex h-11 items-center gap-2 rounded-lg border border-[#cbd3dd] bg-white px-4 text-xs font-semibold text-[#27364a] transition-colors hover:bg-[#f5f7fa]"
+              className="flex h-11 items-center gap-2 rounded-lg border border-[#cbd3dd] bg-white px-4 text-xs font-semibold text-[#324158] transition-colors hover:bg-[#f5f7fa]"
             >
               <span>Login</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -298,11 +298,11 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
-              className="flex items-center gap-1.5 rounded-lg border border-[#cbd5e1] bg-[#f8fafc] px-3 py-2 text-xs font-bold text-[#1e293b] shadow-xs hover:bg-white hover:border-[#94a3b8] transition-all cursor-pointer"
+              className="flex items-center gap-1.5 rounded-lg border border-[#cbd5e1] bg-[#f8fafc] px-3 py-2 text-xs font-bold text-[#324158] shadow-xs hover:bg-white hover:border-[#94a3b8] transition-all cursor-pointer"
               aria-label="Toggle navigation menu"
             >
               <span>{mobileMenuOpen ? "Close" : "Menu"}</span>
-              {mobileMenuOpen ? <X className="h-4 w-4 text-[#1e293b]" /> : <Menu className="h-4 w-4 text-[#1e293b]" />}
+              {mobileMenuOpen ? <X className="h-4 w-4 text-[#324158]" /> : <Menu className="h-4 w-4 text-[#324158]" />}
             </button>
           </div>
         </div>
@@ -333,7 +333,7 @@ export default function HomePage() {
                       handleAnchorClick(e, item.href)
                     }
                   }}
-                  className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-[#27364a] hover:bg-[#f1f5f9] transition-colors"
+                  className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-[#324158] hover:bg-[#f1f5f9] transition-colors"
                 >
                   <span>{item.label}</span>
                   <ArrowRight className="h-3.5 w-3.5 text-[#94a3b8]" />
@@ -359,9 +359,9 @@ export default function HomePage() {
               <Link
                 href="/institute/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#cbd5e1] bg-[#f8fafc] py-2.5 text-xs font-semibold text-[#1e293b] hover:bg-white transition-colors"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#cbd5e1] bg-[#f8fafc] py-2.5 text-xs font-semibold text-[#324158] hover:bg-white transition-colors"
               >
-                <Building2 className="h-3.5 w-3.5 text-[#304058]" />
+                <Building2 className="h-3.5 w-3.5 text-[#324158]" />
                 <span>Login</span>
               </Link>
             </div>
@@ -403,7 +403,7 @@ export default function HomePage() {
 
                 <Link
                   href="/institute/login"
-                  className="flex h-[48px] sm:h-[52px] w-full sm:w-auto items-center justify-center gap-3 rounded-lg bg-white px-6 sm:px-7 text-[14px] sm:text-[15px] font-semibold text-[#304058] shadow-xs transition-colors hover:bg-[#edf2f7]"
+                  className="flex h-[48px] sm:h-[52px] w-full sm:w-auto items-center justify-center gap-3 rounded-lg bg-white px-6 sm:px-7 text-[14px] sm:text-[15px] font-semibold text-[#324158] shadow-xs transition-colors hover:bg-[#edf2f7]"
                 >
                   <span className="text-[11px]">▶</span>
                   Watch Product Demo
@@ -485,7 +485,7 @@ export default function HomePage() {
                     <div className="flex items-start justify-between border-b border-gray-100 sm:border-0 pb-2 sm:pb-0">
                       <div>
                         <p className="text-[8px] sm:text-[9px] text-gray-400 font-medium">Dashboard</p>
-                        <h2 className="mb-2 sm:mb-4 text-xs sm:text-base font-bold text-[#1f2e43]">Good morning, Admin</h2>
+                        <h2 className="mb-2 sm:mb-4 text-xs sm:text-base font-bold text-[#324158]">Good morning, Admin</h2>
                       </div>
                       <span className="flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-[#e7ecf1] text-[7px] sm:text-[8px] font-bold text-[#65758a]">
                         AS
@@ -502,7 +502,7 @@ export default function HomePage() {
                       ].map((stat) => (
                         <div key={stat.label} className="rounded-lg border border-gray-200/80 bg-white p-2 sm:p-2.5 shadow-2xs">
                           <p className="text-[7.5px] sm:text-[8px] text-gray-400 leading-tight truncate">{stat.label}</p>
-                          <p className="mt-0.5 sm:mt-1 text-xs sm:text-base font-bold text-[#1f2e43]">{stat.value}</p>
+                          <p className="mt-0.5 sm:mt-1 text-xs sm:text-base font-bold text-[#324158]">{stat.value}</p>
                         </div>
                       ))}
                     </div>
@@ -511,14 +511,14 @@ export default function HomePage() {
                     <div className="grid grid-cols-1 sm:grid-cols-[1.38fr_0.92fr] gap-2 sm:gap-3">
                       {/* Left: Recent Examinations */}
                       <div className="rounded-lg border border-gray-200/80 bg-white p-2 sm:p-3 shadow-2xs">
-                        <div className="mb-2 sm:mb-3 flex items-center justify-between text-[8.5px] sm:text-[10px] font-bold text-[#1f2e43]">
+                        <div className="mb-2 sm:mb-3 flex items-center justify-between text-[8.5px] sm:text-[10px] font-bold text-[#324158]">
                           <span>Recent examinations</span>
                           <span className="text-[7px] sm:text-[8px] font-normal text-gray-400">View all</span>
                         </div>
                         <div className="space-y-1 sm:space-y-1.5">
                           {[
                             { name: "JEE Mock Test 08", status: "Live", badgeBg: "bg-[#e3f5ec] text-emerald-600" },
-                            { name: "Biology: Human Physiology", status: "Scheduled", badgeBg: "bg-[#eaf0f8] text-[#304058]" },
+                            { name: "Biology: Human Physiology", status: "Scheduled", badgeBg: "bg-[#eaf0f8] text-[#324158]" },
                             { name: "MHT-CET Practice Set", status: "Completed", badgeBg: "bg-gray-100 text-gray-600" },
                           ].map((exam, index) => (
                             <div key={exam.name} className="flex items-center justify-between border-t border-gray-100 pt-1.5 pb-0.5 text-[7.5px] sm:text-[8.5px]">
@@ -540,12 +540,12 @@ export default function HomePage() {
 
                       {/* Right: Result Overview */}
                       <div className="rounded-lg border border-gray-200/80 bg-white p-2 sm:p-3 shadow-2xs flex flex-col justify-between">
-                        <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-bold text-[#1f2e43]">
+                        <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-bold text-[#324158]">
                           <span>Result overview</span>
                           <span className="text-[7px] sm:text-[8px] font-normal text-gray-400">This month</span>
                         </div>
                         <div className="my-1.5 sm:my-4 flex items-center justify-center">
-                          <div className="relative flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center rounded-full border-[6px] sm:border-[10px] border-[#344860] text-xs sm:text-sm font-bold text-[#1f2e43]">
+                          <div className="relative flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center rounded-full border-[6px] sm:border-[10px] border-[#344860] text-xs sm:text-sm font-bold text-[#324158]">
                             84%
                           </div>
                         </div>
@@ -650,7 +650,7 @@ export default function HomePage() {
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">
               Platform Capabilities
             </span>
-            <h2 className="text-3xl font-bold leading-tight tracking-[-0.035em] text-[#304058] sm:text-5xl">
+            <h2 className="text-3xl font-bold leading-tight tracking-[-0.035em] text-[#324158] sm:text-5xl">
               Everything Your Examination
               <br />
               <span className="font-semibold italic">Process Needs.</span>
@@ -674,10 +674,10 @@ export default function HomePage() {
                 <ScrollReveal key={title as string} direction="up" delay={index * 60}>
                   <article className="group relative flex min-h-[224px] flex-col rounded-[15px] border border-[#dce3e9] bg-white p-6 shadow-[0_8px_24px_rgba(47,64,87,0.04)] transition-all duration-300 hover:-translate-y-1 hover:border-[#9eafc0] hover:shadow-[0_14px_30px_rgba(47,64,87,0.1)]">
                     <span className="absolute left-5 top-0 h-px w-3 bg-[#8da0b3]" />
-                    <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#f0f3f6] text-[#304058]">
+                    <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#f0f3f6] text-[#324158]">
                       <FeatureIcon className="h-5 w-5" />
                     </div>
-                    <h3 className="text-[18px] font-medium tracking-tight text-[#304058]">{title as string}</h3>
+                    <h3 className="text-[18px] font-medium tracking-tight text-[#324158]">{title as string}</h3>
                     <p className="mt-2 max-w-[290px] text-[14px] leading-relaxed text-[#718096]">{description as string}</p>
                     <ArrowRight className="mt-auto ml-auto h-4 w-4 text-[#8fa0b0] transition-transform group-hover:translate-x-1" />
                   </article>
@@ -696,7 +696,7 @@ export default function HomePage() {
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">
               End-to-End Exam Management
             </span>
-            <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.035em] text-[#304058] sm:text-5xl">
+            <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.035em] text-[#324158] sm:text-5xl">
               From Exam Creation to Results.
               <br />
               All in One Place.
@@ -722,7 +722,7 @@ export default function HomePage() {
                     <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#dce3e9] bg-white text-[#526982] shadow-[0_5px_15px_rgba(47,64,87,0.06)]">
                       <StepIcon className="h-5 w-5" />
                     </div>
-                    <h3 className="mt-5 text-[16px] font-medium text-[#304058]">{title as string}</h3>
+                    <h3 className="mt-5 text-[16px] font-medium text-[#324158]">{title as string}</h3>
                     <p className="mt-2 max-w-[185px] text-[13px] leading-relaxed text-[#8190a0]">{description as string}</p>
                   </article>
                 </ScrollReveal>
@@ -1112,7 +1112,7 @@ export default function HomePage() {
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">
               Specialized Test Creation
             </span>
-            <h2 className="mt-5 max-w-[390px] text-3xl font-bold leading-[1.05] tracking-[-0.035em] text-[#304058] sm:text-5xl">
+            <h2 className="mt-5 max-w-[390px] text-3xl font-bold leading-[1.05] tracking-[-0.035em] text-[#324158] sm:text-5xl">
               Built for
               <br />
               Competitive
@@ -1135,7 +1135,7 @@ export default function HomePage() {
           <ScrollReveal direction="up" delay={150} className="rounded-2xl border border-[#dce3e9] bg-white p-5 shadow-[0_16px_40px_rgba(47,64,87,0.1)] sm:p-6">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-[16px] font-bold text-[#304058]">Create competitive test</h3>
+                <h3 className="text-[16px] font-bold text-[#324158]">Create competitive test</h3>
                 <p className="mt-1 text-[9px] text-[#9aa8b6]">Configure examination</p>
               </div>
               <span className="rounded-full border border-[#dce3e9] px-3 py-1 text-[9px] text-[#718096]">Step 3 of 6</span>
@@ -1147,13 +1147,13 @@ export default function HomePage() {
               <div>
                 <p className="mb-1">Select class</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {["Class 11", "Class 12"].map((item, index) => <div key={item} className={`rounded-md border px-3 py-3 text-center text-[10px] ${index === 1 ? "border-[#526982] bg-[#f3f5f7] font-medium text-[#304058]" : "border-[#dce3e9] text-[#526982]"}`}>{item}</div>)}
+                  {["Class 11", "Class 12"].map((item, index) => <div key={item} className={`rounded-md border px-3 py-3 text-center text-[10px] ${index === 1 ? "border-[#526982] bg-[#f3f5f7] font-medium text-[#324158]" : "border-[#dce3e9] text-[#526982]"}`}>{item}</div>)}
                 </div>
               </div>
               <div>
                 <p className="mb-1">Select course</p>
                 <div className="grid grid-cols-3 gap-2">
-                  {["JEE", "MHT-CET", "NEET"].map((item, index) => <div key={item} className={`rounded-md border px-3 py-3 text-center text-[10px] ${index === 0 ? "border-[#526982] bg-[#f3f5f7] font-medium text-[#304058]" : "border-[#dce3e9] text-[#526982]"}`}>{item}</div>)}
+                  {["JEE", "MHT-CET", "NEET"].map((item, index) => <div key={item} className={`rounded-md border px-3 py-3 text-center text-[10px] ${index === 0 ? "border-[#526982] bg-[#f3f5f7] font-medium text-[#324158]" : "border-[#dce3e9] text-[#526982]"}`}>{item}</div>)}
                 </div>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -1162,7 +1162,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="mt-5 flex items-center justify-between rounded-lg bg-[#f0f3f6] px-3 py-3">
-              <div className="flex gap-7 text-[#304058]">
+              <div className="flex gap-7 text-[#324158]">
                 <span><small className="block text-[8px] text-[#899aaa]">Questions</small><b className="text-[14px]">60</b></span>
                 <span><small className="block text-[8px] text-[#899aaa]">Duration</small><b className="text-[14px]">180 min</b></span>
               </div>
@@ -1231,7 +1231,7 @@ export default function HomePage() {
                 </div>
                 <div className="flex items-center justify-between border-t border-[#34465c] px-4 sm:px-5 py-2.5 text-[9px]">
                   <span className="text-[#8ea2b6]">Saved just now</span>
-                  <button type="button" className="rounded bg-white px-3 sm:px-4 py-1.5 sm:py-2 font-semibold text-[#304058]">Submit code　→</button>
+                  <button type="button" className="rounded bg-white px-3 sm:px-4 py-1.5 sm:py-2 font-semibold text-[#324158]">Submit code　→</button>
                 </div>
               </div>
             </div>
@@ -1245,7 +1245,7 @@ export default function HomePage() {
         <div className="relative mx-auto max-w-[1115px] px-5 sm:px-8">
           <ScrollReveal direction="up" className="mx-auto max-w-3xl space-y-4 text-center">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">Automated Results &amp; Analytics</span>
-            <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.035em] text-[#304058] sm:text-5xl">
+            <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.035em] text-[#324158] sm:text-5xl">
               Every Result. Every Student.
               <br />
               <span className="font-semibold italic">Every Insight.</span>
@@ -1259,7 +1259,7 @@ export default function HomePage() {
           <ScrollReveal direction="up" delay={150} className="mt-10 overflow-hidden rounded-2xl border border-[#dce3e9] bg-white shadow-[0_16px_40px_rgba(47,64,87,0.1)]">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e5eaee] px-5 sm:px-6 py-4 sm:py-5">
               <div>
-                <h3 className="text-[14px] sm:text-[15px] font-bold text-[#304058]">JEE Mock Test — Results</h3>
+                <h3 className="text-[14px] sm:text-[15px] font-bold text-[#324158]">JEE Mock Test — Results</h3>
                 <p className="mt-0.5 sm:mt-1 text-[9px] text-[#9aa8b6]">Published on 24 May 2025</p>
               </div>
               <button type="button" className="rounded border border-[#dce3e9] bg-white px-3 py-2 text-[9px] font-medium text-[#526982]">Export report</button>
@@ -1272,7 +1272,7 @@ export default function HomePage() {
                 ["Students", "152", "65%"],
               ].map(([label, value, width]) => (
                 <div key={label}>
-                  <div className="flex items-end justify-between gap-2"><p className="text-[9px] text-[#899aaa]">{label}</p><b className="text-xl sm:text-2xl text-[#304058]">{value}</b></div>
+                  <div className="flex items-end justify-between gap-2"><p className="text-[9px] text-[#899aaa]">{label}</p><b className="text-xl sm:text-2xl text-[#324158]">{value}</b></div>
                   <div className="mt-2 h-[3px] rounded-full bg-[#e6ebef]"><div className="h-full bg-[#526982]" style={{ width }} /></div>
                 </div>
               ))}
@@ -1290,7 +1290,7 @@ export default function HomePage() {
                   ["MJ", "Meera Joshi", "198", "66%", "B", "24 May 2025"],
                 ].map(([initials, name, obtained, percentage, grade, date]) => (
                   <div key={name} className="grid grid-cols-[1.6fr_0.7fr_0.7fr_0.8fr_0.8fr_0.7fr_1fr] items-center border-b border-[#edf0f3] px-5 py-3 text-[9px] text-[#526982]">
-                    <span className="flex items-center gap-2 font-semibold text-[#304058]"><b className="flex h-6 w-6 items-center justify-center rounded-full bg-[#edf1f4] text-[7px] font-normal">{initials}</b>{name}</span>
+                    <span className="flex items-center gap-2 font-semibold text-[#324158]"><b className="flex h-6 w-6 items-center justify-center rounded-full bg-[#edf1f4] text-[7px] font-normal">{initials}</b>{name}</span>
                     <span>{obtained}</span><span>300</span><span>{percentage}</span><span><b className="rounded-md bg-[#e7f5ef] px-2 py-1 text-[8px] font-medium text-[#56977b]">Pass</b></span><span>{grade}</span><span>{date}</span>
                   </div>
                 ))}
@@ -1309,7 +1309,7 @@ export default function HomePage() {
         <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "linear-gradient(#e9eef3 1px, transparent 1px), linear-gradient(90deg, #e9eef3 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
         <div className="relative mx-auto max-w-[1115px] px-5 sm:px-8">
           <ScrollReveal direction="up" className="mx-auto max-w-3xl space-y-4 text-center">
-            <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.035em] text-[#304058] sm:text-5xl">
+            <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.035em] text-[#324158] sm:text-5xl">
               One Platform. Multiple
               <br />
               Educational Needs.
@@ -1332,15 +1332,15 @@ export default function HomePage() {
                   <span className="absolute left-5 top-0 h-px w-3 bg-[#8da0b3]" />
                   <div className="pr-0 pb-36 sm:pb-0 sm:pr-[46%] h-full">
                     <p className="text-[10px] font-bold tracking-[0.14em] text-[#899aaa]">{number}</p>
-                    <h3 className="mt-3 sm:mt-4 text-[16px] sm:text-[18px] font-medium leading-tight text-[#304058]">{title}</h3>
+                    <h3 className="mt-3 sm:mt-4 text-[16px] sm:text-[18px] font-medium leading-tight text-[#324158]">{title}</h3>
                     <p className="mt-2 sm:mt-3 text-[12px] sm:text-[13px] leading-relaxed text-[#718096]">{description}</p>
                     <span className="absolute bottom-5 left-5 text-[11px] font-semibold text-[#526982]">Learn more　→</span>
                   </div>
                   <div className="absolute bottom-2 right-2 sm:top-2 w-[88%] sm:w-[43%] h-[125px] sm:h-auto rounded-lg border border-[#dce3e9] bg-[#f3f6f8] p-3 overflow-hidden">
                     {index === 0 && <><div className="mb-3 h-3 w-24 rounded bg-[#304058]" /><div className="space-y-2">{["Electrostatics", "Current electricity"].map((item) => <div key={item} className="rounded border border-[#dce3e9] bg-white p-2 text-[8px] text-[#718096]">□ {item}</div>)}</div></>}
-                    {index === 1 && <><div className="mb-4 h-3 w-20 rounded bg-[#304058]" /><p className="text-[9px] font-semibold text-[#304058]">Which organelle is known as the powerhouse of the cell?</p><div className="mt-3 space-y-2">{["Nucleus", "Mitochondria", "Ribosome"].map((item) => <div key={item} className="rounded border border-[#cbd6df] bg-white p-2 text-[8px] text-[#718096]">{item}</div>)}</div></>}
+                    {index === 1 && <><div className="mb-4 h-3 w-20 rounded bg-[#304058]" /><p className="text-[9px] font-semibold text-[#324158]">Which organelle is known as the powerhouse of the cell?</p><div className="mt-3 space-y-2">{["Nucleus", "Mitochondria", "Ribosome"].map((item) => <div key={item} className="rounded border border-[#cbd6df] bg-white p-2 text-[8px] text-[#718096]">{item}</div>)}</div></>}
                     {index === 2 && <div className="h-full rounded bg-[#1d2b3d] p-3 font-mono text-[8px] leading-relaxed text-[#9ee493]"><p>1 function findResult(data) &#123;</p><p>2 const values = data.map</p><p>3 item.score();</p><p>4 return Math.max(...values)</p><p>5 &#125;</p></div>}
-                    {index === 3 && <><p className="text-2xl font-bold text-[#304058]">82%</p><p className="text-[8px] text-[#899aaa]">Average score</p><div className="mt-8 flex h-16 items-end gap-1">{[35, 55, 42, 68, 52, 78, 60].map((height, bar) => <span key={bar} className="flex-1 bg-[#718198]" style={{ height: `${height}%` }} />)}</div><p className="mt-2 text-[8px] text-[#899aaa]">Completed　　　　　　 124 candidates</p></>}
+                    {index === 3 && <><p className="text-2xl font-bold text-[#324158]">82%</p><p className="text-[8px] text-[#899aaa]">Average score</p><div className="mt-8 flex h-16 items-end gap-1">{[35, 55, 42, 68, 52, 78, 60].map((height, bar) => <span key={bar} className="flex-1 bg-[#718198]" style={{ height: `${height}%` }} />)}</div><p className="mt-2 text-[8px] text-[#899aaa]">Completed　　　　　　 124 candidates</p></>}
                   </div>
                 </article>
               </ScrollReveal>
@@ -1355,7 +1355,7 @@ export default function HomePage() {
         <div className="relative mx-auto max-w-[1115px] px-5 sm:px-8">
           <ScrollReveal direction="up" className="mx-auto max-w-3xl space-y-4 text-center">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">Transparent Pricing</span>
-            <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.035em] text-[#304058] sm:text-5xl">
+            <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.035em] text-[#324158] sm:text-5xl">
               Simple Plans. Powerful
               <br />
               Examination Capabilities.
@@ -1374,7 +1374,7 @@ export default function HomePage() {
                   <span className="absolute left-5 top-0 h-px w-3 bg-[#8da0b3]" />
                   {index === 1 && <span className="absolute right-5 top-5 rounded-md bg-[#304058] px-3 py-2 text-[8px] font-bold uppercase tracking-wide text-white">Most Popular</span>}
                   <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">{name as string}</p>
-                  <div className="mt-7 flex items-baseline gap-2 text-[#304058]">
+                  <div className="mt-7 flex items-baseline gap-2 text-[#324158]">
                     <span className="text-3xl font-bold">{price as string}</span>
                     <small className="text-[9px] text-[#899aaa]">{index === 2 ? "pricing" : "/ year"}</small>
                   </div>
@@ -1407,7 +1407,7 @@ export default function HomePage() {
             <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#64748b]">
               Start Your Transformation
             </span>
-            <h2 className="mt-5 text-3xl sm:text-5xl lg:text-[50px] font-extrabold leading-[1.08] tracking-[-0.035em] text-[#1e293b]">
+            <h2 className="mt-5 text-3xl sm:text-5xl lg:text-[50px] font-extrabold leading-[1.08] tracking-[-0.035em] text-[#324158]">
               Ready to Transform the Way
               <br />
               You Conduct Examinations?
@@ -1423,14 +1423,14 @@ export default function HomePage() {
               <div className="flex min-h-[225px]">
                 {/* Mini Sidebar */}
                 <aside className="w-[70px] shrink-0 bg-[#e8edf2] px-2.5 py-3 text-[#64748b]">
-                  <div className="flex items-center gap-1.5 text-[7px] font-bold text-[#1e293b]">
-                    <span className="flex h-3.5 w-3.5 items-center justify-center rounded bg-white text-[8px] font-black text-[#1e293b] shadow-xs">
+                  <div className="flex items-center gap-1.5 text-[7px] font-bold text-[#324158]">
+                    <span className="flex h-3.5 w-3.5 items-center justify-center rounded bg-white text-[8px] font-black text-[#324158] shadow-xs">
                       T
                     </span>
                     <span className="tracking-wider">TESTRO</span>
                   </div>
                   <div className="mt-4 space-y-2 text-[6.5px]">
-                    <span className="block rounded bg-[#d3dce4] px-1.5 py-1 font-semibold text-[#1e293b]">Dashboard</span>
+                    <span className="block rounded bg-[#d3dce4] px-1.5 py-1 font-semibold text-[#324158]">Dashboard</span>
                     <span className="block px-1.5 py-0.5 text-[#64748b]">Exams</span>
                     <span className="block px-1.5 py-0.5 text-[#64748b]">Questions</span>
                     <span className="block px-1.5 py-0.5 text-[#64748b]">Students</span>
@@ -1441,7 +1441,7 @@ export default function HomePage() {
                 {/* Mini Content Area */}
                 <div className="flex-1 bg-[#f8fafc] p-3">
                   <div className="flex items-center justify-between border-b border-[#e2e8f0] pb-2 text-[7px] text-[#64748b]">
-                    <b className="font-semibold text-[#1e293b]">Dashboard</b>
+                    <b className="font-semibold text-[#324158]">Dashboard</b>
                     <span>Good morning, Admin</span>
                     <span className="h-2.5 w-2.5 rounded-full bg-[#cbd5e1]" />
                   </div>
@@ -1449,7 +1449,7 @@ export default function HomePage() {
                   {/* Metric Tiles */}
                   <div className="mt-2.5 grid grid-cols-4 gap-1.5">
                     {["248", "12", "4,826", "1,842"].map((val) => (
-                      <span key={val} className="rounded border border-[#e2e8f0] bg-white p-1.5 text-center text-[9px] font-bold text-[#1e293b] shadow-xs">
+                      <span key={val} className="rounded border border-[#e2e8f0] bg-white p-1.5 text-center text-[9px] font-bold text-[#324158] shadow-xs">
                         {val}
                       </span>
                     ))}
@@ -1470,7 +1470,7 @@ export default function HomePage() {
                     {/* Right: Circular Progress Ring */}
                     <div className="flex flex-col items-center justify-center rounded border border-[#e2e8f0] bg-white p-2 shadow-xs">
                       <span className="text-[6px] font-medium text-[#64748b]">Result overview</span>
-                      <div className="relative mt-1 flex h-10 w-10 items-center justify-center rounded-full border-[3.5px] border-[#334155] border-t-[#0284c7] text-[8px] font-bold text-[#1e293b]">
+                      <div className="relative mt-1 flex h-10 w-10 items-center justify-center rounded-full border-[3.5px] border-[#334155] border-t-[#0284c7] text-[8px] font-bold text-[#324158]">
                         84%
                       </div>
                     </div>

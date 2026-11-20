@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState } from "react"
 import {
@@ -406,8 +406,8 @@ export default function InstitutesManagementPage() {
             <span>•</span>
             <span>Multi-Tenant Architecture</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#45505F] flex items-center gap-2.5">
-            <Building2 className="w-6 h-6 text-[#2D3A4A]" />
+          <h1 className="text-2xl font-bold text-[#324158] flex items-center gap-2.5">
+            <Building2 className="w-6 h-6 text-[#324158]" />
             <span>Organizations</span>
           </h1>
           <p className="text-xs text-gray-500 mt-1">
@@ -516,13 +516,13 @@ export default function InstitutesManagementPage() {
       {/* Institutes Table / Cards */}
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center text-gray-400">
-          <Loader2 className="w-6 h-6 animate-spin mb-2 text-[#2D3A4A]" />
+          <Loader2 className="w-6 h-6 animate-spin mb-2 text-[#324158]" />
           <span className="text-xs">Loading organizations...</span>
         </div>
       ) : filteredInstitutes.length === 0 ? (
         <div className="py-16 text-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 flex flex-col items-center justify-center">
           <Building2 className="w-10 h-10 text-gray-300 mb-3" />
-          <h3 className="text-sm font-bold text-[#45505F] mb-1">No Organizations Found</h3>
+          <h3 className="text-sm font-bold text-[#324158] mb-1">No Organizations Found</h3>
           <p className="text-xs text-gray-400 max-w-sm mb-4">
             {search || statusFilter !== "all"
               ? "Try adjusting your search query or status filter."
@@ -789,11 +789,11 @@ export default function InstitutesManagementPage() {
                       {/* Name & Code */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-lg bg-gray-100 text-[#2D3A4A] font-bold flex items-center justify-center shrink-0 border border-gray-200">
+                          <div className="w-9 h-9 rounded-lg bg-gray-100 text-[#324158] font-bold flex items-center justify-center shrink-0 border border-gray-200">
                             {inst.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-bold text-[#2D3A4A] text-sm flex items-center gap-1.5">
+                            <div className="font-bold text-[#324158] text-sm flex items-center gap-1.5">
                               <span>{inst.name}</span>
                               <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
                                 {inst.code}
@@ -839,7 +839,7 @@ export default function InstitutesManagementPage() {
                               <span className="text-gray-500">Students:</span>
                               <span
                                 className={`font-bold ${
-                                  studentPct >= 90 ? "text-red-600" : "text-[#2D3A4A]"
+                                  studentPct >= 90 ? "text-red-600" : "text-[#324158]"
                                 }`}
                               >
                                 {inst.usage?.studentsEnrolled || 0} /{" "}
@@ -866,7 +866,7 @@ export default function InstitutesManagementPage() {
                               <span className="text-gray-500">Exams Created:</span>
                               <span
                                 className={`font-bold ${
-                                  examPct >= 90 ? "text-red-600" : "text-[#2D3A4A]"
+                                  examPct >= 90 ? "text-red-600" : "text-[#324158]"
                                 }`}
                               >
                                 {inst.usage?.examsCreated || 0} / {inst.limits?.maxExams ?? 20}
@@ -1061,7 +1061,7 @@ export default function InstitutesManagementPage() {
                   <Building2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[#45505F]">Register Coaching Institute</h3>
+                  <h3 className="text-sm font-bold text-[#324158]">Register Coaching Institute</h3>
                   <p className="text-[11px] text-gray-400">
                     Create an isolated tenant account with customized student & exam limits.
                   </p>
@@ -1178,7 +1178,7 @@ export default function InstitutesManagementPage() {
 
               {/* Limits Configuration */}
               <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 space-y-3">
-                <span className="font-bold text-[#45505F] block">
+                <span className="font-bold text-[#324158] block">
                   Quota Limits & Access Configuration
                 </span>
 
@@ -1225,7 +1225,7 @@ export default function InstitutesManagementPage() {
                         type="checkbox"
                         checked={formPdfImport}
                         onChange={(e) => setFormPdfImport(e.target.checked)}
-                        className="rounded text-[#2D3A4A]"
+                        className="rounded text-[#324158]"
                       />
                       <span className="text-[11px] font-medium text-gray-700">
                         PDF Paper Import
@@ -1260,7 +1260,7 @@ export default function InstitutesManagementPage() {
                                   : current.filter((value) => value !== option.value)
                               )
                             }
-                            className="mt-0.5 rounded text-[#2D3A4A]"
+                            className="mt-0.5 rounded text-[#324158]"
                           />
                           <div className="flex-1">
                             <span className="text-xs font-semibold text-gray-800 block">{option.label}</span>
@@ -1321,7 +1321,7 @@ export default function InstitutesManagementPage() {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-lg">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <div>
-                <h3 className="text-sm font-bold text-[#45505F]">
+                <h3 className="text-sm font-bold text-[#324158]">
                   Edit Quotas & Features: {showEditLimitsModal.name}
                 </h3>
                 <span className="font-mono text-[10px] text-gray-400">
@@ -1419,7 +1419,7 @@ export default function InstitutesManagementPage() {
                                   : current.filter((value) => value !== option.value)
                               )
                             }
-                            className="mt-0.5 rounded text-[#2D3A4A]"
+                            className="mt-0.5 rounded text-[#324158]"
                           />
                           <div className="flex-1">
                             <span className="text-xs font-semibold text-gray-800 block">{option.label}</span>
@@ -1478,8 +1478,8 @@ export default function InstitutesManagementPage() {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-sm">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <div className="flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-[#2D3A4A]" />
-                <h3 className="text-sm font-bold text-[#45505F]">Reset Admin Password</h3>
+                <KeyRound className="w-4 h-4 text-[#324158]" />
+                <h3 className="text-sm font-bold text-[#324158]">Reset Admin Password</h3>
               </div>
               <button
                 onClick={() => setShowResetPasswordModal(null)}

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -36,7 +36,7 @@ export default function SuperAdminOverviewPage() {
             <Shield className="w-3.5 h-3.5 text-amber-500" />
             <span>Super Admin Platform Headquarters</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#45505F]">Platform Overview & Metrics</h1>
+          <h1 className="text-2xl font-bold text-[#324158]">Platform Overview & Metrics</h1>
           <p className="text-xs text-gray-500 mt-1">
             Real-time aggregate data across all registered coaching centers and academic institutions.
           </p>
@@ -56,9 +56,9 @@ export default function SuperAdminOverviewPage() {
         <div className="p-5 rounded-xl bg-white border border-gray-200 shadow-xs">
           <div className="flex items-center justify-between text-gray-400 text-xs font-medium mb-1">
             <span>Registered Institutes</span>
-            <Building2 className="w-4 h-4 text-[#2D3A4A]" />
+            <Building2 className="w-4 h-4 text-[#324158]" />
           </div>
-          <div className="text-3xl font-bold text-[#2D3A4A]">
+          <div className="text-3xl font-bold text-[#324158]">
             {stats?.totalInstitutes ?? "—"}
           </div>
           <span className="text-[11px] text-emerald-600 font-medium">
@@ -69,9 +69,9 @@ export default function SuperAdminOverviewPage() {
         <div className="p-5 rounded-xl bg-white border border-gray-200 shadow-xs">
           <div className="flex items-center justify-between text-gray-400 text-xs font-medium mb-1">
             <span>Total Enrolled Students</span>
-            <Users className="w-4 h-4 text-[#2D3A4A]" />
+            <Users className="w-4 h-4 text-[#324158]" />
           </div>
-          <div className="text-3xl font-bold text-[#2D3A4A]">
+          <div className="text-3xl font-bold text-[#324158]">
             {stats?.studentsEnrolled ?? "—"}
           </div>
           <span className="text-[11px] text-gray-400">Across all coaching batches</span>
@@ -80,9 +80,9 @@ export default function SuperAdminOverviewPage() {
         <div className="p-5 rounded-xl bg-white border border-gray-200 shadow-xs">
           <div className="flex items-center justify-between text-gray-400 text-xs font-medium mb-1">
             <span>Platform Tests Created</span>
-            <FileText className="w-4 h-4 text-[#2D3A4A]" />
+            <FileText className="w-4 h-4 text-[#324158]" />
           </div>
-          <div className="text-3xl font-bold text-[#2D3A4A]">
+          <div className="text-3xl font-bold text-[#324158]">
             {stats?.totalExams ?? "—"}
           </div>
           <span className="text-[11px] text-emerald-600 font-medium">
@@ -93,9 +93,9 @@ export default function SuperAdminOverviewPage() {
         <div className="p-5 rounded-xl bg-white border border-gray-200 shadow-xs">
           <div className="flex items-center justify-between text-gray-400 text-xs font-medium mb-1">
             <span>Total Test Submissions</span>
-            <BarChart2 className="w-4 h-4 text-[#2D3A4A]" />
+            <BarChart2 className="w-4 h-4 text-[#324158]" />
           </div>
-          <div className="text-3xl font-bold text-[#2D3A4A]">
+          <div className="text-3xl font-bold text-[#324158]">
             {stats?.totalAttempts ?? "—"}
           </div>
           <span className="text-[11px] text-gray-400">Total student attempt records</span>
@@ -106,10 +106,10 @@ export default function SuperAdminOverviewPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-xs flex flex-col justify-between space-y-4">
           <div>
-            <div className="w-10 h-10 rounded-xl bg-gray-100 text-[#2D3A4A] flex items-center justify-center mb-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 text-[#324158] flex items-center justify-center mb-3">
               <Building2 className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-[#45505F] mb-1">
+            <h3 className="text-base font-bold text-[#324158] mb-1">
               Coaching Institutes Directory
             </h3>
             <p className="text-xs text-gray-500 leading-relaxed">
@@ -118,7 +118,7 @@ export default function SuperAdminOverviewPage() {
           </div>
           <Link
             href="/admin/institutes"
-            className="inline-flex items-center gap-2 text-xs font-bold text-[#2D3A4A] hover:underline"
+            className="inline-flex items-center gap-2 text-xs font-bold text-[#324158] hover:underline"
           >
             <span>Open Coaching Directory</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -127,10 +127,10 @@ export default function SuperAdminOverviewPage() {
 
         <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-xs flex flex-col justify-between space-y-4">
           <div>
-            <div className="w-10 h-10 rounded-xl bg-gray-100 text-[#2D3A4A] flex items-center justify-center mb-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 text-[#324158] flex items-center justify-center mb-3">
               <Shield className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-[#45505F] mb-1">
+            <h3 className="text-base font-bold text-[#324158] mb-1">
               Global Platform Security & Proctoring
             </h3>
             <p className="text-xs text-gray-500 leading-relaxed">
@@ -139,7 +139,7 @@ export default function SuperAdminOverviewPage() {
           </div>
           <Link
             href="/admin/settings"
-            className="inline-flex items-center gap-2 text-xs font-bold text-[#2D3A4A] hover:underline"
+            className="inline-flex items-center gap-2 text-xs font-bold text-[#324158] hover:underline"
           >
             <span>Platform Settings</span>
             <ArrowRight className="w-3.5 h-3.5" />

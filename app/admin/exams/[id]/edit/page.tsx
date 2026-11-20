@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useRef, useEffect, use, Suspense, ReactNode } from "react"
 import { createPortal } from "react-dom"
@@ -2161,7 +2161,7 @@ function CodingModal({ onSave, onClose, initial }: {
                     type="button"
                     onClick={() => setActiveLang(lang.toLowerCase())}
                     className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
-                      activeLang === lang.toLowerCase() ? "bg-white text-[#45505F] shadow-sm" : "text-gray-400 hover:text-gray-600"
+                      activeLang === lang.toLowerCase() ? "bg-white text-[#324158] shadow-sm" : "text-gray-400 hover:text-gray-600"
                     }`}
                   >
                     {lang}
@@ -2197,7 +2197,7 @@ function CodingModal({ onSave, onClose, initial }: {
                        driverCode: { ...q.driverCode, [activeLang]: e.target.value }
                     })}
                     rows={4}
-                    className="w-full p-3 bg-gray-100 text-[#45505F] font-mono text-xs rounded-xl border border-gray-200 focus:outline-none"
+                    className="w-full p-3 bg-gray-100 text-[#324158] font-mono text-xs rounded-xl border border-gray-200 focus:outline-none"
                     placeholder={`Enter driver code to run test cases in ${activeLang}...`}
                   />
                   <p className="text-[9px] text-gray-400 mt-1.5">Use <code>stdin</code> to read inputs from test cases and print output for validation.</p>

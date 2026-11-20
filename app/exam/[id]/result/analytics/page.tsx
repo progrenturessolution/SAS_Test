@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, use, useMemo, Suspense, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -568,7 +568,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
     if (!formattedAnswer) return null
 
     return (
-      <div className="min-w-0 text-[#45505F]">
+      <div className="min-w-0 text-[#324158]">
         {q.type === "fillblanks" && Array.isArray(answer) ? (
           <div className="space-y-1">
             {answer.map((value, index) => (

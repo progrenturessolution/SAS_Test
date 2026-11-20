@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useMemo, useRef, KeyboardEvent } from "react"
 import {
@@ -465,15 +465,15 @@ export function CompetitiveExamAIGenerator({
         {/* ─── Header ─── */}
         <div className="flex items-center justify-between px-6 py-4.5 border-b border-gray-100 bg-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 text-[#2D3A4A] flex items-center justify-center shrink-0">
-              <GraduationCap className="w-5 h-5 text-[#2D3A4A]" />
+            <div className="w-10 h-10 rounded-xl bg-gray-100 text-[#324158] flex items-center justify-center shrink-0">
+              <GraduationCap className="w-5 h-5 text-[#324158]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-[#45505F]">
+                <h2 className="text-lg font-bold text-[#324158]">
                   NEET / JEE / MHT-CET
                 </h2>
-                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gray-100 text-[#45505F] border border-gray-200">
+                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gray-100 text-[#324158] border border-gray-200">
                   Question Studio
                 </span>
               </div>
@@ -513,7 +513,7 @@ export function CompetitiveExamAIGenerator({
             <div className="space-y-6">
               {/* Section 1: Target Exam Selection */}
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-[#45505F] block mb-2.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#324158] block mb-2.5">
                   1. Select Target Competitive Exam
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -526,7 +526,7 @@ export function CompetitiveExamAIGenerator({
                         onClick={() => handleExamChange(exam.id)}
                         className={`text-left p-3.5 rounded-xl border transition-all relative overflow-hidden cursor-pointer ${
                           isSelected
-                            ? "border-2 border-[#2D3A4A] bg-[#2D3A4A]/5 text-[#2D3A4A] shadow-xs"
+                            ? "border-2 border-[#2D3A4A] bg-[#2D3A4A]/5 text-[#324158] shadow-xs"
                             : "border border-gray-200 hover:border-gray-300 bg-white"
                         }`}
                       >
@@ -537,10 +537,10 @@ export function CompetitiveExamAIGenerator({
                             {exam.badge}
                           </span>
                           {isSelected && (
-                            <CheckCircle2 className="w-4 h-4 text-[#2D3A4A] shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 text-[#324158] shrink-0" />
                           )}
                         </div>
-                        <h3 className="font-bold text-sm text-[#45505F] leading-tight">
+                        <h3 className="font-bold text-sm text-[#324158] leading-tight">
                           {exam.title}
                         </h3>
                         <p className="text-[11px] text-gray-500 mt-1 line-clamp-1">
@@ -556,7 +556,7 @@ export function CompetitiveExamAIGenerator({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-gray-50/70 border border-gray-100">
                 {/* Grade / Class */}
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#45505F] block mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#324158] block mb-2">
                     2. Select Class / Standard
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -583,7 +583,7 @@ export function CompetitiveExamAIGenerator({
 
                 {/* Subject */}
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#45505F] block mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#324158] block mb-2">
                     3. Select Subject
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -609,7 +609,7 @@ export function CompetitiveExamAIGenerator({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#45505F] block">
+                    <label className="text-xs font-bold uppercase tracking-wider text-[#324158] block">
                       4. Chapters, Topics & Syllabus Definition
                     </label>
                     <p className="text-xs text-gray-500">
@@ -634,8 +634,8 @@ export function CompetitiveExamAIGenerator({
                   <div className="p-4 rounded-xl border border-gray-200 bg-white space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-[#45505F] flex items-center gap-1.5">
-                        <Tag className="w-3.5 h-3.5 text-[#45505F]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#324158] flex items-center gap-1.5">
+                        <Tag className="w-3.5 h-3.5 text-[#324158]" />
                         <span>Curriculum Chapters</span>
                         </span>
                         <span className="mt-1 block text-[10px] font-semibold text-emerald-700">
@@ -645,7 +645,7 @@ export function CompetitiveExamAIGenerator({
                           href={currentExamMeta.officialSyllabusUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-1 inline-block text-[10px] font-semibold text-[#2D3A4A] underline-offset-2 hover:underline"
+                          className="mt-1 inline-block text-[10px] font-semibold text-[#324158] underline-offset-2 hover:underline"
                         >
                           Official syllabus source
                         </a>
@@ -657,7 +657,7 @@ export function CompetitiveExamAIGenerator({
                         <button
                           type="button"
                           onClick={handleSelectAllChapters}
-                          className="text-[10px] font-bold text-[#2D3A4A] hover:underline"
+                          className="text-[10px] font-bold text-[#324158] hover:underline"
                         >
                           Select All
                         </button>
@@ -734,8 +734,8 @@ export function CompetitiveExamAIGenerator({
                   {/* Card 2: Add Topics / Specific Concepts */}
                   <div className="p-4 rounded-xl border border-gray-200 bg-white space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#45505F] flex items-center gap-1.5">
-                        <Target className="w-3.5 h-3.5 text-[#45505F]" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#324158] flex items-center gap-1.5">
+                        <Target className="w-3.5 h-3.5 text-[#324158]" />
                         <span>Add Topic(s) / Specific Concepts</span>
                       </span>
                       <span className="text-[11px] font-semibold text-gray-500">
@@ -808,7 +808,7 @@ export function CompetitiveExamAIGenerator({
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-[#45505F]">
+                            <span className="text-xs font-bold text-[#324158]">
                               {uploadedPdf.name}
                             </span>
                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
@@ -832,11 +832,11 @@ export function CompetitiveExamAIGenerator({
                   ) : (
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-gray-100 text-[#45505F] flex items-center justify-center shrink-0">
+                        <div className="w-9 h-9 rounded-lg bg-gray-100 text-[#324158] flex items-center justify-center shrink-0">
                           <Upload className="w-5 h-5" />
                         </div>
                         <div>
-                          <h4 className="text-xs font-bold text-[#45505F]">
+                          <h4 className="text-xs font-bold text-[#324158]">
                             Import Syllabus or Chapter Notes (PDF Upload)
                           </h4>
                           <p className="text-[11px] text-gray-500 leading-snug">
@@ -853,12 +853,12 @@ export function CompetitiveExamAIGenerator({
                       >
                         {isUploadingPdf ? (
                           <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2D3A4A]" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#324158]" />
                             <span>Extracting text from PDF...</span>
                           </>
                         ) : (
                           <>
-                            <Upload className="w-3.5 h-3.5 text-[#2D3A4A]" />
+                            <Upload className="w-3.5 h-3.5 text-[#324158]" />
                             <span>Select Syllabus PDF</span>
                           </>
                         )}
@@ -882,7 +882,7 @@ export function CompetitiveExamAIGenerator({
                     <Target className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-[#45505F]">
+                    <h4 className="text-xs font-bold text-[#324158]">
                       Past Years & High-Yield Question Bank
                     </h4>
                     <p className="text-[11px] text-gray-500 leading-snug">
@@ -897,7 +897,7 @@ export function CompetitiveExamAIGenerator({
                     <ShieldCheck className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-[#45505F]">
+                    <h4 className="text-xs font-bold text-[#324158]">
                       Strict Zero-Repetition Algorithm
                     </h4>
                     <p className="text-[11px] text-gray-500 leading-snug">
@@ -912,7 +912,7 @@ export function CompetitiveExamAIGenerator({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-gray-50/70 border border-gray-100">
                 {/* Question Count */}
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#45505F] block mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#324158] block mb-2">
                     5. Number of Questions
                   </label>
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -940,7 +940,7 @@ export function CompetitiveExamAIGenerator({
 
                 {/* Difficulty */}
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#45505F] block mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#324158] block mb-2">
                     Difficulty Distribution
                   </label>
                   <select
@@ -957,7 +957,7 @@ export function CompetitiveExamAIGenerator({
 
                 {/* Pattern */}
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#45505F] block mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#324158] block mb-2">
                     Question Pattern
                   </label>
                   <select
@@ -1017,7 +1017,7 @@ export function CompetitiveExamAIGenerator({
                     ✓
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-[#45505F] flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-[#324158] flex items-center gap-2">
                       <span>
                         Generated {generatedList.length} of {questionCount} Non-Repeating Questions for {selectedExam} ({selectedSubject})
                       </span>
@@ -1087,17 +1087,17 @@ export function CompetitiveExamAIGenerator({
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleQuestionSelection(q.id)}
-                            className="w-4 h-4 rounded text-[#2D3A4A] focus:ring-[#2D3A4A] cursor-pointer"
+                            className="w-4 h-4 rounded text-[#324158] focus:ring-[#2D3A4A] cursor-pointer"
                           />
-                          <span className="font-bold text-xs px-2 py-0.5 rounded-md bg-gray-100 text-[#2D3A4A]">
+                          <span className="font-bold text-xs px-2 py-0.5 rounded-md bg-gray-100 text-[#324158]">
                             Q{idx + 1}
                           </span>
                           <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
                             {q.chapter}
                           </span>
                           {q.pyqReference && (
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-[#45505F] border border-gray-200 flex items-center gap-1">
-                              <Target className="w-3 h-3 text-[#2D3A4A]" />
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-[#324158] border border-gray-200 flex items-center gap-1">
+                              <Target className="w-3 h-3 text-[#324158]" />
                               <span>{q.pyqReference}</span>
                             </span>
                           )}
@@ -1113,7 +1113,7 @@ export function CompetitiveExamAIGenerator({
                           <button
                             type="button"
                             onClick={() => setEditingQuestion(q)}
-                            className="p-1.5 text-gray-400 hover:text-[#2D3A4A] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-gray-400 hover:text-[#324158] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
                             title="Edit Question"
                           >
                             <Edit3 size={15} />
@@ -1130,7 +1130,7 @@ export function CompetitiveExamAIGenerator({
                       </div>
 
                       {/* Question Text with Math rendering */}
-                      <div className="text-[#2D3A4A] font-medium mb-3 pl-6">
+                      <div className="text-[#324158] font-medium mb-3 pl-6">
                         <MathRenderer content={q.questionText} />
                       </div>
 
@@ -1178,7 +1178,7 @@ export function CompetitiveExamAIGenerator({
                         <button
                           type="button"
                           onClick={() => toggleSolution(q.id)}
-                          className="text-xs font-medium text-[#45505F] hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-xs font-medium text-[#324158] hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                           <span>{isExpanded ? "Hide Solution" : "View Step-by-Step Solution"}</span>
@@ -1186,7 +1186,7 @@ export function CompetitiveExamAIGenerator({
 
                         {isExpanded && (
                           <div className="mt-2.5 p-3.5 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-700">
-                            <span className="font-bold text-[#45505F] block mb-1">
+                            <span className="font-bold text-[#324158] block mb-1">
                               Solution & Concept Explanation:
                             </span>
                             <MathRenderer content={q.explanation} />
@@ -1233,7 +1233,7 @@ export function CompetitiveExamAIGenerator({
       {editingQuestion && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="w-full max-w-2xl bg-white rounded-2xl p-6 shadow-2xl border border-gray-100 space-y-4">
-            <h3 className="text-sm font-bold text-[#45505F] flex items-center justify-between">
+            <h3 className="text-sm font-bold text-[#324158] flex items-center justify-between">
               <span>Edit Question Details</span>
               <button
                 onClick={() => setEditingQuestion(null)}
@@ -1244,7 +1244,7 @@ export function CompetitiveExamAIGenerator({
             </h3>
 
             <div>
-              <label className="text-xs font-semibold text-[#45505F] block mb-1">
+              <label className="text-xs font-semibold text-[#324158] block mb-1">
                 Question Statement (LaTeX supported with $...$)
               </label>
               <textarea
@@ -1258,7 +1258,7 @@ export function CompetitiveExamAIGenerator({
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-[#45505F] block mb-1">
+              <label className="text-xs font-semibold text-[#324158] block mb-1">
                 Diagram / Figure (SVG Vector Markup or Image URL)
               </label>
               <textarea
@@ -1278,7 +1278,7 @@ export function CompetitiveExamAIGenerator({
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-[#45505F] block">
+              <label className="text-xs font-semibold text-[#324158] block">
                 Options & Correct Answer
               </label>
               {editingQuestion.options.map((opt, i) => (
@@ -1321,7 +1321,7 @@ export function CompetitiveExamAIGenerator({
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-[#45505F] block mb-1">
+              <label className="text-xs font-semibold text-[#324158] block mb-1">
                 Solution & Explanation
               </label>
               <textarea

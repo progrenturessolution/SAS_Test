@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import Link from "next/link"
@@ -48,7 +48,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col justify-between overflow-hidden bg-[#fafbfc] text-[#0f172a] selection:bg-[#0f172a] selection:text-white">
+    <div className="relative flex min-h-screen flex-col justify-between overflow-hidden bg-[#fafbfc] text-[#324158] selection:bg-[#0f172a] selection:text-white">
       {/* Background Soft Wave (matches uploaded Figma design) */}
       <div className="pointer-events-none absolute bottom-0 left-0 h-[240px] w-full max-w-[680px] overflow-hidden opacity-40">
         <svg
@@ -77,7 +77,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
             {/* Logo: Lab Flask + Testro Lab */}
             <Link href="/" className="inline-flex items-center gap-3 group">
               <svg
-                className="h-8 w-8 text-[#0f172a] transition-transform group-hover:scale-105"
+                className="h-8 w-8 text-[#324158] transition-transform group-hover:scale-105"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -89,7 +89,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
                 <line x1="8.5" y1="2" x2="15.5" y2="2" />
                 <path d="M8.5 14h7" />
               </svg>
-              <span className="text-[26px] font-bold tracking-tight text-[#0f172a]">
+              <span className="text-[26px] font-bold tracking-tight text-[#324158]">
                 Testro Lab
               </span>
             </Link>
@@ -98,7 +98,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
             <div className="my-8 h-[3.5px] w-12 rounded-full bg-[#0f172a]" />
 
             {/* Platform Headline */}
-            <h1 className="text-4xl font-extrabold tracking-[-0.035em] text-[#0f172a] sm:text-[44px] sm:leading-[1.12]">
+            <h1 className="text-4xl font-extrabold tracking-[-0.035em] text-[#324158] sm:text-[44px] sm:leading-[1.12]">
               Testro Lab Platform
             </h1>
 
@@ -108,7 +108,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
             </p>
 
             {/* 3 Feature Pills */}
-            <div className="mt-9 flex flex-wrap items-center gap-3.5 text-xs font-semibold text-[#1e293b] sm:text-[13px]">
+            <div className="mt-9 flex flex-wrap items-center gap-3.5 text-xs font-semibold text-[#324158] sm:text-[13px]">
               <div>Create Exams</div>
               <span className="text-gray-300">|</span>
               <div>Manage Students</div>
@@ -120,7 +120,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
           {/* Right Column: Clean White Login Card */}
           <div className="w-full max-w-[430px] rounded-2xl border border-gray-100 bg-white p-7 shadow-[0_15px_40px_-12px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.03)] sm:p-9">
             {/* Card Header */}
-            <h2 className="text-[24px] font-bold tracking-tight text-[#0f172a]">
+            <h2 className="text-[24px] font-bold tracking-tight text-[#324158]">
               {isInstitute ? "Organization Login" : "Platform Admin Login"}
             </h2>
             <p className="mt-1 text-sm text-[#64748b] mb-6">
@@ -145,7 +145,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={isInstitute ? "Organization Email" : "Admin Email"}
                   required
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3.5 text-sm text-[#0f172a] placeholder:text-gray-400 outline-none transition focus:border-[#0f172a] focus:ring-1 focus:ring-[#0f172a]"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3.5 text-sm text-[#324158] placeholder:text-gray-400 outline-none transition focus:border-[#0f172a] focus:ring-1 focus:ring-[#0f172a]"
                 />
               </div>
 
@@ -158,7 +158,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
                   required
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3.5 pr-14 text-sm text-[#0f172a] placeholder:text-gray-400 outline-none transition focus:border-[#0f172a] focus:ring-1 focus:ring-[#0f172a]"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3.5 pr-14 text-sm text-[#324158] placeholder:text-gray-400 outline-none transition focus:border-[#0f172a] focus:ring-1 focus:ring-[#0f172a]"
                 />
                 <button
                   type="button"
@@ -177,7 +177,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-[#0f172a] focus:ring-[#0f172a] cursor-pointer"
+                    className="h-4 w-4 rounded border-gray-300 text-[#324158] focus:ring-[#0f172a] cursor-pointer"
                   />
                   <span>Keep me signed in</span>
                 </label>
@@ -212,7 +212,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
                     "_blank"
                   )
                 }
-                className="font-bold text-[#0f172a] hover:underline cursor-pointer inline-flex items-center gap-1"
+                className="font-bold text-[#324158] hover:underline cursor-pointer inline-flex items-center gap-1"
               >
                 <span>Contact Platform Admin</span>
               </button>
@@ -232,7 +232,7 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
 
           <Link
             href="/"
-            className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-[#475569] shadow-2xs hover:bg-gray-50 hover:text-[#0f172a] transition-colors"
+            className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-[#475569] shadow-2xs hover:bg-gray-50 hover:text-[#324158] transition-colors"
           >
             Home
           </Link>

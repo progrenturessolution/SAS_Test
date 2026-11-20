@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, use } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -321,7 +321,7 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
               <div className="relative pt-0.5">
                 <Link
                   href={`/exam/${id}/result/analytics?attemptId=${attemptId}`}
-                  className="inline-flex items-center gap-1.5 bg-white text-[#131B2A] hover:bg-slate-100 font-semibold text-xs px-4 py-2 rounded-full transition-all shadow-sm hover:shadow active:scale-[0.99] cursor-pointer"
+                  className="inline-flex items-center gap-1.5 bg-white text-[#324158] hover:bg-slate-100 font-semibold text-xs px-4 py-2 rounded-full transition-all shadow-sm hover:shadow active:scale-[0.99] cursor-pointer"
                 >
                   <span>Access Analytics</span>
                   <span className="text-sm leading-none">→</span>

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, use, Suspense } from "react"
 import { useRouter } from "next/navigation"
@@ -124,12 +124,12 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
             {/* Icon */}
             <div className="flex justify-center mb-5">
               <div className="w-12 h-12 rounded-xl bg-[#f0f3f8] flex items-center justify-center">
-                <ClipboardList size={22} className="text-[#2D3A4A]" />
+                <ClipboardList size={22} className="text-[#324158]" />
               </div>
             </div>
 
             {/* Title */}
-            <h1 className="text-2xl font-bold text-[#1a2535] text-center mb-1.5">
+            <h1 className="text-2xl font-bold text-[#324158] text-center mb-1.5">
               View Your Results
             </h1>
             <p className="text-sm text-gray-400 text-center mb-7">
@@ -140,7 +140,7 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
             <form onSubmit={handleLookup} className="space-y-5">
               {/* Exam ID (read-only) */}
               <div>
-                <label className="block text-sm font-medium text-[#2D3A4A] mb-1.5">
+                <label className="block text-sm font-medium text-[#324158] mb-1.5">
                   Exam ID / Code
                 </label>
                 <input
@@ -153,7 +153,7 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
 
               {/* Roll Number */}
               <div>
-                <label className="block text-sm font-medium text-[#2D3A4A] mb-1.5">
+                <label className="block text-sm font-medium text-[#324158] mb-1.5">
                   Roll Number / Student ID
                 </label>
                 <input
@@ -167,7 +167,7 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-[#2D3A4A] mb-1.5">
+                <label className="block text-sm font-medium text-[#324158] mb-1.5">
                   Email Address
                 </label>
                 <input

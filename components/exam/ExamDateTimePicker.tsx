@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useEffect, useMemo } from "react"
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight } from "lucide-react"
@@ -183,7 +183,7 @@ export function ExamDateTimePicker({
       {/* Header */}
       <div className="flex items-start justify-between gap-2 border-b border-gray-100 pb-3">
         <div className="min-w-0">
-          <h4 className="text-sm font-bold text-[#2D3A4A] flex items-center gap-2">
+          <h4 className="text-sm font-bold text-[#324158] flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#2D3A4A] shrink-0" />
             <span className="truncate">{label}</span>
           </h4>
@@ -192,7 +192,7 @@ export function ExamDateTimePicker({
           )}
         </div>
         {date && time && (
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-gray-50 border border-gray-200/60 text-[#2D3A4A] tracking-tight shrink-0 whitespace-nowrap">
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-gray-50 border border-gray-200/60 text-[#324158] tracking-tight shrink-0 whitespace-nowrap">
             {hour12}:{minute} {period}
           </span>
         )}
@@ -209,7 +209,7 @@ export function ExamDateTimePicker({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 bg-gray-50/70 hover:bg-gray-100/70 border border-gray-200 rounded-xl text-left text-sm font-semibold text-[#2D3A4A] transition-all focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/20 shadow-2xs"
+                className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 bg-gray-50/70 hover:bg-gray-100/70 border border-gray-200 rounded-xl text-left text-sm font-semibold text-[#324158] transition-all focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/20 shadow-2xs"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-600 shrink-0 shadow-2xs">
@@ -248,7 +248,7 @@ export function ExamDateTimePicker({
 
               {/* Month & Year Navigation */}
               <div className="flex items-center justify-between mb-3 px-1">
-                <span className="text-sm font-black text-[#2D3A4A]">
+                <span className="text-sm font-black text-[#324158]">
                   {MONTH_NAMES[viewMonth]} {viewYear}
                 </span>
                 <div className="flex items-center gap-1">
@@ -328,7 +328,7 @@ export function ExamDateTimePicker({
               <select
                 value={hour12}
                 onChange={(e) => updateTime12(e.target.value, minute, period)}
-                className="bg-white border border-gray-200 rounded-lg py-1.5 px-2.5 text-xs font-bold text-[#2D3A4A] focus:outline-none focus:ring-1 focus:ring-[#2D3A4A] shrink-0 cursor-pointer shadow-2xs"
+                className="bg-white border border-gray-200 rounded-lg py-1.5 px-2.5 text-xs font-bold text-[#324158] focus:outline-none focus:ring-1 focus:ring-[#2D3A4A] shrink-0 cursor-pointer shadow-2xs"
               >
                 {Array.from({ length: 12 }).map((_, i) => {
                   const val = String(i + 1).padStart(2, "0")
@@ -346,7 +346,7 @@ export function ExamDateTimePicker({
               <select
                 value={minute}
                 onChange={(e) => updateTime12(hour12, e.target.value, period)}
-                className="bg-white border border-gray-200 rounded-lg py-1.5 px-2.5 text-xs font-bold text-[#2D3A4A] focus:outline-none focus:ring-1 focus:ring-[#2D3A4A] shrink-0 cursor-pointer shadow-2xs"
+                className="bg-white border border-gray-200 rounded-lg py-1.5 px-2.5 text-xs font-bold text-[#324158] focus:outline-none focus:ring-1 focus:ring-[#2D3A4A] shrink-0 cursor-pointer shadow-2xs"
               >
                 {minuteOptions.map((m) => (
                   <option key={m} value={m}>
