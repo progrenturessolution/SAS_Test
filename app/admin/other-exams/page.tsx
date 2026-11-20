@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useMemo, useRef, useEffect, KeyboardEvent, Suspense } from "react"
 import Link from "next/link"
@@ -1019,6 +1019,13 @@ function OtherExamsContent() {
 
   // Step 7: Final Publish Exam
   const handlePublishExam = async () => {
+    if (isExamQuotaReached && !editingExamId) {
+      const msg = `Exam Limit Reached: Your organization has reached the limit of ${maxExams} exams (${examCount}/${maxExams} used). Contact administrator to increase your exam quota.`
+      setErrorMsg(msg)
+      toast.error(msg)
+      return
+    }
+
     if (!examTitle.trim()) {
       setErrorMsg("Please enter an exam title.")
       setCurrentStep(5)

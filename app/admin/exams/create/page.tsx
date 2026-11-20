@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
@@ -14,6 +14,7 @@ import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
 import { CompetitiveExamAIGenerator, GeneratedCompetitiveQuestion } from "@/components/exam/CompetitiveExamAIGenerator"
 import { MathRenderer } from "@/components/exam/MathRenderer"
+import { toast } from "sonner"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2781,6 +2782,7 @@ export default function CreateExamPage() {
   const [isExamQuotaReached, setIsExamQuotaReached] = useState(false)
   const [maxExams, setMaxExams] = useState(20)
   const [examCount, setExamCount] = useState(0)
+  const [loadingAccess, setLoadingAccess] = useState(true)
 
   // Load global proctoring defaults from admin settings
   useEffect(() => {
@@ -2811,6 +2813,9 @@ export default function CreateExamPage() {
       })
       .catch(() => {
         setHasExamAccess(true)
+      })
+      .finally(() => {
+        setLoadingAccess(false)
       })
   }, [])
 
@@ -2868,7 +2873,14 @@ export default function CreateExamPage() {
   }
 
   const handleSubmit = async (status: "draft" | "active") => {
-    setError(""); setSaving(true)
+    setError("")
+    if (isExamQuotaReached) {
+      const msg = `Exam Limit Reached: Your organization has reached the limit of ${maxExams} exams (${examCount}/${maxExams} used). Contact administrator to increase your exam quota.`
+      setError(msg)
+      toast.error(msg)
+      return
+    }
+    setSaving(true)
     try {
       const startDt = step2.startDate ? getExamStartDateTime({ startDate: step2.startDate, startTime: step2.startTime }) : null
       const endDt = step2.endDate ? getExamEndDateTime({ endDate: step2.endDate, endTime: step2.endTime }) : null
@@ -2967,6 +2979,15 @@ export default function CreateExamPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (loadingAccess) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center bg-[#F8FAFC]">
+        <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
+        <p className="text-xs text-gray-400 font-medium">Checking exam permissions & quota...</p>
+      </div>
+    )
   }
 
   if (isExamQuotaReached) {

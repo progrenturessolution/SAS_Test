@@ -59,9 +59,16 @@ export async function POST(req: Request) {
     const body = await req.json()
 
     // Institute Limit Enforcement
-    if (session.instituteId) {
+    let targetInstituteId = session.instituteId
+    if (!targetInstituteId && session.role === "institute") {
+      const User = (await import("@/models/User")).default
+      const u = await User.findById(session.id).select("instituteId").lean()
+      if (u?.instituteId) targetInstituteId = String(u.instituteId)
+    }
+
+    if (targetInstituteId) {
       const Institute = (await import("@/models/Institute")).default
-      const institute = await Institute.findById(session.instituteId).lean()
+      const institute = await Institute.findById(targetInstituteId).lean()
       if (!institute) {
         return NextResponse.json(
           { error: "Institute access could not be verified. Please sign in again." },
@@ -135,22 +142,36 @@ export async function POST(req: Request) {
             )
           }
       }
+      const mongoose = (await import("mongoose")).default
+      const instObjId = targetInstituteId && mongoose.Types.ObjectId.isValid(targetInstituteId)
+        ? new mongoose.Types.ObjectId(targetInstituteId)
+        : null
+      const userObjId = session.id && mongoose.Types.ObjectId.isValid(session.id)
+        ? new mongoose.Types.ObjectId(session.id)
+        : null
+      const adminObjId = institute.adminUserId && mongoose.Types.ObjectId.isValid(institute.adminUserId)
+        ? new mongoose.Types.ObjectId(institute.adminUserId)
+        : null
+
       const examConditions: any[] = [
-        { instituteId: session.instituteId },
-        { instituteId: String(session.instituteId) },
+        { instituteId: targetInstituteId },
+        { instituteId: String(targetInstituteId) },
+        ...(instObjId ? [{ instituteId: instObjId }] : []),
       ]
       if (session.id) {
         examConditions.push({ createdBy: session.id }, { createdBy: String(session.id) })
+        if (userObjId) examConditions.push({ createdBy: userObjId })
       }
       if (institute.adminUserId) {
         examConditions.push({ createdBy: institute.adminUserId }, { createdBy: String(institute.adminUserId) })
+        if (adminObjId) examConditions.push({ createdBy: adminObjId })
       }
       const examCount = await Exam.countDocuments({ $or: examConditions })
-      const maxExams = institute.limits?.maxExams ?? 20
+      const maxExams = Number(institute.limits?.maxExams ?? 20)
       if (examCount >= maxExams) {
         return NextResponse.json(
           {
-            error: `Exam limit reached (${examCount}/${maxExams} exams used). Please contact the platform admin to increase your exam quota.`,
+            error: `Exam limit reached (${examCount}/${maxExams} exams used). Please contact administrator to increase your exam quota.`,
           },
           { status: 403 }
         )
@@ -182,7 +203,7 @@ export async function POST(req: Request) {
     const exam = await Exam.create({
       ...examData,
       createdBy: session.id,
-      instituteId: session.instituteId || undefined,
+      instituteId: targetInstituteId || undefined,
     })
     return NextResponse.json({ exam }, { status: 201 })
   } catch (error) {

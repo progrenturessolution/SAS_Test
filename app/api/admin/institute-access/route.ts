@@ -63,15 +63,29 @@ export async function GET(req: Request) {
     const hasOtherExamsAccess = rawExamTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(t))
 
     const maxExams = Number(institute.limits?.maxExams ?? 20)
+    const mongoose = (await import("mongoose")).default
+    const instObjId = session.instituteId && mongoose.Types.ObjectId.isValid(session.instituteId)
+      ? new mongoose.Types.ObjectId(session.instituteId)
+      : null
+    const userObjId = session.id && mongoose.Types.ObjectId.isValid(session.id)
+      ? new mongoose.Types.ObjectId(session.id)
+      : null
+    const adminObjId = institute.adminUserId && mongoose.Types.ObjectId.isValid(institute.adminUserId)
+      ? new mongoose.Types.ObjectId(institute.adminUserId)
+      : null
+
     const examConditions: any[] = [
       { instituteId: session.instituteId },
       { instituteId: String(session.instituteId) },
+      ...(instObjId ? [{ instituteId: instObjId }] : []),
     ]
     if (session.id) {
       examConditions.push({ createdBy: session.id }, { createdBy: String(session.id) })
+      if (userObjId) examConditions.push({ createdBy: userObjId })
     }
     if (institute.adminUserId) {
       examConditions.push({ createdBy: institute.adminUserId }, { createdBy: String(institute.adminUserId) })
+      if (adminObjId) examConditions.push({ createdBy: adminObjId })
     }
     const examCount = await Exam.countDocuments({ $or: examConditions })
     const isExamQuotaReached = examCount >= maxExams

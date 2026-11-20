@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useMemo, useRef, useEffect, KeyboardEvent, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -1155,6 +1155,13 @@ function AIGeneratorContent() {
 
   // Publish as Exam to DB
   const handleSaveAsExam = async () => {
+    if (isExamQuotaReached && !editingExamId) {
+      const msg = `Exam Limit Reached: Your organization has reached the limit of ${maxExams} exams (${examCount}/${maxExams} used). Contact administrator to increase your exam quota.`
+      setErrorMsg(msg)
+      toast.error(msg)
+      return
+    }
+
     const toSave = generatedQuestions.filter((q) => selectedQuestionIds.has(q.id))
     if (toSave.length === 0) {
       setErrorMsg("Please select at least one question to include in the exam paper.")
