@@ -215,6 +215,7 @@
   .text-\[\#1E293B\],
   .text-\[\#1f2e43\],
   .text-\[\#27364a\],
+  .text-\[\#324158\],
   .text-\[\#303e52\] {
     color: #324158 !important;
   }
@@ -229,6 +230,59 @@
   button.text-white *,
   a.text-white * {
     color: inherit;
+  }
+
+  /* ── Hero Showcase & Demo Button High-Contrast Overrides ── */
+  .hero-demo-btn,
+  .hero-demo-btn * {
+    color: #324158 !important;
+  }
+
+  .hero-floating-badge,
+  .hero-floating-badge span,
+  .hero-floating-badge div {
+    color: #0f172a !important;
+  }
+  .hero-floating-badge small {
+    color: #64748b !important;
+  }
+
+  .hero-mockup {
+    color: #0f172a !important;
+  }
+  .hero-mockup * {
+    color: #0f172a;
+  }
+  .hero-mockup .mockup-sidebar,
+  .hero-mockup .mockup-sidebar * {
+    color: #ffffff;
+  }
+  .hero-mockup .mockup-sidebar .text-slate-300 {
+    color: #cbd5e1 !important;
+  }
+  .hero-mockup .mockup-sidebar .text-emerald-400 {
+    color: #34d399 !important;
+  }
+  .hero-mockup .mockup-sidebar .text-emerald-300 {
+    color: #6ee7b7 !important;
+  }
+  .hero-mockup .mockup-label {
+    color: #64748b !important;
+  }
+  .hero-mockup .mockup-title {
+    color: #0f172a !important;
+  }
+  .hero-mockup .mockup-value {
+    color: #0f172a !important;
+  }
+  .hero-mockup .mockup-badge-live {
+    color: #065f46 !important;
+  }
+  .hero-mockup .mockup-badge-scheduled {
+    color: #1e40af !important;
+  }
+  .hero-mockup .mockup-badge-completed {
+    color: #334155 !important;
   }
 }
 

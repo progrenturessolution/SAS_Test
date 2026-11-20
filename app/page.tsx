@@ -370,12 +370,12 @@ export default function HomePage() {
       </header>
 
       {/* ─── 2. Hero Section ─── */}
-      <section className="relative overflow-hidden bg-[#1f2e43] pb-16 pt-12 text-white sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
+      <section className="relative overflow-hidden bg-[#1f2e43] pb-16 pt-12 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
         <div className="pointer-events-none absolute inset-0 opacity-30" style={{ backgroundImage: "linear-gradient(rgba(165,188,212,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(165,188,212,.12) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
         <div className="relative z-10 mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-10">
           <div className="grid items-center gap-10 sm:gap-12 lg:grid-cols-[0.86fr_1.14fr] lg:gap-10">
             {/* Left Content */}
-            <ScrollReveal direction="up" className="space-y-5 sm:space-y-7 text-center lg:text-left">
+            <ScrollReveal direction="up" className="space-y-5 sm:space-y-7 text-center lg:text-left text-white">
               <div className="flex items-center justify-center gap-2 text-[10px] sm:text-[12px] font-semibold tracking-[0.1em] sm:tracking-[0.12em] text-[#c2ccda] lg:justify-start">
                 <span className="h-px w-5 sm:w-7 bg-[#c2ccda]" />
                 AI-POWERED EXAMINATION MANAGEMENT PLATFORM
@@ -403,7 +403,7 @@ export default function HomePage() {
 
                 <Link
                   href="/institute/login"
-                  className="flex h-[48px] sm:h-[52px] w-full sm:w-auto items-center justify-center gap-3 rounded-lg bg-white px-6 sm:px-7 text-[14px] sm:text-[15px] font-semibold text-[#324158] shadow-xs transition-colors hover:bg-[#edf2f7]"
+                  className="hero-demo-btn flex h-[48px] sm:h-[52px] w-full sm:w-auto items-center justify-center gap-3 rounded-lg bg-white px-6 sm:px-7 text-[14px] sm:text-[15px] font-semibold text-[#324158] shadow-xs transition-colors hover:bg-[#edf2f7]"
                   style={{ color: "#324158" }}
                 >
                   <span className="text-[11px]" style={{ color: "#324158" }}>▶</span>
@@ -428,9 +428,9 @@ export default function HomePage() {
             </ScrollReveal>
 
             {/* Right Mockup Showcase */}
-            <ScrollReveal direction="up" delay={150} className="relative mx-auto w-full max-w-[790px] pt-3 pb-4 sm:py-0 lg:translate-y-1">
+            <ScrollReveal direction="up" delay={150} className="hero-mockup relative mx-auto w-full max-w-[790px] pt-3 pb-4 sm:py-0 lg:translate-y-1 text-[#0f172a]">
               {/* Floating Badge 1 - Top Right */}
-              <div className="absolute -top-1.5 right-1 sm:-top-7 sm:right-0 z-20 flex min-w-0 sm:min-w-[195px] items-center gap-2 sm:gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.25)] scale-[0.84] xs:scale-90 sm:scale-100 origin-top-right">
+              <div className="hero-floating-badge absolute -top-1.5 right-1 sm:-top-7 sm:right-0 z-20 flex min-w-0 sm:min-w-[195px] items-center gap-2 sm:gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.25)] scale-[0.84] xs:scale-90 sm:scale-100 origin-top-right text-[#0f172a]">
                 <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-600 font-bold">✦</span>
                 <span className="text-[10px] sm:text-[11px] font-bold leading-tight" style={{ color: "#0f172a" }}>AI Question Generated<br /><small className="font-semibold text-[8px] sm:text-[9px]" style={{ color: "#64748b" }}>Ready to review</small></span>
                 <span className="text-xs sm:text-sm font-black text-emerald-600 ml-0.5">✓</span>
@@ -440,7 +440,7 @@ export default function HomePage() {
               <div className="pointer-events-none absolute left-2 sm:left-[26px] top-[-6px] sm:top-[-26px] z-0 h-full w-[calc(100%-10px)] sm:w-full rounded-[18px] sm:rounded-[22px] border border-white/20 bg-white/5 backdrop-blur-xs" />
 
               {/* Mockup Card Main Window */}
-              <div className="relative z-10 overflow-hidden rounded-[16px] border border-slate-700/80 bg-white shadow-[0_24px_50px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.1)]">
+              <div className="relative z-10 overflow-hidden rounded-[16px] border border-slate-700/80 bg-white shadow-[0_24px_50px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.1)] text-[#0f172a]">
                 {/* Window Header Bar */}
                 <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100/90 px-3 sm:px-4 py-2 select-none">
                   <div className="flex items-center gap-1.5">
@@ -448,18 +448,18 @@ export default function HomePage() {
                     <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e] border border-[#d89e24]" />
                     <span className="h-2.5 w-2.5 rounded-full bg-[#28c840] border border-[#1aab29]" />
                   </div>
-                  <div className="flex items-center gap-1.5 rounded-md bg-white border border-slate-200/80 px-2.5 py-0.5 text-[8.5px] sm:text-[10px] font-medium shadow-2xs" style={{ color: "#475569" }}>
+                  <div className="mockup-label flex items-center gap-1.5 rounded-md bg-white border border-slate-200/80 px-2.5 py-0.5 text-[8.5px] sm:text-[10px] font-medium shadow-2xs" style={{ color: "#475569" }}>
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                     <span>testrolab.progrentures.com/admin</span>
                   </div>
-                  <div className="hidden xs:flex items-center text-[8.5px] font-bold" style={{ color: "#64748b" }}>
+                  <div className="mockup-label hidden xs:flex items-center text-[8.5px] font-bold" style={{ color: "#64748b" }}>
                     Admin Portal
                   </div>
                 </div>
 
                 <div className="flex">
                   {/* Sidebar */}
-                  <aside className="w-[48px] xs:w-[56px] sm:w-[24%] lg:w-[22%] shrink-0 bg-[#0f172a] p-2 sm:p-4 text-white flex flex-col justify-between border-r border-slate-800">
+                  <aside className="mockup-sidebar w-[48px] xs:w-[56px] sm:w-[24%] lg:w-[22%] shrink-0 bg-[#0f172a] p-2 sm:p-4 text-white flex flex-col justify-between border-r border-slate-800">
                     <div>
                       {/* Logo */}
                       <div className="mb-4 sm:mb-8 flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2">
@@ -504,8 +504,8 @@ export default function HomePage() {
                     {/* Header */}
                     <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-3 mb-2.5 sm:mb-4">
                       <div>
-                        <p className="text-[8px] sm:text-[9.5px] font-bold uppercase tracking-wider" style={{ color: "#64748b" }}>Dashboard</p>
-                        <h2 className="mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#0f172a" }}>Good morning, Admin</h2>
+                        <p className="mockup-label text-[8px] sm:text-[9.5px] font-bold uppercase tracking-wider" style={{ color: "#64748b" }}>Dashboard</p>
+                        <h2 className="mockup-title mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#0f172a" }}>Good morning, Admin</h2>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-slate-900 text-[7px] sm:text-[9px] font-black text-white shadow-xs">
@@ -523,8 +523,8 @@ export default function HomePage() {
                         { label: "Students", value: "1,842" },
                       ].map((stat) => (
                         <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs">
-                          <p className="text-[7.5px] sm:text-[8.5px] font-semibold leading-tight truncate" style={{ color: "#64748b" }}>{stat.label}</p>
-                          <p className="mt-0.5 sm:mt-1 text-xs sm:text-base font-black" style={{ color: "#0f172a" }}>{stat.value}</p>
+                          <p className="mockup-label text-[7.5px] sm:text-[8.5px] font-semibold leading-tight truncate" style={{ color: "#64748b" }}>{stat.label}</p>
+                          <p className="mockup-value mt-0.5 sm:mt-1 text-xs sm:text-base font-black" style={{ color: "#0f172a" }}>{stat.value}</p>
                         </div>
                       ))}
                     </div>
@@ -534,25 +534,25 @@ export default function HomePage() {
                       {/* Left: Recent Examinations */}
                       <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs">
                         <div className="mb-2 sm:mb-2.5 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#0f172a" }}>
-                          <span style={{ color: "#0f172a" }}>Recent examinations</span>
-                          <span className="text-[7px] sm:text-[8px] font-semibold hover:underline cursor-pointer" style={{ color: "#64748b" }}>View all</span>
+                          <span className="mockup-title" style={{ color: "#0f172a" }}>Recent examinations</span>
+                          <span className="mockup-label text-[7px] sm:text-[8px] font-semibold hover:underline cursor-pointer" style={{ color: "#64748b" }}>View all</span>
                         </div>
                         <div className="space-y-1 sm:space-y-1.5">
                           {[
-                            { name: "JEE Mock Test 08", status: "Live", badgeBg: "bg-emerald-100 text-emerald-800 border-emerald-300 font-bold", dot: "bg-emerald-500" },
-                            { name: "Biology: Human Physiology", status: "Scheduled", badgeBg: "bg-blue-100 text-blue-800 border-blue-300 font-bold", dot: "bg-blue-500" },
-                            { name: "MHT-CET Practice Set", status: "Completed", badgeBg: "bg-slate-100 text-slate-800 border-slate-300 font-semibold", dot: "bg-slate-400" },
+                            { name: "JEE Mock Test 08", status: "Live", badgeClass: "mockup-badge-live bg-emerald-100 text-emerald-800 border-emerald-300 font-bold", dot: "bg-emerald-500" },
+                            { name: "Biology: Human Physiology", status: "Scheduled", badgeClass: "mockup-badge-scheduled bg-blue-100 text-blue-800 border-blue-300 font-bold", dot: "bg-blue-500" },
+                            { name: "MHT-CET Practice Set", status: "Completed", badgeClass: "mockup-badge-completed bg-slate-100 text-slate-800 border-slate-300 font-semibold", dot: "bg-slate-400" },
                           ].map((exam, index) => (
                             <div key={exam.name} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/70 px-2 py-1 text-[7.5px] sm:text-[8.5px]">
                               <span className="flex items-center gap-1.5 truncate">
                                 <b className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded bg-white border border-slate-200 text-[6.5px] sm:text-[7.5px] font-bold" style={{ color: "#334155" }}>
                                   {index + 1}
                                 </b>
-                                <span className="truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none font-semibold" style={{ color: "#0f172a" }}>
+                                <span className="mockup-title truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none font-semibold" style={{ color: "#0f172a" }}>
                                   {exam.name}
                                 </span>
                               </span>
-                              <span className={`shrink-0 flex items-center gap-1 rounded-full border px-1.5 sm:px-2 py-0.5 text-[6.5px] sm:text-[7.5px] ${exam.badgeBg}`}>
+                              <span className={`shrink-0 flex items-center gap-1 rounded-full border px-1.5 sm:px-2 py-0.5 text-[6.5px] sm:text-[7.5px] ${exam.badgeClass}`}>
                                 <span className={`h-1.5 w-1.5 rounded-full ${exam.dot}`} />
                                 {exam.status}
                               </span>
@@ -564,8 +564,8 @@ export default function HomePage() {
                       {/* Right: Result Overview */}
                       <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
                         <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#0f172a" }}>
-                          <span style={{ color: "#0f172a" }}>Result overview</span>
-                          <span className="text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>This month</span>
+                          <span className="mockup-title" style={{ color: "#0f172a" }}>Result overview</span>
+                          <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>This month</span>
                         </div>
                         <div className="my-1.5 sm:my-3 flex items-center justify-center">
                           <div className="relative flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center">
@@ -588,12 +588,12 @@ export default function HomePage() {
                               />
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                              <span className="text-xs sm:text-base font-black leading-none" style={{ color: "#0f172a" }}>84%</span>
+                              <span className="mockup-value text-xs sm:text-base font-black leading-none" style={{ color: "#0f172a" }}>84%</span>
                               <span className="text-[6.5px] sm:text-[7.5px] font-bold mt-0.5" style={{ color: "#059669" }}>Passed</span>
                             </div>
                           </div>
                         </div>
-                        <p className="border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold" style={{ color: "#475569" }}>
+                        <p className="mockup-label border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold" style={{ color: "#475569" }}>
                           <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1 align-middle" />
                           Passed &nbsp;·&nbsp; Needs review
                         </p>
@@ -604,7 +604,7 @@ export default function HomePage() {
               </div>
 
               {/* Floating Badges Bottom */}
-              <div className="absolute -bottom-1.5 left-1 sm:-bottom-3 sm:-left-3 z-20 flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-left">
+              <div className="hero-floating-badge absolute -bottom-1.5 left-1 sm:-bottom-3 sm:-left-3 z-20 flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-left text-[#0f172a]">
                 <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-blue-50 text-blue-600 text-xs font-bold border border-blue-200">⚙</span>
                 <div>
                   <span className="font-bold text-[9px] sm:text-[10px]" style={{ color: "#0f172a" }}>Face Detection Active</span>
@@ -612,7 +612,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="absolute -bottom-1.5 right-1 sm:-bottom-3 sm:-right-1 z-20 hidden xs:flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-right">
+              <div className="hero-floating-badge absolute -bottom-1.5 right-1 sm:-bottom-3 sm:-right-1 z-20 hidden xs:flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-right text-[#0f172a]">
                 <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-purple-50 text-purple-600 text-xs font-bold border border-purple-200">▥</span>
                 <div>
                   <span className="font-bold text-[9px] sm:text-[10px]" style={{ color: "#0f172a" }}>Exam Results Available</span>
