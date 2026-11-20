@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       }
       if (instituteData.status === "suspended" || instituteData.status === "expired") {
         return NextResponse.json(
-          { error: `Your organization account is ${instituteData.status}. Please contact platform support.` },
+          { error: `Your organization account is ${instituteData.status === "suspended" ? "deactivated" : instituteData.status}. Please contact platform support.` },
           { status: 403 }
         )
       }

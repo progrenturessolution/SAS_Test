@@ -69,7 +69,7 @@ export async function POST(req: Request) {
       }
       if (institute.status === "suspended" || institute.status === "expired") {
           return NextResponse.json(
-            { error: `Your coaching institute account is ${institute.status}. You cannot create new exams.` },
+            { error: `Your coaching institute account is ${institute.status === "suspended" ? "deactivated" : institute.status}. You cannot create new exams.` },
             { status: 403 }
           )
       }

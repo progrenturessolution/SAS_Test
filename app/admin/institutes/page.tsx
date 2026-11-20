@@ -26,6 +26,7 @@ import {
   MapPin,
   X,
   Loader2,
+  Eye,
 } from "lucide-react"
 
 interface InstituteLimits {
@@ -112,6 +113,16 @@ async function readApiResponse<T>(response: Response): Promise<T> {
     throw new Error(`Request failed with status ${response.status}`)
   }
   return response.json() as Promise<T>
+}
+
+function formatDateDDMMYYYY(dateInput?: string | Date | null): string {
+  if (!dateInput) return "No expiry set"
+  const date = new Date(dateInput)
+  if (isNaN(date.getTime())) return "Invalid Date"
+  const day = String(date.getDate()).padStart(2, "0")
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const year = date.getFullYear()
+  return `${day}/${month}/${year}`
 }
 
 export default function InstitutesManagementPage() {
@@ -288,7 +299,7 @@ export default function InstitutesManagementPage() {
     const nextStatus = inst.status === "active" ? "suspended" : "active"
     const confirmMsg =
       nextStatus === "suspended"
-        ? `Are you sure you want to SUSPEND "${inst.name}"? Their teachers & students will be blocked from logging in.`
+        ? `Are you sure you want to DEACTIVATE "${inst.name}"? Their teachers & students will be blocked from logging in.`
         : `Re-activate "${inst.name}"?`
 
     if (!confirm(confirmMsg)) return
@@ -426,7 +437,7 @@ export default function InstitutesManagementPage() {
           </div>
           <div className="text-2xl font-bold text-[#2D3A4A]">{activeInstitutesCount}</div>
           <span className="text-[11px] text-gray-400">
-            {totalInstitutesCount - activeInstitutesCount} Suspended
+            {totalInstitutesCount - activeInstitutesCount} Deactivated
           </span>
         </div>
 
@@ -473,7 +484,7 @@ export default function InstitutesManagementPage() {
                   : "bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200"
               }`}
             >
-              {st}
+              {st === "all" ? "All" : st === "active" ? "Active" : "Deactivated"}
             </button>
           ))}
           <button
@@ -544,6 +555,16 @@ export default function InstitutesManagementPage() {
                     </button>
                     {openActionMenu === inst._id && (
                       <div className="absolute right-0 top-9 z-20 w-48 rounded-xl border border-gray-200 bg-white p-1.5 text-left shadow-lg">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionMenu(null)
+                            setSelectedInstitute(inst)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <Eye className="h-3.5 w-3.5 text-blue-600" /> View details
+                        </button>
                         <button type="button" onClick={() => { setOpenActionMenu(null); openEditLimits(inst) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
                           <Sliders className="h-3.5 w-3.5" /> Edit quotas & features
                         </button>
@@ -552,7 +573,7 @@ export default function InstitutesManagementPage() {
                         </button>
                         <button type="button" onClick={() => { setOpenActionMenu(null); handleToggleStatus(inst) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
                           {inst.status === "active" ? <XCircle className="h-3.5 w-3.5 text-amber-600" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
-                          {inst.status === "active" ? "Suspend institute" : "Activate institute"}
+                          {inst.status === "active" ? "Deactivate institute" : "Activate institute"}
                         </button>
                         <button type="button" onClick={() => { setOpenActionMenu(null); handleDeleteInstitute(inst) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50">
                           <Trash2 className="h-3.5 w-3.5" /> Delete institute
@@ -566,7 +587,7 @@ export default function InstitutesManagementPage() {
                   <span className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 font-mono text-[10px] font-semibold text-gray-600">{inst.code}</span>
                   <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold ${inst.status === "active" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
                     <span className={`h-1.5 w-1.5 rounded-full ${inst.status === "active" ? "bg-emerald-500" : "bg-red-500"}`} />
-                    {inst.status === "active" ? "Active" : "Suspended"}
+                    {inst.status === "active" ? "Active" : "Deactivated"}
                   </span>
                 </div>
 
@@ -756,13 +777,21 @@ export default function InstitutesManagementPage() {
                               inst.status === "active" ? "bg-emerald-500" : "bg-red-500"
                             }`}
                           />
-                          {inst.status === "active" ? "Active" : "Suspended"}
+                          {inst.status === "active" ? "Active" : "Deactivated"}
                         </span>
                       </td>
 
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setSelectedInstitute(inst)}
+                            title="View details"
+                            className="p-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-blue-600" />
+                          </button>
+
                           <button
                             onClick={() => openEditLimits(inst)}
                             title="Edit Quotas & Permissions"
@@ -784,14 +813,14 @@ export default function InstitutesManagementPage() {
 
                           <button
                             onClick={() => handleToggleStatus(inst)}
-                            title={inst.status === "active" ? "Suspend Institute" : "Activate Institute"}
+                            title={inst.status === "active" ? "Deactivate Institute" : "Activate Institute"}
                             className={`px-2 py-1 rounded-lg text-[11px] font-medium border cursor-pointer transition-colors ${
                               inst.status === "active"
                                 ? "border-amber-200 text-amber-700 hover:bg-amber-50"
                                 : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                             }`}
                           >
-                            {inst.status === "active" ? "Suspend" : "Activate"}
+                            {inst.status === "active" ? "Deactivate" : "Activate"}
                           </button>
                         </div>
                       </td>
@@ -838,12 +867,12 @@ export default function InstitutesManagementPage() {
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Account status</p>
                 <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${selectedInstitute.status === "active" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${selectedInstitute.status === "active" ? "bg-emerald-500" : "bg-red-500"}`} />
-                  {selectedInstitute.status === "active" ? "Active" : "Suspended"}
+                  {selectedInstitute.status === "active" ? "Active" : "Deactivated"}
                 </span>
                 <p className="mt-4 text-xs text-gray-500">Valid until</p>
-                <p className="mt-1 text-sm font-semibold text-[#2D3A4A]">{selectedInstitute.validUntil ? new Date(selectedInstitute.validUntil).toLocaleDateString() : "No expiry set"}</p>
+                <p className="mt-1 text-sm font-semibold text-[#2D3A4A]">{formatDateDDMMYYYY(selectedInstitute.validUntil)}</p>
                 <p className="mt-4 text-xs text-gray-500">Registered on</p>
-                <p className="mt-1 text-sm font-semibold text-[#2D3A4A]">{new Date(selectedInstitute.createdAt).toLocaleDateString()}</p>
+                <p className="mt-1 text-sm font-semibold text-[#2D3A4A]">{formatDateDDMMYYYY(selectedInstitute.createdAt)}</p>
               </div>
               <div className="rounded-xl border border-gray-200 bg-white p-4 sm:col-span-2">
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Usage and quotas</p>
@@ -1105,6 +1134,22 @@ export default function InstitutesManagementPage() {
                     Select which test creation modules this institute can access. Unchecked options will remain visible but disabled.
                   </span>
                 </div>
+
+                {/* Validity Expiry */}
+                <div>
+                  <label className="font-semibold text-gray-700 block mb-1">
+                    Subscription Valid Until (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={formValidUntil}
+                    onChange={(e) => setFormValidUntil(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2D3A4A]"
+                  />
+                  <span className="text-[10px] text-gray-400 mt-1 block">
+                    Leave blank for unlimited validity
+                  </span>
+                </div>
               </div>
 
               {/* Submit Buttons */}
@@ -1161,7 +1206,7 @@ export default function InstitutesManagementPage() {
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white font-medium"
                 >
                   <option value="active">Active (Access Allowed)</option>
-                  <option value="suspended">Suspended (Access Blocked)</option>
+                  <option value="suspended">Deactivated (Access Blocked)</option>
                 </select>
               </div>
 
