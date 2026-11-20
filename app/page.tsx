@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
@@ -404,9 +404,10 @@ export default function HomePage() {
                 <Link
                   href="/institute/login"
                   className="flex h-[48px] sm:h-[52px] w-full sm:w-auto items-center justify-center gap-3 rounded-lg bg-white px-6 sm:px-7 text-[14px] sm:text-[15px] font-semibold text-[#324158] shadow-xs transition-colors hover:bg-[#edf2f7]"
+                  style={{ color: "#324158" }}
                 >
-                  <span className="text-[11px]">▶</span>
-                  Watch Product Demo
+                  <span className="text-[11px]" style={{ color: "#324158" }}>▶</span>
+                  <span style={{ color: "#324158" }}>Watch Product Demo</span>
                 </Link>
               </div>
 
@@ -429,9 +430,9 @@ export default function HomePage() {
             {/* Right Mockup Showcase */}
             <ScrollReveal direction="up" delay={150} className="relative mx-auto w-full max-w-[790px] pt-3 pb-4 sm:py-0 lg:translate-y-1">
               {/* Floating Badge 1 - Top Right */}
-              <div className="absolute -top-1.5 right-1 sm:-top-7 sm:right-0 z-20 flex min-w-0 sm:min-w-[195px] items-center gap-2 sm:gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.25)] scale-[0.84] xs:scale-90 sm:scale-100 origin-top-right">
+              <div className="absolute -top-1.5 right-1 sm:-top-7 sm:right-0 z-20 flex min-w-0 sm:min-w-[195px] items-center gap-2 sm:gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.25)] scale-[0.84] xs:scale-90 sm:scale-100 origin-top-right">
                 <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-600 font-bold">✦</span>
-                <span className="text-[10px] sm:text-[11px] font-bold text-slate-900 leading-tight">AI Question Generated<br /><small className="font-semibold text-slate-500 text-[8px] sm:text-[9px]">Ready to review</small></span>
+                <span className="text-[10px] sm:text-[11px] font-bold leading-tight" style={{ color: "#0f172a" }}>AI Question Generated<br /><small className="font-semibold text-[8px] sm:text-[9px]" style={{ color: "#64748b" }}>Ready to review</small></span>
                 <span className="text-xs sm:text-sm font-black text-emerald-600 ml-0.5">✓</span>
               </div>
 
@@ -447,11 +448,11 @@ export default function HomePage() {
                     <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e] border border-[#d89e24]" />
                     <span className="h-2.5 w-2.5 rounded-full bg-[#28c840] border border-[#1aab29]" />
                   </div>
-                  <div className="flex items-center gap-1.5 rounded-md bg-white border border-slate-200/80 px-2.5 py-0.5 text-[8.5px] sm:text-[10px] font-medium text-slate-600 shadow-2xs">
+                  <div className="flex items-center gap-1.5 rounded-md bg-white border border-slate-200/80 px-2.5 py-0.5 text-[8.5px] sm:text-[10px] font-medium shadow-2xs" style={{ color: "#475569" }}>
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                     <span>testrolab.progrentures.com/admin</span>
                   </div>
-                  <div className="hidden xs:flex items-center text-[8.5px] font-bold text-slate-500">
+                  <div className="hidden xs:flex items-center text-[8.5px] font-bold" style={{ color: "#64748b" }}>
                     Admin Portal
                   </div>
                 </div>
@@ -499,12 +500,12 @@ export default function HomePage() {
                   </aside>
 
                   {/* Main Content Area */}
-                  <div className="min-w-0 flex-1 bg-[#f8fafc] p-3 sm:p-5 lg:p-6 text-slate-800">
+                  <div className="min-w-0 flex-1 bg-[#f8fafc] p-3 sm:p-5 lg:p-6" style={{ color: "#0f172a" }}>
                     {/* Header */}
                     <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-3 mb-2.5 sm:mb-4">
                       <div>
-                        <p className="text-[8px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider">Dashboard</p>
-                        <h2 className="mb-0.5 text-xs sm:text-base font-extrabold text-slate-900 tracking-tight">Good morning, Admin</h2>
+                        <p className="text-[8px] sm:text-[9.5px] font-bold uppercase tracking-wider" style={{ color: "#64748b" }}>Dashboard</p>
+                        <h2 className="mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#0f172a" }}>Good morning, Admin</h2>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-slate-900 text-[7px] sm:text-[9px] font-black text-white shadow-xs">
@@ -522,8 +523,8 @@ export default function HomePage() {
                         { label: "Students", value: "1,842" },
                       ].map((stat) => (
                         <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs">
-                          <p className="text-[7.5px] sm:text-[8.5px] font-semibold text-slate-600 leading-tight truncate">{stat.label}</p>
-                          <p className="mt-0.5 sm:mt-1 text-xs sm:text-base font-black text-slate-900">{stat.value}</p>
+                          <p className="text-[7.5px] sm:text-[8.5px] font-semibold leading-tight truncate" style={{ color: "#64748b" }}>{stat.label}</p>
+                          <p className="mt-0.5 sm:mt-1 text-xs sm:text-base font-black" style={{ color: "#0f172a" }}>{stat.value}</p>
                         </div>
                       ))}
                     </div>
@@ -532,9 +533,9 @@ export default function HomePage() {
                     <div className="grid grid-cols-1 sm:grid-cols-[1.38fr_0.92fr] gap-2 sm:gap-3">
                       {/* Left: Recent Examinations */}
                       <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs">
-                        <div className="mb-2 sm:mb-2.5 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold text-slate-900">
-                          <span>Recent examinations</span>
-                          <span className="text-[7px] sm:text-[8px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer">View all</span>
+                        <div className="mb-2 sm:mb-2.5 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#0f172a" }}>
+                          <span style={{ color: "#0f172a" }}>Recent examinations</span>
+                          <span className="text-[7px] sm:text-[8px] font-semibold hover:underline cursor-pointer" style={{ color: "#64748b" }}>View all</span>
                         </div>
                         <div className="space-y-1 sm:space-y-1.5">
                           {[
@@ -544,10 +545,10 @@ export default function HomePage() {
                           ].map((exam, index) => (
                             <div key={exam.name} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/70 px-2 py-1 text-[7.5px] sm:text-[8.5px]">
                               <span className="flex items-center gap-1.5 truncate">
-                                <b className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded bg-white border border-slate-200 text-[6.5px] sm:text-[7.5px] font-bold text-slate-700">
+                                <b className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded bg-white border border-slate-200 text-[6.5px] sm:text-[7.5px] font-bold" style={{ color: "#334155" }}>
                                   {index + 1}
                                 </b>
-                                <span className="truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none font-semibold text-slate-800">
+                                <span className="truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none font-semibold" style={{ color: "#0f172a" }}>
                                   {exam.name}
                                 </span>
                               </span>
@@ -562,9 +563,9 @@ export default function HomePage() {
 
                       {/* Right: Result Overview */}
                       <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
-                        <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold text-slate-900">
-                          <span>Result overview</span>
-                          <span className="text-[7px] sm:text-[8px] font-semibold text-slate-500">This month</span>
+                        <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#0f172a" }}>
+                          <span style={{ color: "#0f172a" }}>Result overview</span>
+                          <span className="text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>This month</span>
                         </div>
                         <div className="my-1.5 sm:my-3 flex items-center justify-center">
                           <div className="relative flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center">
@@ -587,12 +588,12 @@ export default function HomePage() {
                               />
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                              <span className="text-xs sm:text-base font-black text-slate-900 leading-none">84%</span>
-                              <span className="text-[6.5px] sm:text-[7.5px] font-bold text-emerald-600 mt-0.5">Passed</span>
+                              <span className="text-xs sm:text-base font-black leading-none" style={{ color: "#0f172a" }}>84%</span>
+                              <span className="text-[6.5px] sm:text-[7.5px] font-bold mt-0.5" style={{ color: "#059669" }}>Passed</span>
                             </div>
                           </div>
                         </div>
-                        <p className="border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold text-slate-600">
+                        <p className="border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold" style={{ color: "#475569" }}>
                           <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1 align-middle" />
                           Passed &nbsp;·&nbsp; Needs review
                         </p>
@@ -603,19 +604,19 @@ export default function HomePage() {
               </div>
 
               {/* Floating Badges Bottom */}
-              <div className="absolute -bottom-1.5 left-1 sm:-bottom-3 sm:-left-3 z-20 flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 text-[9px] sm:text-[10px] font-bold text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-left">
+              <div className="absolute -bottom-1.5 left-1 sm:-bottom-3 sm:-left-3 z-20 flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-left">
                 <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-blue-50 text-blue-600 text-xs font-bold border border-blue-200">⚙</span>
                 <div>
-                  <span className="text-slate-900">Face Detection Active</span>
-                  <small className="block font-semibold text-slate-500 text-[7px] sm:text-[8px]">Session monitored <span className="text-emerald-500 font-bold">●</span></small>
+                  <span className="font-bold text-[9px] sm:text-[10px]" style={{ color: "#0f172a" }}>Face Detection Active</span>
+                  <small className="block font-semibold text-[7px] sm:text-[8px]" style={{ color: "#64748b" }}>Session monitored <span className="text-emerald-500 font-bold">●</span></small>
                 </div>
               </div>
 
-              <div className="absolute -bottom-1.5 right-1 sm:-bottom-3 sm:-right-1 z-20 hidden xs:flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 text-[9px] sm:text-[10px] font-bold text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-right">
+              <div className="absolute -bottom-1.5 right-1 sm:-bottom-3 sm:-right-1 z-20 hidden xs:flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-right">
                 <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-purple-50 text-purple-600 text-xs font-bold border border-purple-200">▥</span>
                 <div>
-                  <span className="text-slate-900">Exam Results Available</span>
-                  <small className="block font-semibold text-slate-500 text-[7px] sm:text-[8px]">152 submissions</small>
+                  <span className="font-bold text-[9px] sm:text-[10px]" style={{ color: "#0f172a" }}>Exam Results Available</span>
+                  <small className="block font-semibold text-[7px] sm:text-[8px]" style={{ color: "#64748b" }}>152 submissions</small>
                 </div>
               </div>
             </ScrollReveal>

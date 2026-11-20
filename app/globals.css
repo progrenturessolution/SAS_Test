@@ -221,12 +221,14 @@
 
   /* Preserve deliberate white text on dark buttons, badges, and icons */
   .text-white,
-  .text-white *,
   button.text-white,
-  button.text-white *,
-  a.text-white,
-  a.text-white * {
+  a.text-white {
     color: #ffffff !important;
+  }
+
+  button.text-white *,
+  a.text-white * {
+    color: inherit;
   }
 }
 
