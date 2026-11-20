@@ -18,9 +18,11 @@ import {
   X,
   Lock,
   Layers,
+  MessageSquare,
 } from "lucide-react"
 import { toast } from "sonner"
 import { formatDateDDMMYYYY } from "@/lib/utils"
+import AdminNotificationBell from "@/components/admin/AdminNotificationBell"
 
 interface AdminSidebarProps {
   userName: string
@@ -57,6 +59,7 @@ export default function AdminSidebar({
   const superAdminNavItems = [
     { label: "Organizations", href: "/admin/institutes", icon: Building2 },
     { label: "Platform Overview", href: "/admin/overview", icon: LayoutDashboard },
+    { label: "Support & Requests", href: "/admin/queries", icon: MessageSquare },
   ]
 
   const instituteNavItems = [
@@ -183,6 +186,7 @@ export default function AdminSidebar({
         </div>
 
         <div className="flex items-center gap-2">
+          {isSuperAdmin && <AdminNotificationBell isSuperAdmin={isSuperAdmin} />}
           {instituteCode && (
             <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200">
               {instituteCode}
@@ -465,9 +469,12 @@ export default function AdminSidebar({
           {/* Role / Tenant Badge */}
           <div className="mt-3">
             {isSuperAdmin ? (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#2D3A4A] text-white text-[11px] font-medium w-fit shadow-xs">
-                <Shield className="w-3 h-3 text-amber-400" />
-                <span>Super Admin Portal</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#2D3A4A] text-white text-[11px] font-medium w-fit shadow-xs">
+                  <Shield className="w-3 h-3 text-amber-400" />
+                  <span>Super Admin Portal</span>
+                </div>
+                <AdminNotificationBell isSuperAdmin={isSuperAdmin} />
               </div>
             ) : (
               <div className="p-2 rounded-lg bg-gray-50 border border-gray-200">

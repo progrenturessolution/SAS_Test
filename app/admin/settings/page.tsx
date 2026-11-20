@@ -13,6 +13,13 @@ import {
   Info,
   Database,
   Calendar,
+  MessageSquare,
+  Send,
+  Clock,
+  Mail,
+  Phone,
+  HelpCircle,
+  ExternalLink,
 } from "lucide-react"
 import { toast } from "sonner"
 import { formatDateDDMMYYYY } from "@/lib/utils"
@@ -55,6 +62,67 @@ export default function SettingsPage() {
   const [supportEmail, setSupportEmail] = useState("support@progrentures.com")
   const [supportPhone, setSupportPhone] = useState("+91 93094 70958")
 
+  // Support queries state for organization
+  const [queries, setQueries] = useState<any[]>([])
+  const [loadingQueries, setLoadingQueries] = useState(false)
+  const [querySubject, setQuerySubject] = useState("")
+  const [queryCategory, setQueryCategory] = useState("quota_increase")
+  const [queryMessage, setQueryMessage] = useState("")
+  const [submittingQuery, setSubmittingQuery] = useState(false)
+
+  const loadInstituteQueries = async () => {
+    try {
+      setLoadingQueries(true)
+      const res = await fetch("/api/admin/queries", { credentials: "include" })
+      const data = await res.json()
+      if (data.success) {
+        setQueries(data.queries || [])
+      }
+    } catch (e) {
+      console.error("Failed to load queries:", e)
+    } finally {
+      setLoadingQueries(false)
+    }
+  }
+
+  const handleSubmitQuery = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!querySubject.trim()) {
+      toast.error("Please enter a subject for your query")
+      return
+    }
+    if (!queryMessage.trim()) {
+      toast.error("Please describe your query or change request")
+      return
+    }
+
+    try {
+      setSubmittingQuery(true)
+      const res = await fetch("/api/admin/queries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: querySubject.trim(),
+          category: queryCategory,
+          message: queryMessage.trim(),
+          contactEmail: email,
+          contactPhone: phone,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to submit query")
+
+      toast.success("Query submitted! Platform administrators have been notified.")
+      setQuerySubject("")
+      setQueryMessage("")
+      loadInstituteQueries()
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit query")
+    } finally {
+      setSubmittingQuery(false)
+    }
+  }
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch settings on mount
@@ -78,6 +146,7 @@ export default function SettingsPage() {
           const color = data.institute.themeColor || "#2D3A4A"
           setThemeColor(color)
           document.documentElement.style.setProperty("--primary", color)
+          loadInstituteQueries()
         } else if (data.settings) {
           setIsInstitute(false)
           if (data.settings.platformName) setPlatformName(data.settings.platformName)
@@ -491,6 +560,207 @@ export default function SettingsPage() {
                   >
                     A
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Help & Support / Request for Change Section */}
+          <div className="bg-white rounded-2xl border border-gray-200/90 p-6 sm:p-8 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
+                  style={{ backgroundColor: themeColor }}
+                >
+                  <MessageSquare size={20} />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900">
+                    Help & Support / Request for Change
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Have questions, need your exam/student quotas increased, or requesting platform changes? Send your query directly to platform administrators.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full border border-slate-200 w-fit">
+                Dedicated Support Desk
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              {/* Left Column: Submit Query Form */}
+              <div className="lg:col-span-6 space-y-4">
+                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <Send size={15} style={{ color: themeColor }} />
+                  <span>Submit a New Query / Request</span>
+                </h3>
+
+                <form onSubmit={handleSubmitQuery} className="space-y-3.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-600 block">
+                      Category / Request Type:
+                    </label>
+                    <select
+                      value={queryCategory}
+                      onChange={(e) => setQueryCategory(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-medium bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/10 focus:border-[#2D3A4A] transition-all cursor-pointer"
+                    >
+                      <option value="quota_increase">Exam Quota Increase Request</option>
+                      <option value="quota_increase">Student Enrolled Limit Increase</option>
+                      <option value="billing_fees">Billing, License & Validity</option>
+                      <option value="feature_request">Feature Request / Customization</option>
+                      <option value="technical_issue">Technical Support / Bug</option>
+                      <option value="other">General Query / Other</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-600 block">
+                      Subject:
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Request to increase exam quota from 20 to 50"
+                      value={querySubject}
+                      onChange={(e) => setQuerySubject(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-medium bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/10 focus:border-[#2D3A4A] transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-600 block">
+                      Message / Request Details:
+                    </label>
+                    <textarea
+                      required
+                      rows={4}
+                      placeholder="Explain your query, the changes required, or additional quotas needed for your institute..."
+                      value={queryMessage}
+                      onChange={(e) => setQueryMessage(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-medium bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/10 focus:border-[#2D3A4A] transition-all resize-none leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <button
+                      type="submit"
+                      disabled={submittingQuery}
+                      style={{ backgroundColor: themeColor }}
+                      className="px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                    >
+                      {submittingQuery ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Submitting Query...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send size={14} />
+                          <span>Submit Query</span>
+                        </>
+                      )}
+                    </button>
+
+                    <a
+                      href={`mailto:support@progrentures.com?subject=${encodeURIComponent(
+                        `REQUEST For Change - ${instituteName || "Organization"} (${instituteCode || "ID"})`
+                      )}&body=${encodeURIComponent(
+                        `Hello Progrentures Support Team,\n\nOrganization: ${instituteName}\nCode: ${instituteCode}\nContact Email: ${email}\nContact Phone: ${phone}\n\nRequest / Change Details:\n${queryMessage || "[Describe your request here]"}\n`
+                      )}`}
+                      className="text-xs text-slate-500 hover:text-slate-800 underline font-medium flex items-center gap-1.5 w-fit"
+                    >
+                      <Mail size={13} className="text-slate-400" />
+                      <span>Or email support@progrentures.com</span>
+                      <ExternalLink size={11} />
+                    </a>
+                  </div>
+                </form>
+              </div>
+
+              {/* Right Column: Query History & Admin Replies */}
+              <div className="lg:col-span-6 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <Clock size={15} style={{ color: themeColor }} />
+                    <span>Your Support Queries & Admin Replies</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={loadInstituteQueries}
+                    disabled={loadingQueries}
+                    className="text-[11px] text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Loader2 size={12} className={loadingQueries ? "animate-spin" : "hidden"} />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                  {loadingQueries && queries.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-gray-400">Loading your queries...</div>
+                  ) : queries.length === 0 ? (
+                    <div className="p-8 text-center rounded-xl bg-gray-50/70 border border-dashed border-gray-200 space-y-1.5">
+                      <HelpCircle size={24} className="text-gray-300 mx-auto" />
+                      <p className="text-xs font-bold text-gray-700">No support queries yet</p>
+                      <p className="text-[11px] text-gray-400">
+                        When you submit a query or request for change, it will appear here along with replies from the platform administrator.
+                      </p>
+                    </div>
+                  ) : (
+                    queries.map((q) => (
+                      <div
+                        key={q._id}
+                        className="p-4 rounded-xl border border-gray-200/90 bg-white shadow-2xs space-y-2.5"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-xs text-gray-900 truncate">{q.subject}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                              q.status === "resolved"
+                                ? "bg-slate-100 text-slate-700"
+                                : q.status === "replied"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-amber-50 text-amber-700 border border-amber-200"
+                            }`}
+                          >
+                            {q.status}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed bg-gray-50/80 p-2.5 rounded-lg border border-gray-100">
+                          {q.message}
+                        </p>
+
+                        <div className="flex items-center justify-between text-[10px] text-gray-400">
+                          <span>Category: <strong className="text-gray-600 capitalize">{q.category?.replace("_", " ")}</strong></span>
+                          <span>{new Date(q.createdAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+
+                        {/* Admin Reply Callout */}
+                        {q.adminReply && (
+                          <div className="mt-2 p-3 rounded-lg bg-emerald-50/80 border border-emerald-200/90 space-y-1">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="font-bold text-emerald-950 flex items-center gap-1.5">
+                                <CheckCircle2 size={13} className="text-emerald-600" />
+                                Reply from Platform Admin ({q.adminRepliedByName || "Support Team"}):
+                              </span>
+                              {q.adminRepliedAt && (
+                                <span className="text-[10px] text-emerald-700">
+                                  {new Date(q.adminRepliedAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-emerald-900 whitespace-pre-wrap leading-relaxed">
+                              {q.adminReply}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
