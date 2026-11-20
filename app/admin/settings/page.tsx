@@ -112,10 +112,17 @@ export default function SettingsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to submit query")
 
-      toast.success("Query submitted! Platform administrators have been notified.")
+      toast.success("Query submitted! Redirecting to email support@progrentures.com...")
       setQuerySubject("")
       setQueryMessage("")
       loadInstituteQueries()
+
+      // Automatically redirect/open email client with the exact prefilled query to support@progrentures.com!
+      if (data.mailtoUrl) {
+        setTimeout(() => {
+          window.location.href = data.mailtoUrl
+        }, 400)
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to submit query")
     } finally {
@@ -736,7 +743,21 @@ export default function SettingsPage() {
 
                         <div className="flex items-center justify-between text-[10px] text-gray-400">
                           <span>Category: <strong className="text-gray-600 capitalize">{q.category?.replace("_", " ")}</strong></span>
-                          <span>{new Date(q.createdAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                          <div className="flex items-center gap-3">
+                            <a
+                              href={`mailto:support@progrentures.com?subject=${encodeURIComponent(
+                                `REQUEST For Change - ${instituteName || "Organization"} (${instituteCode || "ID"}) - ${q.subject}`
+                              )}&body=${encodeURIComponent(
+                                `Organization: ${instituteName}\nCode: ${instituteCode}\nEmail: ${email}\nPhone: ${phone}\nCategory: ${q.category}\nSubject: ${q.subject}\n\nQuery Details:\n${q.message}\n\n---\nSubmitted via Progrentures Platform`
+                              )}`}
+                              className="text-[10px] font-semibold text-[#2D3A4A] hover:underline flex items-center gap-1"
+                              title="Send or forward copy to support@progrentures.com"
+                            >
+                              <Mail size={11} />
+                              <span>Email support</span>
+                            </a>
+                            <span>{new Date(q.createdAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                          </div>
                         </div>
 
                         {/* Admin Reply Callout */}

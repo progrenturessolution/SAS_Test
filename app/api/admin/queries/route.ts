@@ -122,20 +122,39 @@ export async function POST(req: Request) {
       isReadByInstitute: true,
     })
 
-    // Construct standard mailto link to support@progrentures.com
-    const emailSubject = `REQUEST For Change - ${instituteName} (${instituteCode || "ID: " + instituteId})`
-    const emailBody = `Organization: ${instituteName}
-Code: ${instituteCode || "N/A"}
-Email: ${email}
-Phone: ${phone || "N/A"}
-Category: ${category || "General"}
-Subject: ${subject}
+    const categoryLabels: Record<string, string> = {
+      quota_increase: "Exam / Student Quota Increase",
+      billing_fees: "Billing, License & Validity",
+      feature_request: "Feature Request / Customization",
+      technical_issue: "Technical Support / Bug",
+      other: "General Query",
+    }
+    const catLabel = categoryLabels[category] || category || "General"
 
-Query Details:
+    // Construct standard mailto link to support@progrentures.com with the exact query
+    const emailSubject = `REQUEST For Change - ${instituteName}${instituteCode ? ` (${instituteCode})` : ""} - ${subject.trim()}`
+    const emailBody = `Hello Progrentures Support Team,
+
+Please review the following change request submitted from the coaching institute portal:
+
+--------------------------------------------------
+INSTITUTE DETAILS:
+--------------------------------------------------
+Organization Name : ${instituteName}
+Institute Code    : ${instituteCode || "N/A"}
+Contact Email     : ${email}
+Contact Phone     : ${phone || "N/A"}
+Request Category  : ${catLabel}
+Request Subject   : ${subject.trim()}
+
+--------------------------------------------------
+QUERY / REQUEST DETAILS:
+--------------------------------------------------
 ${message.trim()}
 
----
-Submitted via Progrentures Portal`
+--------------------------------------------------
+Status: Logged into Admin Portal Desk
+Submitted via: Progrentures Exam Platform`
 
     const mailtoUrl = `mailto:support@progrentures.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
 

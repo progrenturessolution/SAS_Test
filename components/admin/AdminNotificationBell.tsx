@@ -272,13 +272,12 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                         )}
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          activeQuery.status === "resolved"
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${activeQuery.status === "resolved"
                             ? "bg-slate-100 text-slate-700"
                             : activeQuery.status === "replied"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border border-amber-200"
-                        }`}
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-amber-50 text-amber-700 border border-amber-200"
+                          }`}
                       >
                         {activeQuery.status}
                       </span>
@@ -394,22 +393,20 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                     <button
                       type="button"
                       onClick={() => setFilterTab("all")}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        filterTab === "all"
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filterTab === "all"
                           ? "bg-[#2D3A4A] text-white shadow-xs"
                           : "text-gray-600 hover:bg-gray-200/60"
-                      }`}
+                        }`}
                     >
                       All ({queries.length})
                     </button>
                     <button
                       type="button"
                       onClick={() => setFilterTab("pending")}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        filterTab === "pending"
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterTab === "pending"
                           ? "bg-amber-600 text-white shadow-xs"
                           : "text-amber-800 hover:bg-amber-100/60"
-                      }`}
+                        }`}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full ${filterTab === "pending" ? "bg-white" : "bg-amber-500"}`} />
                       Pending ({pendingCount})
@@ -417,11 +414,10 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                     <button
                       type="button"
                       onClick={() => setFilterTab("replied")}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        filterTab === "replied"
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filterTab === "replied"
                           ? "bg-emerald-700 text-white shadow-xs"
                           : "text-gray-600 hover:bg-gray-200/60"
-                      }`}
+                        }`}
                     >
                       Replied ({queries.filter((q) => q.status === "replied" || q.status === "resolved").length})
                     </button>
@@ -448,9 +444,8 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                           <div
                             key={q._id}
                             onClick={() => handleOpenQuery(q)}
-                            className={`p-4 hover:bg-gray-50/80 transition-all cursor-pointer text-left space-y-1.5 border-l-4 ${
-                              isUnread ? "bg-amber-50/40 border-l-amber-500" : "border-l-transparent"
-                            }`}
+                            className={`p-4 hover:bg-gray-50/80 transition-all cursor-pointer text-left space-y-1.5 border-l-4 ${isUnread ? "bg-amber-50/40 border-l-amber-500" : "border-l-transparent"
+                              }`}
                           >
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
@@ -465,13 +460,12 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                                 )}
                               </div>
                               <span
-                                className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                                  q.status === "resolved"
+                                className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${q.status === "resolved"
                                     ? "bg-slate-100 text-slate-700"
                                     : q.status === "replied"
-                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                    : "bg-amber-50 text-amber-700 border border-amber-200 font-bold"
-                                }`}
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : "bg-amber-50 text-amber-700 border border-amber-200 font-bold"
+                                  }`}
                               >
                                 {q.status}
                               </span>
