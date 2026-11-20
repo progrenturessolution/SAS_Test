@@ -458,7 +458,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="flex">
+                <div className="flex min-h-[350px] xs:min-h-[370px] sm:min-h-[355px] md:min-h-[365px] lg:min-h-[375px]">
                   {/* Sidebar */}
                   <aside className="mockup-sidebar w-[48px] xs:w-[56px] sm:w-[24%] lg:w-[22%] shrink-0 bg-[#0f172a] p-2 sm:p-4 text-white flex flex-col justify-between border-r border-slate-800">
                     <div>
@@ -502,13 +502,13 @@ export default function HomePage() {
                     </div>
                   </aside>
 
-                  {/* Main Content Area */}
-                  <div className="min-w-0 flex-1 bg-[#f8fafc] p-3 sm:p-5 lg:p-6" style={{ color: "#324158" }}>
+                  {/* Main Content Area - Size locked consistently across all tabs */}
+                  <div className="min-w-0 flex-1 bg-[#f8fafc] p-3 sm:p-5 lg:p-6 flex flex-col justify-between" style={{ color: "#324158" }}>
                     {/* 1. OVERVIEW TAB */}
                     {activeMockupTab === "Overview" && (
-                      <div className="space-y-2.5 sm:space-y-4">
+                      <div className="space-y-2.5 sm:space-y-3.5 flex flex-col justify-between h-full">
                         {/* Header */}
-                        <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-3">
+                        <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-2.5">
                           <div>
                             <p className="mockup-label text-[8px] sm:text-[9.5px] font-bold uppercase tracking-wider" style={{ color: "#64748b" }}>Dashboard</p>
                             <h2 className="mockup-title mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#324158" }}>Good morning, Admin</h2>
@@ -528,9 +528,9 @@ export default function HomePage() {
                             { label: "Total Questions", value: "4,826" },
                             { label: "Students", value: "1,842" },
                           ].map((stat) => (
-                            <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs">
+                            <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs h-[46px] sm:h-[52px] flex flex-col justify-center">
                               <p className="mockup-label text-[7.5px] sm:text-[8.5px] font-semibold leading-tight truncate" style={{ color: "#64748b" }}>{stat.label}</p>
-                              <p className="mockup-value mt-0.5 sm:mt-1 text-xs sm:text-base font-black" style={{ color: "#324158" }}>{stat.value}</p>
+                              <p className="mockup-value mt-0.5 text-xs sm:text-base font-black leading-none" style={{ color: "#324158" }}>{stat.value}</p>
                             </div>
                           ))}
                         </div>
@@ -538,8 +538,8 @@ export default function HomePage() {
                         {/* Widgets Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-[1.38fr_0.92fr] gap-2 sm:gap-3">
                           {/* Left: Recent Examinations */}
-                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs">
-                            <div className="mb-2 sm:mb-2.5 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
+                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
+                            <div className="mb-1 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
                               <span className="mockup-title" style={{ color: "#324158" }}>Recent examinations</span>
                               <button type="button" onClick={() => setActiveMockupTab("Examinations")} className="mockup-label text-[7px] sm:text-[8px] font-semibold hover:underline cursor-pointer" style={{ color: "#64748b" }}>View all</button>
                             </div>
@@ -568,13 +568,13 @@ export default function HomePage() {
                           </div>
 
                           {/* Right: Result Overview */}
-                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
                             <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
                               <span className="mockup-title" style={{ color: "#324158" }}>Result overview</span>
                               <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>This month</span>
                             </div>
-                            <div className="my-1.5 sm:my-3 flex items-center justify-center">
-                              <div className="relative flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center">
+                            <div className="my-1 flex items-center justify-center">
+                              <div className="relative flex h-14 w-14 sm:h-18 sm:w-18 items-center justify-center">
                                 <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
                                   <path
                                     className="text-slate-100"
@@ -601,7 +601,7 @@ export default function HomePage() {
                             </div>
                             <p className="mockup-label border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold" style={{ color: "#475569" }}>
                               <span className="inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle" style={{ backgroundColor: "#324158" }} />
-                              Passed &nbsp;·&nbsp; Needs review
+                              1,547 Passed &nbsp;·&nbsp; 295 Review
                             </p>
                           </div>
                         </div>
@@ -610,9 +610,9 @@ export default function HomePage() {
 
                     {/* 2. EXAMINATIONS TAB */}
                     {activeMockupTab === "Examinations" && (
-                      <div className="space-y-2.5 sm:space-y-4">
+                      <div className="space-y-2.5 sm:space-y-3.5 flex flex-col justify-between h-full">
                         {/* Header */}
-                        <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-3">
+                        <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-2.5">
                           <div>
                             <p className="mockup-label text-[8px] sm:text-[9.5px] font-bold uppercase tracking-wider" style={{ color: "#64748b" }}>Assessment Control</p>
                             <h2 className="mockup-title mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#324158" }}>All Examinations</h2>
@@ -630,39 +630,67 @@ export default function HomePage() {
                             { label: "Completed", value: "188" },
                             { label: "Drafts", value: "6" },
                           ].map((stat) => (
-                            <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs">
+                            <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs h-[46px] sm:h-[52px] flex flex-col justify-center">
                               <p className="mockup-label text-[7.5px] sm:text-[8.5px] font-semibold leading-tight truncate" style={{ color: "#64748b" }}>{stat.label}</p>
-                              <p className="mockup-value mt-0.5 sm:mt-1 text-xs sm:text-base font-black" style={{ color: "#324158" }}>{stat.value}</p>
+                              <p className="mockup-value mt-0.5 text-xs sm:text-base font-black leading-none" style={{ color: "#324158" }}>{stat.value}</p>
                             </div>
                           ))}
                         </div>
 
-                        {/* List */}
-                        <div className="rounded-lg border border-slate-200 bg-white p-2 sm:p-3 shadow-2xs">
-                          <div className="mb-2 flex items-center justify-between text-[8px] sm:text-[9px] font-bold text-slate-500 border-b border-slate-100 pb-1.5">
-                            <span>EXAMINATION TITLE</span>
-                            <span className="hidden xs:inline">DURATION / MARKS</span>
-                            <span>STATUS</span>
-                          </div>
-                          <div className="space-y-1 sm:space-y-1.5">
-                            {[
-                              { name: "JEE Advanced Full Mock 09", details: "180 Min · 300 Marks", status: "Live", candidates: "420 candidates active", badgeClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold", dot: "bg-[#324158]" },
-                              { name: "NEET Biology Unit Test", details: "90 Min · 180 Marks", status: "Scheduled", candidates: "Tomorrow, 10:00 AM", badgeClass: "bg-blue-50 text-blue-800 border-blue-200 font-bold", dot: "bg-blue-600" },
-                              { name: "MHT-CET Chemistry Drill #04", details: "60 Min · 100 Marks", status: "Completed", candidates: "512 submissions", badgeClass: "bg-slate-100 text-slate-700 border-slate-200 font-semibold", dot: "bg-slate-400" },
-                              { name: "Class 12 Physics Pre-Board", details: "180 Min · 70 Marks", status: "Draft", candidates: "12 Qs pending", badgeClass: "bg-amber-50 text-amber-800 border-amber-200 font-bold", dot: "bg-amber-500" },
-                            ].map((item) => (
-                              <div key={item.name} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/70 px-2 py-1 text-[7.5px] sm:text-[8.5px]">
-                                <div className="truncate max-w-[140px] xs:max-w-[190px] sm:max-w-[220px]">
-                                  <p className="mockup-title font-bold truncate" style={{ color: "#324158" }}>{item.name}</p>
-                                  <p className="text-[6.5px] sm:text-[7.5px] text-slate-500">{item.candidates}</p>
+                        {/* 2-Col Grid - Identical height */}
+                        <div className="grid grid-cols-1 sm:grid-cols-[1.38fr_0.92fr] gap-2 sm:gap-3">
+                          {/* Left: Active Exams Table */}
+                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
+                            <div className="mb-1 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
+                              <span className="mockup-title" style={{ color: "#324158" }}>Active & Scheduled</span>
+                              <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>420 Active</span>
+                            </div>
+                            <div className="space-y-1 sm:space-y-1.5">
+                              {[
+                                { name: "JEE Adv. Mock 09", details: "180 Min · 300 M", status: "Live", badgeClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold", dot: "bg-[#324158]" },
+                                { name: "NEET Biology Test", details: "90 Min · 180 M", status: "Scheduled", badgeClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold", dot: "bg-[#324158]" },
+                                { name: "MHT-CET Chem Drill", details: "60 Min · 100 M", status: "Completed", badgeClass: "bg-slate-100 text-slate-800 border-slate-300 font-semibold", dot: "bg-slate-400" },
+                              ].map((item, index) => (
+                                <div key={item.name} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/70 px-2 py-1 text-[7.5px] sm:text-[8.5px]">
+                                  <span className="flex items-center gap-1.5 truncate">
+                                    <b className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded bg-white border border-slate-200 text-[6.5px] sm:text-[7.5px] font-bold" style={{ color: "#324158" }}>
+                                      {index + 1}
+                                    </b>
+                                    <span className="mockup-title truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none font-semibold" style={{ color: "#324158" }}>
+                                      {item.name}
+                                    </span>
+                                  </span>
+                                  <span className={`shrink-0 flex items-center gap-1 rounded-full border px-1.5 sm:px-2 py-0.5 text-[6.5px] sm:text-[7.5px] ${item.badgeClass}`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${item.dot}`} />
+                                    {item.status}
+                                  </span>
                                 </div>
-                                <span className="hidden xs:inline text-[7px] sm:text-[8px] font-semibold text-slate-600">{item.details}</span>
-                                <span className={`shrink-0 flex items-center gap-1 rounded-full border px-1.5 sm:px-2 py-0.5 text-[6.5px] sm:text-[7.5px] ${item.badgeClass}`}>
-                                  <span className={`h-1.5 w-1.5 rounded-full ${item.dot}`} />
-                                  {item.status}
-                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Right: Completion Gauge */}
+                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
+                            <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
+                              <span className="mockup-title" style={{ color: "#324158" }}>Exam Completion</span>
+                              <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>Monthly</span>
+                            </div>
+                            <div className="my-1 flex items-center justify-center">
+                              <div className="relative flex h-14 w-14 sm:h-18 sm:w-18 items-center justify-center">
+                                <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                                  <path className="text-slate-100" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                  <path className="text-[#324158]" strokeDasharray="76, 100" strokeWidth="3.5" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                  <span className="mockup-value text-xs sm:text-base font-black leading-none" style={{ color: "#324158" }}>76%</span>
+                                  <span className="text-[6.5px] sm:text-[7.5px] font-bold mt-0.5" style={{ color: "#324158" }}>Executed</span>
+                                </div>
                               </div>
-                            ))}
+                            </div>
+                            <p className="mockup-label border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold" style={{ color: "#475569" }}>
+                              <span className="inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle" style={{ backgroundColor: "#324158" }} />
+                              188 Finished &nbsp;·&nbsp; 60 Active/Sched
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -670,9 +698,9 @@ export default function HomePage() {
 
                     {/* 3. QUESTION BANK TAB */}
                     {activeMockupTab === "Question Bank" && (
-                      <div className="space-y-2.5 sm:space-y-4">
+                      <div className="space-y-2.5 sm:space-y-3.5 flex flex-col justify-between h-full">
                         {/* Header */}
-                        <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-3">
+                        <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-2.5">
                           <div>
                             <p className="mockup-label text-[8px] sm:text-[9.5px] font-bold uppercase tracking-wider" style={{ color: "#64748b" }}>AI Repository</p>
                             <h2 className="mockup-title mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#324158" }}>Question Bank (4,826)</h2>
@@ -690,36 +718,66 @@ export default function HomePage() {
                             { label: "Mathematics", value: "1,510" },
                             { label: "Biology", value: "616" },
                           ].map((stat) => (
-                            <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs">
+                            <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs h-[46px] sm:h-[52px] flex flex-col justify-center">
                               <p className="mockup-label text-[7.5px] sm:text-[8.5px] font-semibold leading-tight truncate" style={{ color: "#64748b" }}>{stat.label}</p>
-                              <p className="mockup-value mt-0.5 sm:mt-1 text-xs sm:text-base font-black" style={{ color: "#324158" }}>{stat.value}</p>
+                              <p className="mockup-value mt-0.5 text-xs sm:text-base font-black leading-none" style={{ color: "#324158" }}>{stat.value}</p>
                             </div>
                           ))}
                         </div>
 
-                        {/* Question Vault List */}
-                        <div className="rounded-lg border border-slate-200 bg-white p-2 sm:p-3 shadow-2xs">
-                          <div className="mb-2 flex items-center justify-between text-[8px] sm:text-[9px] font-bold text-slate-500 border-b border-slate-100 pb-1.5">
-                            <span>TOPIC & QUESTION PREVIEW</span>
-                            <span className="hidden xs:inline">TYPE</span>
-                            <span>DIFFICULTY</span>
-                          </div>
-                          <div className="space-y-1 sm:space-y-1.5">
-                            {[
-                              { topic: "Rotational Dynamics · JEE Main", q: "Moment of inertia of hollow cylinder with rotational acceleration...", type: "MCQ Single", level: "Hard", badgeClass: "bg-red-50 text-red-700 border-red-200 font-bold" },
-                              { topic: "Electrochemistry · NEET Medical", q: "Calculate standard electrode potential using Nernst equation...", type: "MCQ Single", level: "Medium", badgeClass: "bg-amber-50 text-amber-800 border-amber-200 font-bold" },
-                              { topic: "Definite Integrals · JEE Adv", q: "Evaluate limits of definite integral with piecewise continuous f(x)...", type: "Multi Correct", level: "Challenging", badgeClass: "bg-purple-50 text-purple-700 border-purple-200 font-bold" },
-                              { topic: "Human Endocrine · CBSE Board", q: "Explain feedback mechanism of insulin and glucagon in blood...", type: "Descriptive", level: "Easy", badgeClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold" },
-                            ].map((item) => (
-                              <div key={item.topic} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/70 px-2 py-1 text-[7.5px] sm:text-[8.5px]">
-                                <div className="truncate max-w-[140px] xs:max-w-[190px] sm:max-w-[220px]">
-                                  <p className="mockup-title font-bold truncate" style={{ color: "#324158" }}>{item.topic}</p>
-                                  <p className="text-[6.5px] sm:text-[7.5px] text-slate-500 truncate">{item.q}</p>
+                        {/* 2-Col Grid - Identical height */}
+                        <div className="grid grid-cols-1 sm:grid-cols-[1.38fr_0.92fr] gap-2 sm:gap-3">
+                          {/* Left: Questions List */}
+                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
+                            <div className="mb-1 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
+                              <span className="mockup-title" style={{ color: "#324158" }}>Question Vault</span>
+                              <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>Recent AI</span>
+                            </div>
+                            <div className="space-y-1 sm:space-y-1.5">
+                              {[
+                                { topic: "Rotational Dynamics", exam: "JEE Main", level: "Hard", badgeClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold" },
+                                { topic: "Electrochemistry", exam: "NEET Med", level: "Medium", badgeClass: "bg-slate-100 text-slate-800 border-slate-300 font-semibold" },
+                                { topic: "Definite Integrals", exam: "JEE Adv", level: "Hard", badgeClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold" },
+                              ].map((item, index) => (
+                                <div key={item.topic} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/70 px-2 py-1 text-[7.5px] sm:text-[8.5px]">
+                                  <span className="flex items-center gap-1.5 truncate">
+                                    <b className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded bg-white border border-slate-200 text-[6.5px] sm:text-[7.5px] font-bold" style={{ color: "#324158" }}>
+                                      {index + 1}
+                                    </b>
+                                    <span className="mockup-title truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none font-semibold" style={{ color: "#324158" }}>
+                                      {item.topic}
+                                    </span>
+                                  </span>
+                                  <span className={`shrink-0 flex items-center gap-1 rounded-full border px-1.5 sm:px-2 py-0.5 text-[6.5px] sm:text-[7.5px] ${item.badgeClass}`}>
+                                    {item.level}
+                                  </span>
                                 </div>
-                                <span className="hidden xs:inline text-[7px] sm:text-[8px] font-medium text-slate-600">{item.type}</span>
-                                <span className={`rounded-full border px-1.5 sm:px-2 py-0.5 text-[6.5px] sm:text-[7.5px] ${item.badgeClass}`}>{item.level}</span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Right: Coverage Gauge */}
+                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
+                            <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
+                              <span className="mockup-title" style={{ color: "#324158" }}>Syllabus Ready</span>
+                              <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>Full Term</span>
+                            </div>
+                            <div className="my-1 flex items-center justify-center">
+                              <div className="relative flex h-14 w-14 sm:h-18 sm:w-18 items-center justify-center">
+                                <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                                  <path className="text-slate-100" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                  <path className="text-[#324158]" strokeDasharray="92, 100" strokeWidth="3.5" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                  <span className="mockup-value text-xs sm:text-base font-black leading-none" style={{ color: "#324158" }}>92%</span>
+                                  <span className="text-[6.5px] sm:text-[7.5px] font-bold mt-0.5" style={{ color: "#324158" }}>Ready</span>
+                                </div>
                               </div>
-                            ))}
+                            </div>
+                            <p className="mockup-label border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold" style={{ color: "#475569" }}>
+                              <span className="inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle" style={{ backgroundColor: "#324158" }} />
+                              4,826 Qs &nbsp;·&nbsp; 4 Subjects Mapped
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -727,9 +785,9 @@ export default function HomePage() {
 
                     {/* 4. STUDENTS TAB */}
                     {activeMockupTab === "Students" && (
-                      <div className="space-y-2.5 sm:space-y-4">
+                      <div className="space-y-2.5 sm:space-y-3.5 flex flex-col justify-between h-full">
                         {/* Header */}
-                        <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-3">
+                        <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-2.5">
                           <div>
                             <p className="mockup-label text-[8px] sm:text-[9.5px] font-bold uppercase tracking-wider" style={{ color: "#64748b" }}>Candidate Management</p>
                             <h2 className="mockup-title mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#324158" }}>Student Directory (1,842)</h2>
@@ -747,36 +805,66 @@ export default function HomePage() {
                             { label: "Fees Completed", value: "1,620" },
                             { label: "Fees Pending", value: "222" },
                           ].map((stat) => (
-                            <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs">
+                            <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs h-[46px] sm:h-[52px] flex flex-col justify-center">
                               <p className="mockup-label text-[7.5px] sm:text-[8.5px] font-semibold leading-tight truncate" style={{ color: "#64748b" }}>{stat.label}</p>
-                              <p className="mockup-value mt-0.5 sm:mt-1 text-xs sm:text-base font-black" style={{ color: "#324158" }}>{stat.value}</p>
+                              <p className="mockup-value mt-0.5 text-xs sm:text-base font-black leading-none" style={{ color: "#324158" }}>{stat.value}</p>
                             </div>
                           ))}
                         </div>
 
-                        {/* Students List Table */}
-                        <div className="rounded-lg border border-slate-200 bg-white p-2 sm:p-3 shadow-2xs">
-                          <div className="mb-2 flex items-center justify-between text-[8px] sm:text-[9px] font-bold text-slate-500 border-b border-slate-100 pb-1.5">
-                            <span>CANDIDATE NAME & REG</span>
-                            <span className="hidden xs:inline">BATCH</span>
-                            <span>FEES STATUS</span>
-                          </div>
-                          <div className="space-y-1 sm:space-y-1.5">
-                            {[
-                              { name: "Rohan S. Sharma", reg: "TL-2026-8491", batch: "JEE Target 2026", fees: "Completed", feesClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold" },
-                              { name: "Priya V. Patel", reg: "TL-2026-7720", batch: "NEET Medical Pro", fees: "Completed", feesClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold" },
-                              { name: "Aditya N. Deshmukh", reg: "TL-2026-6302", batch: "MHT-CET Crash", fees: "Pending", feesClass: "bg-amber-50 text-amber-800 border-amber-200 font-bold" },
-                              { name: "Sneha R. Kulkarni", reg: "TL-2026-9140", batch: "Class 12 Boards", fees: "Completed", feesClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold" },
-                            ].map((student) => (
-                              <div key={student.reg} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/70 px-2 py-1 text-[7.5px] sm:text-[8.5px]">
-                                <div className="truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[210px]">
-                                  <p className="mockup-title font-bold truncate" style={{ color: "#324158" }}>{student.name}</p>
-                                  <p className="text-[6.5px] sm:text-[7.5px] text-slate-500">{student.reg}</p>
+                        {/* 2-Col Grid - Identical height */}
+                        <div className="grid grid-cols-1 sm:grid-cols-[1.38fr_0.92fr] gap-2 sm:gap-3">
+                          {/* Left: Students Table */}
+                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
+                            <div className="mb-1 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
+                              <span className="mockup-title" style={{ color: "#324158" }}>Enrolled Candidates</span>
+                              <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>Total 1,842</span>
+                            </div>
+                            <div className="space-y-1 sm:space-y-1.5">
+                              {[
+                                { name: "Rohan S. Sharma", batch: "JEE Target 26", fees: "Completed", badgeClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold" },
+                                { name: "Priya V. Patel", batch: "NEET Medical", fees: "Completed", badgeClass: "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold" },
+                                { name: "Aditya N. Deshmukh", batch: "MHT-CET Crash", fees: "Pending", badgeClass: "bg-amber-50 text-amber-800 border-amber-200 font-bold" },
+                              ].map((item, index) => (
+                                <div key={item.name} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/70 px-2 py-1 text-[7.5px] sm:text-[8.5px]">
+                                  <span className="flex items-center gap-1.5 truncate">
+                                    <b className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded bg-white border border-slate-200 text-[6.5px] sm:text-[7.5px] font-bold" style={{ color: "#324158" }}>
+                                      {index + 1}
+                                    </b>
+                                    <span className="mockup-title truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none font-semibold" style={{ color: "#324158" }}>
+                                      {item.name}
+                                    </span>
+                                  </span>
+                                  <span className={`shrink-0 flex items-center gap-1 rounded-full border px-1.5 sm:px-2 py-0.5 text-[6.5px] sm:text-[7.5px] ${item.badgeClass}`}>
+                                    {item.fees}
+                                  </span>
                                 </div>
-                                <span className="hidden xs:inline text-[7px] sm:text-[8px] font-medium text-slate-600 truncate max-w-[110px]">{student.batch}</span>
-                                <span className={`rounded-full border px-1.5 sm:px-2 py-0.5 text-[6.5px] sm:text-[7.5px] ${student.feesClass}`}>{student.fees}</span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Right: Fee Clearance Gauge */}
+                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
+                            <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
+                              <span className="mockup-title" style={{ color: "#324158" }}>Fee Clearance</span>
+                              <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>Active Term</span>
+                            </div>
+                            <div className="my-1 flex items-center justify-center">
+                              <div className="relative flex h-14 w-14 sm:h-18 sm:w-18 items-center justify-center">
+                                <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                                  <path className="text-slate-100" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                  <path className="text-[#324158]" strokeDasharray="88, 100" strokeWidth="3.5" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                  <span className="mockup-value text-xs sm:text-base font-black leading-none" style={{ color: "#324158" }}>88%</span>
+                                  <span className="text-[6.5px] sm:text-[7.5px] font-bold mt-0.5" style={{ color: "#324158" }}>Paid</span>
+                                </div>
                               </div>
-                            ))}
+                            </div>
+                            <p className="mockup-label border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold" style={{ color: "#475569" }}>
+                              <span className="inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle" style={{ backgroundColor: "#324158" }} />
+                              1,620 Paid &nbsp;·&nbsp; 222 Pending
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -784,9 +872,9 @@ export default function HomePage() {
 
                     {/* 5. RESULTS TAB */}
                     {activeMockupTab === "Results" && (
-                      <div className="space-y-2.5 sm:space-y-4">
+                      <div className="space-y-2.5 sm:space-y-3.5 flex flex-col justify-between h-full">
                         {/* Header */}
-                        <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-3">
+                        <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-2.5">
                           <div>
                             <p className="mockup-label text-[8px] sm:text-[9.5px] font-bold uppercase tracking-wider" style={{ color: "#64748b" }}>Evaluation & Insights</p>
                             <h2 className="mockup-title mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#324158" }}>Assessment Results</h2>
@@ -804,26 +892,26 @@ export default function HomePage() {
                             { label: "Highest Score", value: "99.2%" },
                             { label: "Evaluations", value: "14,280" },
                           ].map((stat) => (
-                            <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs">
+                            <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs h-[46px] sm:h-[52px] flex flex-col justify-center">
                               <p className="mockup-label text-[7.5px] sm:text-[8.5px] font-semibold leading-tight truncate" style={{ color: "#64748b" }}>{stat.label}</p>
-                              <p className="mockup-value mt-0.5 sm:mt-1 text-xs sm:text-base font-black" style={{ color: "#324158" }}>{stat.value}</p>
+                              <p className="mockup-value mt-0.5 text-xs sm:text-base font-black leading-none" style={{ color: "#324158" }}>{stat.value}</p>
                             </div>
                           ))}
                         </div>
 
-                        {/* Result Breakdown 2-Col Grid */}
+                        {/* 2-Col Grid - Identical height */}
                         <div className="grid grid-cols-1 sm:grid-cols-[1.38fr_0.92fr] gap-2 sm:gap-3">
                           {/* Left: Score Distribution */}
-                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs">
-                            <div className="mb-2 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
-                              <span className="mockup-title" style={{ color: "#324158" }}>Batch Average Performance</span>
+                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
+                            <div className="mb-1 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
+                              <span className="mockup-title" style={{ color: "#324158" }}>Batch Performance</span>
                               <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>Avg Marks</span>
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                               {[
                                 { exam: "JEE Mock 08", avg: "218/300", pct: 72 },
-                                { exam: "NEET Biology Unit", avg: "152/180", pct: 84 },
-                                { exam: "MHT-CET Practice", avg: "82/100", pct: 82 },
+                                { exam: "NEET Biology", avg: "152/180", pct: 84 },
+                                { exam: "MHT-CET Drill", avg: "82/100", pct: 82 },
                               ].map((row) => (
                                 <div key={row.exam} className="space-y-0.5">
                                   <div className="flex justify-between text-[7px] sm:text-[8px] font-bold">
@@ -839,13 +927,13 @@ export default function HomePage() {
                           </div>
 
                           {/* Right: Passing Gauge */}
-                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+                          <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
                             <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
                               <span className="mockup-title" style={{ color: "#324158" }}>Pass / Review Ratio</span>
                               <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>Monthly</span>
                             </div>
-                            <div className="my-1.5 flex items-center justify-center">
-                              <div className="relative flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center">
+                            <div className="my-1 flex items-center justify-center">
+                              <div className="relative flex h-14 w-14 sm:h-18 sm:w-18 items-center justify-center">
                                 <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
                                   <path className="text-slate-100" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                                   <path className="text-[#324158]" strokeDasharray="84, 100" strokeWidth="3.5" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
@@ -857,7 +945,8 @@ export default function HomePage() {
                               </div>
                             </div>
                             <p className="mockup-label border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold" style={{ color: "#475569" }}>
-                              1,547 Passed · 295 Review
+                              <span className="inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle" style={{ backgroundColor: "#324158" }} />
+                              1,547 Passed &nbsp;·&nbsp; 295 Review
                             </p>
                           </div>
                         </div>
