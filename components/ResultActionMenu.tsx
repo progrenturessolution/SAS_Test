@@ -139,18 +139,28 @@ export function ResultActionMenu({ result }: ResultActionMenuProps) {
       {mounted &&
         open &&
         createPortal(
-          <div
-            ref={menuRef}
-            style={{
-              position: "fixed",
-              top: menuPos.top !== undefined ? `${menuPos.top}px` : "auto",
-              bottom: menuPos.bottom !== undefined ? `${menuPos.bottom}px` : "auto",
-              left: `${menuPos.left}px`,
-              maxHeight: `${menuPos.maxHeight}px`,
-              zIndex: 9999,
-            }}
-            className="w-52 rounded-2xl bg-white border border-slate-200/90 shadow-xl py-1.5 overflow-y-auto text-xs font-medium text-slate-700 animate-in fade-in-0 zoom-in-95 duration-100"
-          >
+          <>
+            {/* Invisible backdrop to dismiss whenever clicking anywhere on screen */}
+            <div
+              className="fixed inset-0 cursor-default"
+              style={{ zIndex: 9998 }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpen(false)
+              }}
+            />
+            <div
+              ref={menuRef}
+              style={{
+                position: "fixed",
+                top: menuPos.top !== undefined ? `${menuPos.top}px` : "auto",
+                bottom: menuPos.bottom !== undefined ? `${menuPos.bottom}px` : "auto",
+                left: `${menuPos.left}px`,
+                maxHeight: `${menuPos.maxHeight}px`,
+                zIndex: 9999,
+              }}
+              className="w-52 rounded-2xl bg-white border border-slate-200/90 shadow-xl py-1.5 overflow-y-auto text-xs font-medium text-slate-700 animate-in fade-in-0 zoom-in-95 duration-100"
+            >
             {/* Review & Grade */}
             <Link
               href={`/admin/results/${result._id}/review`}
@@ -206,9 +216,10 @@ export function ResultActionMenu({ result }: ResultActionMenuProps) {
                 <span>Result Summary</span>
               </div>
             </Link>
-          </div>,
-          document.body
-        )}
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   )
 }

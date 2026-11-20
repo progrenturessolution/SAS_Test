@@ -113,17 +113,22 @@ export default function StudentsPage() {
     return () => window.removeEventListener("institute-settings-updated", handleThemeUpdate)
   }, [])
 
-  // Close 3-dot menu on click outside
+  // Close 3-dot menu on click outside anywhere on the screen
   useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent) => {
+    if (!activeMenuStudentId) return
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
       const target = event.target as HTMLElement
       if (!target.closest(".student-action-menu-container")) {
         setActiveMenuStudentId(null)
       }
     }
-    window.addEventListener("click", handleOutsideClick)
-    return () => window.removeEventListener("click", handleOutsideClick)
-  }, [])
+    document.addEventListener("mousedown", handleOutsideClick)
+    document.addEventListener("touchstart", handleOutsideClick, { passive: true })
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick)
+      document.removeEventListener("touchstart", handleOutsideClick)
+    }
+  }, [activeMenuStudentId])
 
   const loadStudents = () => {
     setLoading(true)
@@ -692,7 +697,16 @@ export default function StudentsPage() {
                               </button>
 
                               {isMenuOpen && (
-                                <div className="absolute right-0 mt-1 w-48 rounded-xl bg-white border border-gray-200 shadow-xl py-1 z-30 focus:outline-none">
+                                <>
+                                  {/* Invisible full-screen backdrop to dismiss menu on any screen click */}
+                                  <div
+                                    className="fixed inset-0 z-20 cursor-default"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setActiveMenuStudentId(null)
+                                    }}
+                                  />
+                                  <div className="absolute right-0 mt-1 w-48 rounded-xl bg-white border border-gray-200 shadow-xl py-1 z-30 focus:outline-none">
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -751,7 +765,8 @@ export default function StudentsPage() {
                                     <span>{deletingId === s._id ? "Removing..." : "Remove Student"}</span>
                                   </button>
                                 </div>
-                              )}
+                              </>
+                            )}
                             </div>
                           </td>
                         </tr>
@@ -833,7 +848,16 @@ export default function StudentsPage() {
                           </button>
 
                           {isMenuOpen && (
-                            <div className="absolute right-0 mt-1 w-48 rounded-xl bg-white border border-gray-200 shadow-xl py-1 z-30 focus:outline-none">
+                            <>
+                              {/* Invisible full-screen backdrop to dismiss menu on any screen click */}
+                              <div
+                                className="fixed inset-0 z-20 cursor-default"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setActiveMenuStudentId(null)
+                                }}
+                              />
+                              <div className="absolute right-0 mt-1 w-48 rounded-xl bg-white border border-gray-200 shadow-xl py-1 z-30 focus:outline-none">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -892,7 +916,8 @@ export default function StudentsPage() {
                                 <span>{deletingId === s._id ? "Removing..." : "Remove Student"}</span>
                               </button>
                             </div>
-                          )}
+                          </>
+                        )}
                         </div>
                       </div>
 

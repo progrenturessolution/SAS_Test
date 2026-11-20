@@ -198,17 +198,28 @@ export function ExamActionMenu({
       </button>
 
       {open && mounted && createPortal(
-        <div
-          ref={menuRef}
-          style={{
-            position: "fixed",
-            top: menuPos.top !== undefined ? `${menuPos.top}px` : undefined,
-            bottom: menuPos.bottom !== undefined ? `${menuPos.bottom}px` : undefined,
-            left: `${menuPos.left}px`,
-            maxHeight: `${menuPos.maxHeight}px`,
-          }}
-          className="w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] overflow-y-auto overscroll-contain divide-y divide-gray-100"
-        >
+        <>
+          {/* Invisible backdrop to dismiss whenever clicking anywhere on screen */}
+          <div
+            className="fixed inset-0 cursor-default"
+            style={{ zIndex: 9998 }}
+            onClick={(e) => {
+              e.stopPropagation()
+              setOpen(false)
+            }}
+          />
+          <div
+            ref={menuRef}
+            style={{
+              position: "fixed",
+              top: menuPos.top !== undefined ? `${menuPos.top}px` : undefined,
+              bottom: menuPos.bottom !== undefined ? `${menuPos.bottom}px` : undefined,
+              left: `${menuPos.left}px`,
+              maxHeight: `${menuPos.maxHeight}px`,
+              zIndex: 9999,
+            }}
+            className="w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] overflow-y-auto overscroll-contain divide-y divide-gray-100"
+          >
           {/* Status Toggle */}
           <button
             type="button"
@@ -292,9 +303,10 @@ export function ExamActionMenu({
             <Trash2 size={15} className="text-red-500 shrink-0" />
             <span className="flex-1">Delete Exam</span>
           </button>
-        </div>,
-        document.body
-      )}
+        </div>
+      </>,
+      document.body
+    )}
     </div>
   )
 }

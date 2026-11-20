@@ -182,6 +182,23 @@ export default function InstitutesManagementPage() {
     fetchInstitutes()
   }, [])
 
+  // Close action menu when clicking anywhere on the screen
+  useEffect(() => {
+    if (!openActionMenu) return
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest("[data-institute-action-menu]")) {
+        setOpenActionMenu(null)
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick)
+    document.addEventListener("touchstart", handleOutsideClick, { passive: true })
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick)
+      document.removeEventListener("touchstart", handleOutsideClick)
+    }
+  }, [openActionMenu])
+
   // Handle Register Coaching
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -551,7 +568,7 @@ export default function InstitutesManagementPage() {
                       </div>
                     </div>
 
-                    <div className="relative shrink-0" onClick={(event) => event.stopPropagation()}>
+                    <div className="relative shrink-0" data-institute-action-menu="true" onClick={(event) => event.stopPropagation()}>
                       <button
                         type="button"
                         aria-label={`Actions for ${inst.name}`}
@@ -561,65 +578,75 @@ export default function InstitutesManagementPage() {
                         <MoreVertical className="h-5 w-5" />
                       </button>
                       {openActionMenu === inst._id && (
-                        <div className="absolute right-0 top-9 z-20 w-52 rounded-xl border border-slate-200 bg-white p-1.5 text-left shadow-xl animate-in fade-in zoom-in-95 duration-100">
-                          <button
-                            type="button"
-                            onClick={() => {
+                        <>
+                          {/* Invisible full-screen backdrop to dismiss menu on any screen click */}
+                          <div
+                            className="fixed inset-0 z-10 cursor-default"
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setOpenActionMenu(null)
-                              setSelectedInstitute(inst)
                             }}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
-                          >
-                            <Eye className="h-3.5 w-3.5 text-blue-600" /> View details
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenActionMenu(null)
-                              openEditLimits(inst)
-                            }}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
-                          >
-                            <Sliders className="h-3.5 w-3.5 text-[#324158]" /> Edit quotas & features
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenActionMenu(null)
-                              setShowResetPasswordModal(inst)
-                              setNewPassword("")
-                            }}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
-                          >
-                            <KeyRound className="h-3.5 w-3.5 text-slate-600" /> Reset password
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenActionMenu(null)
-                              handleToggleStatus(inst)
-                            }}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
-                          >
-                            {inst.status === "active" ? (
-                              <XCircle className="h-3.5 w-3.5 text-amber-600" />
-                            ) : (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                            )}
-                            {inst.status === "active" ? "Deactivate institute" : "Activate institute"}
-                          </button>
-                          <div className="my-1 border-t border-slate-100" />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenActionMenu(null)
-                              handleDeleteInstitute(inst)
-                            }}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 cursor-pointer"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-rose-500" /> Delete institute
-                          </button>
-                        </div>
+                          />
+                          <div className="absolute right-0 top-9 z-20 w-52 rounded-xl border border-slate-200 bg-white p-1.5 text-left shadow-xl animate-in fade-in zoom-in-95 duration-100">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenu(null)
+                                setSelectedInstitute(inst)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                            >
+                              <Eye className="h-3.5 w-3.5 text-blue-600" /> View details
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenu(null)
+                                openEditLimits(inst)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                            >
+                              <Sliders className="h-3.5 w-3.5 text-[#324158]" /> Edit quotas & features
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenu(null)
+                                setShowResetPasswordModal(inst)
+                                setNewPassword("")
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                            >
+                              <KeyRound className="h-3.5 w-3.5 text-slate-600" /> Reset password
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenu(null)
+                                handleToggleStatus(inst)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                            >
+                              {inst.status === "active" ? (
+                                <XCircle className="h-3.5 w-3.5 text-amber-600" />
+                              ) : (
+                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                              )}
+                              {inst.status === "active" ? "Deactivate institute" : "Activate institute"}
+                            </button>
+                            <div className="my-1 border-t border-slate-100" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenu(null)
+                                handleDeleteInstitute(inst)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-rose-500" /> Delete institute
+                            </button>
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>
