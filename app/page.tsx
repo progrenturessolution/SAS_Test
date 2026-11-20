@@ -428,28 +428,28 @@ export default function HomePage() {
             </ScrollReveal>
 
             {/* Right Mockup Showcase */}
-            <ScrollReveal direction="up" delay={150} className="hero-mockup relative mx-auto w-full max-w-[790px] pt-3 pb-4 sm:py-0 lg:translate-y-1 text-[#0f172a]">
+            <ScrollReveal direction="up" delay={150} className="hero-mockup relative mx-auto w-full max-w-[790px] pt-3 pb-4 sm:py-0 lg:translate-y-1 text-[#324158]">
               {/* Floating Badge 1 - Top Right */}
-              <div className="hero-floating-badge absolute -top-1.5 right-1 sm:-top-7 sm:right-0 z-20 flex min-w-0 sm:min-w-[195px] items-center gap-2 sm:gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.25)] scale-[0.84] xs:scale-90 sm:scale-100 origin-top-right text-[#0f172a]">
-                <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-600 font-bold">✦</span>
-                <span className="text-[10px] sm:text-[11px] font-bold leading-tight" style={{ color: "#0f172a" }}>AI Question Generated<br /><small className="font-semibold text-[8px] sm:text-[9px]" style={{ color: "#64748b" }}>Ready to review</small></span>
-                <span className="text-xs sm:text-sm font-black text-emerald-600 ml-0.5">✓</span>
+              <div className="hero-floating-badge absolute -top-1.5 right-1 sm:-top-7 sm:right-0 z-20 flex min-w-0 sm:min-w-[195px] items-center gap-2 sm:gap-3 rounded-xl border border-[#cbd5e1] bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.18)] scale-[0.84] xs:scale-90 sm:scale-100 origin-top-right text-[#324158]">
+                <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-[#eaf0f8] border border-[#cbd5e1] text-xs font-bold" style={{ color: "#324158" }}>✦</span>
+                <span className="text-[10px] sm:text-[11px] font-bold leading-tight" style={{ color: "#324158" }}>AI Question Generated<br /><small className="font-semibold text-[8px] sm:text-[9px]" style={{ color: "#64748b" }}>Ready to review</small></span>
+                <span className="text-xs sm:text-sm font-black ml-0.5" style={{ color: "#324158" }}>✓</span>
               </div>
 
               {/* Offset decorative border frame */}
               <div className="pointer-events-none absolute left-2 sm:left-[26px] top-[-6px] sm:top-[-26px] z-0 h-full w-[calc(100%-10px)] sm:w-full rounded-[18px] sm:rounded-[22px] border border-white/20 bg-white/5 backdrop-blur-xs" />
 
               {/* Mockup Card Main Window */}
-              <div className="relative z-10 overflow-hidden rounded-[16px] border border-slate-700/80 bg-white shadow-[0_24px_50px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.1)] text-[#0f172a]">
+              <div className="relative z-10 overflow-hidden rounded-[16px] border border-slate-700/80 bg-white shadow-[0_24px_50px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.1)] text-[#324158]">
                 {/* Window Header Bar */}
                 <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100/90 px-3 sm:px-4 py-2 select-none">
                   <div className="flex items-center gap-1.5">
                     <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57] border border-[#e0443e]" />
                     <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e] border border-[#d89e24]" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#28c840] border border-[#1aab29]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#324158] border border-[#1e293b]" />
                   </div>
                   <div className="mockup-label flex items-center gap-1.5 rounded-md bg-white border border-slate-200/80 px-2.5 py-0.5 text-[8.5px] sm:text-[10px] font-medium shadow-2xs" style={{ color: "#475569" }}>
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "#324158" }} />
                     <span>testrolab.progrentures.com/admin</span>
                   </div>
                   <div className="mockup-label hidden xs:flex items-center text-[8.5px] font-bold" style={{ color: "#64748b" }}>
@@ -463,9 +463,9 @@ export default function HomePage() {
                     <div>
                       {/* Logo */}
                       <div className="mb-4 sm:mb-8 flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2">
-                        <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded bg-emerald-500 text-[9px] sm:text-[11px] font-black text-white shadow-xs">T</span>
+                        <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded bg-white text-[9px] sm:text-[11px] font-black shadow-xs" style={{ color: "#324158" }}>T</span>
                         <div className="hidden sm:block text-[9.5px] sm:text-[11px] font-extrabold tracking-widest leading-none text-white">
-                          TESTRO<br /><small className="text-[7px] tracking-[0.22em] text-emerald-400 font-bold">LAB</small>
+                          TESTRO<br /><small className="text-[7px] tracking-[0.22em] text-[#93a6bc] font-bold">LAB</small>
                         </div>
                       </div>
 
@@ -485,12 +485,12 @@ export default function HomePage() {
                               key={item.name}
                               className={`flex items-center justify-center sm:justify-start gap-2 rounded-md p-1.5 sm:px-2.5 sm:py-2 transition-colors cursor-pointer ${
                                 isActive
-                                  ? "bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30"
+                                  ? "bg-[#445872] text-white font-semibold"
                                   : "text-slate-300 hover:bg-slate-800 hover:text-white font-medium"
                               }`}
                               title={item.name}
                             >
-                              <ItemIcon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
+                              <ItemIcon className="h-3.5 w-3.5 shrink-0 text-white" />
                               <span className="hidden sm:inline-block truncate">{item.name}</span>
                             </div>
                           )
@@ -500,15 +500,15 @@ export default function HomePage() {
                   </aside>
 
                   {/* Main Content Area */}
-                  <div className="min-w-0 flex-1 bg-[#f8fafc] p-3 sm:p-5 lg:p-6" style={{ color: "#0f172a" }}>
+                  <div className="min-w-0 flex-1 bg-[#f8fafc] p-3 sm:p-5 lg:p-6" style={{ color: "#324158" }}>
                     {/* Header */}
                     <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-3 mb-2.5 sm:mb-4">
                       <div>
                         <p className="mockup-label text-[8px] sm:text-[9.5px] font-bold uppercase tracking-wider" style={{ color: "#64748b" }}>Dashboard</p>
-                        <h2 className="mockup-title mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#0f172a" }}>Good morning, Admin</h2>
+                        <h2 className="mockup-title mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#324158" }}>Good morning, Admin</h2>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-slate-900 text-[7px] sm:text-[9px] font-black text-white shadow-xs">
+                        <span className="flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-[#324158] text-[7px] sm:text-[9px] font-black text-white shadow-xs">
                           AS
                         </span>
                       </div>
@@ -524,7 +524,7 @@ export default function HomePage() {
                       ].map((stat) => (
                         <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs">
                           <p className="mockup-label text-[7.5px] sm:text-[8.5px] font-semibold leading-tight truncate" style={{ color: "#64748b" }}>{stat.label}</p>
-                          <p className="mockup-value mt-0.5 sm:mt-1 text-xs sm:text-base font-black" style={{ color: "#0f172a" }}>{stat.value}</p>
+                          <p className="mockup-value mt-0.5 sm:mt-1 text-xs sm:text-base font-black" style={{ color: "#324158" }}>{stat.value}</p>
                         </div>
                       ))}
                     </div>
@@ -533,22 +533,22 @@ export default function HomePage() {
                     <div className="grid grid-cols-1 sm:grid-cols-[1.38fr_0.92fr] gap-2 sm:gap-3">
                       {/* Left: Recent Examinations */}
                       <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs">
-                        <div className="mb-2 sm:mb-2.5 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#0f172a" }}>
-                          <span className="mockup-title" style={{ color: "#0f172a" }}>Recent examinations</span>
+                        <div className="mb-2 sm:mb-2.5 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
+                          <span className="mockup-title" style={{ color: "#324158" }}>Recent examinations</span>
                           <span className="mockup-label text-[7px] sm:text-[8px] font-semibold hover:underline cursor-pointer" style={{ color: "#64748b" }}>View all</span>
                         </div>
                         <div className="space-y-1 sm:space-y-1.5">
                           {[
-                            { name: "JEE Mock Test 08", status: "Live", badgeClass: "mockup-badge-live bg-emerald-100 text-emerald-800 border-emerald-300 font-bold", dot: "bg-emerald-500" },
-                            { name: "Biology: Human Physiology", status: "Scheduled", badgeClass: "mockup-badge-scheduled bg-blue-100 text-blue-800 border-blue-300 font-bold", dot: "bg-blue-500" },
+                            { name: "JEE Mock Test 08", status: "Live", badgeClass: "mockup-badge-live bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold", dot: "bg-[#324158]" },
+                            { name: "Biology: Human Physiology", status: "Scheduled", badgeClass: "mockup-badge-scheduled bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-bold", dot: "bg-[#324158]" },
                             { name: "MHT-CET Practice Set", status: "Completed", badgeClass: "mockup-badge-completed bg-slate-100 text-slate-800 border-slate-300 font-semibold", dot: "bg-slate-400" },
                           ].map((exam, index) => (
                             <div key={exam.name} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50/70 px-2 py-1 text-[7.5px] sm:text-[8.5px]">
                               <span className="flex items-center gap-1.5 truncate">
-                                <b className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded bg-white border border-slate-200 text-[6.5px] sm:text-[7.5px] font-bold" style={{ color: "#334155" }}>
+                                <b className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded bg-white border border-slate-200 text-[6.5px] sm:text-[7.5px] font-bold" style={{ color: "#324158" }}>
                                   {index + 1}
                                 </b>
-                                <span className="mockup-title truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none font-semibold" style={{ color: "#0f172a" }}>
+                                <span className="mockup-title truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none font-semibold" style={{ color: "#324158" }}>
                                   {exam.name}
                                 </span>
                               </span>
@@ -563,8 +563,8 @@ export default function HomePage() {
 
                       {/* Right: Result Overview */}
                       <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
-                        <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#0f172a" }}>
-                          <span className="mockup-title" style={{ color: "#0f172a" }}>Result overview</span>
+                        <div className="flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
+                          <span className="mockup-title" style={{ color: "#324158" }}>Result overview</span>
                           <span className="mockup-label text-[7px] sm:text-[8px] font-semibold" style={{ color: "#64748b" }}>This month</span>
                         </div>
                         <div className="my-1.5 sm:my-3 flex items-center justify-center">
@@ -578,7 +578,7 @@ export default function HomePage() {
                                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                               />
                               <path
-                                className="text-emerald-500"
+                                className="text-[#324158]"
                                 strokeDasharray="84, 100"
                                 strokeWidth="3.5"
                                 strokeLinecap="round"
@@ -588,13 +588,13 @@ export default function HomePage() {
                               />
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                              <span className="mockup-value text-xs sm:text-base font-black leading-none" style={{ color: "#0f172a" }}>84%</span>
-                              <span className="text-[6.5px] sm:text-[7.5px] font-bold mt-0.5" style={{ color: "#059669" }}>Passed</span>
+                              <span className="mockup-value text-xs sm:text-base font-black leading-none" style={{ color: "#324158" }}>84%</span>
+                              <span className="text-[6.5px] sm:text-[7.5px] font-bold mt-0.5" style={{ color: "#324158" }}>Passed</span>
                             </div>
                           </div>
                         </div>
                         <p className="mockup-label border-t border-slate-100 pt-1 text-center text-[7px] sm:text-[8px] font-semibold" style={{ color: "#475569" }}>
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1 align-middle" />
+                          <span className="inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle" style={{ backgroundColor: "#324158" }} />
                           Passed &nbsp;·&nbsp; Needs review
                         </p>
                       </div>
@@ -604,18 +604,18 @@ export default function HomePage() {
               </div>
 
               {/* Floating Badges Bottom */}
-              <div className="hero-floating-badge absolute -bottom-1.5 left-1 sm:-bottom-3 sm:-left-3 z-20 flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-left text-[#0f172a]">
-                <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-blue-50 text-blue-600 text-xs font-bold border border-blue-200">⚙</span>
+              <div className="hero-floating-badge absolute -bottom-1.5 left-1 sm:-bottom-3 sm:-left-3 z-20 flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.18)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-left text-[#324158]">
+                <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-[#eaf0f8] text-[#324158] text-xs font-bold border border-[#cbd5e1]">⚙</span>
                 <div>
-                  <span className="font-bold text-[9px] sm:text-[10px]" style={{ color: "#0f172a" }}>Face Detection Active</span>
-                  <small className="block font-semibold text-[7px] sm:text-[8px]" style={{ color: "#64748b" }}>Session monitored <span className="text-emerald-500 font-bold">●</span></small>
+                  <span className="font-bold text-[9px] sm:text-[10px]" style={{ color: "#324158" }}>Face Detection Active</span>
+                  <small className="block font-semibold text-[7px] sm:text-[8px]" style={{ color: "#64748b" }}>Session monitored <span className="font-bold" style={{ color: "#324158" }}>●</span></small>
                 </div>
               </div>
 
-              <div className="hero-floating-badge absolute -bottom-1.5 right-1 sm:-bottom-3 sm:-right-1 z-20 hidden xs:flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.22)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-right text-[#0f172a]">
-                <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-purple-50 text-purple-600 text-xs font-bold border border-purple-200">▥</span>
+              <div className="hero-floating-badge absolute -bottom-1.5 right-1 sm:-bottom-3 sm:-right-1 z-20 hidden xs:flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(15,23,42,0.18)] scale-[0.84] xs:scale-90 sm:scale-100 origin-bottom-right text-[#324158]">
+                <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-[#eaf0f8] text-[#324158] text-xs font-bold border border-[#cbd5e1]">▥</span>
                 <div>
-                  <span className="font-bold text-[9px] sm:text-[10px]" style={{ color: "#0f172a" }}>Exam Results Available</span>
+                  <span className="font-bold text-[9px] sm:text-[10px]" style={{ color: "#324158" }}>Exam Results Available</span>
                   <small className="block font-semibold text-[7px] sm:text-[8px]" style={{ color: "#64748b" }}>152 submissions</small>
                 </div>
               </div>
@@ -1468,13 +1468,13 @@ export default function HomePage() {
                 {/* Mini Sidebar */}
                 <aside className="w-[72px] shrink-0 bg-[#0f172a] px-2.5 py-3 text-slate-300 border-r border-slate-800">
                   <div className="flex items-center gap-1.5 text-[7px] font-bold text-white">
-                    <span className="flex h-3.5 w-3.5 items-center justify-center rounded bg-emerald-500 text-[8px] font-black text-white shadow-xs">
+                    <span className="flex h-3.5 w-3.5 items-center justify-center rounded bg-white text-[8px] font-black text-[#324158] shadow-xs">
                       T
                     </span>
                     <span className="tracking-wider font-extrabold text-white">TESTRO</span>
                   </div>
                   <div className="mt-4 space-y-1.5 text-[6.5px]">
-                    <span className="block rounded bg-emerald-500/20 px-1.5 py-1 font-bold text-emerald-300 border border-emerald-500/30">Dashboard</span>
+                    <span className="block rounded bg-[#445872] px-1.5 py-1 font-bold text-white">Dashboard</span>
                     <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Exams</span>
                     <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Questions</span>
                     <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Students</span>
@@ -1483,17 +1483,17 @@ export default function HomePage() {
                 </aside>
 
                 {/* Mini Content Area */}
-                <div className="flex-1 bg-[#f8fafc] p-3 text-slate-800">
+                <div className="flex-1 bg-[#f8fafc] p-3 text-[#324158]">
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2 text-[7px] text-slate-600">
-                    <b className="font-extrabold text-slate-900">Dashboard</b>
-                    <span className="font-medium text-slate-700">Good morning, Admin</span>
-                    <span className="h-2.5 w-2.5 rounded-full bg-slate-900" />
+                    <b className="font-extrabold text-[#324158]">Dashboard</b>
+                    <span className="font-medium text-[#324158]">Good morning, Admin</span>
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#324158]" />
                   </div>
 
                   {/* Metric Tiles */}
                   <div className="mt-2.5 grid grid-cols-4 gap-1.5">
                     {["248", "12", "4,826", "1,842"].map((val) => (
-                      <span key={val} className="rounded border border-slate-200 bg-white p-1.5 text-center text-[9px] font-black text-slate-900 shadow-2xs">
+                      <span key={val} className="rounded border border-slate-200 bg-white p-1.5 text-center text-[9px] font-black text-[#324158] shadow-2xs">
                         {val}
                       </span>
                     ))}
@@ -1503,18 +1503,18 @@ export default function HomePage() {
                   <div className="mt-2.5 grid grid-cols-[1.4fr_1fr] gap-2">
                     {/* Left: Recent Contributions / Exams */}
                     <div className="rounded border border-slate-200 bg-white p-2 shadow-2xs">
-                      <span className="block text-[6.5px] font-bold text-slate-900">Recent examinations</span>
+                      <span className="block text-[6.5px] font-bold text-[#324158]">Recent examinations</span>
                       <div className="mt-2 space-y-1.5">
-                        <span className="block h-1 w-full rounded-full bg-emerald-500/60" />
-                        <span className="block h-1 w-[80%] rounded-full bg-blue-500/60" />
+                        <span className="block h-1 w-full rounded-full bg-[#324158]/70" />
+                        <span className="block h-1 w-[80%] rounded-full bg-[#324158]/40" />
                         <span className="block h-1 w-[60%] rounded-full bg-slate-300" />
                       </div>
                     </div>
 
                     {/* Right: Circular Progress Ring */}
                     <div className="flex flex-col items-center justify-center rounded border border-slate-200 bg-white p-2 shadow-2xs">
-                      <span className="text-[6.5px] font-bold text-slate-900">Result overview</span>
-                      <div className="relative mt-1 flex h-10 w-10 items-center justify-center rounded-full border-[3.5px] border-slate-200 border-t-emerald-500 border-r-emerald-500 text-[8px] font-black text-slate-900">
+                      <span className="text-[6.5px] font-bold text-[#324158]">Result overview</span>
+                      <div className="relative mt-1 flex h-10 w-10 items-center justify-center rounded-full border-[3.5px] border-slate-200 border-t-[#324158] border-r-[#324158] text-[8px] font-black text-[#324158]">
                         84%
                       </div>
                     </div>
