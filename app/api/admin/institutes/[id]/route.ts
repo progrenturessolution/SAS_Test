@@ -104,50 +104,79 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       return NextResponse.json({ error: "Institute not found" }, { status: 404 })
     }
 
-    const instituteAdminId = institute.adminUserId?.toString()
-    const instituteExamQuery = {
-      $or: [
-        { instituteId: institute._id },
-        ...(instituteAdminId ? [{ createdBy: instituteAdminId }] : []),
-      ],
+    const instId = institute._id
+    const instIdStr = institute._id.toString()
+    const instEmail = institute.email?.toLowerCase().trim()
+    const adminUserId = institute.adminUserId
+    const adminUserIdStr = adminUserId?.toString()
+
+    // 1. Identify all users belonging to this institute (students, admin, staff)
+    const userConditions: any[] = [
+      { instituteId: instId },
+      { instituteId: instIdStr },
+      { instituteId: id },
+    ]
+    if (adminUserId) {
+      userConditions.push({ _id: adminUserId })
+    }
+    if (instEmail) {
+      userConditions.push({ email: instEmail })
     }
 
-    const instituteExams = await Exam.find(instituteExamQuery, "_id").lean()
+    const instituteUsers = await User.find({ $or: userConditions }).lean()
+    const allUserIds = instituteUsers.map((u) => u._id)
+    const allUserIdsStr = instituteUsers.map((u) => u._id.toString())
+    const allUserEmails = instituteUsers.map((u) => u.email).filter(Boolean)
+    const studentCount = instituteUsers.filter((u) => u.role === "student").length
+
+    // 2. Identify all exams belonging to this institute or created by its users
+    const examConditions: any[] = [
+      { instituteId: instId },
+      { instituteId: instIdStr },
+      { instituteId: id },
+    ]
+    if (adminUserIdStr) {
+      examConditions.push({ createdBy: adminUserIdStr })
+      examConditions.push({ createdBy: adminUserId })
+    }
+    if (allUserIdsStr.length > 0) {
+      examConditions.push({ createdBy: { $in: allUserIdsStr } })
+      examConditions.push({ createdBy: { $in: allUserIds } })
+    }
+
+    const instituteExams = await Exam.find({ $or: examConditions }, "_id").lean()
     const examIds = instituteExams.map((exam) => exam._id)
-    const studentUsers = await User.find(
-      { instituteId: institute._id, role: "student" },
-      "email"
-    ).lean()
-    const studentEmails = studentUsers.map((student) => student.email)
+    const examIdsStr = instituteExams.map((exam) => exam._id.toString())
 
-    const attemptQuery: Record<string, unknown>[] = []
+    // 3. Build query to delete all attempts associated with this institute's exams or students
+    const attemptConditions: any[] = []
     if (examIds.length > 0) {
-      attemptQuery.push({ examId: { $in: examIds } })
+      attemptConditions.push({ examId: { $in: [...examIds, ...examIdsStr] } })
     }
-    if (studentEmails.length > 0) {
-      attemptQuery.push({ studentEmail: { $in: studentEmails } })
+    if (allUserEmails.length > 0) {
+      const emailRegexes = allUserEmails.map(
+        (e) => new RegExp(`^${e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i")
+      )
+      attemptConditions.push({ studentEmail: { $in: allUserEmails } })
+      attemptConditions.push({ studentEmail: { $in: emailRegexes } })
     }
 
-    const deletedAttempts = attemptQuery.length > 0
-      ? await Attempt.deleteMany({ $or: attemptQuery })
+    // 4. Cascade delete attempts, exams, users, and the institute itself
+    const deletedAttempts = attemptConditions.length > 0
+      ? await Attempt.deleteMany({ $or: attemptConditions })
       : { deletedCount: 0 }
-    const deletedExams = await Exam.deleteMany(instituteExamQuery)
-    const deletedStudents = await User.deleteMany({
-      instituteId: institute._id,
-      role: "student",
-    })
 
-    if (institute.adminUserId) {
-      await User.findByIdAndDelete(institute.adminUserId)
-    }
+    const deletedExams = await Exam.deleteMany({ $or: examConditions })
+    const deletedUsers = await User.deleteMany({ $or: userConditions })
 
     await Institute.findByIdAndDelete(id)
 
     return NextResponse.json({
       ok: true,
-      message: "Institute and all related records removed successfully",
+      message: "Institute and all associated records (exams, attempts, students, admin) deleted successfully",
       deleted: {
-        students: deletedStudents.deletedCount,
+        students: studentCount,
+        users: deletedUsers.deletedCount,
         exams: deletedExams.deletedCount,
         attempts: deletedAttempts.deletedCount,
       },
