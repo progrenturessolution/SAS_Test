@@ -109,6 +109,7 @@ export async function GET(req: Request) {
             name: institute.name,
             code: institute.code,
             status: institute.status,
+            validUntil: institute.validUntil ? new Date(institute.validUntil).toISOString() : null,
             maxStudents: institute.limits?.maxStudents ?? 100,
             maxExams: institute.limits?.maxExams ?? 20,
             features: institute.limits?.features,

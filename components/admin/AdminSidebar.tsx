@@ -20,6 +20,7 @@ import {
   Layers,
 } from "lucide-react"
 import { toast } from "sonner"
+import { formatDateDDMMYYYY } from "@/lib/utils"
 
 interface AdminSidebarProps {
   userName: string
@@ -43,6 +44,7 @@ export default function AdminSidebar({
   const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState(true)
   const [hasExamAccess, setHasExamAccess] = useState(true)
   const [hasOtherExamsAccess, setHasOtherExamsAccess] = useState(true)
+  const [validUntil, setValidUntil] = useState<string | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [instituteLogo, setInstituteLogo] = useState<string | null>(null)
   const [themeColor, setThemeColor] = useState<string>(initialThemeColor || "#2D3A4A")
@@ -89,6 +91,7 @@ export default function AdminSidebar({
           setHasCompetitiveAccess(data.hasCompetitiveAccess !== false)
           setHasExamAccess(data.hasExamAccess !== false)
           setHasOtherExamsAccess(data.hasOtherExamsAccess !== false)
+          if (data.validUntil) setValidUntil(data.validUntil)
           if (data.logo) setInstituteLogo(data.logo)
           if (data.themeColor) {
             setThemeColor(data.themeColor)
@@ -259,11 +262,14 @@ export default function AdminSidebar({
                       {instituteName || "Organization"}
                     </span>
                   </div>
-                  {instituteCode && (
-                    <span className="text-[10px] font-mono text-gray-500 mt-0.5 block">
-                      Code: {instituteCode}
-                    </span>
-                  )}
+                  <div className="flex items-center justify-between text-[10px] text-gray-500 mt-1">
+                    {instituteCode && <span className="font-mono">Code: {instituteCode}</span>}
+                    {validUntil ? (
+                      <span className="font-medium text-slate-600">Valid: {formatDateDDMMYYYY(validUntil)}</span>
+                    ) : (
+                      <span className="font-medium text-slate-500">Lifetime</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -460,11 +466,14 @@ export default function AdminSidebar({
                     {instituteName || "Organization"}
                   </span>
                 </div>
-                {instituteCode && (
-                  <span className="text-[10px] font-mono text-gray-500 mt-0.5 block">
-                    Code: {instituteCode}
-                  </span>
-                )}
+                <div className="flex items-center justify-between text-[10px] text-gray-500 mt-1">
+                  {instituteCode && <span className="font-mono">Code: {instituteCode}</span>}
+                  {validUntil ? (
+                    <span className="font-medium text-slate-600">Valid: {formatDateDDMMYYYY(validUntil)}</span>
+                  ) : (
+                    <span className="font-medium text-slate-500">Lifetime</span>
+                  )}
+                </div>
               </div>
             )}
           </div>

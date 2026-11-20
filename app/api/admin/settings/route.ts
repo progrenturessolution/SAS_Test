@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     // 1. If logged in as Coaching Institute, return coaching profile & branding
     if (session.instituteId) {
       const institute = await Institute.findById(session.instituteId)
-        .select("name code email phone address city contactPerson logo themeColor")
+        .select("name code email phone address city contactPerson logo themeColor validUntil status limits")
         .lean()
 
       if (!institute) {
@@ -42,6 +42,9 @@ export async function GET(req: Request) {
           contactPerson: institute.contactPerson || "",
           logo: institute.logo || "",
           themeColor: institute.themeColor || "#2D3A4A",
+          validUntil: institute.validUntil ? new Date(institute.validUntil).toISOString() : null,
+          status: institute.status || "active",
+          limits: institute.limits || null,
         },
       })
     }

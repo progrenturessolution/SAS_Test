@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth"
 import connectDB from "@/lib/mongodb"
 import Exam from "@/models/Exam"
 import { getExamStartDateTime, getExamEndDateTime } from "@/lib/examSchedule"
+import { formatDateDDMMYYYY } from "@/lib/utils"
 
 // GET /api/exams
 export async function GET(req: Request) {
@@ -67,11 +68,19 @@ export async function POST(req: Request) {
           { status: 403 }
         )
       }
-      if (institute.status === "suspended" || institute.status === "expired") {
-          return NextResponse.json(
-            { error: `Your coaching institute account is ${institute.status === "suspended" ? "deactivated" : institute.status}. You cannot create new exams.` },
-            { status: 403 }
-          )
+      const isExpired = Boolean(
+        institute.validUntil && new Date(institute.validUntil).getTime() < Date.now()
+      )
+      if (institute.status === "suspended" || institute.status === "expired" || isExpired) {
+        let errorMsg = `Your coaching institute account is ${institute.status === "suspended" ? "deactivated" : institute.status}. You cannot create new exams.`
+        if (isExpired) {
+          const expDate = formatDateDDMMYYYY(institute.validUntil)
+          errorMsg = `Your organization subscription expired on ${expDate}. You cannot create new exams. Please contact administrator to renew.`
+        }
+        return NextResponse.json(
+          { error: errorMsg },
+          { status: 403 }
+        )
       }
       const examType = String(body.examType || "CUSTOM").trim().toUpperCase()
       const allowedExamTypes = Array.isArray(institute.limits?.examTypes)

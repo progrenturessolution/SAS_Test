@@ -4,6 +4,7 @@ import connectDB from "@/lib/mongodb"
 import User from "@/models/User"
 import Institute from "@/models/Institute"
 import { createSession, COOKIE_NAME, COOKIE_MAX_AGE } from "@/lib/auth"
+import { formatDateDDMMYYYY } from "@/lib/utils"
 
 export async function POST(req: Request) {
   try {
@@ -59,9 +60,17 @@ export async function POST(req: Request) {
           { status: 403 }
         )
       }
-      if (instituteData.status === "suspended" || instituteData.status === "expired") {
+      const isExpired = Boolean(
+        instituteData.validUntil && new Date(instituteData.validUntil).getTime() < Date.now()
+      )
+      if (instituteData.status === "suspended" || instituteData.status === "expired" || isExpired) {
+        let errorMsg = `Your organization account is ${instituteData.status === "suspended" ? "deactivated" : instituteData.status}. Please contact platform support.`
+        if (isExpired) {
+          const expDate = formatDateDDMMYYYY(instituteData.validUntil)
+          errorMsg = `Your organization subscription expired on ${expDate}. Please contact administrator to renew your plan.`
+        }
         return NextResponse.json(
-          { error: `Your organization account is ${instituteData.status === "suspended" ? "deactivated" : instituteData.status}. Please contact platform support.` },
+          { error: errorMsg },
           { status: 403 }
         )
       }

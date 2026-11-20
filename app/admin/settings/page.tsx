@@ -12,8 +12,10 @@ import {
   Trash2,
   Info,
   Database,
+  Calendar,
 } from "lucide-react"
 import { toast } from "sonner"
+import { formatDateDDMMYYYY } from "@/lib/utils"
 
 const THEME_PRESETS = [
   { name: "Slate Navy", hex: "#2D3A4A", desc: "Professional & Classic" },
@@ -44,6 +46,9 @@ export default function SettingsPage() {
   const [contactPerson, setContactPerson] = useState("")
   const [logo, setLogo] = useState<string>("")
   const [themeColor, setThemeColor] = useState<string>("#2D3A4A")
+  const [validUntil, setValidUntil] = useState<string | null>(null)
+  const [status, setStatus] = useState<string>("active")
+  const [limits, setLimits] = useState<any>(null)
 
   // Super admin platform state
   const [platformName, setPlatformName] = useState("Progrentures Exam Platform")
@@ -67,6 +72,9 @@ export default function SettingsPage() {
           setCity(data.institute.city || "")
           setContactPerson(data.institute.contactPerson || "")
           setLogo(data.institute.logo || "")
+          if (data.institute.validUntil) setValidUntil(data.institute.validUntil)
+          if (data.institute.status) setStatus(data.institute.status)
+          if (data.institute.limits) setLimits(data.institute.limits)
           const color = data.institute.themeColor || "#2D3A4A"
           setThemeColor(color)
           document.documentElement.style.setProperty("--primary", color)
@@ -197,6 +205,72 @@ export default function SettingsPage() {
            COACHING INSTITUTE BRANDING & THEME VIEW (FULL WIDTH)
         ═══════════════════════════════════════════════════════════════════ */
         <div className="space-y-6 sm:space-y-8">
+          {/* Subscription & Validity Card */}
+          <div className="bg-white rounded-2xl border border-gray-200/90 p-5 sm:p-6 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
+                  style={{ backgroundColor: themeColor }}
+                >
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900">
+                    Subscription & License Details
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    View your organization license period and authorized test quotas.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                  status === "active"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-red-50 text-red-700 border-red-200"
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${status === "active" ? "bg-emerald-500" : "bg-red-500"}`} />
+                  {status === "active" ? "Active License" : "Deactivated"}
+                </span>
+
+                {validUntil ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold">
+                    <Calendar size={13} className="text-blue-600" />
+                    Subscription Valid Up To: <strong>{formatDateDDMMYYYY(validUntil)}</strong>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold">
+                    <Calendar size={13} className="text-slate-500" />
+                    Lifetime Validity (No Expiry)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {limits && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100 text-xs">
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Max Students</span>
+                  <span className="font-bold text-[#2D3A4A] text-sm mt-0.5 block">{limits.maxStudents ?? 100} Enrolled</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Max Exams</span>
+                  <span className="font-bold text-[#2D3A4A] text-sm mt-0.5 block">{limits.maxExams ?? 20} Exams</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Paper Import</span>
+                  <span className="font-bold text-[#2D3A4A] text-sm mt-0.5 block">{limits.features?.pdfImport ? "Enabled" : "Disabled"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">AI Generation</span>
+                  <span className="font-bold text-[#2D3A4A] text-sm mt-0.5 block">{limits.features?.neetJeeGenerator !== false ? "Enabled" : "Disabled"}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* 1. Brand Logo Upload Card */}
           <div className="bg-white rounded-2xl border border-gray-200/90 p-6 sm:p-8 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-100">

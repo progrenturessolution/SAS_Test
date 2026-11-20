@@ -22,6 +22,9 @@ export async function GET(req: Request) {
       return NextResponse.json({
         instituteName: session.instituteName || session.name || "Coaching Institute",
         instituteCode: session.instituteCode || "",
+        validUntil: null,
+        isExpired: false,
+        status: "active",
         hasCompetitiveAccess: true,
         hasExamAccess: true,
         hasOtherExamsAccess: true,
@@ -32,10 +35,16 @@ export async function GET(req: Request) {
     }
 
     await connectDB()
-    const institute = await Institute.findById(session.instituteId).select("name code logo themeColor limits").lean()
+    const institute = await Institute.findById(session.instituteId)
+      .select("name code logo themeColor limits validUntil status")
+      .lean()
     if (!institute) {
       return NextResponse.json({ error: "Institute not found" }, { status: 404 })
     }
+
+    const isExpired = Boolean(
+      institute.validUntil && new Date(institute.validUntil).getTime() < Date.now()
+    )
 
     const rawExamTypes = Array.isArray(institute.limits?.examTypes)
       ? institute.limits.examTypes.map((type) => String(type).trim().toUpperCase())
@@ -54,10 +63,13 @@ export async function GET(req: Request) {
       instituteCode: institute.code || session.instituteCode || "",
       logo: institute.logo || null,
       themeColor: institute.themeColor || "#2D3A4A",
-      hasCompetitiveAccess,
-      hasExamAccess,
-      hasOtherExamsAccess,
-      examTypes: rawExamTypes,
+      validUntil: institute.validUntil ? new Date(institute.validUntil).toISOString() : null,
+      isExpired,
+      status: institute.status || "active",
+      hasCompetitiveAccess: isExpired ? false : hasCompetitiveAccess,
+      hasExamAccess: isExpired ? false : hasExamAccess,
+      hasOtherExamsAccess: isExpired ? false : hasOtherExamsAccess,
+      examTypes: isExpired ? [] : rawExamTypes,
       features: institute.limits?.features || {},
       customQuestionTypes: Array.isArray(institute.limits?.customQuestionTypes)
         ? institute.limits.customQuestionTypes

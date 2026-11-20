@@ -28,6 +28,7 @@ import {
   Loader2,
   Eye,
 } from "lucide-react"
+import { formatDateDDMMYYYY } from "@/lib/utils"
 
 interface InstituteLimits {
   maxStudents: number
@@ -113,16 +114,6 @@ async function readApiResponse<T>(response: Response): Promise<T> {
     throw new Error(`Request failed with status ${response.status}`)
   }
   return response.json() as Promise<T>
-}
-
-function formatDateDDMMYYYY(dateInput?: string | Date | null): string {
-  if (!dateInput) return "No expiry set"
-  const date = new Date(dateInput)
-  if (isNaN(date.getTime())) return "Invalid Date"
-  const day = String(date.getDate()).padStart(2, "0")
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const year = date.getFullYear()
-  return `${day}/${month}/${year}`
 }
 
 export default function InstitutesManagementPage() {

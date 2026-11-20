@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Eye, Pencil, Trash2, Link2, BarChart2, UserCheck, FileText, PlayCircle, HelpCircle, Users, Building2, ShieldAlert, Lock } from "lucide-react"
+import { Eye, Pencil, Trash2, Link2, BarChart2, UserCheck, FileText, PlayCircle, HelpCircle, Users, Building2, ShieldAlert, Lock, Calendar, AlertCircle } from "lucide-react"
 import { ExamActionMenu } from "@/components/ExamActionMenu"
 import { toast } from "sonner"
 import { getExamEditUrl } from "@/lib/examEditHelper"
+import { formatDateDDMMYYYY } from "@/lib/utils"
 
 interface Stats {
   isSuperAdmin?: boolean
@@ -15,6 +16,7 @@ interface Stats {
     name: string
     code: string
     status: string
+    validUntil?: string | null
     maxStudents: number
     maxExams: number
     features?: any
@@ -182,6 +184,20 @@ export default function AdminDashboardClient() {
         </div>
       </div>
 
+      {/* Subscription Expired Alert */}
+      {stats?.institute?.validUntil && new Date(stats.institute.validUntil).getTime() < Date.now() && (
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm flex items-start gap-3 shadow-xs">
+          <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold text-red-900">Subscription Expired</p>
+            <p className="text-red-700 mt-0.5">
+              Your organization subscription expired on{" "}
+              <strong>{formatDateDDMMYYYY(stats.institute.validUntil)}</strong>. Exam creation and testing modules are paused. Please contact platform support or administrator to renew.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Organization Plan & Limits Banner */}
       {stats?.institute && (
         <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -193,9 +209,24 @@ export default function AdminDashboardClient() {
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
                 {stats.institute.code}
               </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Active Organization Account
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                stats.institute.status === "active"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-red-50 text-red-700 border-red-200"
+              }`}>
+                {stats.institute.status === "active" ? "Active Organization Account" : "Deactivated"}
               </span>
+              {stats.institute.validUntil ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                  <Calendar size={12} className="text-blue-600" />
+                  <span>Valid up to: <strong>{formatDateDDMMYYYY(stats.institute.validUntil)}</strong></span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                  <Calendar size={12} className="text-slate-500" />
+                  <span>Lifetime Validity</span>
+                </span>
+              )}
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Your organization portal is authorized to conduct tests and enroll students within your allocated quotas.
