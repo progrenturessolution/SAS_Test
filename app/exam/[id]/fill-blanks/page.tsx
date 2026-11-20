@@ -6,6 +6,7 @@ import { CheckCircle, Info } from "lucide-react"
 import { ExamHeader, ProctoringCamera, statusColorMap, QuestionStatus } from "@/components/exam/ExamShared"
 import { ProctoringWarning } from "@/components/exam/ProctoringWarning"
 import { useProctoring } from "@/hooks/use-proctoring"
+import { ExamSubmitModal } from "@/components/exam/ExamSubmitModal"
 
 interface Blank {
   id: number
@@ -46,6 +47,7 @@ export default function FillBlanksPage({ params }: { params: Promise<{ id: strin
   const [activeWarning, setActiveWarning] = useState<string | null>(null)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
 
   useEffect(() => {
     if (!attemptId) { router.push(`/exam/${id}`); return }
@@ -143,10 +145,14 @@ export default function FillBlanksPage({ params }: { params: Promise<{ id: strin
 
   const sectionTabs = exam.sections.map((s) => ({ label: `${s.name} (${s.questionRange})`, type: s.type }))
 
-  const handleSubmitSection = async () => {
-    if (!confirm("Submit Fill Blanks section?")) return
+  const handleSubmitSection = () => {
+    setShowSubmitModal(true)
+  }
+
+  const confirmSubmitSection = async () => {
     if (!attemptId) return
     setSubmitting(true)
+    setShowSubmitModal(false)
     const answers = buildAnswerPayload(blanksAnswers, section as { questions: Question[] })
     await fetch(`/api/attempts/${attemptId}`, {
       method: "PATCH",
@@ -367,6 +373,18 @@ export default function FillBlanksPage({ params }: { params: Promise<{ id: strin
           </div>
         </aside>
       </div>
+
+      <ExamSubmitModal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        onConfirm={confirmSubmitSection}
+        submitting={submitting}
+        totalAnswered={totalAnswered}
+        totalQuestions={questions.length}
+        warnings={procState.warnings}
+        maxWarnings={exam.proctoring?.maxWarnings ?? 3}
+        confirmText={`Submit ${section.name}`}
+      />
     </div>
   )
 }

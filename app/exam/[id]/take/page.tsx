@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { getExamStartDateTime, getExamEndDateTime, formatCountdown, formatScheduleDateTime } from "@/lib/examSchedule"
 import { MathRenderer } from "@/components/exam/MathRenderer"
 import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
+import { ExamSubmitModal } from "@/components/exam/ExamSubmitModal"
 
 // ─── Micro-toast types ────────────────────────────────────────────────────────
 interface Toast { id: number; message: string; type: "warn" | "info" | "danger" }
@@ -2296,102 +2297,17 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       </div>
 
       {/* Submission Confirmation Modal */}
-      {showSubmitConfirm && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-[#131B2A]/60 backdrop-blur-xs transition-opacity duration-200"
-            onClick={() => setShowSubmitConfirm(false)}
-          />
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl relative overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100 p-6 sm:p-8">
-            {/* Header */}
-            <div className="mb-6">
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                Ready to Submit?
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1 leading-relaxed">
-                Please review your attempt summary below before submitting the exam.
-              </p>
-            </div>
-
-            {/* 3 Metric Cards */}
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mb-6">
-              {/* Answered */}
-              <div className="bg-[#F8F9FD] border border-slate-100/90 rounded-2xl p-3 sm:p-4 text-left">
-                <span className="text-[11px] sm:text-xs font-semibold text-slate-600 block">
-                  Answered
-                </span>
-                <span className="text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 block">
-                  {totalAnswered}
-                </span>
-              </div>
-
-              {/* Remaining */}
-              <div className="bg-[#F8F9FD] border border-slate-100/90 rounded-2xl p-3 sm:p-4 text-left">
-                <span className="text-[11px] sm:text-xs font-semibold text-slate-600 block">
-                  Remaining
-                </span>
-                <span className="text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 block">
-                  {totalQuestions - totalAnswered}
-                </span>
-              </div>
-
-              {/* Total Questions */}
-              <div className="bg-[#F8F9FD] border border-slate-100/90 rounded-2xl p-3 sm:p-4 text-left">
-                <span className="text-[11px] sm:text-xs font-semibold text-slate-600 block">
-                  Total Questions
-                </span>
-                <span className="text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 block">
-                  {totalQuestions}
-                </span>
-              </div>
-            </div>
-
-            {/* Divider + Inline Metrics Row */}
-            <div className="border-t border-slate-100 pt-4 sm:pt-5 pb-6">
-              <div className="flex items-center justify-between text-xs sm:text-sm text-slate-700">
-                {/* Marked for Review */}
-                <div className="flex-1 flex items-center justify-between pr-3 sm:pr-6">
-                  <span className="font-semibold text-slate-700">Marked for Review</span>
-                  <span className="font-bold text-slate-900 text-sm sm:text-base">
-                    {answers.filter(a => a.isMarkedForReview).length}
-                  </span>
-                </div>
-
-                {/* Vertical Divider */}
-                <div className="h-5 sm:h-6 w-px bg-slate-200 shrink-0" />
-
-                {/* Proctoring Warnings */}
-                <div className="flex-1 flex items-center justify-between pl-3 sm:pr-2 pl-3 sm:pl-6">
-                  <span className="font-semibold text-slate-700 truncate mr-2">Proctoring Warnings</span>
-                  <span className="font-bold text-slate-900 text-sm sm:text-base shrink-0">
-                    {procState.warnings} / {exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons (Right-aligned) */}
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowSubmitConfirm(false)}
-                className="px-5 sm:px-6 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-slate-800 text-xs sm:text-sm font-bold hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmSubmit}
-                disabled={submitting}
-                className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 rounded-xl bg-[#131B2A] hover:bg-[#1f293d] active:bg-[#0d131e] text-white text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
-              >
-                <span>{submitting ? "Submitting..." : "Confirm & Submit"}</span>
-                <span className="text-sm sm:text-base leading-none">→</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ExamSubmitModal
+        isOpen={showSubmitConfirm}
+        onClose={() => setShowSubmitConfirm(false)}
+        onConfirm={confirmSubmit}
+        submitting={submitting}
+        totalAnswered={totalAnswered}
+        totalQuestions={totalQuestions}
+        markedForReview={answers.filter(a => a.isMarkedForReview).length}
+        warnings={procState.warnings}
+        maxWarnings={exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
+      />
 
       {/* Virtual Scientific Calculator (NPTEL / GATE style) */}
       <ScientificCalculator

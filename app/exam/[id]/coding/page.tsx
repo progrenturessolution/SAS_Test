@@ -7,6 +7,7 @@ import { ExamHeader, ProctoringCamera } from "@/components/exam/ExamShared"
 import { ProctoringWarning } from "@/components/exam/ProctoringWarning"
 import { useProctoring } from "@/hooks/use-proctoring"
 import { CodingPageSkeleton } from "@/components/SkeletonLoaders"
+import { ExamSubmitModal } from "@/components/exam/ExamSubmitModal"
 
 interface TestCase { input: string; expectedOutput: string; hidden?: boolean }
 interface CodingQuestion {
@@ -55,6 +56,7 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
   const [activeTab, setActiveTab] = useState<"problem" | "code" | "tests">("code")
   const [activeWarning, setActiveWarning] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
 
   useEffect(() => {
     if (!attemptId) { router.push(`/exam/${id}`); return }
@@ -125,9 +127,14 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
     setRunning(false)
   }
 
-  const handleSubmitCode = async () => {
+  const handleSubmitCode = () => {
+    setShowSubmitModal(true)
+  }
+
+  const confirmSubmitCode = async () => {
     if (!attemptId || !exam) return
     setSubmitting(true)
+    setShowSubmitModal(false)
     const section = exam.sections.find((s) => s.type === "coding")
     const answers = section?.questions.map((q) => ({
       questionId: q._id,
@@ -395,6 +402,18 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
           </svg>
         </button>
       </div>
+
+      <ExamSubmitModal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        onConfirm={confirmSubmitCode}
+        submitting={submitting}
+        totalAnswered={questions.filter((q) => (codes[q._id] ?? "").trim().length > 0).length}
+        totalQuestions={questions.length}
+        warnings={procState.warnings}
+        maxWarnings={exam.proctoring?.maxWarnings ?? 3}
+        confirmText="Confirm & Submit"
+      />
     </div>
   )
 }

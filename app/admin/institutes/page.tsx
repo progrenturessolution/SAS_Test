@@ -27,6 +27,7 @@ import {
   X,
   Loader2,
   Eye,
+  ArrowRight,
 } from "lucide-react"
 import { formatDateDDMMYYYY } from "@/lib/utils"
 
@@ -410,44 +411,52 @@ export default function InstitutesManagementPage() {
 
       {/* 4 Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-xs">
-          <div className="flex items-center justify-between text-gray-500 text-xs font-medium mb-1">
+        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-[#324158]/40 hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-medium mb-1.5">
             <span>Registered Organizations</span>
-            <Building2 className="w-4 h-4 text-[#2D3A4A]" />
+            <div className="w-8 h-8 rounded-xl bg-[#324158]/8 text-[#324158] flex items-center justify-center">
+              <Building2 className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-2xl font-bold text-[#2D3A4A]">{totalInstitutesCount}</div>
-          <span className="text-[11px] text-emerald-600 font-medium">
+          <div className="text-2xl font-bold text-[#324158]">{totalInstitutesCount}</div>
+          <span className="text-[11px] text-emerald-600 font-semibold mt-1 inline-block">
             {activeInstitutesCount} Active Centers
           </span>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-xs">
-          <div className="flex items-center justify-between text-gray-500 text-xs font-medium mb-1">
+        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-[#324158]/40 hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-medium mb-1.5">
             <span>Active Organizations</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-2xl font-bold text-[#2D3A4A]">{activeInstitutesCount}</div>
-          <span className="text-[11px] text-gray-400">
+          <div className="text-2xl font-bold text-[#324158]">{activeInstitutesCount}</div>
+          <span className="text-[11px] text-slate-500 font-medium mt-1 inline-block">
             {totalInstitutesCount - activeInstitutesCount} Deactivated
           </span>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-xs">
-          <div className="flex items-center justify-between text-gray-500 text-xs font-medium mb-1">
+        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-[#324158]/40 hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-medium mb-1.5">
             <span>Total Students Enrolled</span>
-            <Users className="w-4 h-4 text-[#2D3A4A]" />
+            <div className="w-8 h-8 rounded-xl bg-[#324158]/8 text-[#324158] flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-2xl font-bold text-[#2D3A4A]">{totalPlatformStudents}</div>
-          <span className="text-[11px] text-gray-400">Across all organization batches</span>
+          <div className="text-2xl font-bold text-[#324158]">{totalPlatformStudents}</div>
+          <span className="text-[11px] text-slate-400 font-medium mt-1 inline-block">Across all organization batches</span>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-xs">
-          <div className="flex items-center justify-between text-gray-500 text-xs font-medium mb-1">
+        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-[#324158]/40 hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-medium mb-1.5">
             <span>Total Exams Conducted</span>
-            <FileText className="w-4 h-4 text-[#2D3A4A]" />
+            <div className="w-8 h-8 rounded-xl bg-[#324158]/8 text-[#324158] flex items-center justify-center">
+              <FileText className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-2xl font-bold text-[#2D3A4A]">{totalPlatformExams}</div>
-          <span className="text-[11px] text-gray-400">NEET, JEE & Custom Tests</span>
+          <div className="text-2xl font-bold text-[#324158]">{totalPlatformExams}</div>
+          <span className="text-[11px] text-slate-400 font-medium mt-1 inline-block">NEET, JEE & Custom Tests</span>
         </div>
       </div>
 
@@ -512,94 +521,214 @@ export default function InstitutesManagementPage() {
         </div>
       ) : (
         <>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filteredInstitutes.map((inst) => {
             const studentPct = Math.min(Math.round(((inst.usage?.studentsEnrolled || 0) / (inst.limits?.maxStudents || 100)) * 100), 100)
             const examPct = Math.min(Math.round(((inst.usage?.examsCreated || 0) / (inst.limits?.maxExams || 20)) * 100), 100)
+            const allowedTypes = normalizeExamTypes(inst.limits?.examTypes || [])
 
             return (
               <article
                 key={inst._id}
                 onClick={() => setSelectedInstitute(inst)}
-                className="group relative cursor-pointer rounded-2xl border border-gray-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#2D3A4A]/30 hover:shadow-md"
+                className="group relative cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-[#324158]/50 hover:shadow-lg flex flex-col justify-between"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-gray-100 text-lg font-bold text-[#2D3A4A]">
-                      {inst.name.charAt(0).toUpperCase()}
+                <div>
+                  {/* Top Row: Avatar, Name, and Action Menu */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#324158] text-white text-lg font-bold shadow-xs">
+                        {inst.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-base font-bold text-[#324158] group-hover:text-[#1e2a38] transition-colors">
+                          {inst.name}
+                        </h3>
+                        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500 truncate">
+                          <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
+                          <span>{inst.city || "Location not added"}</span>
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="truncate text-sm font-bold text-[#2D3A4A]">{inst.name}</h3>
-                      <p className="mt-1 flex items-center gap-1 text-[11px] text-gray-400">
-                        <MapPin className="h-3 w-3" /> {inst.city || "Location not added"}
-                      </p>
+
+                    <div className="relative shrink-0" onClick={(event) => event.stopPropagation()}>
+                      <button
+                        type="button"
+                        aria-label={`Actions for ${inst.name}`}
+                        onClick={() => setOpenActionMenu(openActionMenu === inst._id ? null : inst._id)}
+                        className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#324158] cursor-pointer"
+                      >
+                        <MoreVertical className="h-5 w-5" />
+                      </button>
+                      {openActionMenu === inst._id && (
+                        <div className="absolute right-0 top-9 z-20 w-52 rounded-xl border border-slate-200 bg-white p-1.5 text-left shadow-xl animate-in fade-in zoom-in-95 duration-100">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionMenu(null)
+                              setSelectedInstitute(inst)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          >
+                            <Eye className="h-3.5 w-3.5 text-blue-600" /> View details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionMenu(null)
+                              openEditLimits(inst)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          >
+                            <Sliders className="h-3.5 w-3.5 text-[#324158]" /> Edit quotas & features
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionMenu(null)
+                              setShowResetPasswordModal(inst)
+                              setNewPassword("")
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          >
+                            <KeyRound className="h-3.5 w-3.5 text-slate-600" /> Reset password
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionMenu(null)
+                              handleToggleStatus(inst)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          >
+                            {inst.status === "active" ? (
+                              <XCircle className="h-3.5 w-3.5 text-amber-600" />
+                            ) : (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                            )}
+                            {inst.status === "active" ? "Deactivate institute" : "Activate institute"}
+                          </button>
+                          <div className="my-1 border-t border-slate-100" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionMenu(null)
+                              handleDeleteInstitute(inst)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-rose-500" /> Delete institute
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="relative shrink-0" onClick={(event) => event.stopPropagation()}>
-                    <button
-                      type="button"
-                      aria-label={`Actions for ${inst.name}`}
-                      onClick={() => setOpenActionMenu(openActionMenu === inst._id ? null : inst._id)}
-                      className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#2D3A4A]"
+
+                  {/* Second Row: Code, Status & Validity Badges */}
+                  <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+                    <span className="rounded-md border border-[#324158]/15 bg-[#324158]/5 px-2 py-0.5 font-mono text-[10px] font-bold text-[#324158]">
+                      {inst.code}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                        inst.status === "active"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-rose-200 bg-rose-50 text-rose-700"
+                      }`}
                     >
-                      <MoreVertical className="h-5 w-5" />
-                    </button>
-                    {openActionMenu === inst._id && (
-                      <div className="absolute right-0 top-9 z-20 w-48 rounded-xl border border-gray-200 bg-white p-1.5 text-left shadow-lg">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOpenActionMenu(null)
-                            setSelectedInstitute(inst)
-                          }}
-                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-                        >
-                          <Eye className="h-3.5 w-3.5 text-blue-600" /> View details
-                        </button>
-                        <button type="button" onClick={() => { setOpenActionMenu(null); openEditLimits(inst) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                          <Sliders className="h-3.5 w-3.5" /> Edit quotas & features
-                        </button>
-                        <button type="button" onClick={() => { setOpenActionMenu(null); setShowResetPasswordModal(inst); setNewPassword("") }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                          <KeyRound className="h-3.5 w-3.5" /> Reset password
-                        </button>
-                        <button type="button" onClick={() => { setOpenActionMenu(null); handleToggleStatus(inst) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                          {inst.status === "active" ? <XCircle className="h-3.5 w-3.5 text-amber-600" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
-                          {inst.status === "active" ? "Deactivate institute" : "Activate institute"}
-                        </button>
-                        <button type="button" onClick={() => { setOpenActionMenu(null); handleDeleteInstitute(inst) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50">
-                          <Trash2 className="h-3.5 w-3.5" /> Delete institute
-                        </button>
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          inst.status === "active" ? "bg-emerald-500" : "bg-rose-500"
+                        }`}
+                      />
+                      {inst.status === "active" ? "Active" : "Deactivated"}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                      <Calendar size={11} className="text-slate-400" />
+                      <span>{inst.validUntil ? `Valid: ${formatDateDDMMYYYY(inst.validUntil)}` : "Lifetime"}</span>
+                    </span>
+                  </div>
+
+                  {/* Usage Quota Meters Box */}
+                  <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Students</p>
+                          <span className="text-[10px] font-semibold text-slate-500">{studentPct}%</span>
+                        </div>
+                        <p className="mt-0.5 text-sm font-bold text-[#324158]">
+                          {inst.usage?.studentsEnrolled || 0}{" "}
+                          <span className="text-[11px] font-normal text-slate-400">
+                            / {inst.limits?.maxStudents ?? 100}
+                          </span>
+                        </p>
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              studentPct >= 90 ? "bg-rose-500" : studentPct >= 70 ? "bg-amber-500" : "bg-[#324158]"
+                            }`}
+                            style={{ width: `${studentPct}%` }}
+                          />
+                        </div>
                       </div>
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Exams</p>
+                          <span className="text-[10px] font-semibold text-slate-500">{examPct}%</span>
+                        </div>
+                        <p className="mt-0.5 text-sm font-bold text-[#324158]">
+                          {inst.usage?.examsCreated || 0}{" "}
+                          <span className="text-[11px] font-normal text-slate-400">
+                            / {inst.limits?.maxExams ?? 20}
+                          </span>
+                        </p>
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              examPct >= 90 ? "bg-rose-500" : examPct >= 70 ? "bg-amber-500" : "bg-emerald-600"
+                            }`}
+                            style={{ width: `${examPct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Permissions preview */}
+                    {allowedTypes.length > 0 && (
+                      <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex flex-wrap gap-1">
+                        {allowedTypes.map((t) => (
+                          <span
+                            key={t}
+                            className="px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-wide uppercase bg-white border border-slate-200 text-[#324158]"
+                          >
+                            {t === "COMPETITIVE" ? "Competitive" : t === "OTHER" ? "Other Exams" : "Exam"}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contact Info */}
+                  <div className="mt-3.5 space-y-1.5 text-[11px] text-slate-600">
+                    <p className="flex items-center gap-2 truncate">
+                      <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span className="truncate">{inst.email}</span>
+                    </p>
+                    {inst.phone && (
+                      <p className="flex items-center gap-2 truncate">
+                        <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                        <span>{inst.phone}</span>
+                      </p>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between gap-2">
-                  <span className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 font-mono text-[10px] font-semibold text-gray-600">{inst.code}</span>
-                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold ${inst.status === "active" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${inst.status === "active" ? "bg-emerald-500" : "bg-red-500"}`} />
-                    {inst.status === "active" ? "Active" : "Deactivated"}
-                  </span>
+                {/* Footer View Action */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#324158] group-hover:text-[#1e2a38]">
+                  <span>View full details</span>
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                 </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-3 border-y border-gray-100 py-3">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Students</p>
-                    <p className="mt-1 text-sm font-bold text-[#2D3A4A]">{inst.usage?.studentsEnrolled || 0} <span className="text-[11px] font-medium text-gray-400">/ {inst.limits?.maxStudents ?? 100}</span></p>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100"><div className={`h-full rounded-full ${studentPct >= 90 ? "bg-red-500" : studentPct >= 70 ? "bg-amber-500" : "bg-[#2D3A4A]"}`} style={{ width: `${studentPct}%` }} /></div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Exams</p>
-                    <p className="mt-1 text-sm font-bold text-[#2D3A4A]">{inst.usage?.examsCreated || 0} <span className="text-[11px] font-medium text-gray-400">/ {inst.limits?.maxExams ?? 20}</span></p>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100"><div className={`h-full rounded-full ${examPct >= 90 ? "bg-red-500" : examPct >= 70 ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${examPct}%` }} /></div>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-[11px] text-gray-500">
-                  <p className="flex items-center gap-2 truncate"><Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" /> {inst.email}</p>
-                  {inst.phone && <p className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-gray-400" /> {inst.phone}</p>}
-                </div>
-                <p className="mt-4 text-center text-[11px] font-semibold text-[#2D3A4A] opacity-70 transition-opacity group-hover:opacity-100">Click to view full institute details</p>
               </article>
             )
           })}
@@ -828,72 +957,72 @@ export default function InstitutesManagementPage() {
       {selectedInstitute && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-xl">
-            <div className="flex items-start justify-between border-b border-gray-100 p-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-gray-200 bg-gray-100 text-xl font-bold text-[#2D3A4A]">
+            <div className="flex items-start justify-between border-b border-slate-100 p-5 bg-white">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#324158] text-xl font-bold text-white shadow-xs">
                   {selectedInstitute.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-[#2D3A4A]">{selectedInstitute.name}</h2>
-                  <p className="mt-1 text-xs text-gray-500">Institute code: <span className="font-mono font-semibold text-gray-700">{selectedInstitute.code}</span></p>
+                  <h2 className="text-lg font-bold text-[#324158]">{selectedInstitute.name}</h2>
+                  <p className="mt-0.5 text-xs text-slate-500">Institute code: <span className="font-mono font-semibold text-[#324158] bg-[#324158]/5 px-2 py-0.5 rounded border border-[#324158]/15">{selectedInstitute.code}</span></p>
                 </div>
               </div>
-              <button type="button" onClick={() => setSelectedInstitute(null)} aria-label="Close institute details" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+              <button type="button" onClick={() => setSelectedInstitute(null)} aria-label="Close institute details" className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="grid gap-4 p-5 sm:grid-cols-2">
-              <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
-                <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Contact details</p>
-                <div className="space-y-2.5 text-xs text-gray-700">
-                  <p className="flex items-start gap-2"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" /> {selectedInstitute.email}</p>
-                  {selectedInstitute.phone && <p className="flex items-start gap-2"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" /> {selectedInstitute.phone}</p>}
-                  {selectedInstitute.contactPerson && <p className="flex items-start gap-2"><Users className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" /> {selectedInstitute.contactPerson}</p>}
-                  {selectedInstitute.city && <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" /> {selectedInstitute.city}</p>}
-                  {selectedInstitute.address && <p className="flex items-start gap-2"><Building2 className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" /> {selectedInstitute.address}</p>}
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-xs">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Contact details</p>
+                <div className="space-y-2.5 text-xs text-slate-700">
+                  <p className="flex items-start gap-2.5"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-[#324158]" /> <span className="font-medium text-slate-800">{selectedInstitute.email}</span></p>
+                  {selectedInstitute.phone && <p className="flex items-start gap-2.5"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-[#324158]" /> <span className="font-medium text-slate-800">{selectedInstitute.phone}</span></p>}
+                  {selectedInstitute.contactPerson && <p className="flex items-start gap-2.5"><Users className="mt-0.5 h-4 w-4 shrink-0 text-[#324158]" /> <span className="font-medium text-slate-800">{selectedInstitute.contactPerson}</span></p>}
+                  {selectedInstitute.city && <p className="flex items-start gap-2.5"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#324158]" /> <span className="font-medium text-slate-800">{selectedInstitute.city}</span></p>}
+                  {selectedInstitute.address && <p className="flex items-start gap-2.5"><Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#324158]" /> <span className="font-medium text-slate-800">{selectedInstitute.address}</span></p>}
                 </div>
               </div>
-              <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
-                <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Account status</p>
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-xs">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Account status</p>
                 <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${selectedInstitute.status === "active" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${selectedInstitute.status === "active" ? "bg-emerald-500" : "bg-red-500"}`} />
                   {selectedInstitute.status === "active" ? "Active" : "Deactivated"}
                 </span>
-                <p className="mt-4 text-xs text-gray-500">Valid until</p>
-                <p className="mt-1 text-sm font-semibold text-[#2D3A4A]">{formatDateDDMMYYYY(selectedInstitute.validUntil)}</p>
-                <p className="mt-4 text-xs text-gray-500">Registered on</p>
-                <p className="mt-1 text-sm font-semibold text-[#2D3A4A]">{formatDateDDMMYYYY(selectedInstitute.createdAt)}</p>
+                <p className="mt-4 text-xs font-medium text-slate-500">Subscription Valid Until</p>
+                <p className="mt-1 text-sm font-bold text-[#324158]">{formatDateDDMMYYYY(selectedInstitute.validUntil)}</p>
+                <p className="mt-4 text-xs font-medium text-slate-500">Registered on</p>
+                <p className="mt-1 text-sm font-bold text-[#324158]">{formatDateDDMMYYYY(selectedInstitute.createdAt)}</p>
               </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-4 sm:col-span-2">
-                <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Usage and quotas</p>
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 sm:col-span-2 shadow-xs">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Usage and quotas</p>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                  <div><p className="text-xs text-gray-500">Students</p><p className="mt-1 text-lg font-bold text-[#2D3A4A]">{selectedInstitute.usage?.studentsEnrolled || 0} <span className="text-xs font-medium text-gray-400">/ {selectedInstitute.limits?.maxStudents ?? 100}</span></p></div>
-                  <div><p className="text-xs text-gray-500">Exams</p><p className="mt-1 text-lg font-bold text-[#2D3A4A]">{selectedInstitute.usage?.examsCreated || 0} <span className="text-xs font-medium text-gray-400">/ {selectedInstitute.limits?.maxExams ?? 20}</span></p></div>
-                  <div><p className="text-xs text-gray-500">Student limit</p><p className="mt-1 text-lg font-bold text-[#2D3A4A]">{selectedInstitute.limits?.maxStudents ?? 100}</p></div>
-                  <div><p className="text-xs text-gray-500">Exam limit</p><p className="mt-1 text-lg font-bold text-[#2D3A4A]">{selectedInstitute.limits?.maxExams ?? 20}</p></div>
+                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100"><p className="text-xs text-slate-500 font-medium">Students</p><p className="mt-1 text-lg font-bold text-[#324158]">{selectedInstitute.usage?.studentsEnrolled || 0} <span className="text-xs font-normal text-slate-400">/ {selectedInstitute.limits?.maxStudents ?? 100}</span></p></div>
+                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100"><p className="text-xs text-slate-500 font-medium">Exams</p><p className="mt-1 text-lg font-bold text-[#324158]">{selectedInstitute.usage?.examsCreated || 0} <span className="text-xs font-normal text-slate-400">/ {selectedInstitute.limits?.maxExams ?? 20}</span></p></div>
+                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100"><p className="text-xs text-slate-500 font-medium">Student limit</p><p className="mt-1 text-lg font-bold text-[#324158]">{selectedInstitute.limits?.maxStudents ?? 100}</p></div>
+                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100"><p className="text-xs text-slate-500 font-medium">Exam limit</p><p className="mt-1 text-lg font-bold text-[#324158]">{selectedInstitute.limits?.maxExams ?? 20}</p></div>
                 </div>
               </div>
-              <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 sm:col-span-2">
-                <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Enabled features</p>
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 sm:col-span-2 shadow-xs">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Enabled features</p>
                 <div className="flex flex-wrap gap-2">
                   {[
                     ["PDF Import", selectedInstitute.limits?.features?.pdfImport],
                   ].map(([label, enabled]) => (
-                    <span key={String(label)} className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${enabled ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-gray-200 bg-gray-100 text-gray-400"}`}>
+                    <span key={String(label)} className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${enabled ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-100 text-slate-400"}`}>
                       {enabled ? "Enabled" : "Disabled"} · {String(label)}
                     </span>
                   ))}
                 </div>
-                <p className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Allowed Exam Creation</p>
+                <p className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Allowed Exam Creation</p>
                 <div className="flex flex-wrap gap-2">
                   {normalizeExamTypes(selectedInstitute.limits?.examTypes || []).map((type) => (
-                    <span key={type} className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+                    <span key={type} className="rounded-full border border-[#324158]/20 bg-[#324158]/5 px-2.5 py-1 text-[11px] font-bold text-[#324158]">
                       {type === "COMPETITIVE" ? "Competitive Test" : type === "OTHER" ? "Other Exams" : "Exam"}
                     </span>
                   ))}
                   {normalizeExamTypes(selectedInstitute.limits?.examTypes || []).length === 0 && (
-                    <span className="text-xs text-gray-400">No exam creation access granted</span>
+                    <span className="text-xs text-slate-400">No exam creation access granted</span>
                   )}
                 </div>
               </div>

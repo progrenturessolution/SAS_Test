@@ -9,6 +9,7 @@ import {
 import { ExamHeader, ProctoringCamera, statusColorMap, QuestionStatus } from "@/components/exam/ExamShared"
 import { ProctoringWarning } from "@/components/exam/ProctoringWarning"
 import { useProctoring } from "@/hooks/use-proctoring"
+import { ExamSubmitModal } from "@/components/exam/ExamSubmitModal"
 
 interface Question {
   _id: string
@@ -39,6 +40,7 @@ export default function DescriptivePage({ params }: { params: Promise<{ id: stri
   const [activeWarning, setActiveWarning] = useState<string | null>(null)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
 
   useEffect(() => {
     if (!attemptId) { router.push(`/exam/${id}`); return }
@@ -133,10 +135,14 @@ export default function DescriptivePage({ params }: { params: Promise<{ id: stri
     return { label: `${s.name} (${s.questionRange})`, type: s.type, path: paths[s.type] ?? "take" }
   })
 
-  const handleSubmitSection = async () => {
-    if (!confirm("Submit Descriptive section?")) return
+  const handleSubmitSection = () => {
+    setShowSubmitModal(true)
+  }
+
+  const confirmSubmitSection = async () => {
     if (!attemptId) return
     setSubmitting(true)
+    setShowSubmitModal(false)
     const answers = buildPayload(textAnswers, section as { questions: Question[] })
     await fetch(`/api/attempts/${attemptId}`, {
       method: "PATCH",
@@ -344,6 +350,18 @@ export default function DescriptivePage({ params }: { params: Promise<{ id: stri
           </div>
         </aside>
       </div>
+
+      <ExamSubmitModal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        onConfirm={confirmSubmitSection}
+        submitting={submitting}
+        totalAnswered={totalAnswered}
+        totalQuestions={questions.length}
+        warnings={procState.warnings}
+        maxWarnings={exam.proctoring?.maxWarnings ?? 3}
+        confirmText={`Submit ${section.name}`}
+      />
     </div>
   )
 }
