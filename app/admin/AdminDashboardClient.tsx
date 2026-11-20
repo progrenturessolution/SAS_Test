@@ -48,12 +48,18 @@ export default function AdminDashboardClient() {
   const [search, setSearch] = useState("")
   const [copied, setCopied] = useState<string | null>(null)
   const [hasExamAccess, setHasExamAccess] = useState(true)
+  const [isExamQuotaReached, setIsExamQuotaReached] = useState(false)
+  const [maxExams, setMaxExams] = useState(20)
+  const [examCount, setExamCount] = useState(0)
 
   useEffect(() => {
     fetch("/api/admin/institute-access", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => {
         setHasExamAccess(d.hasExamAccess !== false)
+        setIsExamQuotaReached(Boolean(d.isExamQuotaReached))
+        if (d.maxExams !== undefined) setMaxExams(Number(d.maxExams))
+        if (d.examCount !== undefined) setExamCount(Number(d.examCount))
       })
       .catch(() => {})
 
@@ -134,6 +140,11 @@ export default function AdminDashboardClient() {
     return "bg-gray-100 text-gray-600"
   }
 
+  const effectiveQuotaReached = isExamQuotaReached || Boolean(stats?.institute?.maxExams && (stats?.totalExams ?? 0) >= stats.institute.maxExams)
+  const effectiveMaxExams = stats?.institute?.maxExams ?? maxExams
+  const effectiveExamCount = stats?.totalExams ?? examCount
+  const quotaReachedMessage = `Exam Limit Reached: Your organization has reached the limit of ${effectiveMaxExams} exams (${effectiveExamCount}/${effectiveMaxExams} used). Contact administrator to increase your exam quota.`
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -155,7 +166,7 @@ export default function AdminDashboardClient() {
             </svg>
           </div>
           <div className="relative group">
-            {hasExamAccess ? (
+            {!effectiveQuotaReached && hasExamAccess ? (
               <Link
                 href="/admin/exams/create"
                 className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 shadow-sm transition-all text-center whitespace-nowrap block cursor-pointer"
@@ -166,7 +177,11 @@ export default function AdminDashboardClient() {
               <button
                 type="button"
                 onClick={() =>
-                  toast.error("Access Restricted: You do not have permission to create Exams. Contact administrator.")
+                  toast.error(
+                    effectiveQuotaReached
+                      ? quotaReachedMessage
+                      : "Access Restricted: You do not have permission to create Exams. Contact administrator."
+                  )
                 }
                 className="px-4 py-2 bg-gray-100 text-gray-400 border border-gray-200 rounded-lg text-sm font-medium text-center whitespace-nowrap flex items-center gap-1.5 cursor-not-allowed"
               >
@@ -174,15 +189,34 @@ export default function AdminDashboardClient() {
                 <span>+ Create Exam</span>
               </button>
             )}
-            {!hasExamAccess && (
+            {(effectiveQuotaReached || !hasExamAccess) && (
               <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
                 <Lock size={12} className="text-amber-400 shrink-0" />
-                <span>Access Restricted: You do not have permission to create Exams.</span>
+                <span>
+                  {effectiveQuotaReached
+                    ? `Exam Limit Reached: ${effectiveExamCount}/${effectiveMaxExams} exams used. Contact administrator.`
+                    : "Access Restricted: You do not have permission to create Exams."}
+                </span>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Exam Quota Reached Alert */}
+      {effectiveQuotaReached && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-start gap-3 shadow-xs">
+          <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-bold text-amber-950">
+              Exam Quota Reached ({effectiveExamCount} / {effectiveMaxExams} exams used)
+            </p>
+            <p className="text-amber-800 text-xs mt-0.5">
+              Your institute has reached the maximum allowed exam creation limit. Creating new exams is locked. Please contact your platform administrator to increase your exam quota.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Subscription Expired Alert */}
       {stats?.institute?.validUntil && new Date(stats.institute.validUntil).getTime() < Date.now() && (
@@ -293,9 +327,15 @@ export default function AdminDashboardClient() {
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-gray-400 text-sm">
               No exams found.{" "}
-              <Link href="/admin/exams/create" className="text-[#10B981] underline font-medium block mt-1">
-                Create your first exam
-              </Link>
+              {effectiveQuotaReached ? (
+                <span className="text-amber-700 font-medium block mt-1">
+                  Exam quota reached ({effectiveExamCount}/{effectiveMaxExams}). Contact administrator.
+                </span>
+              ) : (
+                <Link href="/admin/exams/create" className="text-[#10B981] underline font-medium block mt-1">
+                  Create your first exam
+                </Link>
+              )}
             </div>
           ) : (
             filtered.map((exam) => (
@@ -394,9 +434,15 @@ export default function AdminDashboardClient() {
                 <tr>
                   <td colSpan={7} className="text-center py-16 text-gray-400 text-sm">
                     No exams found.{" "}
-                    <Link href="/admin/exams/create" className="text-[#10B981] underline font-medium">
-                      Create your first exam
-                    </Link>
+                    {effectiveQuotaReached ? (
+                      <span className="text-amber-700 font-medium">
+                        Exam quota reached ({effectiveExamCount}/{effectiveMaxExams}). Contact administrator.
+                      </span>
+                    ) : (
+                      <Link href="/admin/exams/create" className="text-[#10B981] underline font-medium">
+                        Create your first exam
+                      </Link>
+                    )}
                   </td>
                 </tr>
               )}

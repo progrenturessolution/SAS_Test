@@ -29,6 +29,9 @@ export default function ExamsListPage() {
   const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState(true)
   const [hasExamAccess, setHasExamAccess] = useState(true)
   const [hasOtherExamsAccess, setHasOtherExamsAccess] = useState(true)
+  const [isExamQuotaReached, setIsExamQuotaReached] = useState(false)
+  const [maxExams, setMaxExams] = useState(20)
+  const [examCount, setExamCount] = useState(0)
 
   useEffect(() => {
     fetch("/api/exams", { credentials: "include" })
@@ -41,6 +44,9 @@ export default function ExamsListPage() {
         setHasCompetitiveAccess(d.hasCompetitiveAccess !== false)
         setHasExamAccess(d.hasExamAccess !== false)
         setHasOtherExamsAccess(d.hasOtherExamsAccess !== false)
+        setIsExamQuotaReached(Boolean(d.isExamQuotaReached))
+        if (d.maxExams !== undefined) setMaxExams(Number(d.maxExams))
+        if (d.examCount !== undefined) setExamCount(Number(d.examCount))
       })
       .catch(() => {})
   }, [])
@@ -109,7 +115,7 @@ export default function ExamsListPage() {
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Competitive Test Button */}
           <div className="relative group">
-            {hasCompetitiveAccess ? (
+            {!isExamQuotaReached && hasCompetitiveAccess ? (
               <Link
                 href="/admin/ai-generator"
                 className="flex items-center gap-2 px-3.5 py-2 bg-primary hover:opacity-90 text-white rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
@@ -121,7 +127,11 @@ export default function ExamsListPage() {
               <button
                 type="button"
                 onClick={() =>
-                  toast.error("Access Restricted: You do not have permission to create Competitive Tests. Contact administrator.")
+                  toast.error(
+                    isExamQuotaReached
+                      ? `Exam Limit Reached: Your organization has reached the limit of ${maxExams} exams (${examCount}/${maxExams} used). Please contact administrator to increase your exam quota.`
+                      : "Access Restricted: You do not have permission to create Competitive Tests. Contact administrator."
+                  )
                 }
                 className="flex items-center gap-2 px-3.5 py-2 bg-gray-100 text-gray-400 border border-gray-200 rounded-lg text-sm font-medium cursor-not-allowed shadow-none"
               >
@@ -129,17 +139,21 @@ export default function ExamsListPage() {
                 <span>Competitive Test</span>
               </button>
             )}
-            {!hasCompetitiveAccess && (
+            {(isExamQuotaReached || !hasCompetitiveAccess) && (
               <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
                 <Lock size={12} className="text-amber-400 shrink-0" />
-                <span>Access Restricted: You do not have permission to create Competitive Tests.</span>
+                <span>
+                  {isExamQuotaReached
+                    ? `Exam Limit Reached: ${examCount}/${maxExams} exams used. Contact administrator.`
+                    : "Access Restricted: You do not have permission to create Competitive Tests."}
+                </span>
               </div>
             )}
           </div>
 
           {/* Other Exams Button */}
           <div className="relative group">
-            {hasOtherExamsAccess ? (
+            {!isExamQuotaReached && hasOtherExamsAccess ? (
               <Link
                 href="/admin/other-exams"
                 className="flex items-center gap-2 px-3.5 py-2 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
@@ -151,7 +165,11 @@ export default function ExamsListPage() {
               <button
                 type="button"
                 onClick={() =>
-                  toast.error("Access Restricted: You do not have permission to create Other Exams. Contact administrator.")
+                  toast.error(
+                    isExamQuotaReached
+                      ? `Exam Limit Reached: Your organization has reached the limit of ${maxExams} exams (${examCount}/${maxExams} used). Please contact administrator to increase your exam quota.`
+                      : "Access Restricted: You do not have permission to create Other Exams. Contact administrator."
+                  )
                 }
                 className="flex items-center gap-2 px-3.5 py-2 bg-gray-100 text-gray-400 border border-gray-200 rounded-lg text-sm font-medium cursor-not-allowed shadow-none"
               >
@@ -159,17 +177,21 @@ export default function ExamsListPage() {
                 <span>Other Exams</span>
               </button>
             )}
-            {!hasOtherExamsAccess && (
+            {(isExamQuotaReached || !hasOtherExamsAccess) && (
               <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
                 <Lock size={12} className="text-amber-400 shrink-0" />
-                <span>Access Restricted: You do not have permission to create Other Exams.</span>
+                <span>
+                  {isExamQuotaReached
+                    ? `Exam Limit Reached: ${examCount}/${maxExams} exams used. Contact administrator.`
+                    : "Access Restricted: You do not have permission to create Other Exams."}
+                </span>
               </div>
             )}
           </div>
 
           {/* Create Exam Button */}
           <div className="relative group">
-            {hasExamAccess ? (
+            {!isExamQuotaReached && hasExamAccess ? (
               <Link
                 href="/admin/exams/create"
                 className="flex items-center gap-2 px-3.5 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 shadow-sm transition-colors cursor-pointer"
@@ -180,7 +202,11 @@ export default function ExamsListPage() {
               <button
                 type="button"
                 onClick={() =>
-                  toast.error("Access Restricted: You do not have permission to create Exams. Contact administrator.")
+                  toast.error(
+                    isExamQuotaReached
+                      ? `Exam Limit Reached: Your organization has reached the limit of ${maxExams} exams (${examCount}/${maxExams} used). Please contact administrator to increase your exam quota.`
+                      : "Access Restricted: You do not have permission to create Exams. Contact administrator."
+                  )
                 }
                 className="flex items-center gap-2 px-3.5 py-2 bg-gray-100 text-gray-400 border border-gray-200 rounded-lg text-sm font-medium cursor-not-allowed"
               >
@@ -188,15 +214,34 @@ export default function ExamsListPage() {
                 <span>Create Exam</span>
               </button>
             )}
-            {!hasExamAccess && (
+            {(isExamQuotaReached || !hasExamAccess) && (
               <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
                 <Lock size={12} className="text-amber-400 shrink-0" />
-                <span>Access Restricted: You do not have permission to create Exams.</span>
+                <span>
+                  {isExamQuotaReached
+                    ? `Exam Limit Reached: ${examCount}/${maxExams} exams used. Contact administrator.`
+                    : "Access Restricted: You do not have permission to create Exams."}
+                </span>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Exam Quota Reached Banner */}
+      {isExamQuotaReached && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-start gap-3 shadow-xs">
+          <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-amber-950">
+              Exam Quota Reached ({examCount} / {maxExams} exams created)
+            </p>
+            <p className="text-amber-800 text-xs mt-0.5">
+              Your institute has reached its maximum exam creation limit. Creating new exams (Competitive, Other, or Custom) is currently locked. Existing exams remain fully operational. Please contact your platform administrator to increase your exam quota.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2">

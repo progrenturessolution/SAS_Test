@@ -159,6 +159,24 @@ function AIGeneratorContent() {
   const [printDropdownOpen, setPrintDropdownOpen] = useState(false)
   const [coachingName, setCoachingName] = useState<string>("")
   const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState<boolean | null>(null)
+  const [isExamQuotaReached, setIsExamQuotaReached] = useState(false)
+  const [maxExams, setMaxExams] = useState(20)
+  const [examCount, setExamCount] = useState(0)
+
+  useEffect(() => {
+    fetch("/api/admin/institute-access", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        setHasCompetitiveAccess(data.hasCompetitiveAccess !== false)
+        setIsExamQuotaReached(Boolean(data.isExamQuotaReached))
+        if (data.maxExams !== undefined) setMaxExams(Number(data.maxExams))
+        if (data.examCount !== undefined) setExamCount(Number(data.examCount))
+      })
+      .catch(() => {
+        setHasCompetitiveAccess(true)
+        setIsExamQuotaReached(false)
+      })
+  }, [])
 
   // Load existing exam for editing if ?edit=<id> is present
   useEffect(() => {
@@ -1328,6 +1346,26 @@ function AIGeneratorContent() {
     } finally {
       setCreatingExam(false)
     }
+  }
+
+  if (isExamQuotaReached && !editExamId) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center bg-[#F8FAFC]">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 border border-amber-200 shadow-sm">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[#324158] mb-2">Exam Quota Reached</h2>
+        <p className="text-gray-500 max-w-md text-sm mb-6 leading-relaxed">
+          Your coaching institute has reached its maximum exam creation limit ({examCount}/{maxExams} exams created). New exam creation is disabled. Please contact your platform administrator to increase your exam quota.
+        </p>
+        <Link
+          href="/admin/exams"
+          className="px-6 py-2.5 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-xl text-sm font-medium transition-colors shadow-sm"
+        >
+          Return to Exams
+        </Link>
+      </div>
+    )
   }
 
   if (hasCompetitiveAccess === false) {

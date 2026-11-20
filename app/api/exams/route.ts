@@ -135,17 +135,25 @@ export async function POST(req: Request) {
             )
           }
       }
-      const examCount = await Exam.countDocuments({
-          $or: [{ instituteId: session.instituteId }, { createdBy: session.id }],
-        })
-        const maxExams = institute.limits?.maxExams ?? 20
+      const examConditions: any[] = [
+        { instituteId: session.instituteId },
+        { instituteId: String(session.instituteId) },
+      ]
+      if (session.id) {
+        examConditions.push({ createdBy: session.id }, { createdBy: String(session.id) })
+      }
+      if (institute.adminUserId) {
+        examConditions.push({ createdBy: institute.adminUserId }, { createdBy: String(institute.adminUserId) })
+      }
+      const examCount = await Exam.countDocuments({ $or: examConditions })
+      const maxExams = institute.limits?.maxExams ?? 20
       if (examCount >= maxExams) {
-          return NextResponse.json(
-            {
-              error: `Exam limit reached (${examCount}/${maxExams} exams used). Please contact the platform admin to increase your exam quota.`,
-            },
-            { status: 403 }
-          )
+        return NextResponse.json(
+          {
+            error: `Exam limit reached (${examCount}/${maxExams} exams used). Please contact the platform admin to increase your exam quota.`,
+          },
+          { status: 403 }
+        )
       }
     }
     if (session.instituteId) {

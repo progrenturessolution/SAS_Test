@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { BookOpen, Search, Plus } from "lucide-react"
+import { BookOpen, Search, Plus, Lock } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
+import { toast } from "sonner"
 import { Toaster } from "@/components/ui/toaster"
 
 interface QuestionItem {
@@ -22,6 +23,9 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [filterType, setFilterType] = useState("all")
+  const [isExamQuotaReached, setIsExamQuotaReached] = useState(false)
+  const [maxExams, setMaxExams] = useState(20)
+  const [examCount, setExamCount] = useState(0)
 
   useEffect(() => {
     fetch("/api/exams", { credentials: "include" })
@@ -47,6 +51,15 @@ export default function QuestionsPage() {
         setQuestions(qs)
         setLoading(false)
       })
+
+    fetch("/api/admin/institute-access", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => {
+        setIsExamQuotaReached(Boolean(d.isExamQuotaReached))
+        if (d.maxExams !== undefined) setMaxExams(Number(d.maxExams))
+        if (d.examCount !== undefined) setExamCount(Number(d.examCount))
+      })
+      .catch(() => {})
   }, [])
 
   const typeLabel: Record<string, string> = {
@@ -78,13 +91,36 @@ export default function QuestionsPage() {
           <h1 className="text-2xl font-bold text-primary">Question Bank</h1>
           <p className="text-sm text-gray-500 mt-0.5">All questions across your exams</p>
         </div>
-        <Link
-          href="/admin/exams/create"
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:opacity-90 shadow-sm transition-all"
-        >
-          <Plus size={15} />
-          Add via New Exam
-        </Link>
+        <div className="relative group">
+          {!isExamQuotaReached ? (
+            <Link
+              href="/admin/exams/create"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:opacity-90 shadow-sm transition-all"
+            >
+              <Plus size={15} />
+              Add via New Exam
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                toast.error(
+                  `Exam Limit Reached: Your organization has reached the limit of ${maxExams} exams (${examCount}/${maxExams} used). Contact administrator to increase your exam quota.`
+                )
+              }
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-400 border border-gray-200 text-sm font-medium rounded-lg cursor-not-allowed shadow-none"
+            >
+              <Lock size={15} className="text-gray-400" />
+              <span>Add via New Exam</span>
+            </button>
+          )}
+          {isExamQuotaReached && (
+            <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
+              <Lock size={12} className="text-amber-400 shrink-0" />
+              <span>Exam Limit Reached: {examCount}/{maxExams} exams used.</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -120,9 +156,13 @@ export default function QuestionsPage() {
           <div className="py-16 text-center">
             <BookOpen size={32} className="mx-auto text-gray-300 mb-3" />
             <p className="text-sm text-gray-400">No questions found.</p>
-            <Link href="/admin/exams/create" className="text-[#10B981] text-sm hover:underline mt-1 inline-block">
-              Create an exam to add questions
-            </Link>
+            {isExamQuotaReached ? (
+              <p className="text-amber-700 text-xs mt-1 font-medium">Exam quota reached ({examCount}/{maxExams}). Contact administrator to increase limit.</p>
+            ) : (
+              <Link href="/admin/exams/create" className="text-[#10B981] text-sm hover:underline mt-1 inline-block">
+                Create an exam to add questions
+              </Link>
+            )}
           </div>
         ) : (
           <table className="w-full">

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import connectDB from "@/lib/mongodb"
 import Institute from "@/models/Institute"
+import Exam from "@/models/Exam"
 
 const ALL_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "CODING", "OTHER", "OTHER_EXAMS"]
 const LEGACY_INSTITUTE_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "OTHER", "OTHER_EXAMS"]
@@ -28,6 +29,9 @@ export async function GET(req: Request) {
         hasCompetitiveAccess: true,
         hasExamAccess: true,
         hasOtherExamsAccess: true,
+        maxExams: 999999,
+        examCount: 0,
+        isExamQuotaReached: false,
         examTypes: ALL_EXAM_TYPES,
         features: {},
         customQuestionTypes: ALL_CUSTOM_QUESTION_TYPES,
@@ -36,7 +40,7 @@ export async function GET(req: Request) {
 
     await connectDB()
     const institute = await Institute.findById(session.instituteId)
-      .select("name code logo themeColor limits validUntil status")
+      .select("name code logo themeColor limits validUntil status adminUserId")
       .lean()
     if (!institute) {
       return NextResponse.json({ error: "Institute not found" }, { status: 404 })
@@ -58,6 +62,20 @@ export async function GET(req: Request) {
 
     const hasOtherExamsAccess = rawExamTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(t))
 
+    const maxExams = Number(institute.limits?.maxExams ?? 20)
+    const examConditions: any[] = [
+      { instituteId: session.instituteId },
+      { instituteId: String(session.instituteId) },
+    ]
+    if (session.id) {
+      examConditions.push({ createdBy: session.id }, { createdBy: String(session.id) })
+    }
+    if (institute.adminUserId) {
+      examConditions.push({ createdBy: institute.adminUserId }, { createdBy: String(institute.adminUserId) })
+    }
+    const examCount = await Exam.countDocuments({ $or: examConditions })
+    const isExamQuotaReached = examCount >= maxExams
+
     return NextResponse.json({
       instituteName: institute.name || session.instituteName || "Coaching Institute",
       instituteCode: institute.code || session.instituteCode || "",
@@ -69,6 +87,9 @@ export async function GET(req: Request) {
       hasCompetitiveAccess: isExpired ? false : hasCompetitiveAccess,
       hasExamAccess: isExpired ? false : hasExamAccess,
       hasOtherExamsAccess: isExpired ? false : hasOtherExamsAccess,
+      maxExams,
+      examCount,
+      isExamQuotaReached,
       examTypes: isExpired ? [] : rawExamTypes,
       features: institute.limits?.features || {},
       customQuestionTypes: Array.isArray(institute.limits?.customQuestionTypes)
