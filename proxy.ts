@@ -14,10 +14,15 @@ export async function proxy(req: NextRequest) {
   if (!pathname.startsWith("/admin")) return NextResponse.next()
   if (PUBLIC_ADMIN_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next()
 
+  // Differentiate super admin routes (/admin/institutes, /admin/overview)
+  // from regular organization dashboard routes (/admin, /admin/exams, /admin/students, etc.)
+  const isSuperAdminPath =
+    pathname.startsWith("/admin/institutes") || pathname.startsWith("/admin/overview")
+  const defaultLoginPath = isSuperAdminPath ? "/admin/login" : "/institute/login"
+
   const token = req.cookies.get(COOKIE_NAME)?.value
   if (!token) {
-    // Use req.nextUrl as the base so the redirect stays on the same origin
-    const loginUrl = new URL("/admin/login", req.nextUrl.origin)
+    const loginUrl = new URL(defaultLoginPath, req.nextUrl.origin)
     loginUrl.searchParams.set("callbackUrl", pathname)
     return NextResponse.redirect(loginUrl)
   }
@@ -26,7 +31,7 @@ export async function proxy(req: NextRequest) {
     await jwtVerify(token, SECRET)
     return NextResponse.next()
   } catch {
-    const loginUrl = new URL("/admin/login", req.nextUrl.origin)
+    const loginUrl = new URL(defaultLoginPath, req.nextUrl.origin)
     const res = NextResponse.redirect(loginUrl)
     res.cookies.delete(COOKIE_NAME)
     return res

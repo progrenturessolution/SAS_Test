@@ -15,7 +15,10 @@ export async function requireAdmin() {
 
 export async function requireSuperAdmin() {
   const session = await getSession()
-  if (!session || (!["super_admin", "admin"].includes(session.role) || Boolean(session.instituteId))) {
+  if (!session) {
+    redirect("/admin/login")
+  }
+  if (!["super_admin", "admin"].includes(session.role) || Boolean(session.instituteId)) {
     redirect("/admin")
   }
   return session
