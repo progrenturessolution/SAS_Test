@@ -158,7 +158,7 @@ export default function InstitutesManagementPage() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState("")
 
-  // Edit Limits state
+  // Edit Organization state
   const [editMaxStudents, setEditMaxStudents] = useState(100)
   const [editMaxExams, setEditMaxExams] = useState(20)
   const [editExamTypes, setEditExamTypes] = useState<string[]>([])
@@ -166,6 +166,8 @@ export default function InstitutesManagementPage() {
   const [editPdfImport, setEditPdfImport] = useState(true)
   const [editValidUntil, setEditValidUntil] = useState("")
   const [editStatus, setEditStatus] = useState<"active" | "suspended">("active")
+  const [editPassword, setEditPassword] = useState("")
+  const [showEditPassword, setShowEditPassword] = useState(false)
   const [savingLimits, setSavingLimits] = useState(false)
 
   // Password reset state
@@ -235,7 +237,7 @@ export default function InstitutesManagementPage() {
           examTypes: formExamTypes,
           customQuestionTypes: formCustomQuestionTypes,
           features: {
-            pdfImport: formPdfImport,
+            pdfImport: true,
           },
           validUntil: formValidUntil || undefined,
         }),
@@ -267,46 +269,81 @@ export default function InstitutesManagementPage() {
     }
   }
 
-  // Open Edit Limits Modal
+  // Open Edit Organization Modal
   const openEditLimits = (inst: Institute) => {
     setShowEditLimitsModal(inst)
+    setEditPassword("")
+    setShowEditPassword(false)
     setEditMaxStudents(inst.limits?.maxStudents ?? 100)
     setEditMaxExams(inst.limits?.maxExams ?? 20)
     setEditExamTypes(normalizeExamTypes(inst.limits?.examTypes ?? []))
     setEditCustomQuestionTypes(inst.limits?.customQuestionTypes ?? ALL_CUSTOM_QUESTION_TYPES)
-    setEditPdfImport(inst.limits?.features?.pdfImport ?? true)
+    setEditPdfImport(true)
     setEditStatus(inst.status === "suspended" ? "suspended" : "active")
     setEditValidUntil(
       inst.validUntil ? new Date(inst.validUntil).toISOString().split("T")[0] : ""
     )
   }
 
-  // Handle Save Limits
+  // Handle Save Organization Changes
   const handleSaveLimits = async () => {
     if (!showEditLimitsModal) return
+    if (editPassword.trim() && editPassword.trim().length < 6) {
+      alert("Password must be at least 6 characters long.")
+      return
+    }
     setSavingLimits(true)
 
     try {
+      const payload: any = {
+        status: editStatus,
+        validUntil: editValidUntil || null,
+        limits: {
+          maxStudents: editMaxStudents,
+          maxExams: editMaxExams,
+          examTypes: editExamTypes,
+          customQuestionTypes: editCustomQuestionTypes,
+          features: {
+            pdfImport: true,
+          },
+        },
+      }
+      if (editPassword.trim()) {
+        payload.password = editPassword.trim()
+      }
+
       const res = await fetch(`/api/admin/institutes/${showEditLimitsModal._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: editStatus,
-          validUntil: editValidUntil || null,
-          limits: {
-            maxStudents: editMaxStudents,
-            maxExams: editMaxExams,
-            examTypes: editExamTypes,
-            customQuestionTypes: editCustomQuestionTypes,
-            features: {
-              pdfImport: editPdfImport,
-            },
-          },
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to update limits")
+      if (!res.ok) throw new Error(data.error || "Failed to update organization")
+
+      if (selectedInstitute && selectedInstitute._id === showEditLimitsModal._id) {
+        setSelectedInstitute((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...(editPassword.trim() ? { adminPassword: editPassword.trim() } : {}),
+                status: editStatus,
+                validUntil: editValidUntil || undefined,
+                limits: {
+                  ...prev.limits,
+                  maxStudents: editMaxStudents,
+                  maxExams: editMaxExams,
+                  examTypes: editExamTypes,
+                  customQuestionTypes: editCustomQuestionTypes,
+                  features: {
+                    ...prev.limits?.features,
+                    pdfImport: true,
+                  },
+                },
+              }
+            : null
+        )
+      }
 
       setShowEditLimitsModal(null)
       await fetchInstitutes()
@@ -649,9 +686,9 @@ export default function InstitutesManagementPage() {
                                 setOpenActionMenu(null)
                                 setSelectedInstitute(inst)
                               }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] cursor-pointer transition-colors"
                             >
-                              <Eye className="h-3.5 w-3.5 text-blue-600" /> View details
+                              <Eye className="h-3.5 w-3.5 text-[#324158]" /> View details
                             </button>
                             <button
                               type="button"
@@ -659,9 +696,9 @@ export default function InstitutesManagementPage() {
                                 setOpenActionMenu(null)
                                 openEditLimits(inst)
                               }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] cursor-pointer transition-colors"
                             >
-                              <Sliders className="h-3.5 w-3.5 text-[#324158]" /> Edit quotas & features
+                              <Sliders className="h-3.5 w-3.5 text-[#324158]" /> Edit Organization
                             </button>
                             <button
                               type="button"
@@ -670,9 +707,9 @@ export default function InstitutesManagementPage() {
                                 setShowResetPasswordModal(inst)
                                 setNewPassword("")
                               }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] cursor-pointer transition-colors"
                             >
-                              <KeyRound className="h-3.5 w-3.5 text-slate-600" /> Reset password
+                              <KeyRound className="h-3.5 w-3.5 text-[#324158]" /> Reset password
                             </button>
                             <button
                               type="button"
@@ -680,12 +717,12 @@ export default function InstitutesManagementPage() {
                                 setOpenActionMenu(null)
                                 handleToggleStatus(inst)
                               }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] cursor-pointer transition-colors"
                             >
                               {inst.status === "active" ? (
-                                <XCircle className="h-3.5 w-3.5 text-amber-600" />
+                                <XCircle className="h-3.5 w-3.5 text-[#324158]" />
                               ) : (
-                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                <CheckCircle2 className="h-3.5 w-3.5 text-[#324158]" />
                               )}
                               {inst.status === "active" ? "Deactivate institute" : "Activate institute"}
                             </button>
@@ -983,17 +1020,17 @@ export default function InstitutesManagementPage() {
                           <button
                             onClick={() => setSelectedInstitute(inst)}
                             title="View details"
-                            className="p-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors"
+                            className="p-1.5 rounded-lg border border-gray-200 text-[#324158] hover:bg-[#eaf0f8] cursor-pointer transition-colors"
                           >
-                            <Eye className="w-3.5 h-3.5 text-blue-600" />
+                            <Eye className="w-3.5 h-3.5 text-[#324158]" />
                           </button>
 
                           <button
                             onClick={() => openEditLimits(inst)}
-                            title="Edit Quotas & Permissions"
-                            className="p-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors"
+                            title="Edit Organization"
+                            className="p-1.5 rounded-lg border border-gray-200 text-[#324158] hover:bg-[#eaf0f8] cursor-pointer transition-colors"
                           >
-                            <Sliders className="w-3.5 h-3.5" />
+                            <Sliders className="w-3.5 h-3.5 text-[#324158]" />
                           </button>
 
                           <button
@@ -1002,9 +1039,9 @@ export default function InstitutesManagementPage() {
                               setNewPassword("")
                             }}
                             title="Reset Password"
-                            className="p-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors"
+                            className="p-1.5 rounded-lg border border-gray-200 text-[#324158] hover:bg-[#eaf0f8] cursor-pointer transition-colors"
                           >
-                            <KeyRound className="w-3.5 h-3.5" />
+                            <KeyRound className="w-3.5 h-3.5 text-[#324158]" />
                           </button>
 
                           <button
@@ -1373,26 +1410,6 @@ export default function InstitutesManagementPage() {
                   </div>
                 </div>
 
-                {/* Feature Permissions Checkboxes */}
-                <div>
-                  <span className="font-semibold text-gray-700 block mb-1.5">
-                    Permitted Features
-                  </span>
-                  <div className="grid grid-cols-1 gap-2">
-                    <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-gray-200 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formPdfImport}
-                        onChange={(e) => setFormPdfImport(e.target.checked)}
-                        className="rounded text-[#324158]"
-                      />
-                      <span className="text-[11px] font-medium text-gray-700">
-                        PDF Paper Import
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
                 <div>
                   <span className="font-semibold text-gray-700 block mb-1.5">
                     Exam Creation Access
@@ -1474,14 +1491,14 @@ export default function InstitutesManagementPage() {
         </div>
       )}
 
-      {/* ─── Modal 2: Edit Quotas & Permissions ─── */}
+      {/* ─── Modal 2: Edit Organization ─── */}
       {showEditLimitsModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-lg">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <div>
                 <h3 className="text-sm font-bold text-[#324158]">
-                  Edit Quotas & Features: {showEditLimitsModal.name}
+                  Edit Organization: {showEditLimitsModal.name}
                 </h3>
                 <span className="font-mono text-[10px] text-gray-400">
                   Code: {showEditLimitsModal.code}
@@ -1502,11 +1519,35 @@ export default function InstitutesManagementPage() {
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white font-medium"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white font-medium focus:outline-none focus:border-[#324158]"
                 >
                   <option value="active">Active (Access Allowed)</option>
                   <option value="suspended">Deactivated (Access Blocked)</option>
                 </select>
+              </div>
+
+              {/* Change Portal Password */}
+              <div>
+                <label className="font-bold text-gray-700 block mb-1">
+                  Change Portal Password <span className="text-[10px] font-normal text-gray-400">(Leave blank to keep existing password)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showEditPassword ? "text" : "password"}
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="Enter new portal password"
+                    className="w-full px-3 py-2 pr-10 rounded-lg border border-gray-200 bg-white font-medium focus:outline-none focus:border-[#324158]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPassword(!showEditPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#324158] cursor-pointer"
+                    title={showEditPassword ? "Hide password" : "Show password"}
+                  >
+                    {showEditPassword ? <EyeOff className="w-4 h-4 text-[#324158]" /> : <Eye className="w-4 h-4 text-[#324158]" />}
+                  </button>
+                </div>
               </div>
 
               {/* Quota inputs */}
@@ -1518,7 +1559,7 @@ export default function InstitutesManagementPage() {
                     min={1}
                     value={editMaxStudents}
                     onChange={(e) => setEditMaxStudents(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158]"
                   />
                   <span className="text-[10px] text-gray-400">
                     Currently: {showEditLimitsModal.usage?.studentsEnrolled || 0} enrolled
@@ -1532,7 +1573,7 @@ export default function InstitutesManagementPage() {
                     min={1}
                     value={editMaxExams}
                     onChange={(e) => setEditMaxExams(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158]"
                   />
                   <span className="text-[10px] text-gray-400">
                     Currently: {showEditLimitsModal.usage?.examsCreated || 0} created
@@ -1540,58 +1581,44 @@ export default function InstitutesManagementPage() {
                 </div>
               </div>
 
-              {/* Features */}
+              {/* Exam Creation Access */}
               <div>
-                <label className="font-bold text-gray-700 block mb-2">Enabled Features</label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editPdfImport}
-                      onChange={(e) => setEditPdfImport(e.target.checked)}
-                    />
-                    <span className="font-medium text-gray-700">Syllabus & PDF Paper Import</span>
-                  </label>
+                <label className="font-bold text-gray-700 block mb-2">Exam Creation Access</label>
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  {EXAM_ACCESS_OPTIONS.map((option) => {
+                    const isChecked = editExamTypes.includes(option.value)
+                    return (
+                      <label
+                        key={option.value}
+                        className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-all ${
+                          isChecked
+                            ? "border-[#324158] bg-[#324158]/5 shadow-xs"
+                            : "border-gray-200 bg-white hover:bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) =>
+                            setEditExamTypes((current) =>
+                              e.target.checked
+                                ? [...current, option.value]
+                                : current.filter((value) => value !== option.value)
+                            )
+                          }
+                          className="mt-0.5 rounded text-[#324158]"
+                        />
+                        <div className="flex-1">
+                          <span className="text-xs font-semibold text-gray-800 block">{option.label}</span>
+                          <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">{option.description}</span>
+                        </div>
+                      </label>
+                    )
+                  })}
                 </div>
-
-                <div>
-                  <label className="font-bold text-gray-700 block mb-2">Exam Creation Access</label>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-                    {EXAM_ACCESS_OPTIONS.map((option) => {
-                      const isChecked = editExamTypes.includes(option.value)
-                      return (
-                        <label
-                          key={option.value}
-                          className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-all ${
-                            isChecked
-                              ? "border-[#2D3A4A] bg-[#2D3A4A]/5 shadow-xs"
-                              : "border-gray-200 bg-white hover:bg-gray-50"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) =>
-                              setEditExamTypes((current) =>
-                                e.target.checked
-                                  ? [...current, option.value]
-                                  : current.filter((value) => value !== option.value)
-                              )
-                            }
-                            className="mt-0.5 rounded text-[#324158]"
-                          />
-                          <div className="flex-1">
-                            <span className="text-xs font-semibold text-gray-800 block">{option.label}</span>
-                            <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">{option.description}</span>
-                          </div>
-                        </label>
-                      )
-                    })}
-                  </div>
-                  <span className="mt-1.5 block text-[10px] text-gray-400">
-                    Control which test creation modules this institute can access. Unchecked options will remain visible but disabled.
-                  </span>
-                </div>
+                <span className="mt-1.5 block text-[10px] text-gray-400">
+                  Control which test creation modules this institute can access. Unchecked options will remain visible but disabled.
+                </span>
               </div>
 
               {/* Validity Expiry */}
@@ -1603,7 +1630,7 @@ export default function InstitutesManagementPage() {
                   type="date"
                   value={editValidUntil}
                   onChange={(e) => setEditValidUntil(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158]"
                 />
               </div>
 
@@ -1620,10 +1647,10 @@ export default function InstitutesManagementPage() {
                   type="button"
                   onClick={handleSaveLimits}
                   disabled={savingLimits}
-                  className="px-5 py-2 rounded-lg bg-[#2D3A4A] hover:bg-[#1e2a38] text-white font-medium shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-lg bg-[#324158] hover:bg-[#1e2a38] text-white font-medium shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {savingLimits && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{savingLimits ? "Saving..." : "Save Changes"}</span>
+                  <span>{savingLimits ? "Saving..." : "Update Organization"}</span>
                 </button>
               </div>
             </div>

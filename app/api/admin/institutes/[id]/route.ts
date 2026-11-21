@@ -36,6 +36,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       institute.validUntil = body.validUntil ? new Date(body.validUntil) : undefined
     }
 
+    // Update password if provided
+    if (body.password && typeof body.password === "string" && body.password.trim().length >= 6) {
+      const newPassword = body.password.trim()
+      institute.adminPassword = newPassword
+
+      const user = await User.findOne({
+        $or: [
+          ...(institute.adminUserId ? [{ _id: institute.adminUserId }] : []),
+          ...(institute.email ? [{ email: institute.email.toLowerCase() }] : []),
+        ],
+      })
+
+      if (user) {
+        user.password = newPassword
+        await user.save()
+      }
+    }
+
     if (body.limits) {
       let finalExamTypes = institute.limits.examTypes
       let hasComp = institute.limits.features?.neetJeeGenerator ?? true
@@ -73,8 +91,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           : institute.limits.customQuestionTypes,
         features: {
           neetJeeGenerator: hasComp,
-          aiProctoring: body.limits.features?.aiProctoring ?? institute.limits.features.aiProctoring,
-          pdfImport: body.limits.features?.pdfImport ?? institute.limits.features.pdfImport,
+          aiProctoring: body.limits.features?.aiProctoring ?? institute.limits.features?.aiProctoring ?? true,
+          pdfImport: true, // Always allowed
         },
       }
     }

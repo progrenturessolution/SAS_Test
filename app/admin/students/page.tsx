@@ -912,16 +912,16 @@ export default function StudentsPage() {
                                     }}
                                     className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer transition-colors"
                                   >
-                                    <User size={14} className="text-gray-400" />
+                                    <User size={14} className="text-[#324158]" />
                                     <span>View Profile</span>
                                   </button>
 
                                   <button
                                     type="button"
                                     onClick={() => openEditModal(s)}
-                                    className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer transition-colors"
+                                    className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
                                   >
-                                    <Edit3 size={14} className="text-gray-400" />
+                                    <Edit3 size={14} className="text-[#324158]" />
                                     <span>Edit Student</span>
                                   </button>
 
@@ -943,9 +943,9 @@ export default function StudentsPage() {
                                         setDeactivateTarget(s)
                                         setDeactivateReason("")
                                       }}
-                                      className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2 cursor-pointer transition-colors"
+                                      className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
                                     >
-                                      <UserX size={14} className="text-slate-500" />
+                                      <UserX size={14} className="text-[#324158]" />
                                       <span>Deactivate Student</span>
                                     </button>
                                   )}
@@ -1078,18 +1078,18 @@ export default function StudentsPage() {
                                   setProfileStudent(s)
                                   setActiveMenuStudentId(null)
                                 }}
-                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer transition-colors"
+                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
                               >
-                                <User size={14} className="text-gray-400" />
+                                <User size={14} className="text-[#324158]" />
                                 <span>View Profile</span>
                               </button>
 
                               <button
                                 type="button"
                                 onClick={() => openEditModal(s)}
-                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer transition-colors"
+                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
                               >
-                                <Edit3 size={14} className="text-gray-400" />
+                                <Edit3 size={14} className="text-[#324158]" />
                                 <span>Edit Student</span>
                               </button>
 
@@ -1111,9 +1111,9 @@ export default function StudentsPage() {
                                     setDeactivateTarget(s)
                                     setDeactivateReason("")
                                   }}
-                                  className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2 cursor-pointer transition-colors"
+                                  className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
                                 >
-                                  <UserX size={14} className="text-slate-500" />
+                                  <UserX size={14} className="text-[#324158]" />
                                   <span>Deactivate Student</span>
                                 </button>
                               )}

@@ -2434,8 +2434,8 @@ function QuestionMenu({ q, onEdit, onDelete, onClose, anchorRect }: { q: Questio
       style={{ position: "fixed", top, left }}
       className="z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden min-w-40 animate-in fade-in zoom-in-95 duration-100"
     >
-      <button onClick={() => { onEdit(q); onClose() }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left border-b border-gray-100 font-medium transition-colors">
-        <Pencil size={14} className="text-blue-500" />
+      <button onClick={() => { onEdit(q); onClose() }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] text-left border-b border-gray-100 font-medium transition-colors">
+        <Pencil size={14} className="text-[#324158]" />
         <span className="flex-1">Edit Question</span>
       </button>
       <button onClick={() => { onDelete(q.id); onClose() }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 text-left font-medium transition-colors">
