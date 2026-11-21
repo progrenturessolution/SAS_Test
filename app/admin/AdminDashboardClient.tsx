@@ -135,9 +135,9 @@ export default function AdminDashboardClient() {
   )
 
   const statusColor = (s: string) => {
-    if (s === "active") return "bg-green-100 text-green-700"
-    if (s === "draft") return "bg-yellow-100 text-yellow-700"
-    return "bg-gray-100 text-gray-600"
+    if (s === "active") return "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-semibold"
+    if (s === "draft") return "bg-amber-50 text-amber-800 border border-amber-200 font-semibold"
+    return "bg-slate-100 text-slate-700 border border-slate-200 font-medium"
   }
 
   const effectiveQuotaReached = isExamQuotaReached || Boolean(stats?.institute?.maxExams && (stats?.totalExams ?? 0) >= stats.institute.maxExams)
@@ -156,7 +156,7 @@ export default function AdminDashboardClient() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
           <div className="relative flex-1 sm:w-64">
             <input
-              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#10B981] shadow-xs"
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#324158] shadow-xs"
               placeholder="Search exams..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -288,18 +288,18 @@ export default function AdminDashboardClient() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
         {[
-          { label: "Total Exams", value: stats?.totalExams ?? "—", sub: `+${stats?.examsThisMonth ?? 0} this month`, icon: FileText, iconBg: "bg-blue-50", iconColor: "text-blue-500" },
-          { label: "Active Exams", value: stats?.activeExams ?? "—", sub: "Live now", icon: PlayCircle, iconBg: "bg-green-50", iconColor: "text-green-500" },
-          { label: "Total Questions", value: stats?.totalQuestions?.toLocaleString() ?? "—", sub: "Across all exams", icon: HelpCircle, iconBg: "bg-purple-50", iconColor: "text-purple-500" },
-          { label: "Students Enrolled", value: stats?.studentsEnrolled?.toLocaleString() ?? "—", sub: `+${stats?.studentsThisMonth ?? 0} this month`, icon: UserCheck, iconBg: "bg-teal-50", iconColor: "text-teal-500" },
+          { label: "Total Exams", value: stats?.totalExams ?? "—", sub: `+${stats?.examsThisMonth ?? 0} this month`, icon: FileText, iconBg: "bg-[#eaf0f8] border border-[#cbd5e1]/60", iconColor: "text-[#324158]" },
+          { label: "Active Exams", value: stats?.activeExams ?? "—", sub: "Live now", icon: PlayCircle, iconBg: "bg-[#eaf0f8] border border-[#cbd5e1]/60", iconColor: "text-[#324158]" },
+          { label: "Total Questions", value: stats?.totalQuestions?.toLocaleString() ?? "—", sub: "Across all exams", icon: HelpCircle, iconBg: "bg-[#eaf0f8] border border-[#cbd5e1]/60", iconColor: "text-[#324158]" },
+          { label: "Students Enrolled", value: stats?.studentsEnrolled?.toLocaleString() ?? "—", sub: `+${stats?.studentsThisMonth ?? 0} this month`, icon: UserCheck, iconBg: "bg-[#eaf0f8] border border-[#cbd5e1]/60", iconColor: "text-[#324158]" },
         ].map((stat) => (
           <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex justify-between items-start shadow-xs">
             <div>
               <p className="text-xs sm:text-sm text-gray-500 mb-1">{stat.label}</p>
-              <p className="text-2xl sm:text-3xl font-bold text-primary">{stat.value}</p>
-              <p className="text-xs text-green-500 mt-1">{stat.sub}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-[#324158]">{stat.value}</p>
+              <p className="text-xs text-[#64748b] font-medium mt-1">{stat.sub}</p>
             </div>
-            <div className={`w-9 h-9 sm:w-10 sm:h-10 ${stat.iconBg} rounded-lg flex items-center justify-center shrink-0`}>
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 ${stat.iconBg} rounded-lg flex items-center justify-center shrink-0 shadow-2xs`}>
               <stat.icon size={18} className={stat.iconColor} />
             </div>
           </div>
@@ -332,7 +332,7 @@ export default function AdminDashboardClient() {
                   Exam quota reached ({effectiveExamCount}/{effectiveMaxExams}). Contact administrator.
                 </span>
               ) : (
-                <Link href="/admin/exams/create" className="text-[#10B981] underline font-medium block mt-1">
+                <Link href="/admin/exams/create" className="text-[#324158] hover:underline font-semibold block mt-1">
                   Create your first exam
                 </Link>
               )}
@@ -401,14 +401,14 @@ export default function AdminDashboardClient() {
                     href={getExamEditUrl(exam)}
                     className="flex-1 py-1.5 px-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1.5 transition-colors text-center"
                   >
-                    <Pencil size={13} className="text-emerald-500 shrink-0" />
+                    <Pencil size={13} className="text-[#324158] shrink-0" />
                     <span>Edit</span>
                   </Link>
                   <Link
                     href={`/admin/results?examId=${exam._id}`}
-                    className="flex-1 py-1.5 px-2 rounded-lg bg-primary/5 border border-primary/20 text-xs font-medium text-primary hover:bg-primary/10 flex items-center justify-center gap-1.5 transition-colors text-center"
+                    className="flex-1 py-1.5 px-2 rounded-lg bg-[#324158]/5 border border-[#324158]/20 text-xs font-medium text-[#324158] hover:bg-[#324158]/10 flex items-center justify-center gap-1.5 transition-colors text-center"
                   >
-                    <BarChart2 size={13} className="text-primary shrink-0" />
+                    <BarChart2 size={13} className="text-[#324158] shrink-0" />
                     <span>Results</span>
                   </Link>
                 </div>
@@ -439,7 +439,7 @@ export default function AdminDashboardClient() {
                         Exam quota reached ({effectiveExamCount}/{effectiveMaxExams}). Contact administrator.
                       </span>
                     ) : (
-                      <Link href="/admin/exams/create" className="text-[#10B981] underline font-medium">
+                      <Link href="/admin/exams/create" className="text-[#324158] hover:underline font-semibold">
                         Create your first exam
                       </Link>
                     )}

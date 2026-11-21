@@ -124,9 +124,9 @@ const TYPE_META: Record<QuestionType, { label: string; color: string; icon: Reac
 
 function Stepper({ step, onStepClick }: { step: number; onStepClick?: (step: number) => void }) {
   const steps = [
-    { n: 1, label: "Exam Details" },
-    { n: 2, label: "Settings" },
-    { n: 3, label: "Questions" },
+    { n: 1, label: "Questions" },
+    { n: 2, label: "Exam Details" },
+    { n: 3, label: "Settings" },
   ]
 
   return (
@@ -2002,7 +2002,7 @@ function Step1({ form, setForm }: { form: Step1Form; setForm: React.Dispatch<Rea
     <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs relative">
       <div className="mb-6 sm:mb-8 pb-5 border-b border-slate-100">
         <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-          STEP 1 · EXAM DETAILS
+          STEP 2 · EXAM DETAILS
         </p>
         <h2 className="mt-1 text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
           Basic Information
@@ -2117,7 +2117,7 @@ function Step2({ form, setForm, canUseAiProctoring }: { form: Step2Form; setForm
     <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs relative">
       <div className="mb-6 sm:mb-8 pb-5 border-b border-slate-100">
         <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-          STEP 2 · TIMELINE & POLICIES
+          STEP 3 · TIMELINE & POLICIES
         </p>
         <h2 className="mt-1 text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
           Exam Settings & Proctoring
@@ -2519,7 +2519,7 @@ function Step3({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-            STEP 3 · QUESTION STUDIO
+            STEP 1 · QUESTION STUDIO
           </p>
           <div className="flex items-center gap-3 mt-1">
             <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">Select & Manage Questions</h2>
@@ -2864,10 +2864,13 @@ export default function CreateExamPage() {
   const handleNext = () => {
     setError("")
     if (step === 1) {
-      const err = validateStep1(); if (err) return setError(err)
+      if (questions.length === 0) {
+        return setError("Please add at least one question before proceeding to exam details")
+      }
     }
     if (step === 2) {
-      const err = validateStep2(); if (err) return setError(err)
+      const err = validateStep1()
+      if (err) return setError(err)
     }
     setStep(s => s + 1)
   }
@@ -2879,6 +2882,20 @@ export default function CreateExamPage() {
       setError(msg)
       toast.error(msg)
       return
+    }
+    const err1 = validateStep1()
+    if (err1) {
+      setStep(2)
+      return setError(err1)
+    }
+    const err2 = validateStep2()
+    if (err2) {
+      setStep(3)
+      return setError(err2)
+    }
+    if (status === "active" && questions.length === 0) {
+      setStep(1)
+      return setError("Please add at least one question to publish the exam")
     }
     setSaving(true)
     try {
@@ -3049,7 +3066,7 @@ export default function CreateExamPage() {
               Create New Exam
             </h1>
             <p className="sm:hidden text-xs text-slate-500 mt-0.5">
-              Step {step} of 3: {step === 1 ? "Exam Details" : step === 2 ? "Settings" : "Questions"}
+              Step {step} of 3: {step === 1 ? "Questions" : step === 2 ? "Exam Details" : "Settings"}
             </p>
           </div>
 
@@ -3089,9 +3106,23 @@ export default function CreateExamPage() {
         <Stepper
           step={step}
           onStepClick={(s) => {
-            if (s < step) setStep(s)
-            else if (s === 2 && step === 1) handleNext()
-            else if (s === 3 && step === 2) handleNext()
+            if (s < step) {
+              setStep(s)
+            } else if (s === 2 && step === 1) {
+              handleNext()
+            } else if (s === 3 && step === 2) {
+              handleNext()
+            } else if (s === 3 && step === 1) {
+              if (questions.length === 0) {
+                return setError("Please add at least one question before proceeding")
+              }
+              const err = validateStep1()
+              if (err) {
+                setStep(2)
+                return setError(err)
+              }
+              setStep(3)
+            }
           }}
         />
 
@@ -3113,9 +3144,7 @@ export default function CreateExamPage() {
 
         {/* ─── Step Content ─── */}
         <div className="space-y-6">
-          {step === 1 && <Step1 form={step1} setForm={setStep1} />}
-          {step === 2 && <Step2 form={step2} setForm={setStep2} canUseAiProctoring={instituteFeatures.aiProctoring} />}
-          {step === 3 && (
+          {step === 1 && (
             <Step3
               questions={questions}
               setQuestions={setQuestions}
@@ -3124,6 +3153,8 @@ export default function CreateExamPage() {
               allowedCustomQuestionTypes={allowedCustomQuestionTypes}
             />
           )}
+          {step === 2 && <Step1 form={step1} setForm={setStep1} />}
+          {step === 3 && <Step2 form={step2} setForm={setStep2} canUseAiProctoring={instituteFeatures.aiProctoring} />}
 
           {/* ─── Bottom Navigation Bar ─── */}
           <div className="flex items-center justify-between pt-6 border-t border-slate-200/80 mt-8">
@@ -3152,9 +3183,9 @@ export default function CreateExamPage() {
               <button
                 type="button"
                 onClick={handleNext}
-                className="ml-auto h-11 sm:h-12 px-7 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-[0.99]"
+                className="ml-auto h-11 sm:h-12 px-7 rounded-xl bg-[#324158] hover:bg-[#253244] text-white text-sm font-semibold flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-[0.99]"
               >
-                <span>{step === 1 ? "Next: Settings" : "Next: Questions"}</span>
+                <span>{step === 1 ? "Next: Exam Details" : "Next: Settings"}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
@@ -3162,7 +3193,7 @@ export default function CreateExamPage() {
                 type="button"
                 onClick={() => handleSubmit("active")}
                 disabled={saving || questions.length === 0}
-                className="ml-auto h-11 sm:h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99]"
+                className="ml-auto h-11 sm:h-12 px-8 rounded-xl bg-[#324158] hover:bg-[#253244] text-white text-sm font-semibold flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99]"
               >
                 {saving ? (
                   <>

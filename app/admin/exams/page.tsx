@@ -117,88 +117,12 @@ export default function ExamsListPage() {
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">View and manage all exams generated in your organization</p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Competitive Test Button */}
-          <div className="relative group">
-            {!quotaReached && hasCompetitiveAccess ? (
-              <Link
-                href="/admin/ai-generator"
-                className="flex items-center gap-2 px-3.5 py-2 bg-primary hover:opacity-90 text-white rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
-              >
-                <GraduationCap size={16} className="text-white" />
-                <span>Competitive Test</span>
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  toast.error(
-                    quotaReached
-                      ? quotaReachedMessage
-                      : "Access Restricted: You do not have permission to create Competitive Tests. Contact administrator."
-                  )
-                }
-                className="flex items-center gap-2 px-3.5 py-2 bg-gray-100 text-gray-400 border border-gray-200 rounded-lg text-sm font-medium cursor-not-allowed shadow-none"
-              >
-                <Lock size={15} className="text-gray-400" />
-                <span>Competitive Test</span>
-              </button>
-            )}
-            {(quotaReached || !hasCompetitiveAccess) && (
-              <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
-                <Lock size={12} className="text-amber-400 shrink-0" />
-                <span>
-                  {quotaReached
-                    ? `Exam Limit Reached: ${currentExamCount}/${maxExams} exams used. Contact administrator.`
-                    : "Access Restricted: You do not have permission to create Competitive Tests."}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Other Exams Button */}
-          <div className="relative group">
-            {!quotaReached && hasOtherExamsAccess ? (
-              <Link
-                href="/admin/other-exams"
-                className="flex items-center gap-2 px-3.5 py-2 bg-[#2D3A4A] hover:bg-[#1e2a38] text-white rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
-              >
-                <Layers size={16} className="text-white" />
-                <span>Other Exams</span>
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  toast.error(
-                    quotaReached
-                      ? quotaReachedMessage
-                      : "Access Restricted: You do not have permission to create Other Exams. Contact administrator."
-                  )
-                }
-                className="flex items-center gap-2 px-3.5 py-2 bg-gray-100 text-gray-400 border border-gray-200 rounded-lg text-sm font-medium cursor-not-allowed shadow-none"
-              >
-                <Lock size={15} className="text-gray-400" />
-                <span>Other Exams</span>
-              </button>
-            )}
-            {(quotaReached || !hasOtherExamsAccess) && (
-              <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1E293B] px-3 py-1.5 text-xs text-white shadow-xl border border-gray-700 animate-in fade-in duration-150">
-                <Lock size={12} className="text-amber-400 shrink-0" />
-                <span>
-                  {quotaReached
-                    ? `Exam Limit Reached: ${currentExamCount}/${maxExams} exams used. Contact administrator.`
-                    : "Access Restricted: You do not have permission to create Other Exams."}
-                </span>
-              </div>
-            )}
-          </div>
-
           {/* Create Exam Button */}
           <div className="relative group">
             {!quotaReached && hasExamAccess ? (
               <Link
                 href="/admin/exams/create"
-                className="flex items-center gap-2 px-3.5 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 shadow-sm transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-3.5 py-2 bg-[#324158] hover:bg-[#253244] text-white rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
               >
                 <Plus size={16} /> Create Exam
               </Link>
