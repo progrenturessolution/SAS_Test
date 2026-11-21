@@ -5,6 +5,7 @@ import { generateContentWithKeyRotation, getGeminiApiKeys } from "@/lib/gemini"
 
 interface QuestionBlueprint {
   mcq?: number
+  assertion?: number
   truefalse?: number
   descriptive?: number
   fillblanks?: number
@@ -12,6 +13,7 @@ interface QuestionBlueprint {
 
 interface DefaultMarks {
   mcq?: number
+  assertion?: number
   truefalse?: number
   descriptive?: number
   fillblanks?: number
@@ -50,7 +52,7 @@ export async function POST(req: Request) {
     } = body as {
       topic?: string
       topics?: TopicItem[]
-      questionType?: "mcq" | "truefalse" | "fillblanks" | "descriptive"
+      questionType?: "mcq" | "assertion" | "truefalse" | "fillblanks" | "descriptive"
       count?: number
       subject?: string
       grade?: string
@@ -88,8 +90,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Maximum 40 questions can be generated at once" }, { status: 400 })
       }
 
-      const qMarks = Number(marks) || (questionType === "mcq" ? 4 : questionType === "descriptive" ? 5 : 2)
-      const qNegMark = typeof negativeMark === "number" ? negativeMark : (questionType === "mcq" ? 1 : 0)
+      const qMarks = Number(marks) || (questionType === "mcq" || questionType === "assertion" ? 4 : questionType === "descriptive" ? 5 : 2)
+      const qNegMark = typeof negativeMark === "number" ? negativeMark : (questionType === "mcq" || questionType === "assertion" ? 1 : 0)
 
       let typeSpecificPrompt = ""
       if (questionType === "mcq") {
@@ -100,6 +102,26 @@ Rules:
 - "options": Array of exactly 4 plausible distinct choices.
 - "correctAnswer": Must be strictly one of "A", "B", "C", or "D" corresponding to the index (0=A, 1=B, 2=C, 3=D) of the correct choice in the "options" array.
 - "explanation": Concise conceptual explanation of the answer.
+- "difficulty": "${difficulty}"
+- "marks": ${qMarks}
+- "negativeMark": ${qNegMark}
+`
+      } else if (questionType === "assertion") {
+        typeSpecificPrompt = `
+Generate exactly ${totalCount} Assertion & Reason Questions (type: "assertion").
+Rules:
+- "assertionText": Statement of Assertion (A). A factual or conceptual assertion.
+- "reasonText": Statement of Reason (R). A factual or conceptual explanation/statement.
+- "questionText": Formatted strictly as: "Assertion (A): <assertionText>\\nReason (R): <reasonText>"
+- "options": Must strictly be standard 4 choices:
+  [
+    "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A).",
+    "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A).",
+    "Assertion (A) is true but Reason (R) is false.",
+    "Assertion (A) is false but Reason (R) is true."
+  ]
+- "correctAnswer": Must be strictly one of "A", "B", "C", or "D".
+- "explanation": Clear conceptual explanation.
 - "difficulty": "${difficulty}"
 - "marks": ${qMarks}
 - "negativeMark": ${qNegMark}
@@ -219,6 +241,48 @@ Return ONLY a valid, parseable JSON object with a single "questions" array. No m
           }
         }
 
+        if (questionType === "assertion") {
+          const rawOptions = Array.isArray(q.options) && q.options.length >= 4
+            ? q.options.slice(0, 4)
+            : [
+                "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A).",
+                "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A).",
+                "Assertion (A) is true but Reason (R) is false.",
+                "Assertion (A) is false but Reason (R) is true."
+              ]
+          let correct = String(q.correctAnswer || "A").trim().toUpperCase()
+          if (!["A", "B", "C", "D"].includes(correct)) {
+            const matchedIdx = rawOptions.findIndex((o: string) => o.toLowerCase() === String(q.correctAnswer).toLowerCase())
+            correct = matchedIdx >= 0 ? String.fromCharCode(65 + matchedIdx) : "A"
+          }
+          let aText = String(q.assertionText || "").trim()
+          let rText = String(q.reasonText || "").trim()
+          let qText = String(q.questionText || "").trim()
+          if (!aText || !rText) {
+            const match = qText.match(/(?:Assertion|Statement\s*1)\s*(?:\([Aa1]\))?\s*:\s*([\s\S]*?)(?:Reason|Statement\s*2)\s*(?:\([Rr2]\))?\s*:\s*([\s\S]*)$/i)
+            if (match) {
+              aText = match[1].trim()
+              rText = match[2].trim()
+            }
+          }
+          if (!qText && aText && rText) {
+            qText = `Assertion (A): ${aText}\nReason (R): ${rText}`
+          }
+          return {
+            id,
+            type: "assertion" as const,
+            assertionText: aText,
+            reasonText: rText,
+            questionText: qText,
+            difficulty: diff,
+            marks: qMarks,
+            negativeMark: qNegMark,
+            options: rawOptions.map(String),
+            correctAnswer: correct,
+            explanation: String(q.explanation || "").trim(),
+          }
+        }
+
         if (questionType === "truefalse") {
           const rawAns = String(q.correctAnswer || "True").toLowerCase()
           const correct = rawAns.includes("false") ? "False" : "True"
@@ -286,14 +350,15 @@ Return ONLY a valid, parseable JSON object with a single "questions" array. No m
       return NextResponse.json({ error: "Topic is required for question generation" }, { status: 400 })
     }
 
-    const bp = blueprint || { mcq: 5, truefalse: 3, descriptive: 2, fillblanks: 3 }
-    const dm = defaultMarks || { mcq: 4, truefalse: 2, descriptive: 5, fillblanks: 2 }
+    const bp = blueprint || { mcq: 5, assertion: 0, truefalse: 3, descriptive: 2, fillblanks: 3 }
+    const dm = defaultMarks || { mcq: 4, assertion: 4, truefalse: 2, descriptive: 5, fillblanks: 2 }
 
     const mcqCount = Math.max(0, Number(bp.mcq) || 0)
+    const assertionCount = Math.max(0, Number(bp.assertion) || 0)
     const tfCount = Math.max(0, Number(bp.truefalse) || 0)
     const descCount = Math.max(0, Number(bp.descriptive) || 0)
     const fibCount = Math.max(0, Number(bp.fillblanks) || 0)
-    const totalCount = mcqCount + tfCount + descCount + fibCount
+    const totalCount = mcqCount + assertionCount + tfCount + descCount + fibCount
 
     if (totalCount === 0) {
       return NextResponse.json({ error: "Please select at least 1 question to generate" }, { status: 400 })
@@ -304,6 +369,7 @@ Return ONLY a valid, parseable JSON object with a single "questions" array. No m
     }
 
     const mcqMarks = Number(dm.mcq) || 4
+    const assertionMarks = Number(dm.assertion) || 4
     const tfMarks = Number(dm.truefalse) || 2
     const descMarks = Number(dm.descriptive) || 5
     const fibMarks = Number(dm.fillblanks) || 2
@@ -320,6 +386,7 @@ ${additionalPrompt?.trim() ? `Additional Instructions: "${additionalPrompt.trim(
 
 Requested Question Breakdown:
 ${mcqCount > 0 ? `- Exactly ${mcqCount} Multiple Choice Questions (type: "mcq", marks: ${mcqMarks})` : ""}
+${assertionCount > 0 ? `- Exactly ${assertionCount} Assertion & Reason Questions (type: "assertion", marks: ${assertionMarks})` : ""}
 ${tfCount > 0 ? `- Exactly ${tfCount} True/False Questions (type: "truefalse", marks: ${tfMarks})` : ""}
 ${descCount > 0 ? `- Exactly ${descCount} Descriptive Questions (type: "descriptive", marks: ${descMarks})` : ""}
 ${fibCount > 0 ? `- Exactly ${fibCount} Fill in the Blanks Questions (type: "fillblanks", marks: ${fibMarks})` : ""}
@@ -329,16 +396,29 @@ Rules for each format:
    - "options": Array of exactly 4 plausible, distinct choices.
    - "correctAnswer": Must be strictly "A", "B", "C", or "D".
    - "explanation": Concise, conceptual step-by-step solution.
-2. For "truefalse":
+2. For "assertion":
+   - "assertionText": Statement of Assertion (A).
+   - "reasonText": Statement of Reason (R).
+   - "questionText": Strictly format as "Assertion (A): <assertionText>\\nReason (R): <reasonText>".
+   - "options": Exactly 4 standard choices:
+     [
+       "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A).",
+       "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A).",
+       "Assertion (A) is true but Reason (R) is false.",
+       "Assertion (A) is false but Reason (R) is true."
+     ]
+   - "correctAnswer": Strictly one of "A", "B", "C", or "D".
+   - "explanation": Clear conceptual explanation.
+3. For "truefalse":
    - "questionText": A clear, unambiguous statement.
    - "correctAnswer": Strictly either "True" or "False".
    - "explanation": Why the statement is true or false.
-3. For "descriptive":
+4. For "descriptive":
    - "questionText": Conceptual or analytical prompt testing deep understanding.
    - "wordLimit": Realistic word limit (e.g. "50-100 words" or "100-150 words").
    - "modelAnswer": Ideal sample answer meeting all requirements.
    - "rubric": Array of 3 to 4 specific evaluation bullet points.
-4. For "fillblanks":
+5. For "fillblanks":
    - "questionText": Sentence containing '___' (3 underscores) for the blank.
    - "blanks": Array of objects: [{ "answer": "Primary Answer", "alsoAccept": ["synonym1"] }]
    - "caseInsensitive": true.
@@ -379,7 +459,7 @@ Return ONLY a valid, parseable JSON object with a single "questions" array.
     }
 
     const formattedQuestions = parsed.questions.map((q: any, idx: number) => {
-      const qType = ["mcq", "truefalse", "descriptive", "fillblanks"].includes(q.type) ? q.type : "mcq"
+      const qType = ["mcq", "assertion", "truefalse", "descriptive", "fillblanks"].includes(q.type) ? q.type : "mcq"
       const diff = ["easy", "medium", "hard"].includes(q.difficulty) ? q.difficulty : "medium"
       const id = `gen_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 7)}`
 
@@ -399,6 +479,48 @@ Return ONLY a valid, parseable JSON object with a single "questions" array.
           questionText: String(q.questionText || "Question text").trim(),
           difficulty: diff,
           marks: Number(q.marks) || mcqMarks,
+          negativeMark: Number(q.negativeMark) || 1,
+          options: rawOptions.map(String),
+          correctAnswer: correct,
+          explanation: String(q.explanation || "").trim(),
+        }
+      }
+
+      if (qType === "assertion") {
+        const rawOptions = Array.isArray(q.options) && q.options.length >= 4
+          ? q.options.slice(0, 4)
+          : [
+              "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A).",
+              "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A).",
+              "Assertion (A) is true but Reason (R) is false.",
+              "Assertion (A) is false but Reason (R) is true."
+            ]
+        let correct = String(q.correctAnswer || "A").trim().toUpperCase()
+        if (!["A", "B", "C", "D"].includes(correct)) {
+          const matchedIdx = rawOptions.findIndex((o: string) => o.toLowerCase() === String(q.correctAnswer).toLowerCase())
+          correct = matchedIdx >= 0 ? String.fromCharCode(65 + matchedIdx) : "A"
+        }
+        let aText = String(q.assertionText || "").trim()
+        let rText = String(q.reasonText || "").trim()
+        let qText = String(q.questionText || "").trim()
+        if (!aText || !rText) {
+          const match = qText.match(/(?:Assertion|Statement\s*1)\s*(?:\([Aa1]\))?\s*:\s*([\s\S]*?)(?:Reason|Statement\s*2)\s*(?:\([Rr2]\))?\s*:\s*([\s\S]*)$/i)
+          if (match) {
+            aText = match[1].trim()
+            rText = match[2].trim()
+          }
+        }
+        if (!qText && aText && rText) {
+          qText = `Assertion (A): ${aText}\nReason (R): ${rText}`
+        }
+        return {
+          id,
+          type: "assertion" as const,
+          assertionText: aText,
+          reasonText: rText,
+          questionText: qText,
+          difficulty: diff,
+          marks: Number(q.marks) || assertionMarks,
           negativeMark: Number(q.negativeMark) || 1,
           options: rawOptions.map(String),
           correctAnswer: correct,

@@ -8,7 +8,7 @@ import {
   Check, Upload, Plus, X, Trash2, Search, AlertCircle,
   FileText, CheckSquare, List, Code2, AlignLeft, Info, Pencil, MoreVertical,
   Shield, Camera, Maximize, AlertTriangle, Sparkles, Loader2, Clock, GraduationCap,
-  ArrowRight, ArrowLeft, CheckCircle2, Zap, Layers, Lock, ChevronDown, ChevronUp
+  ArrowRight, ArrowLeft, CheckCircle2, Zap, Layers, Lock, ChevronDown, ChevronUp, Minus
 } from "lucide-react"
 import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
@@ -2348,6 +2348,104 @@ function Step3({
   const toggleSolution = (id: string) => setExpandedSolutions(prev => ({ ...prev, [id]: !prev[id] }))
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // ── AI In-Page Question Generator State ──
+  const [aiTopic, setAiTopic] = useState("")
+  const [aiDifficulty, setAiDifficulty] = useState<Difficulty>("medium")
+  const [selectedFormats, setSelectedFormats] = useState<Record<"mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks", boolean>>({
+    mcq: true,
+    assertion: true,
+    truefalse: true,
+    descriptive: false,
+    fillblanks: true,
+  })
+  const [formatCounts, setFormatCounts] = useState<Record<"mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks", number>>({
+    mcq: 5,
+    assertion: 2,
+    truefalse: 2,
+    descriptive: 2,
+    fillblanks: 2,
+  })
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false)
+  const [aiGenError, setAiGenError] = useState("")
+
+  const toggleFormat = (fmt: "mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks") => {
+    setSelectedFormats(prev => ({ ...prev, [fmt]: !prev[fmt] }))
+  }
+
+  const updateFormatCount = (fmt: "mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks", delta: number) => {
+    setFormatCounts(prev => ({
+      ...prev,
+      [fmt]: Math.max(1, Math.min(20, (prev[fmt] || 1) + delta))
+    }))
+  }
+
+  const adjustAllCounts = (delta: number) => {
+    setFormatCounts(prev => ({
+      mcq: Math.max(1, Math.min(20, (prev.mcq || 1) + delta)),
+      assertion: Math.max(1, Math.min(20, (prev.assertion || 1) + delta)),
+      truefalse: Math.max(1, Math.min(20, (prev.truefalse || 1) + delta)),
+      descriptive: Math.max(1, Math.min(20, (prev.descriptive || 1) + delta)),
+      fillblanks: Math.max(1, Math.min(20, (prev.fillblanks || 1) + delta)),
+    }))
+  }
+
+  const totalAiCount = (["mcq", "assertion", "truefalse", "descriptive", "fillblanks"] as const)
+    .reduce((sum, fmt) => sum + (selectedFormats[fmt] ? (formatCounts[fmt] || 0) : 0), 0)
+
+  const handleGenerateAi = async () => {
+    if (!aiTopic.trim()) {
+      toast.error("Please enter a Topic Name first")
+      return
+    }
+    if (totalAiCount === 0) {
+      toast.error("Please select at least one question format")
+      return
+    }
+    if (totalAiCount > 40) {
+      toast.error("Maximum 40 questions can be generated per batch. Please reduce quantities.")
+      return
+    }
+
+    setIsGeneratingAi(true)
+    setAiGenError("")
+    try {
+      const blueprint: Record<string, number> = {}
+      if (selectedFormats.mcq) blueprint.mcq = formatCounts.mcq
+      if (selectedFormats.assertion) blueprint.assertion = formatCounts.assertion
+      if (selectedFormats.truefalse) blueprint.truefalse = formatCounts.truefalse
+      if (selectedFormats.descriptive) blueprint.descriptive = formatCounts.descriptive
+      if (selectedFormats.fillblanks) blueprint.fillblanks = formatCounts.fillblanks
+
+      const res = await fetch("/api/admin/generate-exam-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: aiTopic.trim(),
+          difficulty: aiDifficulty,
+          blueprint,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate questions")
+      }
+
+      if (Array.isArray(data.questions) && data.questions.length > 0) {
+        setQuestions(prev => [...prev, ...data.questions])
+        toast.success(`Successfully generated ${data.questions.length} questions for "${aiTopic.trim()}"!`)
+      } else {
+        toast.error("No questions were generated. Please try with a clearer topic name.")
+      }
+    } catch (err: any) {
+      console.error("AI Question Generation error:", err)
+      setAiGenError(err.message || "Failed to generate questions")
+      toast.error(err.message || "Failed to generate questions")
+    } finally {
+      setIsGeneratingAi(false)
+    }
+  }
+
   const isCorrectOption = (opt: string, optIndex: number, correctAnswer?: string | string[]) => {
     if (correctAnswer === undefined || correctAnswer === null || correctAnswer === "") return false
     const ansStr = Array.isArray(correctAnswer) ? correctAnswer[0] : String(correctAnswer)
@@ -2609,6 +2707,244 @@ function Step3({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Quick AI Question Generator Panel ── */}
+      <div className="mb-6 rounded-2xl border border-[#cbd5e1] bg-gradient-to-b from-[#f8fafc] to-[#eaf0f8]/35 p-4 sm:p-6 shadow-xs space-y-4">
+        {/* Panel Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#cbd5e1]/70">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#324158] text-white shadow-2xs">
+              <Sparkles size={16} />
+            </span>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-[#324158]">
+                AI Question Generator
+              </h3>
+              <p className="text-[11px] sm:text-xs text-slate-500">
+                Enter topic name, select question formats, adjust quantities, and generate questions with answers instantly.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-[11px] font-bold text-[#324158] bg-white border border-[#cbd5e1] px-3 py-1 rounded-full shadow-2xs">
+              Total to Generate: <span className="font-extrabold text-[#324158]">{totalAiCount}</span> Questions
+            </span>
+          </div>
+        </div>
+
+        {/* Row 1: Topic Input & Difficulty */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
+          <div>
+            <label className="block text-xs font-bold text-[#324158] mb-1.5">
+              Topic Name / Chapter <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={aiTopic}
+              onChange={e => setAiTopic(e.target.value)}
+              placeholder="e.g. Thermodynamics, Light and Optics, Chemical Bonding, Linear Equations..."
+              className="w-full h-11 px-3.5 bg-white border border-[#cbd5e1] rounded-xl text-sm font-semibold text-[#324158] placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-all shadow-2xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-[#324158] mb-1.5">
+              Difficulty Level
+            </label>
+            <div className="flex items-center gap-1.5 h-11 bg-white border border-[#cbd5e1] rounded-xl p-1 shadow-2xs">
+              {(["easy", "medium", "hard"] as Difficulty[]).map(diff => (
+                <button
+                  key={diff}
+                  type="button"
+                  onClick={() => setAiDifficulty(diff)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
+                    aiDifficulty === diff
+                      ? "bg-[#324158] text-white shadow-xs"
+                      : "text-slate-600 hover:bg-[#eaf0f8] hover:text-[#324158]"
+                  }`}
+                >
+                  {diff}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Format Selection & Quantity Controls */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-bold text-[#324158]">
+              Select Formats & Set Quantities
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const allSelected = (["mcq", "assertion", "truefalse", "descriptive", "fillblanks"] as const).every(f => selectedFormats[f])
+                  const targetState = !allSelected
+                  setSelectedFormats({
+                    mcq: targetState,
+                    assertion: targetState,
+                    truefalse: targetState,
+                    descriptive: targetState,
+                    fillblanks: targetState,
+                  })
+                }}
+                className="text-[11px] font-bold text-[#324158] hover:underline cursor-pointer"
+              >
+                {(["mcq", "assertion", "truefalse", "descriptive", "fillblanks"] as const).every(f => selectedFormats[f]) ? "Deselect All" : "Select All"}
+              </button>
+              <span className="text-slate-300">·</span>
+              <button
+                type="button"
+                onClick={() => adjustAllCounts(1)}
+                className="text-[11px] font-bold text-[#324158] hover:underline cursor-pointer"
+                title="Increase quantity by 1 for all formats"
+              >
+                +1 to All
+              </button>
+              <span className="text-slate-300">·</span>
+              <button
+                type="button"
+                onClick={() => adjustAllCounts(-1)}
+                className="text-[11px] font-bold text-[#324158] hover:underline cursor-pointer"
+                title="Decrease quantity by 1 for all formats"
+              >
+                -1 to All
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+            {[
+              { id: "mcq" as const, label: "MCQ", sublabel: "Multiple Choice", icon: List },
+              { id: "assertion" as const, label: "Assertion & Reason", sublabel: "A & R Statements", icon: Layers },
+              { id: "truefalse" as const, label: "True / False", sublabel: "Binary Statement", icon: CheckSquare },
+              { id: "descriptive" as const, label: "Descriptive", sublabel: "Long Answer", icon: AlignLeft },
+              { id: "fillblanks" as const, label: "Fill Blanks", sublabel: "Complete Sentence", icon: FileText },
+            ].map(item => {
+              const isSelected = selectedFormats[item.id]
+              const count = formatCounts[item.id] || 1
+              const Icon = item.icon
+              return (
+                <div
+                  key={item.id}
+                  className={`relative rounded-xl border p-3 transition-all flex flex-col justify-between ${
+                    isSelected
+                      ? "border-[#324158] bg-white shadow-xs ring-1 ring-[#324158]/10"
+                      : "border-[#cbd5e1] bg-slate-50/60 opacity-60 hover:opacity-100"
+                  }`}
+                >
+                  <div
+                    onClick={() => toggleFormat(item.id)}
+                    className="flex items-start justify-between gap-2 cursor-pointer select-none"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-xs ${
+                        isSelected ? "bg-[#eaf0f8] text-[#324158] font-bold" : "bg-slate-200 text-slate-500"
+                      }`}>
+                        <Icon size={13} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#324158] leading-tight truncate">
+                          {item.label}
+                        </p>
+                        <p className="text-[10px] text-slate-500 leading-none mt-0.5 truncate">
+                          {item.sublabel}
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                      isSelected
+                        ? "bg-[#324158] border-[#324158] text-white"
+                        : "border-slate-300 bg-white"
+                    }`}>
+                      {isSelected && <Check size={11} strokeWidth={3} />}
+                    </div>
+                  </div>
+
+                  {/* Quantity Stepper */}
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Qty:
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={!isSelected || count <= 1}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          updateFormatCount(item.id, -1)
+                        }}
+                        className="w-6 h-6 rounded-md bg-[#eaf0f8] hover:bg-[#dbe6f5] text-[#324158] disabled:opacity-40 flex items-center justify-center cursor-pointer transition-colors"
+                        title="Decrease count"
+                      >
+                        <Minus size={11} />
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={20}
+                        disabled={!isSelected}
+                        value={count}
+                        onChange={(e) => {
+                          const val = Math.max(1, Math.min(20, Number(e.target.value) || 1))
+                          setFormatCounts(prev => ({ ...prev, [item.id]: val }))
+                        }}
+                        className="w-10 h-6 text-center text-xs font-bold text-[#324158] bg-white border border-[#cbd5e1] rounded-md disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:border-[#324158]"
+                      />
+                      <button
+                        type="button"
+                        disabled={!isSelected || count >= 20}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          updateFormatCount(item.id, 1)
+                        }}
+                        className="w-6 h-6 rounded-md bg-[#eaf0f8] hover:bg-[#dbe6f5] text-[#324158] disabled:opacity-40 flex items-center justify-center cursor-pointer transition-colors"
+                        title="Increase count"
+                      >
+                        <Plus size={11} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {aiGenError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 flex items-center gap-2">
+            <AlertCircle size={15} className="shrink-0"/>
+            <span>{aiGenError}</span>
+          </div>
+        )}
+
+        {/* Action Row */}
+        <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[#cbd5e1]/60">
+          <p className="text-xs text-slate-500">
+            Generates <span className="font-bold text-[#324158]">{totalAiCount}</span> questions with options, explanations & correct answers based on your topic.
+          </p>
+          <button
+            type="button"
+            onClick={handleGenerateAi}
+            disabled={isGeneratingAi || !aiTopic.trim() || totalAiCount === 0}
+            className="h-11 px-6 rounded-xl bg-[#324158] hover:bg-[#253244] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2.5 shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            {isGeneratingAi ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>Generating {totalAiCount} Questions...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                <span>✦ Generate {totalAiCount} Questions</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
