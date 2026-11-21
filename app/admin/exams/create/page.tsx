@@ -8,7 +8,7 @@ import {
   Check, Upload, Plus, X, Trash2, Search, AlertCircle,
   FileText, CheckSquare, List, Code2, AlignLeft, Info, Pencil, MoreVertical,
   Shield, Camera, Maximize, AlertTriangle, Sparkles, Loader2, Clock, GraduationCap,
-  ArrowRight, ArrowLeft, CheckCircle2, Zap, Layers, Lock
+  ArrowRight, ArrowLeft, CheckCircle2, Zap, Layers, Lock, ChevronDown, ChevronUp
 } from "lucide-react"
 import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
@@ -2344,7 +2344,51 @@ function Step3({
   const [pdfUploading, setPdfUploading] = useState(false)
   const [pdfError, setPdfError] = useState("")
   const [showCompetitiveAiModal, setShowCompetitiveAiModal] = useState(false)
+  const [expandedSolutions, setExpandedSolutions] = useState<Record<string, boolean>>({})
+  const toggleSolution = (id: string) => setExpandedSolutions(prev => ({ ...prev, [id]: !prev[id] }))
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const isCorrectOption = (opt: string, optIndex: number, correctAnswer?: string | string[]) => {
+    if (correctAnswer === undefined || correctAnswer === null || correctAnswer === "") return false
+    const ansStr = Array.isArray(correctAnswer) ? correctAnswer[0] : String(correctAnswer)
+    const trimmedAns = ansStr.trim().toLowerCase()
+    const trimmedOpt = String(opt).trim().toLowerCase()
+    if (trimmedOpt === trimmedAns) return true
+    const letter = ["a", "b", "c", "d", "e"][optIndex]
+    if (trimmedAns === letter) return true
+    if (trimmedAns === `option ${letter}`) return true
+    if (trimmedAns === String(optIndex)) return true
+    return false
+  }
+
+  const isCorrectTF = (opt: "True" | "False", correctAnswer?: string) => {
+    if (!correctAnswer) return false
+    const lowerAns = String(correctAnswer).toLowerCase()
+    if (opt === "True") {
+      return lowerAns === "true" || lowerAns === "option a" || lowerAns === "a" || lowerAns === "0"
+    } else {
+      return lowerAns === "false" || lowerAns === "option b" || lowerAns === "b" || lowerAns === "1"
+    }
+  }
+
+  const getFormatBadge = (type: QuestionType) => {
+    switch (type) {
+      case "mcq":
+        return "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1]"
+      case "assertion":
+        return "bg-purple-50 text-purple-800 border border-purple-200"
+      case "truefalse":
+        return "bg-teal-50 text-teal-800 border border-teal-200"
+      case "descriptive":
+        return "bg-blue-50 text-blue-800 border border-blue-200"
+      case "fillblanks":
+        return "bg-amber-50 text-amber-800 border border-amber-200"
+      case "coding":
+        return "bg-red-50 text-red-800 border border-red-200"
+      default:
+        return "bg-slate-100 text-slate-700 border border-slate-200"
+    }
+  }
 
   const handleAddCompetitiveQuestions = (newQuestions: GeneratedCompetitiveQuestion[]) => {
     const mapped: Question[] = newQuestions.map(q => {
@@ -2514,17 +2558,17 @@ function Step3({
   )
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs relative">
+    <div className="bg-white rounded-2xl border border-[#cbd5e1] p-5 sm:p-8 shadow-xs relative">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#64748b]">
             STEP 1 · QUESTION STUDIO
           </p>
           <div className="flex items-center gap-3 mt-1">
-            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">Select & Manage Questions</h2>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#324158]">Select & Manage Questions</h2>
             {questions.length > 0 && (
-              <span className="px-3 py-1 bg-slate-100 rounded-full text-xs font-semibold text-slate-800 ring-1 ring-slate-200">
+              <span className="px-3 py-1 bg-[#eaf0f8] rounded-full text-xs font-bold text-[#324158] border border-[#cbd5e1]">
                 {questions.length} Selected
               </span>
             )}
@@ -2536,7 +2580,7 @@ function Step3({
             type="button"
             onClick={() => canUsePdfImport && fileRef.current?.click()}
             disabled={pdfUploading || !canUsePdfImport}
-            className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+            className="h-10 px-4 rounded-xl border border-[#cbd5e1] bg-white hover:bg-[#eaf0f8] text-[#324158] text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
           >
             <Upload size={15} className="shrink-0" />
             <span>{pdfUploading ? "Uploading..." : "Upload from PDF"}</span>
@@ -2550,13 +2594,13 @@ function Step3({
               <span>Add Question</span>
             </button>
             <div className="absolute right-0 top-full pt-1.5 w-48 z-20 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
-              <div className="bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden p-1 animate-in fade-in zoom-in-95">
+              <div className="bg-white border border-[#cbd5e1] rounded-2xl shadow-xl overflow-hidden p-1 animate-in fade-in zoom-in-95">
                 {(["mcq","assertion","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).filter(type => allowedCustomQuestionTypes.includes(type)).map(type => (
                   <button
                     key={type}
                     type="button"
                     onClick={() => openModal(type)}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer text-left font-medium"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs sm:text-sm text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] rounded-xl transition-colors cursor-pointer text-left font-medium"
                   >
                     {TYPE_META[type].icon}
                     <span>{TYPE_META[type].label}</span>
@@ -2583,13 +2627,13 @@ function Step3({
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search questions by text..."
-            className="w-full h-11 pl-10 pr-4 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors shadow-2xs"
+            className="w-full h-11 pl-10 pr-4 bg-white border border-[#cbd5e1] rounded-xl text-sm text-[#324158] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/10 focus:border-[#324158] transition-colors shadow-2xs"
           />
         </div>
         <select
           value={filterType}
           onChange={e => setFilterType(e.target.value as QuestionType | "all")}
-          className="h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors cursor-pointer shadow-2xs"
+          className="h-11 px-4 bg-white border border-[#cbd5e1] rounded-xl text-sm font-semibold text-[#324158] focus:outline-none focus:ring-2 focus:ring-[#324158]/10 focus:border-[#324158] transition-colors cursor-pointer shadow-2xs"
         >
           <option value="all">All Question Types</option>
           {(["mcq","assertion","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
@@ -2616,60 +2660,354 @@ function Step3({
 
       {/* Question List */}
       {filtered.length === 0 ? (
-        <div className="py-16 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-          <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center mx-auto mb-3">
-            <FileText size={20} className="text-slate-400"/>
+        <div className="py-16 text-center bg-slate-50/50 rounded-2xl border border-dashed border-[#cbd5e1]">
+          <div className="w-12 h-12 rounded-2xl bg-white border border-[#cbd5e1] shadow-2xs flex items-center justify-center mx-auto mb-3">
+            <FileText size={20} className="text-[#324158]"/>
           </div>
-          <p className="text-sm font-semibold text-slate-700">No questions added yet</p>
-          <p className="text-xs text-slate-400 mt-1">Add questions manually above, generate via AI topic, or import from PDF.</p>
+          <p className="text-sm font-bold text-[#324158]">No questions added yet</p>
+          <p className="text-xs text-slate-500 mt-1">Add questions manually above via Add Question or import from PDF.</p>
         </div>
       ) : (
-        <div className="space-y-2.5 mb-4 max-h-137.5 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
-          {filtered.map((q, i) => (
-            <div key={q.id} className={`flex items-start sm:items-center gap-3 p-3.5 sm:p-4 rounded-xl border transition-colors bg-white hover:border-slate-300
-              ${q.type === "coding" ? "border-red-100 bg-red-50/20" : "border-slate-200/80"}`}>
-              <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${TYPE_META[q.type].color} mt-0.5 sm:mt-0 shadow-2xs`}>
-                {TYPE_META[q.type].icon}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug">
-                  <MathRenderer content={q.questionText || `Question ${i+1}`} />
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1.5">
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${TYPE_META[q.type].color} border-current opacity-90`}>{TYPE_META[q.type].label}</span>
-                  {q.questionImage && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      Diagram
-                    </span>
-                  )}
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${DIFFICULTY_COLORS[q.difficulty]} border-current opacity-90`}>{q.difficulty}</span>
-                  <span className="sm:hidden text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-700 font-semibold rounded">
-                    {q.marks} {q.marks === 1 ? "mark" : "marks"}
+        <div className="space-y-4 mb-4 max-h-[640px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+          {filtered.map((q, i) => {
+            // Keep coding question row 100% untouched as requested by user
+            if (q.type === "coding") {
+              return (
+                <div key={q.id} className="flex items-start sm:items-center gap-3 p-3.5 sm:p-4 rounded-xl border border-red-100 bg-red-50/20 transition-colors hover:border-red-200">
+                  <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-red-100 text-red-700 mt-0.5 sm:mt-0 shadow-2xs">
+                    <Code2 size={13} />
                   </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug">
+                      <MathRenderer content={q.questionText || `Coding Challenge ${i+1}`} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1.5">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-red-100 text-red-700 border-current opacity-90">Coding</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${DIFFICULTY_COLORS[q.difficulty]} border-current opacity-90`}>{q.difficulty}</span>
+                      <span className="sm:hidden text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-700 font-semibold rounded">
+                        {q.marks} {q.marks === 1 ? "mark" : "marks"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-sm font-bold text-slate-800">{q.marks}</p>
+                      <p className="text-[10px] font-medium text-slate-400 uppercase">Marks</p>
+                    </div>
+                    <div className="flex items-center gap-1 relative">
+                      <button onClick={(e) => openMenu(q.id, e)} className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
+                        <MoreVertical size={16}/>
+                      </button>
+                      {menuOpen === q.id && (
+                        <QuestionMenu
+                          q={q}
+                          anchorRect={anchorRect}
+                          onEdit={q => openEdit(q)}
+                          onDelete={id => removeQ(id)}
+                          onClose={() => setMenuOpen(null)}
+                        />
+                      )}
+                    </div>
+                  </div>
                 </div>
+              )
+            }
+
+            // Rich Question Card with Questions and Answers shown (MCQ, Assertion, True/False, Descriptive, Fill Blanks)
+            return (
+              <div
+                key={q.id}
+                className="bg-white rounded-2xl border border-[#cbd5e1] p-4 sm:p-5 shadow-xs hover:border-[#324158]/50 transition-all space-y-3.5"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap min-w-0">
+                    <span className="w-6 h-6 rounded-lg bg-[#324158] text-white text-xs font-bold flex items-center justify-center shadow-2xs shrink-0">
+                      {i + 1}
+                    </span>
+                    <span className={`text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-md font-bold uppercase tracking-wider ${getFormatBadge(q.type)}`}>
+                      {TYPE_META[q.type].label}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${DIFFICULTY_COLORS[q.difficulty]}`}>
+                      {q.difficulty}
+                    </span>
+                    {q.questionImage && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        Diagram
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs font-bold text-[#324158] bg-[#eaf0f8] border border-[#cbd5e1] px-2.5 py-0.5 rounded-md">
+                      +{q.marks}m{q.negativeMark ? ` / -${q.negativeMark}m` : ""}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openEdit(q)}
+                      className="p-1.5 text-slate-400 hover:text-[#324158] hover:bg-[#eaf0f8] rounded-lg transition-colors cursor-pointer"
+                      title="Edit Question"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeQ(q.id)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      title="Delete Question"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Question Statement */}
+                {q.type === "assertion" ? (
+                  (() => {
+                    const parsed = (q as AssertionQuestion).assertionText && (q as AssertionQuestion).reasonText
+                      ? { assertion: (q as AssertionQuestion).assertionText!, reason: (q as AssertionQuestion).reasonText! }
+                      : parseAssertionReason(q.questionText)
+                    return parsed ? (
+                      <div className="space-y-2 mb-2">
+                        <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-200 text-slate-900 text-xs sm:text-sm">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded mb-1 inline-block">
+                            Assertion (A)
+                          </span>
+                          <div className="leading-relaxed">
+                            <MathRenderer content={parsed.assertion} />
+                          </div>
+                        </div>
+                        <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-200 text-slate-900 text-xs sm:text-sm">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-900 bg-purple-100 border border-purple-300 px-2 py-0.5 rounded mb-1 inline-block">
+                            Reason (R)
+                          </span>
+                          <div className="leading-relaxed">
+                            <MathRenderer content={parsed.reason} />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
+                        <MathRenderer content={q.questionText} />
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <div className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
+                    <MathRenderer content={q.questionText} />
+                  </div>
+                )}
+
+                {/* Question Image / Diagram */}
+                {q.questionImage && (
+                  <div className="my-2 max-w-sm rounded-lg overflow-hidden border border-slate-200 bg-slate-50 p-1">
+                    <img src={q.questionImage} alt="Diagram" className="max-h-48 rounded object-contain mx-auto" />
+                  </div>
+                )}
+
+                {/* Options / Answers Section */}
+                {/* 1. MCQ Options */}
+                {q.type === "mcq" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {(q as MCQQuestion).options?.map((opt, oi) => {
+                      const isCorrect = isCorrectOption(opt, oi, (q as MCQQuestion).correctAnswer)
+                      const letter = ["A", "B", "C", "D", "E"][oi]
+                      return (
+                        <div
+                          key={oi}
+                          className={`p-3 rounded-xl border flex items-start gap-2.5 transition-all text-xs sm:text-sm ${
+                            isCorrect
+                              ? "bg-[#eaf0f8] border-2 border-[#324158] text-[#324158] font-medium shadow-xs"
+                              : "bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-white"
+                          }`}
+                        >
+                          <span
+                            className={`w-6 h-6 rounded-md text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 ${
+                              isCorrect
+                                ? "bg-[#324158] text-white shadow-2xs"
+                                : "bg-white border border-slate-200 text-slate-600"
+                            }`}
+                          >
+                            {isCorrect ? "✓" : letter}
+                          </span>
+                          <div className="flex-1 pt-0.5 leading-relaxed overflow-x-auto">
+                            <MathRenderer content={opt} />
+                          </div>
+                          {isCorrect && (
+                            <span className="text-[10px] font-bold text-white bg-[#324158] px-2 py-0.5 rounded shadow-2xs shrink-0 self-start mt-0.5">
+                              Correct Answer
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* 2. Assertion & Reason Options */}
+                {q.type === "assertion" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {((q as AssertionQuestion).options && (q as AssertionQuestion).options.length > 0
+                      ? (q as AssertionQuestion).options
+                      : [
+                          "Both A and R are true and R is the correct explanation of A",
+                          "Both A and R are true but R is not the correct explanation of A",
+                          "A is true but R is false",
+                          "A is false but R is true"
+                        ]
+                    ).map((opt, oi) => {
+                      const isCorrect = isCorrectOption(opt, oi, (q as AssertionQuestion).correctAnswer)
+                      const letter = ["A", "B", "C", "D"][oi]
+                      return (
+                        <div
+                          key={oi}
+                          className={`p-3 rounded-xl border flex items-start gap-2.5 transition-all text-xs sm:text-sm ${
+                            isCorrect
+                              ? "bg-[#eaf0f8] border-2 border-[#324158] text-[#324158] font-medium shadow-xs"
+                              : "bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-white"
+                          }`}
+                        >
+                          <span
+                            className={`w-6 h-6 rounded-md text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 ${
+                              isCorrect
+                                ? "bg-[#324158] text-white shadow-2xs"
+                                : "bg-white border border-slate-200 text-slate-600"
+                            }`}
+                          >
+                            {isCorrect ? "✓" : letter}
+                          </span>
+                          <div className="flex-1 pt-0.5 leading-relaxed overflow-x-auto">
+                            <MathRenderer content={opt} />
+                          </div>
+                          {isCorrect && (
+                            <span className="text-[10px] font-bold text-white bg-[#324158] px-2 py-0.5 rounded shadow-2xs shrink-0 self-start mt-0.5">
+                              Correct Answer
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* 3. True / False Options */}
+                {q.type === "truefalse" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {(["True", "False"] as const).map((opt) => {
+                      const isCorrect = isCorrectTF(opt, (q as TrueFalseQuestion).correctAnswer)
+                      return (
+                        <div
+                          key={opt}
+                          className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold transition-all ${
+                            isCorrect
+                              ? "bg-[#eaf0f8] border-2 border-[#324158] text-[#324158] shadow-xs"
+                              : "bg-slate-50/70 border-slate-200 text-slate-600 hover:bg-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className={`w-7 h-7 rounded-md text-xs font-bold flex items-center justify-center shrink-0 ${
+                                isCorrect
+                                  ? "bg-[#324158] text-white shadow-2xs"
+                                  : "bg-white border border-slate-200 text-slate-600"
+                              }`}
+                            >
+                              {isCorrect ? "✓" : opt === "True" ? "T" : "F"}
+                            </span>
+                            <span>{opt}</span>
+                          </div>
+                          {isCorrect && (
+                            <span className="text-[10px] font-bold text-white bg-[#324158] px-2.5 py-1 rounded shadow-2xs">
+                              Correct Answer
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* 4. Descriptive Answer */}
+                {q.type === "descriptive" && (
+                  <div className="space-y-2.5 pt-1">
+                    <div className="p-3.5 rounded-xl bg-[#eaf0f8]/60 border border-[#cbd5e1] text-xs sm:text-sm">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#324158] flex items-center gap-1.5">
+                          <CheckCircle2 size={13} className="text-[#324158]" />
+                          <span>Model / Reference Answer</span>
+                        </span>
+                        {(q as DescriptiveQuestion).wordLimit && (
+                          <span className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded">
+                            Word Limit: ~{(q as DescriptiveQuestion).wordLimit} words
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-slate-800 leading-relaxed overflow-x-auto">
+                        <MathRenderer content={(q as DescriptiveQuestion).modelAnswer || (q as any).sampleAnswer || (q as any).correctAnswer || "Model answer to be evaluated by instructor."} />
+                      </div>
+                    </div>
+
+                    {(q as DescriptiveQuestion).rubric && (q as DescriptiveQuestion).rubric.length > 0 && (
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                        <span className="font-bold text-[#324158] block mb-1 uppercase tracking-wider text-[10px]">
+                          Evaluation Rubric:
+                        </span>
+                        <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
+                          {(q as DescriptiveQuestion).rubric.map((r, ri) => <li key={ri}>{r}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 5. Fill in the Blanks Answer */}
+                {q.type === "fillblanks" && (
+                  <div className="p-3.5 rounded-xl bg-[#eaf0f8]/60 border border-[#cbd5e1] text-xs sm:text-sm space-y-2 pt-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#324158] flex items-center gap-1.5">
+                      <CheckCircle2 size={13} className="text-[#324158]" />
+                      <span>Correct Blank Answers</span>
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {(q as FillBlanksQuestion).blanks && (q as FillBlanksQuestion).blanks.length > 0 ? (
+                        (q as FillBlanksQuestion).blanks.map((b, bi) => (
+                          <span key={bi} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-[#cbd5e1] text-xs font-semibold text-[#324158] shadow-2xs">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase">Blank {bi + 1}:</span>
+                            <span>{b.answer}</span>
+                          </span>
+                        ))
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-[#cbd5e1] text-xs font-semibold text-[#324158] shadow-2xs">
+                          <span>{Array.isArray((q as any).correctAnswer) ? (q as any).correctAnswer.join(", ") : ((q as any).correctAnswer || "Correct answer specified")}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Solution / Explanation Accordion */}
+                {(q as any).explanation && (
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleSolution(q.id)}
+                      className="text-xs font-semibold text-[#324158] hover:underline flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {expandedSolutions[q.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      <span>{expandedSolutions[q.id] ? "Hide Solution" : "View Step-by-Step Solution"}</span>
+                    </button>
+                    {expandedSolutions[q.id] && (
+                      <div className="mt-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed overflow-x-auto">
+                        <span className="font-bold text-[#324158] block text-[11px] uppercase tracking-wider mb-1">
+                          Concept &amp; Detailed Solution:
+                        </span>
+                        <MathRenderer content={(q as any).explanation} />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold text-slate-800">{q.marks}</p>
-                  <p className="text-[10px] font-medium text-slate-400 uppercase">Marks</p>
-                </div>
-                <div className="flex items-center gap-1 relative">
-                  <button onClick={(e) => openMenu(q.id, e)} className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
-                    <MoreVertical size={16}/>
-                  </button>
-                  {menuOpen === q.id && (
-                    <QuestionMenu
-                      q={q}
-                      anchorRect={anchorRect}
-                      onEdit={q => openEdit(q)}
-                      onDelete={id => removeQ(id)}
-                      onClose={() => setMenuOpen(null)}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -2677,11 +3015,11 @@ function Step3({
       {questions.length > 0 && (
         <div className="pt-4 sm:pt-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
           <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
-            <span className="font-bold text-slate-900 tracking-tight">{questions.length} questions selected</span>
+            <span className="font-bold text-[#324158] tracking-tight">{questions.length} questions selected</span>
             <span className="text-slate-300">|</span>
-            <span className="font-medium text-slate-500">Total: <span className="text-slate-900 font-bold">{totalMarks} marks</span></span>
+            <span className="font-medium text-slate-500">Total: <span className="text-[#324158] font-bold">{totalMarks} marks</span></span>
             {Object.entries(typeCounts).filter(([,c]) => c > 0).map(([t, c]) => (
-              <span key={t} className="flex items-center gap-1.5"><span className="text-slate-300">·</span><span className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-700 font-semibold">{c} {TYPE_META[t as QuestionType].label}</span></span>
+              <span key={t} className="flex items-center gap-1.5"><span className="text-slate-300">·</span><span className="px-2 py-0.5 bg-[#eaf0f8] border border-[#cbd5e1] rounded text-xs text-[#324158] font-semibold">{c} {TYPE_META[t as QuestionType].label}</span></span>
             ))}
           </div>
         </div>
