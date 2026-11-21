@@ -17,6 +17,9 @@ import {
   Phone,
   ArrowLeft,
   ChevronRight,
+  CheckCheck,
+  ShieldCheck,
+  User,
 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -83,7 +86,7 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
     return () => clearInterval(interval)
   }, [isSuperAdmin])
 
-  // Prevent background scroll on mobile/desktop when drawer is open
+  // Prevent background scroll when drawer is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden"
@@ -170,6 +173,13 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
 
   const pendingCount = queries.filter((q) => q.status === "pending").length
 
+  const getInitials = (name: string) => {
+    const clean = (name || "").replace(/[^a-zA-Z0-9 ]/g, "").trim()
+    const parts = clean.split(" ").filter(Boolean)
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+    return clean.slice(0, 2).toUpperCase() || "OR"
+  }
+
   return (
     <>
       {/* ── Bell Trigger Button ── */}
@@ -191,7 +201,7 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
         )}
       </button>
 
-      {/* ── Portal-Rendered Slide-Over Drawer (Never Clipped, 100% Mobile Responsive) ── */}
+      {/* ── Portal-Rendered Slide-Over Drawer ── */}
       {mounted &&
         isOpen &&
         createPortal(
@@ -203,16 +213,16 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
             />
 
             {/* Slide-Over Drawer Container */}
-            <aside className="relative flex flex-col w-full sm:w-[460px] md:w-[490px] h-full bg-white shadow-2xl z-10 animate-in slide-in-from-right duration-200 border-l border-gray-200">
+            <aside className="relative flex flex-col w-full sm:w-[480px] md:w-[510px] h-full bg-white shadow-2xl z-10 animate-in slide-in-from-right duration-200 border-l border-gray-200">
               {/* Header */}
-              <div className="p-4 px-5 border-b border-gray-200 bg-[#2D3A4A] text-white flex items-center justify-between shrink-0">
+              <div className="p-4 px-5 border-b border-gray-200 bg-[#324158] text-white flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-amber-400">
                     <MessageSquare size={17} />
                   </div>
                   <div>
                     <h3 className="font-bold text-sm leading-tight text-white">
-                      Organization Requests
+                      Organization Communications
                     </h3>
                     <p className="text-[11px] text-slate-300">
                       {pendingCount > 0 ? `${pendingCount} queries awaiting reply` : "All queries replied"}
@@ -244,114 +254,124 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                 </div>
               </div>
 
-              {/* View 1: Active Query Detail & Reply Panel */}
+              {/* View 1: Active Query WhatsApp Conversation Stream */}
               {activeQuery ? (
-                <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
-                  {/* Back button */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveQuery(null)}
-                    className="text-xs font-bold text-[#2D3A4A] hover:opacity-80 flex items-center gap-1.5 cursor-pointer w-fit py-1"
-                  >
-                    <ArrowLeft size={14} />
-                    <span>Back to all requests</span>
-                  </button>
+                <div className="flex-1 flex flex-col min-h-0 bg-[#f8fafc]">
+                  {/* Top Header of Active Query */}
+                  <div className="p-3.5 px-4 bg-white border-b border-gray-200 flex items-center justify-between gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setActiveQuery(null)}
+                      className="text-xs font-bold text-[#324158] hover:opacity-80 flex items-center gap-1 cursor-pointer py-1"
+                    >
+                      <ArrowLeft size={15} />
+                      <span>All requests</span>
+                    </button>
 
-                  {/* Organization Card Info */}
-                  <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Building2 size={16} className="text-[#2D3A4A] shrink-0" />
-                        <span className="font-bold text-xs sm:text-sm text-gray-900 truncate">
-                          {activeQuery.instituteName}
-                        </span>
-                        {activeQuery.instituteCode && (
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 bg-white border border-gray-200 rounded text-gray-600">
-                            {activeQuery.instituteCode}
-                          </span>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-1.5">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${activeQuery.status === "resolved"
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          activeQuery.status === "resolved"
                             ? "bg-slate-100 text-slate-700"
                             : activeQuery.status === "replied"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border border-amber-200"
-                          }`}
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-amber-100 text-amber-800 border border-amber-200"
+                        }`}
                       >
                         {activeQuery.status}
                       </span>
                     </div>
-
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold text-[#324158]">{activeQuery.subject}</p>
-                      <p className="text-xs text-gray-800 whitespace-pre-wrap bg-white p-3 rounded-lg border border-gray-200 leading-relaxed">
-                        {activeQuery.message}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500 pt-1">
-                      <span className="flex items-center gap-1">
-                        <Mail size={12} className="text-gray-400" />
-                        {activeQuery.contactEmail}
-                      </span>
-                      {activeQuery.contactPhone && (
-                        <span className="flex items-center gap-1">
-                          <Phone size={12} className="text-gray-400" />
-                          {activeQuery.contactPhone}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <Clock size={12} className="text-gray-400" />
-                        {new Date(activeQuery.createdAt).toLocaleString([], {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
                   </div>
 
-                  {/* Previous Reply if any */}
-                  {activeQuery.adminReply && (
-                    <div className="p-3.5 rounded-xl bg-emerald-50/90 border border-emerald-200 space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-emerald-950 flex items-center gap-1.5">
-                          <CheckCircle2 size={13} className="text-emerald-600" />
-                          Your Reply:
-                        </span>
-                        {activeQuery.adminRepliedAt && (
-                          <span className="text-[10px] text-emerald-700">
-                            {new Date(activeQuery.adminRepliedAt).toLocaleString([], {
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        )}
+                  {/* WhatsApp Conversation Stream */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {/* Organization Identity Card */}
+                    <div className="p-3 rounded-xl bg-white border border-gray-200 flex items-center gap-3 shadow-2xs">
+                      <div className="w-10 h-10 rounded-2xl bg-[#324158] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                        {getInitials(activeQuery.instituteName)}
                       </div>
-                      <p className="text-xs text-emerald-900 whitespace-pre-wrap leading-relaxed">
-                        {activeQuery.adminReply}
-                      </p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-gray-900 truncate">
+                            {activeQuery.instituteName}
+                          </span>
+                          {activeQuery.instituteCode && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#eaf0f8] text-[#324158] font-bold rounded">
+                              {activeQuery.instituteCode}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-gray-500 truncate flex items-center gap-2 mt-0.5">
+                          <span>{activeQuery.contactEmail}</span>
+                          {activeQuery.contactPhone && <span>• {activeQuery.contactPhone}</span>}
+                        </p>
+                      </div>
                     </div>
-                  )}
 
-                  {/* Reply Form */}
-                  <div className="space-y-2 pt-2 border-t border-gray-100 mt-auto">
-                    <label className="text-xs font-bold text-gray-800 block">
-                      {activeQuery.adminReply ? "Update Reply / Send Follow Up:" : "Write Reply to Organization:"}
+                    {/* Left Bubble: Institute's Query */}
+                    <div className="flex items-start gap-2 max-w-[88%]">
+                      <div className="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[9px] shrink-0 mt-0.5">
+                        {getInitials(activeQuery.instituteName)}
+                      </div>
+                      <div className="bg-white rounded-2xl rounded-tl-xs p-3.5 border border-gray-200 shadow-2xs space-y-1.5 text-left w-full">
+                        <div className="flex items-center justify-between gap-1 text-[10px]">
+                          <span className="font-bold text-[#324158] capitalize">
+                            {activeQuery.category?.replace("_", " ")}
+                          </span>
+                          <span className="text-gray-400">
+                            {new Date(activeQuery.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <p className="text-xs font-bold text-[#324158]">{activeQuery.subject}</p>
+                        <p className="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed">
+                          {activeQuery.message}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right Bubble: Admin's Reply if exists */}
+                    {activeQuery.adminReply && (
+                      <div className="flex items-start gap-2 max-w-[88%] ml-auto justify-end">
+                        <div className="bg-[#324158] text-white rounded-2xl rounded-tr-xs p-3.5 shadow-2xs space-y-1.5 text-left w-full">
+                          <div className="flex items-center justify-between text-[11px] text-slate-200 border-b border-white/10 pb-1">
+                            <span className="font-bold flex items-center gap-1">
+                              <ShieldCheck size={12} className="text-emerald-400" />
+                              {activeQuery.adminRepliedByName || "Progrentures Support"}
+                            </span>
+                            <span className="text-[10px] text-slate-300">
+                              {activeQuery.adminRepliedAt
+                                ? new Date(activeQuery.adminRepliedAt).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : ""}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-100 whitespace-pre-wrap leading-relaxed">
+                            {activeQuery.adminReply}
+                          </p>
+                          <div className="flex justify-end pt-0.5">
+                            <CheckCheck size={14} className="text-emerald-400" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* WhatsApp-Style Reply Bar at Bottom */}
+                  <div className="p-3.5 bg-white border-t border-gray-200 space-y-2 shrink-0">
+                    <label className="text-[11px] font-bold text-gray-700 block">
+                      {activeQuery.adminReply ? "Send Follow-up to Organization:" : "Write Reply to Organization:"}
                     </label>
                     <textarea
-                      rows={4}
+                      rows={3}
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Type your response here (e.g. Your exam quota has been increased to 50 exams)..."
-                      className="w-full text-xs p-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/20 focus:border-[#2D3A4A] transition-all resize-none leading-relaxed"
+                      placeholder={`Type your reply to ${activeQuery.instituteName}...`}
+                      className="w-full text-xs p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#324158]/15 focus:border-[#324158] transition-all resize-none leading-relaxed"
                     />
 
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                    <div className="flex items-center justify-between gap-2 pt-1">
                       <a
                         href={`mailto:${activeQuery.contactEmail}?subject=${encodeURIComponent(
                           "Re: " + activeQuery.subject
@@ -367,7 +387,7 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                           type="button"
                           onClick={() => handleSendReply("resolved")}
                           disabled={sendingReply || !replyText.trim()}
-                          className="px-3 py-2 rounded-xl text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
                         >
                           <CheckCircle2 size={13} className="text-emerald-600" />
                           <span>Resolve</span>
@@ -376,7 +396,7 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                           type="button"
                           onClick={() => handleSendReply("replied")}
                           disabled={sendingReply || !replyText.trim()}
-                          className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#2D3A4A] text-white hover:bg-[#1E293B] shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                          className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-[#324158] text-white hover:bg-[#1E293B] shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
                         >
                           <Send size={13} />
                           <span>{sendingReply ? "Sending..." : "Send Reply"}</span>
@@ -386,27 +406,29 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                   </div>
                 </div>
               ) : (
-                /* View 2: Queries List */
+                /* View 2: WhatsApp-Style Queries List */
                 <div className="flex-1 flex flex-col min-h-0">
                   {/* Filter Tabs */}
-                  <div className="p-3 px-4 border-b border-gray-100 bg-gray-50/70 flex items-center gap-1.5 shrink-0">
+                  <div className="p-3 px-4 border-b border-gray-100 bg-gray-50/80 flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => setFilterTab("all")}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filterTab === "all"
-                          ? "bg-[#2D3A4A] text-white shadow-xs"
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        filterTab === "all"
+                          ? "bg-[#324158] text-white shadow-xs"
                           : "text-gray-600 hover:bg-gray-200/60"
-                        }`}
+                      }`}
                     >
                       All ({queries.length})
                     </button>
                     <button
                       type="button"
                       onClick={() => setFilterTab("pending")}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterTab === "pending"
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        filterTab === "pending"
                           ? "bg-amber-600 text-white shadow-xs"
                           : "text-amber-800 hover:bg-amber-100/60"
-                        }`}
+                      }`}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full ${filterTab === "pending" ? "bg-white" : "bg-amber-500"}`} />
                       Pending ({pendingCount})
@@ -414,16 +436,17 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                     <button
                       type="button"
                       onClick={() => setFilterTab("replied")}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filterTab === "replied"
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        filterTab === "replied"
                           ? "bg-emerald-700 text-white shadow-xs"
                           : "text-gray-600 hover:bg-gray-200/60"
-                        }`}
+                      }`}
                     >
                       Replied ({queries.filter((q) => q.status === "replied" || q.status === "resolved").length})
                     </button>
                   </div>
 
-                  {/* Scrollable list */}
+                  {/* Scrollable list with WhatsApp-style cards */}
                   <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
                     {loading && queries.length === 0 ? (
                       <div className="p-12 text-center text-xs text-gray-400">Loading requests...</div>
@@ -444,50 +467,69 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                           <div
                             key={q._id}
                             onClick={() => handleOpenQuery(q)}
-                            className={`p-4 hover:bg-gray-50/80 transition-all cursor-pointer text-left space-y-1.5 border-l-4 ${isUnread ? "bg-amber-50/40 border-l-amber-500" : "border-l-transparent"
-                              }`}
+                            className={`p-3.5 px-4 hover:bg-[#eaf0f8]/50 transition-all cursor-pointer text-left flex items-start gap-3 border-l-4 ${
+                              isUnread ? "bg-amber-50/50 border-l-amber-500" : "border-l-transparent"
+                            }`}
                           >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                {isUnread && <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />}
-                                <span className="font-bold text-xs text-gray-900 truncate">
-                                  {q.instituteName}
-                                </span>
-                                {q.instituteCode && (
-                                  <span className="text-[9px] font-mono px-1.5 py-0.2 bg-gray-100 text-gray-600 rounded">
-                                    {q.instituteCode}
-                                  </span>
-                                )}
-                              </div>
-                              <span
-                                className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${q.status === "resolved"
-                                    ? "bg-slate-100 text-slate-700"
-                                    : q.status === "replied"
-                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                      : "bg-amber-50 text-amber-700 border border-amber-200 font-bold"
-                                  }`}
-                              >
-                                {q.status}
-                              </span>
+                            {/* Institute Avatar */}
+                            <div className="w-10 h-10 rounded-2xl bg-[#324158] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs mt-0.5">
+                              {getInitials(q.instituteName)}
                             </div>
 
-                            <p className="text-xs font-semibold text-[#324158] truncate">{q.subject}</p>
-                            <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{q.message}</p>
+                            {/* Info */}
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="font-bold text-xs text-gray-900 truncate">
+                                    {q.instituteName}
+                                  </span>
+                                  {q.instituteCode && (
+                                    <span className="text-[9px] font-mono px-1.5 py-0.2 bg-[#eaf0f8] text-[#324158] font-bold rounded">
+                                      {q.instituteCode}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-gray-400 shrink-0">
+                                  {new Date(q.createdAt).toLocaleDateString([], {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </span>
+                              </div>
 
-                            <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1">
-                              <span className="flex items-center gap-1">
-                                <Clock size={11} />
-                                {new Date(q.createdAt).toLocaleDateString([], {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </span>
-                              <span className="text-xs font-bold text-[#2D3A4A] flex items-center gap-0.5 hover:underline">
-                                <span>{q.adminReply ? "View Reply" : "Reply"}</span>
-                                <ChevronRight size={13} />
-                              </span>
+                              <p className="text-xs font-semibold text-[#324158] truncate">{q.subject}</p>
+                              <p className="text-[11px] text-gray-500 truncate flex items-center gap-1">
+                                {q.adminReply ? (
+                                  <>
+                                    <CheckCheck size={12} className="text-blue-500 shrink-0" />
+                                    <span className="truncate">{q.adminReply}</span>
+                                  </>
+                                ) : (
+                                  <span className="truncate">{q.message}</span>
+                                )}
+                              </p>
+
+                              <div className="flex items-center justify-between pt-0.5 text-[10px]">
+                                <span className="capitalize text-gray-400 font-medium">
+                                  {q.category?.replace("_", " ")}
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                      q.status === "resolved"
+                                        ? "bg-slate-100 text-slate-700"
+                                        : q.status === "replied"
+                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                        : "bg-amber-100 text-amber-800 font-bold"
+                                    }`}
+                                  >
+                                    {q.status}
+                                  </span>
+                                  {isUnread && (
+                                    <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-ping" />
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         )
@@ -497,15 +539,15 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                 </div>
               )}
 
-              {/* Footer */}
+              {/* Drawer Footer */}
               <div className="p-3 px-5 border-t border-gray-100 bg-gray-50/80 flex items-center justify-between text-xs shrink-0">
                 <span className="text-[11px] text-gray-500">Progrentures Support Desk</span>
                 <Link
                   href="/admin/queries"
                   onClick={() => setIsOpen(false)}
-                  className="text-xs font-bold text-[#2D3A4A] hover:underline flex items-center gap-1"
+                  className="text-xs font-bold text-[#324158] hover:underline flex items-center gap-1"
                 >
-                  <span>Open Full Screen Page</span>
+                  <span>Open Full Communications Hub</span>
                   <ExternalLink size={12} />
                 </Link>
               </div>

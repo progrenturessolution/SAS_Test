@@ -24,11 +24,24 @@ export async function GET(req: Request) {
         filter.status = status
       }
 
-      const [queries, unreadCount, pendingCount] = await Promise.all([
-        SupportQuery.find(filter).sort({ createdAt: -1 }).limit(50).lean(),
+      const [rawQueries, unreadCount, pendingCount] = await Promise.all([
+        SupportQuery.find(filter)
+          .populate("instituteId", "name code phone email city")
+          .sort({ createdAt: -1 })
+          .limit(200)
+          .lean(),
         SupportQuery.countDocuments({ isReadByAdmin: false }),
         SupportQuery.countDocuments({ status: "pending" }),
       ])
+
+      const queries = rawQueries.map((q: any) => ({
+        ...q,
+        instituteName: q.instituteId?.name || q.instituteName || "Organization",
+        instituteCode: q.instituteId?.code || q.instituteCode || "",
+        instituteCity: q.instituteId?.city || "",
+        contactEmail: q.contactEmail || q.instituteId?.email || "",
+        contactPhone: q.contactPhone || q.instituteId?.phone || "",
+      }))
 
       return NextResponse.json({
         success: true,
