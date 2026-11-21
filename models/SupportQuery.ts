@@ -1,5 +1,13 @@
 import mongoose, { Schema, Document } from "mongoose"
 
+export interface ISupportQueryReply {
+  _id?: string
+  senderRole: "admin" | "institute"
+  senderName: string
+  message: string
+  createdAt: Date
+}
+
 export interface ISupportQuery extends Document {
   instituteId: mongoose.Types.ObjectId
   instituteName: string
@@ -17,6 +25,7 @@ export interface ISupportQuery extends Document {
   adminReply?: string
   adminRepliedAt?: Date
   adminRepliedByName?: string
+  replies?: ISupportQueryReply[]
   createdAt: Date
   updatedAt: Date
 }
@@ -47,13 +56,27 @@ const SupportQuerySchema = new Schema<ISupportQuery>(
     adminReply: { type: String, default: "" },
     adminRepliedAt: { type: Date },
     adminRepliedByName: { type: String, default: "" },
+    replies: [
+      {
+        senderRole: { type: String, enum: ["admin", "institute"], default: "admin" },
+        senderName: { type: String, default: "" },
+        message: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 )
+
+if (mongoose.models.SupportQuery) {
+  const paths = (mongoose.models.SupportQuery as any).schema?.paths || {}
+  if (!paths.replies) {
+    delete (mongoose.models as any).SupportQuery
+  }
+}
 
 const SupportQuery =
   (mongoose.models.SupportQuery as mongoose.Model<ISupportQuery>) ||
   mongoose.model<ISupportQuery>("SupportQuery", SupportQuerySchema)
 
 export default SupportQuery
-

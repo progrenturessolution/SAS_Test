@@ -39,6 +39,12 @@ interface QueryItem {
   adminReply?: string
   adminRepliedAt?: string
   adminRepliedByName?: string
+  replies?: Array<{
+    senderRole: "admin" | "institute"
+    senderName: string
+    message: string
+    createdAt: string
+  }>
   createdAt: string
 }
 
@@ -148,13 +154,27 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
       if (!res.ok) throw new Error(data.error || "Failed to send reply")
 
       toast.success(status === "resolved" ? "Query resolved and reply saved!" : "Reply sent to organization successfully!")
+      const newReplyObj = {
+        senderRole: "admin" as const,
+        senderName: "Progrentures Support",
+        message: replyText.trim(),
+        createdAt: new Date().toISOString(),
+      }
+      const existingReplies = activeQuery.replies
+        ? [...activeQuery.replies]
+        : (activeQuery.adminReply
+        ? [{ senderRole: "admin" as const, senderName: activeQuery.adminRepliedByName || "Support", message: activeQuery.adminReply, createdAt: activeQuery.adminRepliedAt || activeQuery.createdAt }]
+        : [])
+
       const updated = {
         ...activeQuery,
         adminReply: replyText.trim(),
         status,
         isReadByAdmin: true,
         adminRepliedAt: new Date().toISOString(),
+        replies: [...existingReplies, newReplyObj],
       }
+      setReplyText("")
       setActiveQuery(updated)
       setQueries((prev) => prev.map((item) => (item._id === activeQuery._id ? updated : item)))
       fetchQueries()
@@ -329,8 +349,62 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                       </div>
                     </div>
 
-                    {/* Right Bubble: Admin's Reply if exists */}
-                    {activeQuery.adminReply && (
+                    {/* Multi-reply WhatsApp stream: each reply appears sequentially without replacing each other! */}
+                    {Array.isArray(activeQuery.replies) && activeQuery.replies.length > 0 ? (
+                      activeQuery.replies.map((r, rIdx) => {
+                        const isAdmin = r.senderRole === "admin"
+                        return (
+                          <div
+                            key={rIdx}
+                            className={`flex items-start gap-2 max-w-[88%] ${isAdmin ? "ml-auto justify-end" : ""}`}
+                          >
+                            {!isAdmin && (
+                              <div className="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[9px] shrink-0 mt-0.5">
+                                {getInitials(activeQuery.instituteName)}
+                              </div>
+                            )}
+
+                            <div
+                              className={`p-3.5 rounded-2xl shadow-2xs space-y-1.5 text-left w-full ${
+                                isAdmin
+                                  ? "bg-[#324158] text-white rounded-tr-xs"
+                                  : "bg-white text-gray-800 rounded-tl-xs border border-gray-200"
+                              }`}
+                            >
+                              <div
+                                className={`flex items-center justify-between text-[11px] border-b pb-1 ${
+                                  isAdmin ? "text-slate-200 border-white/10" : "text-gray-500 border-gray-100"
+                                }`}
+                              >
+                                <span className="font-bold flex items-center gap-1">
+                                  {isAdmin && <ShieldCheck size={12} className="text-emerald-400" />}
+                                  {r.senderName || (isAdmin ? "Progrentures Support" : "Organization")}
+                                </span>
+                                <span className={isAdmin ? "text-slate-300 text-[10px]" : "text-gray-400 text-[10px]"}>
+                                  {r.createdAt
+                                    ? new Date(r.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                    : ""}
+                                </span>
+                              </div>
+                              <p className={`text-xs whitespace-pre-wrap leading-relaxed ${isAdmin ? "text-slate-100" : "text-gray-800"}`}>
+                                {r.message}
+                              </p>
+                              {isAdmin && (
+                                <div className="flex justify-end pt-0.5">
+                                  <CheckCheck size={14} className="text-emerald-400" />
+                                </div>
+                              )}
+                            </div>
+
+                            {isAdmin && (
+                              <div className="w-7 h-7 rounded-lg bg-[#324158] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                                <ShieldCheck size={14} />
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })
+                    ) : activeQuery.adminReply ? (
                       <div className="flex items-start gap-2 max-w-[88%] ml-auto justify-end">
                         <div className="bg-[#324158] text-white rounded-2xl rounded-tr-xs p-3.5 shadow-2xs space-y-1.5 text-left w-full">
                           <div className="flex items-center justify-between text-[11px] text-slate-200 border-b border-white/10 pb-1">
@@ -354,8 +428,11 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                             <CheckCheck size={14} className="text-emerald-400" />
                           </div>
                         </div>
+                        <div className="w-7 h-7 rounded-lg bg-[#324158] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                          <ShieldCheck size={14} />
+                        </div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* WhatsApp-Style Reply Bar at Bottom */}

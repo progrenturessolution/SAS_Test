@@ -45,6 +45,7 @@ export async function GET(req: Request) {
 
       return NextResponse.json({
         success: true,
+        isSuperAdmin: true,
         queries,
         unreadCount,
         pendingCount,
@@ -64,8 +65,14 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
+      isSuperAdmin: false,
       queries,
       unreadReplies,
+      institute: {
+        id: session.instituteId,
+        name: session.instituteName || "Organization",
+        code: session.instituteCode || "",
+      },
     })
   } catch (error: any) {
     console.error("GET /api/admin/queries error:", error)

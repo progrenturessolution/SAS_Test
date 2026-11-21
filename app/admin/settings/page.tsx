@@ -20,7 +20,10 @@ import {
   Phone,
   HelpCircle,
   ExternalLink,
+  User,
+  CheckCheck,
 } from "lucide-react"
+import Link from "next/link"
 import { toast } from "sonner"
 import { formatDateDDMMYYYY } from "@/lib/utils"
 
@@ -694,18 +697,27 @@ export default function SettingsPage() {
                     <Clock size={15} style={{ color: themeColor }} />
                     <span>Your Support Queries & Admin Replies</span>
                   </h3>
-                  <button
-                    type="button"
-                    onClick={loadInstituteQueries}
-                    disabled={loadingQueries}
-                    className="text-[11px] text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Loader2 size={12} className={loadingQueries ? "animate-spin" : "hidden"} />
-                    <span>Refresh</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href="/admin/queries"
+                      className="text-[11px] font-bold text-[#324158] hover:underline flex items-center gap-1 bg-[#eaf0f8] px-2 py-0.5 rounded-lg"
+                    >
+                      <MessageSquare size={12} />
+                      <span>Open Full Chat</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={loadInstituteQueries}
+                      disabled={loadingQueries}
+                      className="text-[11px] text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Loader2 size={12} className={loadingQueries ? "animate-spin" : "hidden"} />
+                      <span>Refresh</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[420px] overflow-y-auto overscroll-contain pr-1" style={{ overscrollBehavior: "contain" }}>
                   {loadingQueries && queries.length === 0 ? (
                     <div className="p-8 text-center text-xs text-gray-400">Loading your queries...</div>
                   ) : queries.length === 0 ? (
@@ -720,7 +732,7 @@ export default function SettingsPage() {
                     queries.map((q) => (
                       <div
                         key={q._id}
-                        className="p-4 rounded-xl border border-gray-200/90 bg-white shadow-2xs space-y-2.5"
+                        className="p-4 rounded-xl border border-gray-200/90 bg-white shadow-2xs space-y-2.5 text-left"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-bold text-xs text-gray-900 truncate">{q.subject}</span>
@@ -737,48 +749,87 @@ export default function SettingsPage() {
                           </span>
                         </div>
 
-                        <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed bg-gray-50/80 p-2.5 rounded-lg border border-gray-100">
+                        <p className="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50/80 p-2.5 rounded-lg border border-gray-100">
                           {q.message}
                         </p>
 
                         <div className="flex items-center justify-between text-[10px] text-gray-400">
                           <span>Category: <strong className="text-gray-600 capitalize">{q.category?.replace("_", " ")}</strong></span>
-                          <div className="flex items-center gap-3">
-                            <a
-                              href={`mailto:support@progrentures.com?subject=${encodeURIComponent(
-                                `REQUEST For Change - ${instituteName || "Organization"} (${instituteCode || "ID"}) - ${q.subject}`
-                              )}&body=${encodeURIComponent(
-                                `Organization: ${instituteName}\nCode: ${instituteCode}\nEmail: ${email}\nPhone: ${phone}\nCategory: ${q.category}\nSubject: ${q.subject}\n\nQuery Details:\n${q.message}\n\n---\nSubmitted via Progrentures Platform`
-                              )}`}
-                              className="text-[10px] font-semibold text-[#2D3A4A] hover:underline flex items-center gap-1"
-                              title="Send or forward copy to support@progrentures.com"
-                            >
-                              <Mail size={11} />
-                              <span>Email support</span>
-                            </a>
-                            <span>{new Date(q.createdAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                          </div>
+                          <span>{new Date(q.createdAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                         </div>
 
-                        {/* Admin Reply Callout */}
-                        {q.adminReply && (
-                          <div className="mt-2 p-3 rounded-lg bg-emerald-50/80 border border-emerald-200/90 space-y-1">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="font-bold text-emerald-950 flex items-center gap-1.5">
-                                <CheckCircle2 size={13} className="text-emerald-600" />
+                        {/* WhatsApp-Style Thread Replies: loops through all replies so second reply NEVER replaces first! */}
+                        {Array.isArray(q.replies) && q.replies.length > 0 ? (
+                          <div className="mt-3 space-y-2 border-t border-gray-100 pt-2">
+                            {q.replies.map((r: any, rIdx: number) => {
+                              const isAdmin = r.senderRole === "admin"
+                              return (
+                                <div
+                                  key={rIdx}
+                                  className={`p-3 rounded-xl space-y-1 text-left ${
+                                    isAdmin
+                                      ? "bg-[#324158] text-white rounded-tl-xs shadow-xs"
+                                      : "bg-gray-100 text-gray-800 rounded-tr-xs border border-gray-200"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between text-[11px] border-b border-white/10 pb-1">
+                                    <span className="font-bold flex items-center gap-1.5">
+                                      {isAdmin ? (
+                                        <CheckCircle2 size={13} className="text-emerald-400" />
+                                      ) : (
+                                        <User size={13} className="text-gray-500" />
+                                      )}
+                                      {r.senderName || (isAdmin ? "Platform Admin" : "Your Follow-up")}
+                                    </span>
+                                    <span className={`text-[10px] ${isAdmin ? "text-slate-300" : "text-gray-400"}`}>
+                                      {r.createdAt
+                                        ? new Date(r.createdAt).toLocaleDateString([], {
+                                            month: "short",
+                                            day: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })
+                                        : ""}
+                                    </span>
+                                  </div>
+                                  <p className={`text-xs whitespace-pre-wrap leading-relaxed ${isAdmin ? "text-slate-100" : "text-gray-800"}`}>
+                                    {r.message}
+                                  </p>
+                                  {isAdmin && (
+                                    <div className="flex justify-end pt-0.5">
+                                      <CheckCheck size={13} className="text-emerald-400" />
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : q.adminReply ? (
+                          <div className="mt-2 p-3 rounded-xl bg-[#324158] text-white shadow-xs space-y-1 text-left">
+                            <div className="flex items-center justify-between text-[11px] border-b border-white/10 pb-1">
+                              <span className="font-bold flex items-center gap-1.5 text-white">
+                                <CheckCircle2 size={13} className="text-emerald-400" />
                                 Reply from Platform Admin ({q.adminRepliedByName || "Support Team"}):
                               </span>
                               {q.adminRepliedAt && (
-                                <span className="text-[10px] text-emerald-700">
-                                  {new Date(q.adminRepliedAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                <span className="text-[10px] text-slate-300">
+                                  {new Date(q.adminRepliedAt).toLocaleDateString([], {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-emerald-900 whitespace-pre-wrap leading-relaxed">
+                            <p className="text-xs text-slate-100 whitespace-pre-wrap leading-relaxed">
                               {q.adminReply}
                             </p>
+                            <div className="flex justify-end pt-0.5">
+                              <CheckCheck size={13} className="text-emerald-400" />
+                            </div>
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     ))
                   )}

@@ -69,6 +69,7 @@ export default function AdminSidebar({
     { label: "Other Exams", href: "/admin/other-exams", icon: Layers },
     { label: "Students", href: "/admin/students", icon: Users },
     { label: "Results", href: "/admin/results", icon: BarChart2 },
+    { label: "Support & Help", href: "/admin/queries", icon: MessageSquare },
   ]
 
   // Close mobile drawer on route navigation
