@@ -3673,11 +3673,6 @@ export default function CreateExamPage() {
 
   const handleNext = () => {
     setError("")
-    if (step === 1) {
-      if (questions.length === 0) {
-        return setError("Please add at least one question before proceeding to exam details")
-      }
-    }
     if (step === 2) {
       const err = validateStep1()
       if (err) return setError(err)
@@ -3916,22 +3911,15 @@ export default function CreateExamPage() {
         <Stepper
           step={step}
           onStepClick={(s) => {
-            if (s < step) {
-              setStep(s)
-            } else if (s === 2 && step === 1) {
-              handleNext()
+            setError("")
+            if (s === 2 && step === 1) {
+              setStep(2)
+            } else if (s === 3 && step === 1) {
+              setStep(3)
             } else if (s === 3 && step === 2) {
               handleNext()
-            } else if (s === 3 && step === 1) {
-              if (questions.length === 0) {
-                return setError("Please add at least one question before proceeding")
-              }
-              const err = validateStep1()
-              if (err) {
-                setStep(2)
-                return setError(err)
-              }
-              setStep(3)
+            } else {
+              setStep(s)
             }
           }}
         />

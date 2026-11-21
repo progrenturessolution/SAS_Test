@@ -61,13 +61,14 @@ export async function GET(req: Request) {
       .sort({ createdAt: -1 })
       .lean()
 
-    const unreadReplies = queries.filter((q) => q.isReadByInstitute === false && Boolean(q.adminReply)).length
+    const unreadCount = queries.filter((q) => q.isReadByInstitute === false).length
 
     return NextResponse.json({
       success: true,
       isSuperAdmin: false,
       queries,
-      unreadReplies,
+      unreadReplies: unreadCount,
+      unreadCount,
       institute: {
         id: session.instituteId,
         name: session.instituteName || "Organization",

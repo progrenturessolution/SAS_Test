@@ -13,15 +13,17 @@ import {
   Info,
   Database,
   Calendar,
-  MessageSquare,
-  Send,
-  Clock,
   Mail,
   Phone,
   HelpCircle,
   ExternalLink,
   User,
-  CheckCheck,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Copy,
+  Lock,
+  Shield,
 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -60,93 +62,19 @@ export default function SettingsPage() {
   const [status, setStatus] = useState<string>("active")
   const [limits, setLimits] = useState<any>(null)
 
+  // Credentials & Password state for organization
+  const [adminPassword, setAdminPassword] = useState("")
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmNewPassword, setConfirmNewPassword] = useState("")
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false)
+  const [updatingPassword, setUpdatingPassword] = useState(false)
+
   // Super admin platform state
   const [platformName, setPlatformName] = useState("Progrentures Exam Platform")
   const [supportEmail, setSupportEmail] = useState("support@progrentures.com")
   const [supportPhone, setSupportPhone] = useState("+91 93094 70958")
-
-  // Support queries state for organization
-  const [queries, setQueries] = useState<any[]>([])
-  const [loadingQueries, setLoadingQueries] = useState(false)
-  const [querySubject, setQuerySubject] = useState("")
-  const [queryCategory, setQueryCategory] = useState("quota_increase")
-  const [queryMessage, setQueryMessage] = useState("")
-  const [submittingQuery, setSubmittingQuery] = useState(false)
-
-  const loadInstituteQueries = async () => {
-    try {
-      setLoadingQueries(true)
-      const res = await fetch("/api/admin/queries", { credentials: "include" })
-      const data = await res.json()
-      if (data.success) {
-        setQueries(data.queries || [])
-        // Auto-mark queries as read by institute if unread
-        const unread = (data.queries || []).filter((q: any) => q.isReadByInstitute === false)
-        if (unread.length > 0) {
-          unread.forEach(async (q: any) => {
-            try {
-              await fetch(`/api/admin/queries/${q._id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ markRead: true }),
-              })
-            } catch (err) {
-              console.error("Mark read error:", err)
-            }
-          })
-        }
-      }
-    } catch (e) {
-      console.error("Failed to load queries:", e)
-    } finally {
-      setLoadingQueries(false)
-    }
-  }
-
-  const handleSubmitQuery = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!querySubject.trim()) {
-      toast.error("Please enter a subject for your query")
-      return
-    }
-    if (!queryMessage.trim()) {
-      toast.error("Please describe your query or change request")
-      return
-    }
-
-    try {
-      setSubmittingQuery(true)
-      const res = await fetch("/api/admin/queries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject: querySubject.trim(),
-          category: queryCategory,
-          message: queryMessage.trim(),
-          contactEmail: email,
-          contactPhone: phone,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to submit query")
-
-      toast.success("Query submitted! Redirecting to email support@progrentures.com...")
-      setQuerySubject("")
-      setQueryMessage("")
-      loadInstituteQueries()
-
-      // Automatically redirect/open email client with the exact prefilled query to support@progrentures.com!
-      if (data.mailtoUrl) {
-        setTimeout(() => {
-          window.location.href = data.mailtoUrl
-        }, 400)
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to submit query")
-    } finally {
-      setSubmittingQuery(false)
-    }
-  }
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -165,13 +93,13 @@ export default function SettingsPage() {
           setCity(data.institute.city || "")
           setContactPerson(data.institute.contactPerson || "")
           setLogo(data.institute.logo || "")
+          setAdminPassword(data.institute.adminPassword || "")
           if (data.institute.validUntil) setValidUntil(data.institute.validUntil)
           if (data.institute.status) setStatus(data.institute.status)
           if (data.institute.limits) setLimits(data.institute.limits)
           const color = data.institute.themeColor || "#2D3A4A"
           setThemeColor(color)
           document.documentElement.style.setProperty("--primary", color)
-          loadInstituteQueries()
         } else if (data.settings) {
           setIsInstitute(false)
           if (data.settings.platformName) setPlatformName(data.settings.platformName)
@@ -184,6 +112,40 @@ export default function SettingsPage() {
       })
       .finally(() => setLoading(false))
   }, [])
+
+  // Handle Password Update for Coaching Institute
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newPassword || newPassword.trim().length < 6) {
+      toast.error("New password must be at least 6 characters long.")
+      return
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error("New password and confirmation do not match.")
+      return
+    }
+
+    setUpdatingPassword(true)
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ newPassword: newPassword.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to update password")
+
+      setAdminPassword(newPassword.trim())
+      setNewPassword("")
+      setConfirmNewPassword("")
+      toast.success("Portal password updated successfully! Super Admin view has also been updated.")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update password")
+    } finally {
+      setUpdatingPassword(false)
+    }
+  }
 
   // Handle Logo Upload
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -590,7 +552,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* 3. Help & Support / Request for Change Section */}
+          {/* 3. Portal Login Credentials & Security Section */}
           <div className="bg-white rounded-2xl border border-gray-200/90 p-6 sm:p-8 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
@@ -598,297 +560,212 @@ export default function SettingsPage() {
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
                   style={{ backgroundColor: themeColor }}
                 >
-                  <MessageSquare size={20} />
+                  <KeyRound size={20} />
                 </div>
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-gray-900">
-                    Help & Support / Request for Change
+                    Portal Login Credentials & Security
                   </h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Have questions, need your exam/student quotas increased, or requesting platform changes? Send your query directly to platform administrators.
+                    View your organization login credentials and manage your account password.
                   </p>
                 </div>
               </div>
               <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full border border-slate-200 w-fit">
-                Dedicated Support Desk
+                Login Access & Security
               </span>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-              {/* Left Column: Submit Query Form */}
+              {/* Left Column: Organization Login Credentials Display */}
               <div className="lg:col-span-6 space-y-4">
                 <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                  <Send size={15} style={{ color: themeColor }} />
-                  <span>Submit a New Query / Request</span>
+                  <Shield size={16} style={{ color: themeColor }} />
+                  <span>Current Portal Credentials</span>
                 </h3>
 
-                <form onSubmit={handleSubmitQuery} className="space-y-3.5">
+                <div className="space-y-3">
+                  {/* Email */}
+                  <div className="p-3.5 rounded-xl border border-gray-200/90 bg-gray-50/60 shadow-2xs space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+                      Login Email Address
+                    </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-xs text-gray-900 font-mono truncate select-all">
+                        {email || "Not specified"}
+                      </span>
+                      {email && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(email)
+                            toast.success("Login email copied to clipboard!")
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-[#324158] hover:bg-white rounded-lg transition-colors shadow-2xs shrink-0 cursor-pointer"
+                          title="Copy Email"
+                        >
+                          <Copy size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Portal Code */}
+                  <div className="p-3.5 rounded-xl border border-gray-200/90 bg-gray-50/60 shadow-2xs space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+                      Organization Portal Code
+                    </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-bold text-xs text-[#324158] bg-[#eaf0f8] px-2 py-0.5 rounded-md select-all">
+                        {instituteCode || "ID"}
+                      </span>
+                      {instituteCode && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(instituteCode)
+                            toast.success("Organization code copied!")
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-[#324158] hover:bg-white rounded-lg transition-colors shadow-2xs shrink-0 cursor-pointer"
+                          title="Copy Code"
+                        >
+                          <Copy size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Password with Eye Toggle */}
+                  <div className="p-3.5 rounded-xl border border-gray-200/90 bg-gray-50/60 shadow-2xs space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+                      Current Portal Password
+                    </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-semibold text-xs text-gray-900 select-all">
+                        {adminPassword ? (
+                          showCurrentPassword ? adminPassword : "••••••••••••"
+                        ) : (
+                          <span className="text-gray-400 italic font-normal text-xs">•••••••• (Set new password below)</span>
+                        )}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {adminPassword && (
+                          <button
+                            type="button"
+                            onClick={() => setShowCurrentPassword((prev) => !prev)}
+                            className="p-1.5 text-gray-400 hover:text-[#324158] hover:bg-white rounded-lg transition-colors shadow-2xs cursor-pointer"
+                            title={showCurrentPassword ? "Hide password" : "Show password"}
+                          >
+                            {showCurrentPassword ? <EyeOff size={14} /> : <Eye size={14} className="text-[#324158]" />}
+                          </button>
+                        )}
+                        {adminPassword && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(adminPassword)
+                              toast.success("Password copied to clipboard!")
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-[#324158] hover:bg-white rounded-lg transition-colors shadow-2xs cursor-pointer"
+                            title="Copy Password"
+                          >
+                            <Copy size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-800 leading-relaxed flex items-start gap-2">
+                  <Info size={15} className="text-blue-600 mt-0.5 shrink-0" />
+                  <p>
+                    These credentials are used by your coaching administration to sign in. Any password change will immediately update across your account and reflect on the Super Admin organization details.
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Column: Change Password Form */}
+              <div className="lg:col-span-6 space-y-4">
+                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <Lock size={16} style={{ color: themeColor }} />
+                  <span>Change Portal Password</span>
+                </h3>
+
+                <form onSubmit={handleUpdatePassword} className="space-y-3.5">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-600 block">
-                      Category / Request Type:
+                      New Password *
                     </label>
-                    <select
-                      value={queryCategory}
-                      onChange={(e) => setQueryCategory(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-medium bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/10 focus:border-[#2D3A4A] transition-all cursor-pointer"
-                    >
-                      <option value="quota_increase">Exam Quota Increase Request</option>
-                      <option value="quota_increase">Student Enrolled Limit Increase</option>
-                      <option value="billing_fees">Billing, License & Validity</option>
-                      <option value="feature_request">Feature Request / Customization</option>
-                      <option value="technical_issue">Technical Support / Bug</option>
-                      <option value="other">General Query / Other</option>
-                    </select>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        required
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new portal password"
+                        className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-gray-200 text-xs font-medium bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/10 focus:border-[#2D3A4A] transition-all font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword((prev) => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 cursor-pointer"
+                        title={showNewPassword ? "Hide password" : "Show password"}
+                      >
+                        {showNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-600 block">
-                      Subject:
+                      Confirm New Password *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Request to increase exam quota from 20 to 50"
-                      value={querySubject}
-                      onChange={(e) => setQuerySubject(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-medium bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/10 focus:border-[#2D3A4A] transition-all"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showConfirmNewPassword ? "text" : "password"}
+                        required
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        placeholder="Re-enter new password to confirm"
+                        className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-gray-200 text-xs font-medium bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/10 focus:border-[#2D3A4A] transition-all font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmNewPassword((prev) => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 cursor-pointer"
+                        title={showConfirmNewPassword ? "Hide password" : "Show password"}
+                      >
+                        {showConfirmNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-600 block">
-                      Message / Request Details:
-                    </label>
-                    <textarea
-                      required
-                      rows={4}
-                      placeholder="Explain your query, the changes required, or additional quotas needed for your institute..."
-                      value={queryMessage}
-                      onChange={(e) => setQueryMessage(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-medium bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/10 focus:border-[#2D3A4A] transition-all resize-none leading-relaxed"
-                    />
-                  </div>
+                  <p className="text-[11px] text-gray-400">
+                    Password must be at least 6 characters long.
+                  </p>
 
-                  <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="pt-2">
                     <button
                       type="submit"
-                      disabled={submittingQuery}
+                      disabled={updatingPassword || !newPassword || newPassword.length < 6 || newPassword !== confirmNewPassword}
                       style={{ backgroundColor: themeColor }}
-                      className="px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {submittingQuery ? (
+                      {updatingPassword ? (
                         <>
                           <Loader2 size={14} className="animate-spin" />
-                          <span>Submitting Query...</span>
+                          <span>Updating Password...</span>
                         </>
                       ) : (
                         <>
-                          <Send size={14} />
-                          <span>Submit Query</span>
+                          <KeyRound size={14} />
+                          <span>Update Portal Password</span>
                         </>
                       )}
                     </button>
-
-                    <a
-                      href={`mailto:support@progrentures.com?subject=${encodeURIComponent(
-                        `REQUEST For Change - ${instituteName || "Organization"} (${instituteCode || "ID"})`
-                      )}&body=${encodeURIComponent(
-                        `Hello Progrentures Support Team,\n\nOrganization: ${instituteName}\nCode: ${instituteCode}\nContact Email: ${email}\nContact Phone: ${phone}\n\nRequest / Change Details:\n${queryMessage || "[Describe your request here]"}\n`
-                      )}`}
-                      className="text-xs text-slate-500 hover:text-slate-800 underline font-medium flex items-center gap-1.5 w-fit"
-                    >
-                      <Mail size={13} className="text-slate-400" />
-                      <span>Or email support@progrentures.com</span>
-                      <ExternalLink size={11} />
-                    </a>
                   </div>
                 </form>
-              </div>
-
-              {/* Right Column: Query History & Admin Replies */}
-              <div className="lg:col-span-6 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                    <Clock size={15} style={{ color: themeColor }} />
-                    <span>Your Support Queries & Admin Replies</span>
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href="/admin/queries"
-                      className="text-[11px] font-bold text-[#324158] hover:underline flex items-center gap-1 bg-[#eaf0f8] px-2 py-0.5 rounded-lg"
-                    >
-                      <MessageSquare size={12} />
-                      <span>Open Full Chat</span>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={loadInstituteQueries}
-                      disabled={loadingQueries}
-                      className="text-[11px] text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer"
-                    >
-                      <Loader2 size={12} className={loadingQueries ? "animate-spin" : "hidden"} />
-                      <span>Refresh</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-3 max-h-[420px] overflow-y-auto overscroll-contain pr-1" style={{ overscrollBehavior: "contain" }}>
-                  {loadingQueries && queries.length === 0 ? (
-                    <div className="p-8 text-center text-xs text-gray-400">Loading your queries...</div>
-                  ) : queries.length === 0 ? (
-                    <div className="p-8 text-center rounded-xl bg-gray-50/70 border border-dashed border-gray-200 space-y-1.5">
-                      <HelpCircle size={24} className="text-gray-300 mx-auto" />
-                      <p className="text-xs font-bold text-gray-700">No support queries yet</p>
-                      <p className="text-[11px] text-gray-400">
-                        When you submit a query or request for change, it will appear here along with replies from the platform administrator.
-                      </p>
-                    </div>
-                  ) : (
-                    queries.map((q) => (
-                      <div
-                        key={q._id}
-                        className="p-4 rounded-xl border border-gray-200/90 bg-white shadow-2xs space-y-2.5 text-left"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-bold text-xs text-gray-900 truncate">{q.subject}</span>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${
-                              q.status === "resolved"
-                                ? "bg-slate-100 text-slate-700"
-                                : q.status === "replied"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-amber-50 text-amber-700 border border-amber-200"
-                            }`}
-                          >
-                            {q.status}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50/80 p-2.5 rounded-lg border border-gray-100">
-                          {q.message}
-                        </p>
-
-                        <div className="flex items-center justify-between text-[10px] text-gray-400">
-                          <span>Category: <strong className="text-gray-600 capitalize">{q.category?.replace("_", " ")}</strong></span>
-                          <div className="flex items-center gap-1.5">
-                            <span>{new Date(q.createdAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                            <span className="inline-flex items-center shrink-0 ml-0.5" title={q.isReadByAdmin ? "Read by support" : "Delivered"}>
-                              <CheckCheck
-                                size={15}
-                                strokeWidth={2.2}
-                                className={`shrink-0 ${q.isReadByAdmin ? "text-sky-500" : "text-gray-400"}`}
-                              />
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* WhatsApp-Style Thread Replies: loops through all replies so second reply NEVER replaces first! */}
-                        {Array.isArray(q.replies) && q.replies.length > 0 ? (
-                          <div className="mt-3 space-y-2 border-t border-gray-100 pt-2">
-                            {q.replies.map((r: any, rIdx: number) => {
-                              const isAdmin = r.senderRole === "admin"
-                              return (
-                                <div
-                                  key={rIdx}
-                                  className={`p-3 rounded-xl space-y-1 text-left ${
-                                    isAdmin
-                                      ? "bg-[#324158] text-white rounded-tl-xs shadow-xs"
-                                      : "bg-gray-100 text-gray-800 rounded-tr-xs border border-gray-200"
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between text-[11px] border-b border-white/10 pb-1">
-                                    <span className="font-bold flex items-center gap-1.5">
-                                      {isAdmin ? (
-                                        <CheckCircle2 size={13} className="text-emerald-400" />
-                                      ) : (
-                                        <User size={13} className="text-gray-500" />
-                                      )}
-                                      {r.senderName || (isAdmin ? "Platform Admin" : "Your Follow-up")}
-                                    </span>
-                                    <span className={`text-[10px] ${isAdmin ? "text-slate-300" : "text-gray-400"}`}>
-                                      {r.createdAt
-                                        ? new Date(r.createdAt).toLocaleDateString([], {
-                                            month: "short",
-                                            day: "numeric",
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                          })
-                                        : ""}
-                                    </span>
-                                  </div>
-                                  <p className={`text-xs whitespace-pre-wrap leading-relaxed ${isAdmin ? "text-slate-100" : "text-gray-800"}`}>
-                                    {r.message}
-                                  </p>
-                                  {!isAdmin ? (
-                                    <div className="flex justify-end items-center gap-1 text-[10px] text-gray-400 pt-0.5">
-                                      <span
-                                        className="inline-flex items-center shrink-0 ml-0.5"
-                                        title={(r.isRead ?? q.isReadByAdmin) ? "Read by support" : "Delivered"}
-                                      >
-                                        <CheckCheck
-                                          size={15}
-                                          strokeWidth={2.2}
-                                          className={`shrink-0 ${(r.isRead ?? q.isReadByAdmin) ? "text-sky-500" : "text-gray-400"}`}
-                                        />
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <div className="flex justify-end items-center gap-1 text-[10px] text-slate-300 pt-0.5">
-                                      <span
-                                        className="inline-flex items-center shrink-0 ml-0.5"
-                                        title={q.isReadByInstitute ? "Read" : "Delivered"}
-                                      >
-                                        <CheckCheck
-                                          size={15}
-                                          strokeWidth={2.2}
-                                          className={`shrink-0 ${q.isReadByInstitute ? "text-sky-400" : "text-slate-400"}`}
-                                        />
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : q.adminReply ? (
-                          <div className="mt-2 p-3 rounded-xl bg-[#324158] text-white shadow-xs space-y-1 text-left">
-                            <div className="flex items-center justify-between text-[11px] border-b border-white/10 pb-1">
-                              <span className="font-bold flex items-center gap-1.5 text-white">
-                                <CheckCircle2 size={13} className="text-emerald-400" />
-                                Reply from Platform Admin ({q.adminRepliedByName || "Support Team"}):
-                              </span>
-                              {q.adminRepliedAt && (
-                                <span className="text-[10px] text-slate-300">
-                                  {new Date(q.adminRepliedAt).toLocaleDateString([], {
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-slate-100 whitespace-pre-wrap leading-relaxed">
-                              {q.adminReply}
-                            </p>
-                            <div className="flex justify-end items-center gap-1 text-[10px] text-slate-300 pt-0.5">
-                              <span
-                                className="inline-flex items-center shrink-0 ml-0.5"
-                                title={q.isReadByInstitute ? "Read" : "Delivered"}
-                              >
-                                <CheckCheck
-                                  size={15}
-                                  strokeWidth={2.2}
-                                  className={`shrink-0 ${q.isReadByInstitute ? "text-sky-400" : "text-slate-400"}`}
-                                />
-                              </span>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    ))
-                  )}
-                </div>
               </div>
             </div>
           </div>

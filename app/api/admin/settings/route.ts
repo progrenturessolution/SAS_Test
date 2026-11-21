@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth"
 import connectDB from "@/lib/mongodb"
 import GlobalSettings from "@/models/GlobalSettings"
 import Institute from "@/models/Institute"
+import User from "@/models/User"
 
 // GET /api/admin/settings
 export async function GET(req: Request) {
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
     // 1. If logged in as Coaching Institute, return coaching profile & branding
     if (session.instituteId) {
       const institute = await Institute.findById(session.instituteId)
-        .select("name code email phone address city contactPerson logo themeColor validUntil status limits")
+        .select("name code email phone address city contactPerson logo themeColor validUntil status limits adminPassword")
         .lean()
 
       if (!institute) {
@@ -42,6 +43,7 @@ export async function GET(req: Request) {
           contactPerson: institute.contactPerson || "",
           logo: institute.logo || "",
           themeColor: institute.themeColor || "#2D3A4A",
+          adminPassword: institute.adminPassword || "",
           validUntil: institute.validUntil ? new Date(institute.validUntil).toISOString() : null,
           status: institute.status || "active",
           limits: institute.limits || null,
@@ -96,11 +98,30 @@ export async function POST(req: Request) {
       if (body.logo !== undefined) institute.logo = body.logo
       if (body.themeColor !== undefined) institute.themeColor = body.themeColor
 
+      // Handle password update if provided
+      if (body.newPassword && typeof body.newPassword === "string") {
+        const trimmedPass = body.newPassword.trim()
+        if (trimmedPass.length < 6) {
+          return NextResponse.json({ error: "New password must be at least 6 characters long." }, { status: 400 })
+        }
+        institute.adminPassword = trimmedPass
+
+        // Also update User account for this institute admin
+        const user = await User.findOne({
+          $or: [{ _id: institute.adminUserId }, { email: institute.email }],
+        })
+        if (user) {
+          user.password = trimmedPass
+          await user.save()
+        }
+      }
+
       await institute.save()
 
       return NextResponse.json({
         success: true,
         isInstitute: true,
+        message: body.newPassword ? "Settings and password updated successfully!" : "Settings saved successfully!",
         institute: {
           id: institute._id.toString(),
           name: institute.name,
@@ -112,6 +133,7 @@ export async function POST(req: Request) {
           contactPerson: institute.contactPerson || "",
           logo: institute.logo || "",
           themeColor: institute.themeColor || "#2D3A4A",
+          adminPassword: institute.adminPassword || "",
         },
       })
     }

@@ -22,7 +22,6 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { formatDateDDMMYYYY } from "@/lib/utils"
-import AdminNotificationBell from "@/components/admin/AdminNotificationBell"
 
 interface AdminSidebarProps {
   userName: string
@@ -53,8 +52,31 @@ export default function AdminSidebar({
   const [mobileOpen, setMobileOpen] = useState(false)
   const [instituteLogo, setInstituteLogo] = useState<string | null>(null)
   const [themeColor, setThemeColor] = useState<string>(initialThemeColor || "#2D3A4A")
+  const [unreadSupportCount, setUnreadSupportCount] = useState<number>(0)
 
   const isSuperAdmin = role === "super_admin" || (role === "admin" && !instituteName)
+
+  const loadUnreadSupport = async () => {
+    try {
+      const res = await fetch("/api/admin/queries", { credentials: "include" })
+      const data = await res.json()
+      if (data.success) {
+        setUnreadSupportCount(Number(data.unreadCount || data.unreadReplies || 0))
+      }
+    } catch {
+      // silent
+    }
+  }
+
+  useEffect(() => {
+    loadUnreadSupport()
+    const interval = setInterval(loadUnreadSupport, 15000)
+    window.addEventListener("queries-updated", loadUnreadSupport)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("queries-updated", loadUnreadSupport)
+    }
+  }, [])
 
   const superAdminNavItems = [
     { label: "Organizations", href: "/admin/institutes", icon: Building2 },
@@ -187,7 +209,6 @@ export default function AdminSidebar({
         </div>
 
         <div className="flex items-center gap-2">
-          {isSuperAdmin && <AdminNotificationBell isSuperAdmin={isSuperAdmin} />}
           {instituteCode && (
             <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200">
               {instituteCode}
@@ -345,7 +366,11 @@ export default function AdminSidebar({
                         <Icon size={17} />
                         <span>{item.label}</span>
                       </div>
-                      {isRestricted ? (
+                      {item.href === "/admin/queries" && unreadSupportCount > 0 ? (
+                        <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold shadow-xs">
+                          {unreadSupportCount > 99 ? "99+" : unreadSupportCount}
+                        </span>
+                      ) : isRestricted ? (
                         <span className="flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded">
                           <Lock size={10} className="text-amber-600" />
                           <span>{isQuotaBlocked ? "Quota Full" : "Locked"}</span>
@@ -470,12 +495,9 @@ export default function AdminSidebar({
           {/* Role / Tenant Badge */}
           <div className="mt-3">
             {isSuperAdmin ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#2D3A4A] text-white text-[11px] font-medium w-fit shadow-xs">
-                  <Shield className="w-3 h-3 text-amber-400" />
-                  <span>Super Admin Portal</span>
-                </div>
-                <AdminNotificationBell isSuperAdmin={isSuperAdmin} />
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#2D3A4A] text-white text-[11px] font-medium w-fit shadow-xs">
+                <Shield className="w-3 h-3 text-amber-400" />
+                <span>Super Admin Portal</span>
               </div>
             ) : (
               <div className="p-2 rounded-lg bg-gray-50 border border-gray-200">
@@ -554,7 +576,11 @@ export default function AdminSidebar({
                     <Icon size={16} />
                     <span>{item.label}</span>
                   </div>
-                  {isRestricted ? (
+                  {item.href === "/admin/queries" && unreadSupportCount > 0 ? (
+                    <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold shadow-xs">
+                      {unreadSupportCount > 99 ? "99+" : unreadSupportCount}
+                    </span>
+                  ) : isRestricted ? (
                     <span className="flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded">
                       <Lock size={10} className="text-amber-600" />
                       <span>{isQuotaBlocked ? "Quota Full" : "Locked"}</span>

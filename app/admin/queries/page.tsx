@@ -192,6 +192,9 @@ export default function AdminQueriesPage() {
         setQueries(data.queries || [])
         setIsSuperAdmin(data.isSuperAdmin !== false)
         if (data.institute) setCurrentInstitute(data.institute)
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("queries-updated"))
+        }
       }
     } catch (err) {
       console.error("Failed to load queries:", err)
@@ -345,6 +348,9 @@ export default function AdminQueriesPage() {
             : q
         )
       )
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("queries-updated"))
+      }
     }
   }
 
