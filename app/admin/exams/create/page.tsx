@@ -1742,16 +1742,25 @@ function CodingModal({ onSave, onClose, initial }: {
   }
 
   return (
-    <ModalShell title="Add Coding Question" icon={<div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center"><Code2 size={18} className="text-red-600"/></div>} onClose={onClose}>
-      <div className="space-y-4 pb-4 overflow-y-auto max-h-[85vh] px-1">
+    <ModalShell
+      title="Coding Challenge Studio"
+      icon={
+        <div className="w-9 h-9 rounded-xl bg-[#eaf0f8] border border-[#cbd5e1] flex items-center justify-center text-[#324158] shadow-2xs">
+          <Code2 size={18} />
+        </div>
+      }
+      onClose={onClose}
+      maxWidth="max-w-4xl"
+    >
+      <div className="space-y-4 pb-2 overflow-y-auto max-h-[82vh] px-0.5 custom-scrollbar">
         {/* Gemini AI Auto-Generator */}
-        <div className="p-3.5 bg-gradient-to-r from-indigo-50/90 via-purple-50/60 to-blue-50/90 border border-indigo-200/80 rounded-2xl space-y-2.5 shadow-sm">
+        <div className="p-4 bg-gradient-to-b from-[#f8fafc] to-[#eaf0f8]/35 border border-[#cbd5e1] rounded-2xl space-y-3 shadow-2xs">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-950">
-              <Sparkles size={14} className="text-indigo-600 animate-pulse" />
-              <span>Smart Question & Template Generator</span>
+            <div className="flex items-center gap-2 text-xs font-bold text-[#324158]">
+              <Sparkles size={14} className="text-[#324158]" />
+              <span>Smart AI Coding Problem Generator</span>
             </div>
-            <span className="text-[10px] font-bold text-indigo-700 px-2 py-0.5 bg-indigo-100 rounded-full">
+            <span className="text-[10px] font-bold text-[#324158] px-2.5 py-0.5 bg-[#eaf0f8] border border-[#cbd5e1] rounded-full">
               Auto-Fill
             </span>
           </div>
@@ -1763,82 +1772,129 @@ function CodingModal({ onSave, onClose, initial }: {
               onChange={e => setAiPrompt(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAiGenerate(); } }}
               disabled={isAiGenerating}
-              className="flex-1 px-3 py-2 text-xs bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-60 placeholder:text-gray-400"
+              className="flex-1 h-10 px-3.5 text-xs font-semibold bg-white border border-[#cbd5e1] rounded-xl text-[#324158] placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] disabled:opacity-60 shadow-2xs transition-all"
             />
             <button
               type="button"
               disabled={isAiGenerating || !aiPrompt.trim()}
               onClick={handleAiGenerate}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm shrink-0 active:scale-95"
+              className="h-10 px-4 bg-[#324158] hover:bg-[#253244] text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer"
             >
               {isAiGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-              <span>{isAiGenerating ? "Generating..." : "Generate"}</span>
+              <span>{isAiGenerating ? "Generating..." : "Generate AI"}</span>
             </button>
           </div>
           {aiError && (
-            <p className="text-[11px] text-red-600 font-medium flex items-center gap-1">
-              <AlertCircle size={11} /> {aiError}
+            <p className="text-[11px] text-red-600 font-semibold flex items-center gap-1">
+              <AlertCircle size={12} /> {aiError}
             </p>
           )}
-          <p className="text-[10px] text-indigo-800/70">
-            Type any problem name or topic to auto-fill description, starter templates for all languages, and test cases instantly!
+          <p className="text-[11px] text-slate-500">
+            Type any programming problem or topic name to auto-fill description, starter templates for all languages, and test cases instantly.
           </p>
         </div>
 
         {/* Step-by-Step Guide */}
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-[11px] text-blue-700 leading-relaxed">
-          <p className="font-bold mb-1 flex items-center gap-1"><Info size={12}/> How to create a LeetCode-style problem:</p>
-          <ol className="list-decimal list-inside space-y-0.5 ml-1">
-            <li>Write the <b>Problem Statement</b> and set <b>Marks</b>.</li>
-            <li>Enable the <b>Languages</b> you want to support.</li>
-            <li>Under each language tab, the <b>Initial Template</b> is what the student sees (e.g. a class method).</li>
-            <li>The <b>Driver Code</b> (hidden) is what executes the student's code and reads test cases via <code>stdin</code>.</li>
-            <li>Add <b>Test Cases</b> with the specific inputs your Driver expects.</li>
+        <div className="bg-slate-50/80 border border-[#cbd5e1] rounded-xl p-3.5 text-xs text-[#324158] leading-relaxed">
+          <p className="font-bold mb-1 flex items-center gap-1.5 text-[#324158]">
+            <Info size={13} className="text-[#324158]" />
+            How to configure a LeetCode-style problem:
+          </p>
+          <ol className="list-decimal list-inside space-y-1 ml-1 text-[11.5px] text-slate-600">
+            <li>Write the <b>Problem Statement</b> and configure <b>Difficulty</b> & <b>Marks</b>.</li>
+            <li>Select the <b>Languages</b> you want candidates to be able to choose from.</li>
+            <li>Under each language tab, the <b>Initial Template</b> is what the student sees in their code editor.</li>
+            <li>The <b>Driver Code</b> (hidden internal runner) executes the candidate's code and feeds test cases via <code>stdin</code>.</li>
+            <li>Add <b>Test Cases</b> with sample inputs & expected outputs matching your driver logic.</li>
           </ol>
         </div>
 
+        {/* Problem Statement */}
         <div>
-          <label className={labelCls}>Problem Statement *</label>
-          <textarea value={q.questionText} onChange={e => setQ({...q, questionText: e.target.value})}
-            rows={4} placeholder="Describe the problem clearly..."
-            className={inputCls + " resize-none"} />
+          <label className="block text-xs font-bold text-[#324158] mb-1.5">Problem Statement <span className="text-rose-500">*</span></label>
+          <textarea
+            value={q.questionText}
+            onChange={e => setQ({...q, questionText: e.target.value})}
+            rows={4}
+            placeholder="Describe the problem clearly, including input format, output format, and constraints..."
+            className="w-full px-3.5 py-2.5 rounded-xl border border-[#cbd5e1] bg-white hover:border-[#324158]/50 text-sm font-medium text-[#324158] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-all shadow-2xs resize-none"
+          />
         </div>
+
+        {/* Question Image URL */}
         <div>
-          <label className={labelCls}>Question Image URL <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <input value={q.questionImage || ""} onChange={e => setQ({...q, questionImage: e.target.value})} 
-            placeholder="https://example.com/image.png" className={inputCls} />
+          <label className="block text-xs font-bold text-[#324158] mb-1.5">
+            Diagram / Image URL <span className="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <input
+            value={q.questionImage || ""}
+            onChange={e => setQ({...q, questionImage: e.target.value})} 
+            placeholder="https://example.com/graph-diagram.png"
+            className="w-full h-10 px-3.5 rounded-xl border border-[#cbd5e1] bg-white hover:border-[#324158]/50 text-sm text-[#324158] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-all shadow-2xs"
+          />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+
+        {/* Difficulty, Marks, Negative Marks */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className={labelCls}>Difficulty *</label>
-            <select value={q.difficulty} onChange={e => setQ({...q, difficulty: e.target.value as Difficulty})} className={inputCls + " cursor-pointer"}>
+            <label className="block text-xs font-bold text-[#324158] mb-1.5">Difficulty Level <span className="text-rose-500">*</span></label>
+            <select
+              value={q.difficulty}
+              onChange={e => setQ({...q, difficulty: e.target.value as Difficulty})}
+              className="w-full h-10 px-3 rounded-xl border border-[#cbd5e1] bg-white text-xs font-bold text-[#324158] focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] shadow-2xs cursor-pointer capitalize"
+            >
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
               <option value="hard">Hard</option>
             </select>
           </div>
           <div>
-            <label className={labelCls}>Marks *</label>
-            <input type="number" value={q.marks} onChange={e => setQ({...q, marks: +e.target.value})} min={1} className={inputCls} />
+            <label className="block text-xs font-bold text-[#324158] mb-1.5">Marks <span className="text-rose-500">*</span></label>
+            <input
+              type="number"
+              value={q.marks}
+              onChange={e => setQ({...q, marks: +e.target.value})}
+              min={1}
+              className="w-full h-10 px-3.5 rounded-xl border border-[#cbd5e1] bg-white text-xs font-bold text-[#324158] focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] shadow-2xs"
+            />
           </div>
           <div>
-            <label className={labelCls}>Negative Mark</label>
-            <input type="number" step="0.1" value={q.negativeMark || 0} onChange={e => setQ({...q, negativeMark: +e.target.value})} min={0} className={inputCls} placeholder="0" />
+            <label className="block text-xs font-bold text-[#324158] mb-1.5">Negative Mark</label>
+            <input
+              type="number"
+              step="0.1"
+              value={q.negativeMark || 0}
+              onChange={e => setQ({...q, negativeMark: +e.target.value})}
+              min={0}
+              className="w-full h-10 px-3.5 rounded-xl border border-[#cbd5e1] bg-white text-xs font-bold text-[#324158] focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] shadow-2xs"
+              placeholder="0"
+            />
           </div>
         </div>
 
+        {/* Multi-Language Boilerplates */}
         <div>
-          <label className={labelCls}>Enabled Languages</label>
-          <div className="flex gap-2 flex-wrap mb-4">
+          <label className="block text-xs font-bold text-[#324158] mb-1.5">
+            Enabled Programming Languages <span className="text-rose-500">*</span>
+          </label>
+          <div className="flex gap-2 flex-wrap mb-3.5">
             {["Python","Java","C++","JavaScript","Go","Rust"].map(lang => {
-              const val = lang.toLowerCase()
               const active = q.languages.includes(lang)
               return (
-                <button key={lang} type="button" onClick={() => setQ(prev => {
-                  const langs = active ? prev.languages.filter(l => l !== lang) : [...prev.languages, lang]
-                  return { ...prev, languages: langs }
-                })} className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all
-                  ${active ? "bg-[#45505F] text-white border-[#45505F] shadow-md" : "bg-white border-gray-100 text-gray-500 hover:border-gray-300"}`}>
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => setQ(prev => {
+                    const langs = active ? prev.languages.filter(l => l !== lang) : [...prev.languages, lang]
+                    return { ...prev, languages: langs }
+                  })}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    active
+                      ? "bg-[#324158] text-white border-[#324158] shadow-xs"
+                      : "bg-white border-[#cbd5e1] text-slate-600 hover:border-[#324158]"
+                  }`}
+                >
+                  {active && <span className="mr-1">✓</span>}
                   {lang}
                 </button>
               )
@@ -1846,26 +1902,38 @@ function CodingModal({ onSave, onClose, initial }: {
           </div>
 
           {q.languages.length > 0 && (
-            <div className="border border-gray-100 rounded-2xl overflow-hidden bg-gray-50/30">
-              <div className="flex bg-gray-100/50 p-1">
-                {q.languages.map(lang => (
-                  <button
-                    key={lang}
-                    type="button"
-                    onClick={() => setActiveLang(lang.toLowerCase())}
-                    className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
-                      activeLang === lang.toLowerCase() ? "bg-white text-[#324158] shadow-sm" : "text-gray-400 hover:text-gray-600"
-                    }`}
-                  >
-                    {lang}
-                  </button>
-                ))}
+            <div className="border border-[#cbd5e1] rounded-2xl overflow-hidden bg-white shadow-2xs">
+              {/* Language selection tabs */}
+              <div className="flex bg-slate-100/80 p-1 border-b border-[#cbd5e1] gap-1 overflow-x-auto">
+                {q.languages.map(lang => {
+                  const isActive = activeLang === lang.toLowerCase()
+                  return (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => setActiveLang(lang.toLowerCase())}
+                      className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-[#324158] text-white shadow-xs"
+                          : "text-slate-600 hover:text-[#324158] hover:bg-white/60"
+                      }`}
+                    >
+                      {lang}
+                    </button>
+                  )
+                })}
               </div>
+
+              {/* Code Editors */}
               <div className="p-4 space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Initial Template</label>
-                    <span className="text-[9px] text-[#10B981] font-bold">VISIBLE TO STUDENT</span>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Initial Boilerplate Template ({activeLang})
+                    </label>
+                    <span className="text-[9px] font-bold text-[#324158] bg-[#eaf0f8] border border-[#cbd5e1] px-2 py-0.5 rounded-full">
+                      VISIBLE TO CANDIDATE
+                    </span>
                   </div>
                   <textarea
                     value={q.codeTemplates[activeLang] || ""}
@@ -1874,14 +1942,18 @@ function CodingModal({ onSave, onClose, initial }: {
                       codeTemplates: { ...q.codeTemplates, [activeLang]: e.target.value }
                     })}
                     rows={6}
-                    className="w-full p-3 bg-[#1e2a38] text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500/50"
-                    placeholder={`Enter boilerplate code for ${activeLang}...`}
+                    className="w-full p-3 bg-[#1e293b] text-slate-100 font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-[#324158] border border-slate-700"
+                    placeholder={`Enter starter boilerplate function / class for ${activeLang}...`}
                   />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Driver Code</label>
-                    <span className="text-[9px] text-red-400 font-bold">HIDDEN INTERNAL RUNNER</span>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Driver Code Runner ({activeLang})
+                    </label>
+                    <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded-full">
+                      INTERNAL TEST RUNNER (HIDDEN)
+                    </span>
                   </div>
                   <textarea
                     value={q.driverCode[activeLang] || ""}
@@ -1890,77 +1962,126 @@ function CodingModal({ onSave, onClose, initial }: {
                        driverCode: { ...q.driverCode, [activeLang]: e.target.value }
                     })}
                     rows={4}
-                    className="w-full p-3 bg-gray-100 text-[#324158] font-mono text-xs rounded-xl border border-gray-200 focus:outline-none"
+                    className="w-full p-3 bg-slate-50 text-[#324158] font-mono text-xs rounded-xl border border-[#cbd5e1] focus:outline-none focus:ring-1 focus:ring-[#324158]"
                     placeholder={`Enter driver code to run test cases in ${activeLang}...`}
                   />
-                  <p className="text-[9px] text-gray-400 mt-1.5">Use <code>stdin</code> to read inputs from test cases and print output for validation.</p>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Reads candidate solution inputs via <code>stdin</code> and prints output to <code>stdout</code> for assertion.
+                  </p>
                 </div>
               </div>
             </div>
           )}
         </div>
 
+        {/* Test Cases Studio */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className={labelCls + " mb-0"}>Test Cases</label>
-            <button type="button" onClick={() => setQ({...q, testCases: [...q.testCases, {input:"", expectedOutput:"", hidden: false}]})}
-              className="text-xs text-[#10B981] hover:underline flex items-center gap-1 font-bold"><Plus size={12}/>ADD TEST CASE</button>
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold text-[#324158]">
+                Test Cases ({q.testCases.length})
+              </label>
+              <span className="text-[10px] text-slate-400">At least 1 required</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setQ({...q, testCases: [...q.testCases, {input:"", expectedOutput:"", hidden: false}]})}
+              className="text-xs text-[#324158] hover:bg-[#eaf0f8] px-2.5 py-1 rounded-lg border border-[#cbd5e1] flex items-center gap-1 font-bold transition-colors cursor-pointer"
+            >
+              <Plus size={13}/>
+              <span>+ Add Test Case</span>
+            </button>
           </div>
           <div className="space-y-3">
             {q.testCases.map((tc, i) => (
-              <div key={i} className="flex gap-2 items-start bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                <div className="flex-1 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[9px] font-black text-gray-400 uppercase mb-1 block">Input</label>
-                      <textarea value={tc.input} onChange={e => {
-                        const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], input: e.target.value}; setQ({...q, testCases: tc2})
-                      }} placeholder="e.g. [1, 2, 3]" className={inputCls + " text-xs font-mono h-16 resize-none"} />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-gray-400 uppercase mb-1 block">Expected Output</label>
-                      <textarea value={tc.expectedOutput} onChange={e => {
-                        const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], expectedOutput: e.target.value}; setQ({...q, testCases: tc2})
-                      }} placeholder="e.g. 6" className={inputCls + " text-xs font-mono h-16 resize-none"} />
-                    </div>
+              <div key={i} className="bg-slate-50/70 p-3.5 rounded-xl border border-[#cbd5e1] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold text-[#324158]">Test Case #{i + 1}</span>
+                    <label className="flex items-center gap-1.5 cursor-pointer ml-2">
+                      <input
+                        type="checkbox"
+                        checked={!!tc.hidden}
+                        onChange={e => {
+                          const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], hidden: e.target.checked}; setQ({...q, testCases: tc2})
+                        }}
+                        className="rounded border-[#cbd5e1] text-[#324158] focus:ring-[#324158]"
+                      />
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Hidden Test Case
+                      </span>
+                    </label>
                   </div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={!!tc.hidden} onChange={e => {
-                      const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], hidden: e.target.checked}; setQ({...q, testCases: tc2})
-                    }} className="rounded border-gray-300 text-[#10B981] focus:ring-[#10B981]" />
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">Hidden Test Case</span>
-                  </label>
+                  {q.testCases.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setQ({...q, testCases: q.testCases.filter((_, idx) => idx !== i)})}
+                      className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      title="Delete test case"
+                    >
+                      <Trash2 size={14}/>
+                    </button>
+                  )}
                 </div>
-                <button type="button" onClick={() => setQ({...q, testCases: q.testCases.filter((_, idx) => idx !== i)})}
-                  className="p-1.5 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors mt-4">
-                  <Trash2 size={16}/>
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Input (stdin)</label>
+                    <textarea
+                      value={tc.input}
+                      onChange={e => {
+                        const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], input: e.target.value}; setQ({...q, testCases: tc2})
+                      }}
+                      placeholder="e.g. 5\n1 2 3 4 5"
+                      className="w-full h-18 p-2.5 text-xs font-mono bg-white border border-[#cbd5e1] rounded-xl text-[#324158] focus:outline-none focus:ring-1 focus:ring-[#324158] resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Expected Output (stdout)</label>
+                    <textarea
+                      value={tc.expectedOutput}
+                      onChange={e => {
+                        const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], expectedOutput: e.target.value}; setQ({...q, testCases: tc2})
+                      }}
+                      placeholder="e.g. 15"
+                      className="w-full h-18 p-2.5 text-xs font-mono bg-white border border-[#cbd5e1] rounded-xl text-[#324158] focus:outline-none focus:ring-1 focus:ring-[#324158] resize-none"
+                    />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
-        {error && <p className="text-sm text-red-500 flex items-center gap-1 font-medium bg-red-50 p-2 rounded-lg"><AlertCircle size={14}/>{error}</p>}
+
+        {error && (
+          <p className="text-xs text-red-600 flex items-center gap-1.5 font-bold bg-red-50 border border-red-200 p-2.5 rounded-xl">
+            <AlertCircle size={14}/> {error}
+          </p>
+        )}
       </div>
-      <ModalFooter note={<span className="font-medium text-gray-500">Enable multiple languages for student choice</span>} onCancel={onClose} onSave={save} />
+      <ModalFooter
+        note={<span className="font-semibold text-slate-500">Multi-language code challenge configured</span>}
+        onCancel={onClose}
+        onSave={save}
+      />
     </ModalShell>
   )
 }
 
 // ─── Modal Shell & Footer ─────────────────────────────────────────────────────
 
-function ModalShell({ title, icon, onClose, children }: {
-  title: string; icon: React.ReactNode; onClose: () => void; children: React.ReactNode
+function ModalShell({ title, icon, onClose, maxWidth = "max-w-2xl", children }: {
+  title: string; icon: React.ReactNode; onClose: () => void; maxWidth?: string; children: React.ReactNode
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in-50">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
-        <div className="flex items-center gap-3 px-5 sm:px-6 py-4 border-b border-slate-100 shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in-50">
+      <div className={`bg-white rounded-2xl shadow-2xl border border-[#cbd5e1] w-full ${maxWidth} max-h-[92vh] flex flex-col overflow-hidden`}>
+        <div className="flex items-center gap-3 px-5 sm:px-6 py-4 border-b border-slate-100 shrink-0 bg-slate-50/70">
           {icon}
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 flex-1 truncate">{title}</h2>
+          <h2 className="text-base sm:text-lg font-bold text-[#324158] flex-1 truncate">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -1979,14 +2100,14 @@ function ModalFooter({ note, onCancel, onSave }: { note: React.ReactNode; onCanc
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 sm:flex-none h-10 px-5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs sm:text-sm font-semibold text-slate-700 transition-colors cursor-pointer"
+          className="flex-1 sm:flex-none h-10 px-5 rounded-xl border border-[#cbd5e1] bg-white hover:bg-[#eaf0f8] text-xs sm:text-sm font-bold text-[#324158] transition-colors cursor-pointer"
         >
           Cancel
         </button>
         <button
           type="button"
           onClick={onSave}
-          className="flex-1 sm:flex-none h-10 px-6 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+          className="flex-1 sm:flex-none h-10 px-6 rounded-xl bg-[#324158] hover:bg-[#253244] text-white text-xs sm:text-sm font-bold shadow-xs transition-colors cursor-pointer"
         >
           Save Question
         </button>
