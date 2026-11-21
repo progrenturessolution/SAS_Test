@@ -2531,21 +2531,12 @@ function Step3({
           </div>
         </div>
         <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            type="button"
-            onClick={() => canUseQuestionStudio && setShowCompetitiveAiModal(true)}
-            disabled={!canUseQuestionStudio}
-            className="h-10 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <GraduationCap size={16} className="text-white shrink-0" />
-            <span>{canUseQuestionStudio ? "Competitive Test" : "Question Studio"}</span>
-          </button>
           <input ref={fileRef} type="file" accept="application/pdf" onChange={handlePdfUpload} className="hidden" />
           <button
             type="button"
             onClick={() => canUsePdfImport && fileRef.current?.click()}
             disabled={pdfUploading || !canUsePdfImport}
-            className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+            className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
           >
             <Upload size={15} className="shrink-0" />
             <span>{pdfUploading ? "Uploading..." : "Upload from PDF"}</span>
@@ -2553,7 +2544,7 @@ function Step3({
           <div className="relative group">
             <button
               type="button"
-              className="h-10 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+              className="h-10 px-4 rounded-xl bg-[#324158] hover:bg-[#253244] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
             >
               <Plus size={16} className="shrink-0" />
               <span>Add Question</span>
