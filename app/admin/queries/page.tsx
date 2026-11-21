@@ -36,6 +36,7 @@ interface QueryReply {
   senderName: string
   message: string
   createdAt: string
+  isRead?: boolean
 }
 
 interface QueryItem {
@@ -85,6 +86,7 @@ interface ChatMessage {
   status?: string
   createdAt: string
   isOriginalQuery?: boolean
+  isRead?: boolean
 }
 
 const CATEGORY_META: Record<string, { label: string; bg: string; text: string }> = {
@@ -106,7 +108,7 @@ const QUICK_TEMPLATES = [
 function getQueryMessages(q: QueryItem): ChatMessage[] {
   const msgs: ChatMessage[] = []
 
-  // 1. Initial query from institute
+  // 1. Initial query from institute (read status = admin has read it)
   msgs.push({
     id: `query-${q._id}`,
     queryId: q._id,
@@ -118,11 +120,19 @@ function getQueryMessages(q: QueryItem): ChatMessage[] {
     status: q.status,
     createdAt: q.createdAt,
     isOriginalQuery: true,
+    isRead: Boolean(q.isReadByAdmin),
   })
 
   // 2. All subsequent replies
   if (Array.isArray(q.replies) && q.replies.length > 0) {
     q.replies.forEach((r, idx) => {
+      const isMsgRead =
+        typeof r.isRead === "boolean"
+          ? r.isRead
+          : r.senderRole === "admin"
+          ? Boolean(q.isReadByInstitute)
+          : Boolean(q.isReadByAdmin)
+
       msgs.push({
         id: r._id || `reply-${q._id}-${idx}`,
         queryId: q._id,
@@ -131,6 +141,7 @@ function getQueryMessages(q: QueryItem): ChatMessage[] {
         message: r.message,
         createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : q.createdAt,
         isOriginalQuery: false,
+        isRead: isMsgRead,
       })
     })
   } else if (q.adminReply) {
@@ -143,6 +154,7 @@ function getQueryMessages(q: QueryItem): ChatMessage[] {
       message: q.adminReply,
       createdAt: q.adminRepliedAt ? new Date(q.adminRepliedAt).toISOString() : q.createdAt,
       isOriginalQuery: false,
+      isRead: Boolean(q.isReadByInstitute),
     })
   }
 
@@ -171,9 +183,9 @@ export default function AdminQueriesPage() {
 
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  const fetchQueries = async () => {
+  const fetchQueries = async (isBackground = false) => {
     try {
-      setLoading(true)
+      if (!isBackground) setLoading(true)
       const res = await fetch("/api/admin/queries", { credentials: "include" })
       const data = await res.json()
       if (data.success) {
@@ -183,14 +195,16 @@ export default function AdminQueriesPage() {
       }
     } catch (err) {
       console.error("Failed to load queries:", err)
-      toast.error("Failed to load organization queries")
+      if (!isBackground) toast.error("Failed to load organization queries")
     } finally {
-      setLoading(false)
+      if (!isBackground) setLoading(false)
     }
   }
 
   useEffect(() => {
     fetchQueries()
+    const interval = setInterval(() => fetchQueries(true), 12000)
+    return () => clearInterval(interval)
   }, [])
 
   // Group queries into WhatsApp-like Institute Threads (for Super Admin)
@@ -361,6 +375,7 @@ export default function AdminQueriesPage() {
         senderName: isSuperAdmin ? "Progrentures Support Desk" : (currentInstitute?.name || "Institute Admin"),
         message: replyText.trim(),
         createdAt: updatedTimestamp,
+        isRead: false,
       }
 
       setQueries((prev) =>
@@ -369,7 +384,7 @@ export default function AdminQueriesPage() {
           const existingReplies: QueryReply[] = q.replies
             ? [...q.replies]
             : (q.adminReply
-            ? [{ senderRole: "admin" as const, senderName: q.adminRepliedByName || "Support", message: q.adminReply, createdAt: q.adminRepliedAt || q.createdAt }]
+            ? [{ senderRole: "admin" as const, senderName: q.adminRepliedByName || "Support", message: q.adminReply, createdAt: q.adminRepliedAt || q.createdAt, isRead: q.isReadByInstitute }]
             : [])
           return {
             ...q,
@@ -483,7 +498,7 @@ export default function AdminQueriesPage() {
 
           <button
             type="button"
-            onClick={fetchQueries}
+            onClick={() => fetchQueries(false)}
             disabled={loading}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors shadow-2xs cursor-pointer"
           >
@@ -602,6 +617,13 @@ export default function AdminQueriesPage() {
                 const hasUnread = thread.unreadCount > 0
                 const hasPending = thread.pendingCount > 0
                 const latest = thread.latestQuery
+                const threadMsgs = thread.queries.flatMap((q) => getQueryMessages(q))
+                const lastMsg = threadMsgs[threadMsgs.length - 1] || null
+                const isLastMsgMine = lastMsg
+                  ? isSuperAdmin
+                    ? lastMsg.senderRole === "admin"
+                    : lastMsg.senderRole === "institute"
+                  : false
 
                 return (
                   <div
@@ -637,20 +659,25 @@ export default function AdminQueriesPage() {
                           )}
                         </div>
                         <span className="text-[10px] text-gray-400 shrink-0">
-                          {formatTime(latest.createdAt)}
+                          {formatTime(lastMsg ? lastMsg.createdAt : latest.createdAt)}
                         </span>
                       </div>
 
                       <p className="text-xs font-semibold text-[#324158] truncate">{latest.subject}</p>
-                      <p className="text-[11px] text-gray-500 truncate flex items-center gap-1">
-                        {latest.adminReply ? (
-                          <>
-                            <CheckCheck size={12} className="text-blue-500 shrink-0" />
-                            <span className="truncate">{latest.adminReply}</span>
-                          </>
-                        ) : (
-                          <span className="truncate">{latest.message}</span>
+                      <p className="text-[11px] text-gray-500 truncate flex items-center gap-1.5">
+                        {isLastMsgMine && (
+                          <span
+                            className="inline-flex items-center shrink-0"
+                            title={lastMsg?.isRead ? "Read by recipient" : "Delivered"}
+                          >
+                            <CheckCheck
+                              size={15}
+                              strokeWidth={2.2}
+                              className={`shrink-0 ${lastMsg?.isRead ? "text-sky-500" : "text-gray-400"}`}
+                            />
+                          </span>
                         )}
+                        <span className="truncate">{lastMsg?.message || latest.message}</span>
                       </p>
 
                       <div className="flex items-center justify-between pt-0.5 text-[10px]">
@@ -664,7 +691,7 @@ export default function AdminQueriesPage() {
                             </span>
                           ) : (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-0.5">
-                              <CheckCheck size={11} />
+                              <CheckCheck size={12} strokeWidth={2.2} className="shrink-0" />
                               Replied
                             </span>
                           )}
@@ -844,8 +871,21 @@ export default function AdminQueriesPage() {
 
                           {/* Footer with time & WhatsApp checkmarks */}
                           <div className={`flex items-center justify-end gap-1.5 text-[10px] pt-0.5 ${isSenderUser ? "text-slate-300" : "text-gray-400"}`}>
-                            <span>{formatTime(msg.createdAt)}</span>
-                            {isSenderUser && <CheckCheck size={13} className="text-emerald-400" />}
+                            <span className="tabular-nums">{formatTime(msg.createdAt)}</span>
+                            {isSenderUser && (
+                              <span
+                                className="inline-flex items-center shrink-0 ml-0.5"
+                                title={msg.isRead ? "Read by recipient" : "Delivered"}
+                              >
+                                <CheckCheck
+                                  size={16}
+                                  strokeWidth={2.2}
+                                  className={`shrink-0 transition-colors ${
+                                    msg.isRead ? "text-sky-400" : "text-slate-400"
+                                  }`}
+                                />
+                              </span>
+                            )}
                           </div>
                         </div>
 

@@ -36,14 +36,17 @@ interface QueryItem {
   message: string
   status: "pending" | "replied" | "resolved"
   isReadByAdmin: boolean
+  isReadByInstitute?: boolean
   adminReply?: string
   adminRepliedAt?: string
   adminRepliedByName?: string
   replies?: Array<{
+    _id?: string
     senderRole: "admin" | "institute"
     senderName: string
     message: string
     createdAt: string
+    isRead?: boolean
   }>
   createdAt: string
 }
@@ -390,8 +393,29 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                                 {r.message}
                               </p>
                               {isAdmin && (
-                                <div className="flex justify-end pt-0.5">
-                                  <CheckCheck size={14} className="text-emerald-400" />
+                                <div className="flex justify-end items-center gap-1 text-[10px] text-slate-300 pt-0.5">
+                                  <span
+                                    className="inline-flex items-center shrink-0 ml-0.5"
+                                    title={
+                                      (typeof (r as any).isRead === "boolean"
+                                        ? (r as any).isRead
+                                        : activeQuery.isReadByInstitute)
+                                        ? "Read by organization"
+                                        : "Delivered"
+                                    }
+                                  >
+                                    <CheckCheck
+                                      size={16}
+                                      strokeWidth={2.2}
+                                      className={`shrink-0 ${
+                                        (typeof (r as any).isRead === "boolean"
+                                          ? (r as any).isRead
+                                          : activeQuery.isReadByInstitute)
+                                          ? "text-sky-400"
+                                          : "text-slate-400"
+                                      }`}
+                                    />
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -424,8 +448,19 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                           <p className="text-xs text-slate-100 whitespace-pre-wrap leading-relaxed">
                             {activeQuery.adminReply}
                           </p>
-                          <div className="flex justify-end pt-0.5">
-                            <CheckCheck size={14} className="text-emerald-400" />
+                          <div className="flex justify-end items-center gap-1 text-[10px] text-slate-300 pt-0.5">
+                            <span
+                              className="inline-flex items-center shrink-0 ml-0.5"
+                              title={activeQuery.isReadByInstitute ? "Read by organization" : "Delivered"}
+                            >
+                              <CheckCheck
+                                size={16}
+                                strokeWidth={2.2}
+                                className={`shrink-0 ${
+                                  activeQuery.isReadByInstitute ? "text-sky-400" : "text-slate-400"
+                                }`}
+                              />
+                            </span>
                           </div>
                         </div>
                         <div className="w-7 h-7 rounded-lg bg-[#324158] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
@@ -575,10 +610,19 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
                               </div>
 
                               <p className="text-xs font-semibold text-[#324158] truncate">{q.subject}</p>
-                              <p className="text-[11px] text-gray-500 truncate flex items-center gap-1">
+                              <p className="text-[11px] text-gray-500 truncate flex items-center gap-1.5">
                                 {q.adminReply ? (
                                   <>
-                                    <CheckCheck size={12} className="text-blue-500 shrink-0" />
+                                    <span
+                                      className="inline-flex items-center shrink-0"
+                                      title={q.isReadByInstitute ? "Read by organization" : "Delivered"}
+                                    >
+                                      <CheckCheck
+                                        size={15}
+                                        strokeWidth={2.2}
+                                        className={`shrink-0 ${q.isReadByInstitute ? "text-sky-500" : "text-gray-400"}`}
+                                      />
+                                    </span>
                                     <span className="truncate">{q.adminReply}</span>
                                   </>
                                 ) : (

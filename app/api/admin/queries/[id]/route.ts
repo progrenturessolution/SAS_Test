@@ -56,7 +56,17 @@ export async function PATCH(
           senderName,
           message: replyText,
           createdAt: new Date(),
+          isRead: false,
         })
+
+        // Admin replying confirms admin has read all messages in this query
+        if (query.replies) {
+          query.replies.forEach((r) => {
+            if (r.senderRole === "institute") {
+              r.isRead = true
+            }
+          })
+        }
 
         query.adminReply = replyText
         query.adminRepliedAt = new Date()
@@ -72,7 +82,18 @@ export async function PATCH(
           senderName,
           message: replyText,
           createdAt: new Date(),
+          isRead: false,
         })
+
+        // Institute replying confirms institute has read all previous admin messages in this query
+        if (query.replies) {
+          query.replies.forEach((r) => {
+            if (r.senderRole === "admin") {
+              r.isRead = true
+            }
+          })
+        }
+
         query.status = "pending"
         query.isReadByAdmin = false // marks unread for super admin
         query.isReadByInstitute = true
@@ -93,8 +114,22 @@ export async function PATCH(
     if (body.markRead) {
       if (isSuperAdmin) {
         query.isReadByAdmin = true
+        if (query.replies) {
+          query.replies.forEach((r) => {
+            if (r.senderRole === "institute") {
+              r.isRead = true
+            }
+          })
+        }
       } else if (session.instituteId && String(query.instituteId) === String(session.instituteId)) {
         query.isReadByInstitute = true
+        if (query.replies) {
+          query.replies.forEach((r) => {
+            if (r.senderRole === "admin") {
+              r.isRead = true
+            }
+          })
+        }
       }
       await query.save()
       return NextResponse.json({ success: true, query })

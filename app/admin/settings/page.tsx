@@ -80,6 +80,21 @@ export default function SettingsPage() {
       const data = await res.json()
       if (data.success) {
         setQueries(data.queries || [])
+        // Auto-mark queries as read by institute if unread
+        const unread = (data.queries || []).filter((q: any) => q.isReadByInstitute === false)
+        if (unread.length > 0) {
+          unread.forEach(async (q: any) => {
+            try {
+              await fetch(`/api/admin/queries/${q._id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ markRead: true }),
+              })
+            } catch (err) {
+              console.error("Mark read error:", err)
+            }
+          })
+        }
       }
     } catch (e) {
       console.error("Failed to load queries:", e)
@@ -755,7 +770,16 @@ export default function SettingsPage() {
 
                         <div className="flex items-center justify-between text-[10px] text-gray-400">
                           <span>Category: <strong className="text-gray-600 capitalize">{q.category?.replace("_", " ")}</strong></span>
-                          <span>{new Date(q.createdAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span>{new Date(q.createdAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                            <span className="inline-flex items-center shrink-0 ml-0.5" title={q.isReadByAdmin ? "Read by support" : "Delivered"}>
+                              <CheckCheck
+                                size={15}
+                                strokeWidth={2.2}
+                                className={`shrink-0 ${q.isReadByAdmin ? "text-sky-500" : "text-gray-400"}`}
+                              />
+                            </span>
+                          </div>
                         </div>
 
                         {/* WhatsApp-Style Thread Replies: loops through all replies so second reply NEVER replaces first! */}
@@ -795,9 +819,31 @@ export default function SettingsPage() {
                                   <p className={`text-xs whitespace-pre-wrap leading-relaxed ${isAdmin ? "text-slate-100" : "text-gray-800"}`}>
                                     {r.message}
                                   </p>
-                                  {isAdmin && (
-                                    <div className="flex justify-end pt-0.5">
-                                      <CheckCheck size={13} className="text-emerald-400" />
+                                  {!isAdmin ? (
+                                    <div className="flex justify-end items-center gap-1 text-[10px] text-gray-400 pt-0.5">
+                                      <span
+                                        className="inline-flex items-center shrink-0 ml-0.5"
+                                        title={(r.isRead ?? q.isReadByAdmin) ? "Read by support" : "Delivered"}
+                                      >
+                                        <CheckCheck
+                                          size={15}
+                                          strokeWidth={2.2}
+                                          className={`shrink-0 ${(r.isRead ?? q.isReadByAdmin) ? "text-sky-500" : "text-gray-400"}`}
+                                        />
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex justify-end items-center gap-1 text-[10px] text-slate-300 pt-0.5">
+                                      <span
+                                        className="inline-flex items-center shrink-0 ml-0.5"
+                                        title={q.isReadByInstitute ? "Read" : "Delivered"}
+                                      >
+                                        <CheckCheck
+                                          size={15}
+                                          strokeWidth={2.2}
+                                          className={`shrink-0 ${q.isReadByInstitute ? "text-sky-400" : "text-slate-400"}`}
+                                        />
+                                      </span>
                                     </div>
                                   )}
                                 </div>
@@ -825,8 +871,17 @@ export default function SettingsPage() {
                             <p className="text-xs text-slate-100 whitespace-pre-wrap leading-relaxed">
                               {q.adminReply}
                             </p>
-                            <div className="flex justify-end pt-0.5">
-                              <CheckCheck size={13} className="text-emerald-400" />
+                            <div className="flex justify-end items-center gap-1 text-[10px] text-slate-300 pt-0.5">
+                              <span
+                                className="inline-flex items-center shrink-0 ml-0.5"
+                                title={q.isReadByInstitute ? "Read" : "Delivered"}
+                              >
+                                <CheckCheck
+                                  size={15}
+                                  strokeWidth={2.2}
+                                  className={`shrink-0 ${q.isReadByInstitute ? "text-sky-400" : "text-slate-400"}`}
+                                />
+                              </span>
                             </div>
                           </div>
                         ) : null}

@@ -6,6 +6,7 @@ export interface ISupportQueryReply {
   senderName: string
   message: string
   createdAt: Date
+  isRead?: boolean
 }
 
 export interface ISupportQuery extends Document {
@@ -62,6 +63,7 @@ const SupportQuerySchema = new Schema<ISupportQuery>(
         senderName: { type: String, default: "" },
         message: { type: String, required: true },
         createdAt: { type: Date, default: Date.now },
+        isRead: { type: Boolean, default: false },
       },
     ],
   },
