@@ -40,6 +40,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     user.password = newPassword
     await user.save()
 
+    institute.adminPassword = newPassword
+    await institute.save()
+
     return NextResponse.json({ ok: true, message: `Password for ${institute.name} updated successfully!` })
   } catch (error: any) {
     console.error("Reset password error:", error)

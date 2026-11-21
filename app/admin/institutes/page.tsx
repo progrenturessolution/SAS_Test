@@ -27,6 +27,8 @@ import {
   X,
   Loader2,
   Eye,
+  EyeOff,
+  Copy,
   AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -99,6 +101,7 @@ interface Institute {
   name: string
   code: string
   email: string
+  adminPassword?: string
   phone?: string
   city?: string
   address?: string
@@ -142,6 +145,7 @@ export default function InstitutesManagementPage() {
   const [formCode, setFormCode] = useState("")
   const [formEmail, setFormEmail] = useState("")
   const [formPassword, setFormPassword] = useState("")
+  const [showFormPassword, setShowFormPassword] = useState(false)
   const [formPhone, setFormPhone] = useState("")
   const [formCity, setFormCity] = useState("")
   const [formContactPerson, setFormContactPerson] = useState("")
@@ -166,7 +170,9 @@ export default function InstitutesManagementPage() {
 
   // Password reset state
   const [newPassword, setNewPassword] = useState("")
+  const [showResetPassword, setShowResetPassword] = useState(false)
   const [resettingPassword, setResettingPassword] = useState(false)
+  const [showDetailPassword, setShowDetailPassword] = useState(false)
 
   const fetchInstitutes = async () => {
     try {
@@ -244,6 +250,7 @@ export default function InstitutesManagementPage() {
       setFormCode("")
       setFormEmail("")
       setFormPassword("")
+      setShowFormPassword(false)
       setFormPhone("")
       setFormCity("")
       setFormContactPerson("")
@@ -383,9 +390,12 @@ export default function InstitutesManagementPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to reset password")
 
-      alert(`Password successfully updated for ${showResetPasswordModal.name}!`)
+      toast.success(`Password successfully updated for ${showResetPasswordModal.name}!`)
+      setInstitutes(prev => prev.map(inst => inst._id === showResetPasswordModal._id ? { ...inst, adminPassword: newPassword } : inst))
+      setSelectedInstitute(current => current?._id === showResetPasswordModal._id ? { ...current, adminPassword: newPassword } : current)
       setShowResetPasswordModal(null)
       setNewPassword("")
+      setShowResetPassword(false)
     } catch (err: any) {
       alert("Error: " + err.message)
     } finally {
@@ -1060,6 +1070,98 @@ export default function InstitutesManagementPage() {
                 <p className="mt-4 text-xs font-medium text-slate-500">Registered on</p>
                 <p className="mt-1 text-sm font-bold text-[#324158]">{formatDateDDMMYYYY(selectedInstitute.createdAt)}</p>
               </div>
+
+              {/* Portal Login Credentials */}
+              <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-b from-[#f8fafc] to-[#eaf0f8]/40 p-4.5 sm:col-span-2 shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="h-4 w-4 text-[#324158]" />
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[#324158]">
+                      Portal Login Credentials
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowResetPasswordModal(selectedInstitute)
+                      setNewPassword("")
+                      setShowResetPassword(false)
+                    }}
+                    className="text-[11px] font-bold text-[#324158] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    Reset Password
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {/* Email */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-2xs">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Login Email / Username
+                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-semibold text-slate-800 truncate select-all">
+                        {selectedInstitute.email}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedInstitute.email)
+                          toast.success("Login email copied to clipboard!")
+                        }}
+                        className="text-slate-400 hover:text-[#324158] p-1 rounded transition-colors cursor-pointer"
+                        title="Copy Email"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-2xs">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Portal Password
+                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-semibold text-slate-800 select-all">
+                        {selectedInstitute.adminPassword ? (
+                          showDetailPassword ? selectedInstitute.adminPassword : "••••••••••••"
+                        ) : (
+                          <span className="text-slate-400 font-normal italic">
+                            •••••••• (Reset password to reveal)
+                          </span>
+                        )}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {selectedInstitute.adminPassword && (
+                          <button
+                            type="button"
+                            onClick={() => setShowDetailPassword((prev) => !prev)}
+                            className="p-1 rounded text-slate-400 hover:text-[#324158] transition-colors cursor-pointer"
+                            title={showDetailPassword ? "Hide password" : "Show password"}
+                          >
+                            {showDetailPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5 text-[#324158]" />}
+                          </button>
+                        )}
+                        {selectedInstitute.adminPassword && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedInstitute.adminPassword) {
+                                navigator.clipboard.writeText(selectedInstitute.adminPassword)
+                                toast.success("Password copied to clipboard!")
+                              }
+                            }}
+                            className="p-1 rounded text-slate-400 hover:text-[#324158] transition-colors cursor-pointer"
+                            title="Copy Password"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 sm:col-span-2 shadow-xs">
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Usage and quotas</p>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -1174,15 +1276,26 @@ export default function InstitutesManagementPage() {
 
                 <div>
                   <label className="font-bold text-gray-700 block mb-1">Initial Password *</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    placeholder="••••••••"
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#2D3A4A]"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showFormPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      placeholder="••••••••"
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      className="w-full px-3 py-2 pr-10 rounded-lg border border-gray-200 focus:outline-none focus:border-[#2D3A4A]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowFormPassword((prev) => !prev)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                      title={showFormPassword ? "Hide password" : "Show password"}
+                      aria-label={showFormPassword ? "Hide password" : "Show password"}
+                    >
+                      {showFormPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1544,13 +1657,24 @@ export default function InstitutesManagementPage() {
 
               <div>
                 <label className="font-bold text-gray-700 block mb-1">New Password *</label>
-                <input
-                  type="text"
-                  placeholder="Min 6 characters..."
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 font-mono"
-                />
+                <div className="relative">
+                  <input
+                    type={showResetPassword ? "text" : "password"}
+                    placeholder="Min 6 characters..."
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2 pr-10 rounded-lg border border-gray-200 font-mono text-xs focus:outline-none focus:border-[#2D3A4A]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPassword((prev) => !prev)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                    title={showResetPassword ? "Hide password" : "Show password"}
+                    aria-label={showResetPassword ? "Hide password" : "Show password"}
+                  >
+                    {showResetPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2">

@@ -156,6 +156,7 @@ export async function POST(req: Request) {
       name: name.trim(),
       code: cleanCode,
       email: cleanEmail,
+      adminPassword: String(password).trim(),
       phone: phone?.trim(),
       city: city?.trim(),
       address: address?.trim(),

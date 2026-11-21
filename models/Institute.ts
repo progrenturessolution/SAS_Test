@@ -17,6 +17,7 @@ export interface IInstitute extends Document {
 
   code: string
   email: string
+  adminPassword?: string
   phone?: string
   address?: string
   city?: string
@@ -36,6 +37,7 @@ const InstituteSchema = new Schema<IInstitute>(
     name: { type: String, required: true, trim: true },
     code: { type: String, required: true, unique: true, uppercase: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    adminPassword: { type: String, trim: true },
     phone: { type: String, trim: true },
     address: { type: String, trim: true },
     city: { type: String, trim: true },
