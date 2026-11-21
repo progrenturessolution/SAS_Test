@@ -2948,6 +2948,46 @@ function Step3({
         </div>
       </div>
 
+      {/* ── Separate Coding Challenge Box ── */}
+      {allowedCustomQuestionTypes.includes("coding") && (
+        <div
+          onClick={() => openModal("coding")}
+          className="mb-6 rounded-2xl border border-[#cbd5e1] bg-gradient-to-b from-[#f8fafc] to-[#eaf0f8]/35 p-4 sm:p-5 shadow-xs transition-all hover:border-[#324158] hover:shadow-sm cursor-pointer group"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#324158] text-white shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+                <Code2 size={22} />
+              </span>
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h3 className="text-sm sm:text-base font-bold text-[#324158] group-hover:text-[#253244] transition-colors">
+                    Coding Challenge Studio
+                  </h3>
+                  <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1]">
+                    IDE & Test Cases
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
+                  Create programming questions with custom starter code, driver code, test cases (public/hidden), constraints, and multi-language support (Python, Java, C++, JavaScript).
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                openModal("coding")
+              }}
+              className="h-10 px-5 rounded-xl bg-[#324158] group-hover:bg-[#253244] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+            >
+              <Plus size={16} />
+              <span>+ Add Coding Question</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {pdfError && (
         <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 flex items-center gap-2">
           <AlertCircle size={15} className="shrink-0"/>
@@ -2956,7 +2996,7 @@ function Step3({
       )}
 
       {/* Search + Filter */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="flex-1 relative">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
           <input
@@ -2976,22 +3016,6 @@ function Step3({
             <option key={t} value={t}>{TYPE_META[t].label}</option>
           ))}
         </select>
-      </div>
-
-      {/* Type Legend */}
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
-        <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mr-1">TYPES:</span>
-        {(["mcq","assertion","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => (
-          <button 
-            key={t} 
-            type="button"
-            onClick={() => openModal(t)}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${TYPE_META[t].color} border border-current/20 hover:scale-105 active:scale-95 transition-all cursor-pointer`}
-          >
-            {TYPE_META[t].icon}
-            <span>{TYPE_META[t].label}</span>
-          </button>
-        ))}
       </div>
 
       {/* Question List */}
