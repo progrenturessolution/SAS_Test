@@ -225,17 +225,17 @@ export function ExamActionMenu({
             type="button"
             onClick={handleToggleStatus}
             disabled={loading}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-50 transition-colors text-sm text-left font-medium text-gray-700"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
           >
             {exam.status === "active" ? (
               <>
-                <Eye size={15} className="text-blue-500 shrink-0" />
+                <Eye size={15} className="text-[#324158] shrink-0" />
                 <span className="flex-1">Unpublish</span>
                 <span className="text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Active</span>
               </>
             ) : (
               <>
-                <EyeOff size={15} className="text-gray-400 shrink-0" />
+                <EyeOff size={15} className="text-[#324158] shrink-0" />
                 <span className="flex-1">Publish</span>
                 <span className="text-[10px] font-semibold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">Draft</span>
               </>
@@ -247,16 +247,16 @@ export function ExamActionMenu({
             type="button"
             onClick={handleCopy}
             disabled={loading}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-50 transition-colors text-sm text-left font-medium text-gray-700"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
           >
             {copied ? (
               <>
-                <Check size={15} className="text-green-500 shrink-0" />
-                <span className="flex-1 text-green-600">Link Copied!</span>
+                <Check size={15} className="text-[#324158] shrink-0" />
+                <span className="flex-1 text-[#324158]">Link Copied!</span>
               </>
             ) : (
               <>
-                <Link2 size={15} className="text-gray-500 shrink-0" />
+                <Link2 size={15} className="text-[#324158] shrink-0" />
                 <span className="flex-1">Copy Link</span>
               </>
             )}
@@ -266,9 +266,9 @@ export function ExamActionMenu({
           <Link
             href={getExamEditUrl(exam)}
             onClick={() => setOpen(false)}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm font-medium text-gray-700"
           >
-            <Pencil size={15} className="text-emerald-500 shrink-0" />
+            <Pencil size={15} className="text-[#324158] shrink-0" />
             <span className="flex-1">Edit Exam</span>
           </Link>
 
@@ -276,9 +276,9 @@ export function ExamActionMenu({
           <Link
             href={`/admin/results?examId=${exam._id}`}
             onClick={() => setOpen(false)}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm font-medium text-gray-700"
           >
-            <BarChart2 size={15} className="text-purple-500 shrink-0" />
+            <BarChart2 size={15} className="text-[#324158] shrink-0" />
             <span className="flex-1">View Results</span>
           </Link>
 
@@ -287,9 +287,9 @@ export function ExamActionMenu({
             type="button"
             onClick={handleShare}
             disabled={loading}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-50 transition-colors text-sm text-left font-medium text-gray-700"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
           >
-            <Share2 size={15} className="text-blue-500 shrink-0" />
+            <Share2 size={15} className="text-[#324158] shrink-0" />
             <span className="flex-1">Share Exam</span>
           </button>
 
@@ -300,7 +300,7 @@ export function ExamActionMenu({
             disabled={loading}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-red-50 text-red-600 transition-colors text-sm text-left font-medium"
           >
-            <Trash2 size={15} className="text-red-500 shrink-0" />
+            <Trash2 size={15} className="text-[#324158] group-hover:text-red-600 shrink-0" />
             <span className="flex-1">Delete Exam</span>
           </button>
         </div>
