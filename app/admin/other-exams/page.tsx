@@ -1051,7 +1051,7 @@ function OtherExamsContent() {
       const startDateTime = new Date(`${startDate}T${formattedStartTime}:00`)
       const endDateTime = new Date(`${endDate}T${formattedEndTime}:00`)
 
-      const isNegativeEnabled = evalSettings.enableNegativeMarking
+      const isNegativeEnabled = negativeMarkingEnabled
 
       // Format questions into sections for exam model
       const sections = [
@@ -2033,11 +2033,17 @@ function OtherExamsContent() {
                   Penalty marks for incorrect choices.
                 </p>
                 {negativeMarkingEnabled && (
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
                     <span className="text-xs text-slate-600 font-medium">Penalty:</span>
                     <select
-                      value={negativeMarkPenalty}
-                      onChange={(e) => setNegativeMarkPenalty(parseFloat(e.target.value))}
+                      value={[0.25, 0.33, 0.5, 1, 2].includes(negativeMarkPenalty) ? negativeMarkPenalty : "custom"}
+                      onChange={(e) => {
+                        if (e.target.value === "custom") {
+                          setNegativeMarkPenalty(1.5)
+                        } else {
+                          setNegativeMarkPenalty(parseFloat(e.target.value))
+                        }
+                      }}
                       className="py-1 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:border-slate-800"
                     >
                       <option value={0.25}>-0.25 (1/4th penalty)</option>
@@ -2045,7 +2051,23 @@ function OtherExamsContent() {
                       <option value={0.5}>-0.50 (1/2 penalty)</option>
                       <option value={1}>-1.00 (Standard)</option>
                       <option value={2}>-2.00</option>
+                      <option value="custom">Custom penalty...</option>
                     </select>
+                    {![0.25, 0.33, 0.5, 1, 2].includes(negativeMarkPenalty) && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-bold text-slate-700">-</span>
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="0.05"
+                          max="10"
+                          value={negativeMarkPenalty}
+                          onChange={(e) => setNegativeMarkPenalty(Math.max(0, parseFloat(e.target.value) || 0))}
+                          className="w-16 py-1 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center focus:outline-none focus:border-slate-800"
+                        />
+                        <span className="text-[11px] text-slate-500">marks</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -3146,31 +3168,6 @@ function OtherExamsContent() {
                           <div
                             className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
                               evalSettings.allowReview ? "translate-x-5" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between py-2.5">
-                        <span className="text-xs font-normal text-slate-700">
-                          Enable Negative Marking
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEvalSettings((prev) => {
-                              const val = !prev.enableNegativeMarking
-                              setNegativeMarkingEnabled(val)
-                              return { ...prev, enableNegativeMarking: val }
-                            })
-                          }
-                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                            evalSettings.enableNegativeMarking ? "bg-[#1E293B]" : "bg-slate-200"
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
-                              evalSettings.enableNegativeMarking ? "translate-x-5" : "translate-x-0"
                             }`}
                           />
                         </button>

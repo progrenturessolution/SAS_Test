@@ -268,6 +268,41 @@ function AIGeneratorContent() {
   const [pattern, setPattern] = useState<"mcq_single" | "assertion_reason" | "mixed">("mixed")
   const [focusPYQ, setFocusPYQ] = useState(true)
 
+  // Step 2: Negative Marking States (Customizable in Blueprint Step)
+  const [negativeMarkingEnabled, setNegativeMarkingEnabled] = useState<boolean>(() => {
+    const meta = EXAM_TARGETS.find((e) => e.id === "MHT_CET")
+    return (meta?.defaultNegativeMarks || 0) > 0
+  })
+  const [negativeMarkPenalty, setNegativeMarkPenalty] = useState<number>(() => {
+    const meta = EXAM_TARGETS.find((e) => e.id === "MHT_CET")
+    return meta?.defaultNegativeMarks && meta.defaultNegativeMarks > 0 ? meta.defaultNegativeMarks : 1
+  })
+
+  const handleToggleNegativeMarking = (enabled: boolean) => {
+    setNegativeMarkingEnabled(enabled)
+    setEvalSettings((prev) => ({ ...prev, enableNegativeMarking: enabled }))
+    if (generatedQuestions.length > 0) {
+      setGeneratedQuestions((prev) =>
+        prev.map((q) => {
+          const isDesc = q.type === "descriptive" || q.questionFormat === "descriptive"
+          return isDesc ? q : { ...q, negativeMark: enabled ? negativeMarkPenalty : 0 }
+        })
+      )
+    }
+  }
+
+  const handleNegativePenaltyChange = (penalty: number) => {
+    setNegativeMarkPenalty(penalty)
+    if (negativeMarkingEnabled && generatedQuestions.length > 0) {
+      setGeneratedQuestions((prev) =>
+        prev.map((q) => {
+          const isDesc = q.type === "descriptive" || q.questionFormat === "descriptive"
+          return isDesc ? q : { ...q, negativeMark: penalty }
+        })
+      )
+    }
+  }
+
   // Generation & Status
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
@@ -370,6 +405,9 @@ function AIGeneratorContent() {
             enableNegativeMarking: exam.settings.negativeMarking ?? prev.enableNegativeMarking,
             allowCalculator: exam.settings.allowCalculator ?? exam.settings.enableCalculator ?? (exam as any).allowCalculator ?? prev.allowCalculator,
           }))
+          if (exam.settings.negativeMarking !== undefined) {
+            setNegativeMarkingEnabled(Boolean(exam.settings.negativeMarking))
+          }
           if (exam.settings.proctoring) {
             setProctoringSettings((prev) => ({
               ...prev,
@@ -379,6 +417,13 @@ function AIGeneratorContent() {
               aiStatusAnalysis: exam.settings.proctoring.aiProctoring ?? exam.settings.proctoring.aiStatusAnalysis ?? prev.aiStatusAnalysis,
             }))
           }
+        }
+        if (exam.sections?.[0]?.negativeMarking !== undefined) {
+          setNegativeMarkingEnabled(Boolean(exam.sections[0].negativeMarking))
+        }
+        const loadedNegMark = exam.sections?.[0]?.sectionNegativeMark || exam.sections?.[0]?.questions?.[0]?.negativeMark
+        if (loadedNegMark !== undefined && loadedNegMark > 0) {
+          setNegativeMarkPenalty(loadedNegMark)
         }
 
         // Questions mapping
@@ -391,7 +436,7 @@ function AIGeneratorContent() {
             questionImage: q.questionImage,
             difficulty: q.difficulty || "medium",
             marks: q.marks || (q.type === "descriptive" ? 5 : 4),
-            negativeMark: q.type === "descriptive" ? 0 : (q.negativeMark || (exam.settings?.negativeMarking ? 1 : 0)),
+            negativeMark: q.type === "descriptive" ? 0 : (q.negativeMark !== undefined ? q.negativeMark : (exam.settings?.negativeMarking ? (loadedNegMark || 1) : 0)),
             options: Array.isArray(q.options) ? q.options : [],
             correctAnswer: q.correctAnswer || "",
             explanation: q.explanation || "",
@@ -695,6 +740,15 @@ function AIGeneratorContent() {
       setBlueprintFormats(sync.formats)
       setClass11Weightage(sync.c11Weight)
       setClass12Weightage(sync.c12Weight)
+      if (targetMeta.defaultNegativeMarks > 0) {
+        setNegativeMarkingEnabled(true)
+        setNegativeMarkPenalty(targetMeta.defaultNegativeMarks)
+        setEvalSettings((prev) => ({ ...prev, enableNegativeMarking: true }))
+      } else {
+        setNegativeMarkingEnabled(false)
+        setNegativeMarkPenalty(1)
+        setEvalSettings((prev) => ({ ...prev, enableNegativeMarking: false }))
+      }
     }
     // Reset selected chapters when exam changes
     setSelectedChapters([])
@@ -1425,7 +1479,7 @@ function AIGeneratorContent() {
                   formatLabel: sf.formatLabel,
                   count: take,
                   marks: sf.marks,
-                  negativeMark: evalSettings.enableNegativeMarking ? (currentExamMeta.defaultNegativeMarks || 1) : 0,
+                  negativeMark: negativeMarkingEnabled ? negativeMarkPenalty : 0,
                 })
                 rem -= take
               }
@@ -1449,7 +1503,7 @@ function AIGeneratorContent() {
                   formatLabel: sf.formatLabel,
                   count: take,
                   marks: sf.marks,
-                  negativeMark: evalSettings.enableNegativeMarking ? (currentExamMeta.defaultNegativeMarks || 1) : 0,
+                  negativeMark: negativeMarkingEnabled ? negativeMarkPenalty : 0,
                 })
                 rem -= take
               }
@@ -1513,7 +1567,7 @@ function AIGeneratorContent() {
                 formatLabel: sf.formatLabel,
                 count: take,
                 marks: sf.marks,
-                negativeMark: evalSettings.enableNegativeMarking ? (currentExamMeta.defaultNegativeMarks || 1) : 0,
+                negativeMark: negativeMarkingEnabled ? negativeMarkPenalty : 0,
               })
               rem -= take
             }
@@ -1536,7 +1590,7 @@ function AIGeneratorContent() {
                 formatLabel: sf.formatLabel,
                 count: take,
                 marks: sf.marks,
-                negativeMark: evalSettings.enableNegativeMarking ? (currentExamMeta.defaultNegativeMarks || 1) : 0,
+                negativeMark: negativeMarkingEnabled ? negativeMarkPenalty : 0,
               })
               rem -= take
             }
@@ -1701,7 +1755,7 @@ function AIGeneratorContent() {
                 count: Math.min(Number(f.count) || 0, gap),
               })),
               marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
-              negativeMarks: currentExamMeta.defaultNegativeMarks,
+              negativeMarks: negativeMarkingEnabled ? negativeMarkPenalty : 0,
               focusPYQ,
               existingQuestions: allGenerated.map((q) => q.questionText).slice(-30),
               stream: false,
@@ -1718,7 +1772,7 @@ function AIGeneratorContent() {
                   ...q,
                   subject: targetSubject,
                   marks: q.marks || currentExamMeta.defaultMarksPerQuestion,
-                  negativeMark: q.negativeMark ?? currentExamMeta.defaultNegativeMarks,
+                  negativeMark: q.negativeMark ?? (negativeMarkingEnabled ? negativeMarkPenalty : 0),
                 })
               }
             }
@@ -1782,7 +1836,7 @@ function AIGeneratorContent() {
             count: Math.min(Number(f.count) || 0, requestCount),
           })),
           marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
-          negativeMarks: currentExamMeta.defaultNegativeMarks,
+          negativeMarks: negativeMarkingEnabled ? negativeMarkPenalty : 0,
           focusPYQ,
           existingQuestions: existingTexts.slice(-30),
           stream: false,
@@ -1791,7 +1845,10 @@ function AIGeneratorContent() {
 
       const data = await res.json()
       if (res.ok && data.success && Array.isArray(data.questions) && data.questions.length > 0) {
-        const toAdd = data.questions.slice(0, missingCount)
+        const toAdd = data.questions.slice(0, missingCount).map((q: any) => ({
+          ...q,
+          negativeMark: q.negativeMark !== undefined ? q.negativeMark : (negativeMarkingEnabled ? negativeMarkPenalty : 0),
+        }))
         const updated = [...generatedQuestions, ...toAdd].slice(0, targetTotalQuestions)
         setGeneratedQuestions(updated)
         setSelectedQuestionIds(new Set(updated.map((q) => q.id)))
@@ -1886,14 +1943,14 @@ function AIGeneratorContent() {
       const finalInstructions = instructions && instructions.length > 0 ? instructions : [
         "Read each question carefully before submitting your answer.",
         `Each question carries ${currentExamMeta.defaultMarksPerQuestion} marks.`,
-        currentExamMeta.defaultNegativeMarks > 0
-          ? `Negative marking: -${currentExamMeta.defaultNegativeMarks} marks will be deducted for each incorrect response.`
+        negativeMarkingEnabled
+          ? `Negative marking: -${negativeMarkPenalty} marks will be deducted for each incorrect response.`
           : "No negative marking applicable.",
         "Formulas and chemical reactions are formatted with scientific standard LaTeX notation.",
       ]
 
-      const isNegativeEnabled = evalSettings.enableNegativeMarking
-      const defaultNegMark = isNegativeEnabled ? (currentExamMeta.defaultNegativeMarks || 1) : 0
+      const isNegativeEnabled = negativeMarkingEnabled
+      const defaultNegMark = isNegativeEnabled ? negativeMarkPenalty : 0
 
       const typeTitles: Record<string, string> = {
         mcq: "Multiple Choice Questions",
@@ -1936,9 +1993,9 @@ function AIGeneratorContent() {
           marks: q.marks || (isDescriptive ? 5 : currentExamMeta.defaultMarksPerQuestion),
           negativeMark: isDescriptive
             ? 0
-            : (q.negativeMark !== undefined
-              ? q.negativeMark
-              : defaultNegMark),
+            : (negativeMarkingEnabled
+              ? (q.negativeMark !== undefined && q.negativeMark > 0 ? q.negativeMark : defaultNegMark)
+              : 0),
           options,
           correctAnswer,
           explanation: q.explanation,
@@ -3057,6 +3114,68 @@ function AIGeneratorContent() {
                       </div>
                     </div>
                   )}
+
+                  {/* Box 3: Negative Marking */}
+                  <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-800">
+                          Negative Marking
+                        </h4>
+                        <Info size={13} className="text-slate-400" />
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={negativeMarkingEnabled}
+                        onChange={(e) => handleToggleNegativeMarking(e.target.checked)}
+                        className="w-4 h-4 rounded text-slate-900 focus:ring-slate-900 cursor-pointer"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Penalty marks for incorrect choices.
+                    </p>
+                    {negativeMarkingEnabled && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100 flex-wrap">
+                        <span className="text-xs text-slate-600 font-medium">Penalty:</span>
+                        <div className="relative">
+                          <select
+                            value={[0.25, 0.33, 0.5, 1, 2].includes(negativeMarkPenalty) ? negativeMarkPenalty : "custom"}
+                            onChange={(e) => {
+                              if (e.target.value === "custom") {
+                                handleNegativePenaltyChange(1.5)
+                              } else {
+                                handleNegativePenaltyChange(parseFloat(e.target.value))
+                              }
+                            }}
+                            className="py-1 pl-2.5 pr-7 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:border-slate-800 cursor-pointer shadow-2xs appearance-none"
+                          >
+                            <option value={0.25}>-0.25 (1/4th penalty)</option>
+                            <option value={0.33}>-0.33 (1/3rd penalty)</option>
+                            <option value={0.5}>-0.50 (1/2 penalty)</option>
+                            <option value={1}>-1.00 (Standard)</option>
+                            <option value={2}>-2.00</option>
+                            <option value="custom">Custom penalty...</option>
+                          </select>
+                          <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                        {![0.25, 0.33, 0.5, 1, 2].includes(negativeMarkPenalty) && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-bold text-slate-700">-</span>
+                            <input
+                              type="number"
+                              step="0.05"
+                              min="0.05"
+                              max="10"
+                              value={negativeMarkPenalty}
+                              onChange={(e) => handleNegativePenaltyChange(Math.max(0, parseFloat(e.target.value) || 0))}
+                              className="w-16 py-1 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center focus:outline-none focus:border-slate-800"
+                            />
+                            <span className="text-[11px] text-slate-500">marks</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -3494,7 +3613,7 @@ function AIGeneratorContent() {
 
                               <div className="flex items-center gap-1.5 shrink-0">
                                 <span className="text-[11px] sm:text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                                  +{q.marks}/-{q.negativeMark}m
+                                  +{q.marks}m{q.negativeMark > 0 ? ` / -${q.negativeMark}m` : ""}
                                 </span>
                                 <button
                                   type="button"
@@ -4227,30 +4346,6 @@ function AIGeneratorContent() {
                       </div>
 
                       <div className="flex items-center justify-between py-2.5">
-                        <span className="text-xs font-normal text-slate-700">
-                          Enable Negative Marking
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEvalSettings((prev) => ({
-                              ...prev,
-                              enableNegativeMarking: !prev.enableNegativeMarking,
-                            }))
-                          }
-                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                            evalSettings.enableNegativeMarking ? "bg-[#1E293B]" : "bg-slate-200"
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
-                              evalSettings.enableNegativeMarking ? "translate-x-5" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between py-2.5">
                         <div className="flex items-center gap-2">
                           <Calculator className="w-4 h-4 text-[#324158]" />
                           <div>
@@ -4618,6 +4713,18 @@ function AIGeneratorContent() {
                   type="button"
                   onClick={() => {
                     if (isGenerating) return
+                    setInstructions((prev) => {
+                      const negText = negativeMarkingEnabled
+                        ? `Negative marking: -${negativeMarkPenalty} marks will be deducted for each incorrect response.`
+                        : "No negative marking applicable."
+                      const filtered = prev.filter((i) => !i.toLowerCase().includes("negative marking"))
+                      return [
+                        filtered[0] || "Read each question carefully before submitting your answer.",
+                        filtered[1] || `Each question carries ${currentExamMeta.defaultMarksPerQuestion} marks.`,
+                        negText,
+                        ...filtered.slice(2),
+                      ]
+                    })
                     setCurrentStep(4)
                     window.scrollTo({ top: 0, behavior: "smooth" })
                   }}
