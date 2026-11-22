@@ -842,6 +842,40 @@ function AIGeneratorContent() {
     )
   }
 
+  const updateFormatTotalMarks = (id: string, totalMarksVal: any) => {
+    const parsed = typeof totalMarksVal === "number" ? totalMarksVal : parseInt(String(totalMarksVal), 10)
+    const safeMarks = isNaN(parsed) ? 0 : Math.max(0, Math.min(2000, Math.round(parsed)))
+    setBlueprintFormats((prev) => {
+      const updated = prev.map((f) => {
+        if (f.id === id) {
+          const mpq = Number(f.marks) || 1
+          const newCount = mpq > 0 ? Math.round(safeMarks / mpq) : 0
+          return {
+            ...f,
+            count: newCount,
+            checked: newCount > 0,
+          }
+        }
+        return f
+      })
+      if (selectedSubjects.length === 1) {
+        const sub = selectedSubjects[0]
+        const totalQ = updated.reduce((acc, f) => acc + (f.checked ? Number(f.count) || 0 : 0), 0)
+        const totalM = updated.reduce((acc, f) => acc + (f.checked ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
+        const mpq = totalQ > 0 ? Math.max(1, Math.round(totalM / totalQ)) : 1
+        setSubjectDist((sPrev) => ({
+          ...sPrev,
+          [sub]: {
+            questions: totalQ,
+            marksPerQuestion: mpq,
+            marks: totalQ === 0 ? 0 : totalM,
+          },
+        }))
+      }
+      return updated
+    })
+  }
+
   const updateSubjectDist = (sub: string, field: "questions" | "marks", val: number) => {
     setSubjectDist((prev) => {
       const cur = prev[sub] || {
@@ -850,8 +884,8 @@ function AIGeneratorContent() {
         marks: 0,
       }
       let nextQ = cur.questions
-      let nextMarksPerQ = cur.marksPerQuestion || 1
       let nextMarks = cur.marks
+      let nextMarksPerQ = cur.marksPerQuestion || 1
 
       if (field === "questions") {
         nextQ = Math.max(0, val)
@@ -867,9 +901,8 @@ function AIGeneratorContent() {
           // Requirement 3: A subject with 0 questions must not have non-zero marks.
           nextMarks = 0
         } else {
-          const rawMarks = Math.max(0, val)
-          nextMarksPerQ = Math.max(1, Math.round(rawMarks / nextQ))
-          nextMarks = nextQ * nextMarksPerQ
+          nextMarks = Math.max(0, val)
+          nextMarksPerQ = nextQ > 0 ? Math.max(1, Math.round(nextMarks / nextQ)) : 1
         }
       }
 
@@ -2782,13 +2815,18 @@ function AIGeneratorContent() {
                           />
                         </div>
 
-                        {/* Total Marks (Calculated) */}
+                        {/* Total Marks */}
                         <div className="col-span-2">
                           <input
-                            type="text"
-                            readOnly
+                            type="number"
+                            min={0}
+                            max={2000}
                             value={(f.count || 0) * (f.marks || 0)}
-                            className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-slate-50/80 text-xs font-bold text-slate-700 shadow-2xs select-none"
+                            onChange={(e) => {
+                              const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
+                              updateFormatTotalMarks(f.id, val)
+                            }}
+                            className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10"
                           />
                         </div>
                       </div>
@@ -2882,7 +2920,10 @@ function AIGeneratorContent() {
                                 min={0}
                                 max={200}
                                 value={qVal}
-                                onChange={(e) => updateSubjectDist(sub, "questions", parseInt(e.target.value, 10) || 0)}
+                                onChange={(e) => {
+                                  const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
+                                  updateSubjectDist(sub, "questions", val)
+                                }}
                                 className="w-16 h-8 px-2 text-center rounded-lg border border-slate-200 bg-slate-50/70 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#324158]/10 shadow-2xs"
                               />
                             </div>
@@ -2893,7 +2934,10 @@ function AIGeneratorContent() {
                                 max={1000}
                                 disabled={isZeroQ}
                                 value={isZeroQ ? 0 : mVal}
-                                onChange={(e) => updateSubjectDist(sub, "marks", parseInt(e.target.value, 10) || 0)}
+                                onChange={(e) => {
+                                  const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
+                                  updateSubjectDist(sub, "marks", val)
+                                }}
                                 title={isZeroQ ? "Subject has 0 questions (Marks must be 0)" : "Total marks for this subject"}
                                 className={`w-16 h-8 px-2 text-center rounded-lg border text-xs font-semibold shadow-2xs ${
                                   isZeroQ
