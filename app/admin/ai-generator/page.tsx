@@ -99,19 +99,29 @@ function AIGeneratorContent() {
   const [activeSubjectTab, setActiveSubjectTab] = useState<CompetitiveSubject>("Physics")
   const [classFilter, setClassFilter] = useState<"all" | "11" | "12">("all")
   const [expandedClasses, setExpandedClasses] = useState<{ "11": boolean; "12": boolean }>({
-    "11": false,
+    "11": true,
     "12": false,
   })
 
-  // Blueprint Format Matrix - Default to 10 MCQ questions
+  // Blueprint Format Matrix - Match Screenshot (No Coding)
   const [blueprintFormats, setBlueprintFormats] = useState([
-    { id: "mcq", label: "MCQ", checked: true, count: 10, marks: 4 },
-    { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 4 },
-    { id: "assertion", label: "Assertion", checked: false, count: 0, marks: 4 },
-    { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 2 },
-    { id: "true_false", label: "True / False", checked: false, count: 0, marks: 2 },
-    { id: "descriptive", label: "Descriptive", checked: false, count: 0, marks: 5 },
+    { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: 50, marks: 1 },
+    { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
+    { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
+    { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
+    { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
+    { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 2 },
+    { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
   ])
+
+  // Subject-wise Marks & Syllabus Weightage States (Screenshot Match)
+  const [subjectDist, setSubjectDist] = useState<Record<string, { questions: number; marks: number }>>({
+    Physics: { questions: 50, marks: 50 },
+    Chemistry: { questions: 50, marks: 50 },
+    Mathematics: { questions: 50, marks: 100 },
+  })
+  const [class11Weightage, setClass11Weightage] = useState<number>(20)
+  const [class12Weightage, setClass12Weightage] = useState<number>(80)
 
   // Chapter Selection
   const [selectedChapters, setSelectedChapters] = useState<string[]>([])
@@ -653,10 +663,44 @@ function AIGeneratorContent() {
 
   const updateFormatMarks = (id: string, marks: any) => {
     const parsed = typeof marks === "number" ? marks : parseInt(String(marks), 10)
-    const safeMarks = isNaN(parsed) ? 4 : Math.max(0, Math.min(20, Math.round(parsed)))
+    const safeMarks = isNaN(parsed) ? 1 : Math.max(0, Math.min(20, Math.round(parsed)))
     setBlueprintFormats((prev) =>
       prev.map((f) => (f.id === id ? { ...f, marks: safeMarks } : f))
     )
+  }
+
+  const updateFormatType = (id: string, newLabel: string) => {
+    setBlueprintFormats((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, label: newLabel } : f))
+    )
+  }
+
+  const updateSubjectDist = (sub: string, field: "questions" | "marks", val: number) => {
+    setSubjectDist((prev) => ({
+      ...prev,
+      [sub]: {
+        questions: field === "questions" ? val : (prev[sub]?.questions ?? 50),
+        marks: field === "marks" ? val : (prev[sub]?.marks ?? 50),
+      },
+    }))
+  }
+
+  const totalSubjectQuestions = useMemo(() => {
+    return selectedSubjects.reduce((acc, sub) => acc + (subjectDist[sub]?.questions ?? 50), 0)
+  }, [selectedSubjects, subjectDist])
+
+  const totalSubjectMarks = useMemo(() => {
+    return selectedSubjects.reduce((acc, sub) => acc + (subjectDist[sub]?.marks ?? (sub === "Mathematics" ? 100 : 50)), 0)
+  }, [selectedSubjects, subjectDist])
+
+  const handleClass11WeightageChange = (val: number) => {
+    setClass11Weightage(val)
+    setClass12Weightage(Math.max(0, 100 - val))
+  }
+
+  const handleClass12WeightageChange = (val: number) => {
+    setClass12Weightage(val)
+    setClass11Weightage(Math.max(0, 100 - val))
   }
 
   // Step 2: Chapters by subject & grade
@@ -1731,25 +1775,30 @@ function AIGeneratorContent() {
             </div>
           )}
 
-          {/* ─── STEP 2: CONTENT & BLUEPRINT (MIRO DESIGN) ─── */}
+          {/* ─── STEP 2: CONTENT & BLUEPRINT (MATCHING SCREENSHOT) ─── */}
           {currentStep === 2 && (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-8 shadow-xs">
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-7 shadow-xs">
               {/* Top Header inside card */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-100">
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900">
-                    Content &amp; Blueprint
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Select chapters and set question format, marks and difficulty level.
-                  </p>
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 text-[#324158]">
+                    <Layers size={18} />
+                  </div>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900">
+                      Content &amp; Blueprint
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Select chapters and set question format, marks and difficulty level.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Selected Summary Badges & Edit Icon */}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-[11px] sm:text-xs font-normal text-slate-600">
                     Class:{" "}
-                    <span className="font-medium text-slate-800">
+                    <span className="font-semibold text-slate-800">
                       {selectedGrade === "both"
                         ? "11th + 12th"
                         : selectedGrade === "11"
@@ -1759,11 +1808,8 @@ function AIGeneratorContent() {
                   </span>
                   <span className="px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-[11px] sm:text-xs font-normal text-slate-600">
                     Subjects:{" "}
-                    <span className="font-medium text-slate-800">
-                      {selectedSubjects.slice(0, 3).join(", ") +
-                        (selectedSubjects.length > 3
-                          ? ` +${selectedSubjects.length - 3} more`
-                          : "")}
+                    <span className="font-semibold text-slate-800">
+                      {selectedSubjects.join(", ")}
                     </span>
                   </span>
                   <button
@@ -1777,321 +1823,399 @@ function AIGeneratorContent() {
                 </div>
               </div>
 
-              {/* Two-Column Grid: Chapter Selection & Question Blueprint */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start pt-6">
-                {/* Left Column: Chapter Selection */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="w-1 h-3.5 bg-slate-900 rounded-full" />
-                    <h3 className="text-sm font-medium text-slate-800">Chapter Selection</h3>
-                  </div>
+              {/* ─── Chapter Selection (Full Width) ─── */}
+              <div className="pt-6">
+                <div className="flex items-center gap-2 mb-3.5">
+                  <span className="w-1.5 h-4 bg-[#324158] rounded-full inline-block" />
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900">Chapter Selection</h3>
+                </div>
 
-                  {/* Subject Filter Pills */}
-                  <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
-                    {selectedSubjects.map((sub) => {
-                      const count = getChapters(selectedExam, selectedGrade, sub).length
-                      const isActive = activeSubjectTab === sub
-                      return (
-                        <button
-                          key={sub}
-                          type="button"
-                          onClick={() => {
-                            setActiveSubjectTab(sub)
-                            setSelectedSubject(sub)
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-normal transition-all shrink-0 sm:shrink cursor-pointer whitespace-nowrap ${
-                            isActive
-                              ? "bg-[#1E293B] text-white shadow-xs font-medium"
-                              : "bg-white border border-slate-200 text-slate-700 hover:border-slate-300"
-                          }`}
-                        >
-                          {sub} ({count})
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  {/* Class Filter Chips */}
-                  <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
-                    {[
-                      { id: "all", label: `All (${currentSubjectChapters.length})` },
-                      { id: "11", label: `Class 11 (${class11Chapters.length})` },
-                      { id: "12", label: `Class 12 (${class12Chapters.length})` },
-                    ].map((cf) => (
+                {/* Subject Selection Pills */}
+                <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
+                  {selectedSubjects.map((sub) => {
+                    const count = getChapters(selectedExam, selectedGrade, sub).length
+                    const isActive = activeSubjectTab === sub
+                    return (
                       <button
-                        key={cf.id}
+                        key={sub}
                         type="button"
-                        onClick={() => setClassFilter(cf.id as any)}
-                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-normal transition-colors shrink-0 sm:shrink cursor-pointer whitespace-nowrap ${
-                          classFilter === cf.id
-                            ? "bg-blue-100 text-blue-800 font-medium"
-                            : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300"
+                        onClick={() => {
+                          setActiveSubjectTab(sub)
+                          setSelectedSubject(sub)
+                        }}
+                        className={`px-4 py-1.5 rounded-full text-xs transition-all shrink-0 sm:shrink cursor-pointer whitespace-nowrap ${
+                          isActive
+                            ? "bg-[#324158] text-white font-bold shadow-xs"
+                            : "bg-slate-50 border border-slate-200 text-slate-700 hover:border-slate-300 font-semibold"
                         }`}
                       >
-                        {cf.label}
+                        {sub} ({count})
                       </button>
-                    ))}
-                  </div>
+                    )
+                  })}
+                </div>
 
-                  {/* Accordion Rows for Class 11 and Class 12 */}
-                  <div className="space-y-3">
-                    {/* Class 11 Row */}
-                    {(classFilter === "all" || classFilter === "11") && class11Chapters.length > 0 && (
-                      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden transition-all shadow-2xs">
-                        <div className="p-3.5 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setExpandedClasses((prev) => ({ ...prev, "11": !prev["11"] }))
-                              }
-                              className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5"
-                            >
-                              <ChevronDown
-                                className={`w-4 h-4 transition-transform duration-200 ${
-                                  expandedClasses["11"] ? "rotate-180" : ""
-                                }`}
-                              />
-                            </button>
-                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={
-                                  class11Chapters.length > 0 &&
-                                  class11Chapters.every((c) => selectedChapters.includes(c.name))
-                                }
-                                onChange={() => toggleAllClass("11")}
-                                className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
-                              />
-                              <span className="font-medium text-slate-800 text-xs sm:text-sm">
-                                Class 11 ({class11Chapters.length} chapters)
-                              </span>
-                            </label>
-                          </div>
-                          <ChevronRight
+                {/* Class Filter Chips */}
+                <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
+                  {[
+                    { id: "all", label: `All (${currentSubjectChapters.length})` },
+                    { id: "11", label: `Class 11 (${class11Chapters.length})` },
+                    { id: "12", label: `Class 12 (${class12Chapters.length})` },
+                  ].map((cf) => (
+                    <button
+                      key={cf.id}
+                      type="button"
+                      onClick={() => setClassFilter(cf.id as any)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors shrink-0 sm:shrink cursor-pointer whitespace-nowrap ${
+                        classFilter === cf.id
+                          ? "bg-blue-50 text-blue-900 border border-blue-200/80 font-bold"
+                          : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 font-medium"
+                      }`}
+                    >
+                      {cf.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Accordions for Class 11 and Class 12 */}
+                <div className="space-y-3 mb-4">
+                  {/* Class 11 */}
+                  {(classFilter === "all" || classFilter === "11") && class11Chapters.length > 0 && (
+                    <div className="rounded-xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
+                      <div className="p-3.5 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
                             onClick={() =>
                               setExpandedClasses((prev) => ({ ...prev, "11": !prev["11"] }))
                             }
-                            className="w-4 h-4 text-slate-400 cursor-pointer"
-                          />
-                        </div>
-
-                        {expandedClasses["11"] && (
-                          <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 max-h-56 overflow-y-auto space-y-2">
-                            {class11Chapters.map((ch, idx) => {
-                              const isChecked = selectedChapters.includes(ch.name)
-                              return (
-                                <label
-                                  key={ch.id || ch.name}
-                                  className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer hover:text-slate-900 py-1"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => toggleChapter(ch.name)}
-                                    className="mt-0.5 w-3.5 h-3.5 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
-                                  />
-                                  <span className="font-normal text-slate-700">
-                                    <span className="text-slate-400 mr-1.5">{idx + 1}.</span>
-                                    {ch.name}
-                                  </span>
-                                </label>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Class 12 Row */}
-                    {(classFilter === "all" || classFilter === "12") && class12Chapters.length > 0 && (
-                      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden transition-all shadow-2xs">
-                        <div className="p-3.5 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setExpandedClasses((prev) => ({ ...prev, "12": !prev["12"] }))
+                            className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5"
+                          >
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform duration-200 ${
+                                expandedClasses["11"] ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={
+                                class11Chapters.length > 0 &&
+                                class11Chapters.every((c) => selectedChapters.includes(c.name))
                               }
-                              className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5"
-                            >
-                              <ChevronDown
-                                className={`w-4 h-4 transition-transform duration-200 ${
-                                  expandedClasses["12"] ? "rotate-180" : ""
-                                }`}
-                              />
-                            </button>
-                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={
-                                  class12Chapters.length > 0 &&
-                                  class12Chapters.every((c) => selectedChapters.includes(c.name))
-                                }
-                                onChange={() => toggleAllClass("12")}
-                                className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
-                              />
-                              <span className="font-medium text-slate-800 text-xs sm:text-sm">
-                                Class 12 ({class12Chapters.length} chapters)
-                              </span>
-                            </label>
-                          </div>
-                          <ChevronRight
+                              onChange={() => toggleAllClass("11")}
+                              className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                            />
+                            <span className="font-bold text-slate-800 text-xs sm:text-sm">
+                              Class 11 ({class11Chapters.length} chapters)
+                            </span>
+                          </label>
+                        </div>
+                        <ChevronRight
+                          onClick={() =>
+                            setExpandedClasses((prev) => ({ ...prev, "11": !prev["11"] }))
+                          }
+                          className={`w-4 h-4 text-slate-400 cursor-pointer transition-transform ${
+                            expandedClasses["11"] ? "rotate-90" : ""
+                          }`}
+                        />
+                      </div>
+
+                      {expandedClasses["11"] && (
+                        <div className="px-4 py-3 bg-slate-50/40 border-t border-slate-100 max-h-72 overflow-y-auto space-y-1.5 custom-scrollbar">
+                          {class11Chapters.map((ch, idx) => {
+                            const isChecked = selectedChapters.includes(ch.name)
+                            return (
+                              <label
+                                key={ch.id || ch.name}
+                                className="flex items-center gap-3 text-xs text-slate-700 cursor-pointer hover:bg-white p-2 rounded-lg transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleChapter(ch.name)}
+                                  className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer shrink-0"
+                                />
+                                <span className="font-medium text-slate-800">
+                                  <span className="text-slate-400 mr-2">{idx + 1}.</span>
+                                  {ch.name}
+                                </span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Class 12 */}
+                  {(classFilter === "all" || classFilter === "12") && class12Chapters.length > 0 && (
+                    <div className="rounded-xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
+                      <div className="p-3.5 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
                             onClick={() =>
                               setExpandedClasses((prev) => ({ ...prev, "12": !prev["12"] }))
                             }
-                            className="w-4 h-4 text-slate-400 cursor-pointer"
-                          />
-                        </div>
-
-                        {expandedClasses["12"] && (
-                          <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 max-h-56 overflow-y-auto space-y-2">
-                            {class12Chapters.map((ch, idx) => {
-                              const isChecked = selectedChapters.includes(ch.name)
-                              return (
-                                <label
-                                  key={ch.id || ch.name}
-                                  className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer hover:text-slate-900 py-1"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => toggleChapter(ch.name)}
-                                    className="mt-0.5 w-3.5 h-3.5 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
-                                  />
-                                  <span className="font-normal text-slate-700">
-                                    <span className="text-slate-400 mr-1.5">{idx + 1}.</span>
-                                    {ch.name}
-                                  </span>
-                                </label>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Selected Status Bar */}
-                  <div className="mt-4 px-4 py-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-2 text-xs font-medium text-blue-900">
-                    <Check className="w-4 h-4 text-blue-600 stroke-[2.5]" />
-                    <span>Selected: {selectedChapters.length} Chapters</span>
-                  </div>
-                </div>
-
-                {/* Right Column: Question Blueprint */}
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="w-1 h-3.5 bg-slate-900 rounded-full" />
-                      <h3 className="text-sm font-medium text-slate-800">Question Blueprint</h3>
-                    </div>
-                  </div>
-
-                  {/* Blueprint Matrix Table */}
-                  <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
-                    <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                      <div className="min-w-[340px]">
-                        <div className="grid grid-cols-12 gap-2 px-3 sm:px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 text-[11px] font-medium text-slate-500">
-                          <span className="col-span-6">Question Format</span>
-                          <span className="col-span-3 text-center">No. of Questions</span>
-                          <span className="col-span-3 text-center">Marks</span>
-                        </div>
-
-                        <div className="divide-y divide-slate-100">
-                          {blueprintFormats.map((f) => (
-                            <div
-                              key={f.id}
-                              className={`grid grid-cols-12 gap-2 px-3 sm:px-4 py-2.5 items-center transition-colors ${
-                                f.checked ? "bg-white" : "bg-slate-50/40 opacity-75"
+                            className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5"
+                          >
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform duration-200 ${
+                                expandedClasses["12"] ? "rotate-180" : ""
                               }`}
-                            >
-                              <label className="col-span-6 flex items-center gap-2 sm:gap-2.5 cursor-pointer select-none">
+                            />
+                          </button>
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={
+                                class12Chapters.length > 0 &&
+                                class12Chapters.every((c) => selectedChapters.includes(c.name))
+                              }
+                              onChange={() => toggleAllClass("12")}
+                              className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                            />
+                            <span className="font-bold text-slate-800 text-xs sm:text-sm">
+                              Class 12 ({class12Chapters.length} chapters)
+                            </span>
+                          </label>
+                        </div>
+                        <ChevronRight
+                          onClick={() =>
+                            setExpandedClasses((prev) => ({ ...prev, "12": !prev["12"] }))
+                          }
+                          className={`w-4 h-4 text-slate-400 cursor-pointer transition-transform ${
+                            expandedClasses["12"] ? "rotate-90" : ""
+                          }`}
+                        />
+                      </div>
+
+                      {expandedClasses["12"] && (
+                        <div className="px-4 py-3 bg-slate-50/40 border-t border-slate-100 max-h-72 overflow-y-auto space-y-1.5 custom-scrollbar">
+                          {class12Chapters.map((ch, idx) => {
+                            const isChecked = selectedChapters.includes(ch.name)
+                            return (
+                              <label
+                                key={ch.id || ch.name}
+                                className="flex items-center gap-3 text-xs text-slate-700 cursor-pointer hover:bg-white p-2 rounded-lg transition-colors"
+                              >
                                 <input
                                   type="checkbox"
-                                  checked={f.checked}
-                                  onChange={() => toggleFormatCheck(f.id)}
+                                  checked={isChecked}
+                                  onChange={() => toggleChapter(ch.name)}
                                   className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer shrink-0"
                                 />
-                                <span className="font-normal text-slate-800 text-xs truncate">
-                                  {f.label}
+                                <span className="font-medium text-slate-800">
+                                  <span className="text-slate-400 mr-2">{idx + 1}.</span>
+                                  {ch.name}
                                 </span>
                               </label>
-
-                              <div className="col-span-3 flex justify-center items-center">
-                                <input
-                                  type="number"
-                                  disabled={!f.checked}
-                                  min={0}
-                                  max={200}
-                                  value={f.count === 0 ? "" : f.count}
-                                  placeholder="0"
-                                  onChange={(e) => {
-                                    const raw = e.target.value
-                                    const val = raw === "" ? 0 : Math.max(0, Math.min(200, parseInt(raw, 10) || 0))
-                                    updateFormatCount(f.id, val)
-                                  }}
-                                  className="w-16 sm:w-20 h-9 px-2 text-center rounded-lg border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 disabled:bg-slate-100 disabled:text-slate-400"
-                                />
-                              </div>
-
-                              <div className="col-span-3 flex justify-center">
-                                <select
-                                  disabled={!f.checked}
-                                  value={f.marks}
-                                  onChange={(e) => updateFormatMarks(f.id, Number(e.target.value))}
-                                  className="w-14 sm:w-16 h-9 px-1.5 sm:px-2 rounded-lg border border-slate-200 bg-white text-xs font-normal text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
-                                >
-                                  {[0, 1, 2, 3, 4, 5, 8, 10].map((m) => (
-                                    <option key={m} value={m}>
-                                      {m}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
-                      </div>
+                      )}
                     </div>
-                  </div>
+                  )}
+                </div>
 
-                  {/* Info Summary: Total Questions & Marks */}
-                  <div className="mt-4 px-4 py-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-3 text-xs text-blue-950 font-normal">
-                    <Info className="w-4 h-4 text-blue-600 shrink-0" />
-                    <div className="flex items-center gap-3">
-                      <span>
-                        Total Questions:{" "}
-                        <span className="font-semibold text-slate-900">{totalQuestions}</span>
-                      </span>
-                      <span className="text-blue-200">|</span>
-                      <span>
-                        Total Marks:{" "}
-                        <span className="font-semibold text-slate-900">{totalMarks}</span>
-                      </span>
-                    </div>
-                  </div>
+                {/* Selected Status Bar */}
+                <div className="px-4 py-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-2 text-xs font-bold text-blue-900 mb-8">
+                  <Check className="w-4 h-4 text-blue-600 stroke-[2.5]" />
+                  <span>Selected: {selectedChapters.length} Chapters</span>
                 </div>
               </div>
 
-              {/* Bottom Section: Difficulty Level */}
-              <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs sm:text-sm font-semibold text-slate-900">Difficulty Level</p>
-                  <p className="text-[11px] text-slate-400">Choose the challenge level for learners.</p>
+              {/* ─── Bottom Section: Question Type & Marks (Left) + Subject Breakdown & Syllabus Weightage (Right) ─── */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pt-2">
+                {/* Left Column: Question Type & Marks */}
+                <div className="lg:col-span-7 xl:col-span-7">
+                  <div className="flex items-center gap-2 mb-3.5">
+                    <span className="w-1.5 h-4 bg-[#324158] rounded-full inline-block" />
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-1.5">
+                      Question Type &amp; Marks <Info size={13} className="text-slate-400" />
+                    </h3>
+                  </div>
+
+                  {/* Table of Question Types */}
+                  <div className="space-y-2.5">
+                    {/* Header Row */}
+                    <div className="grid grid-cols-12 gap-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      <span className="col-span-5">Question Type</span>
+                      <span className="col-span-3 text-center">Marks per Question</span>
+                      <span className="col-span-2 text-center">Total Questions</span>
+                      <span className="col-span-2 text-center">Total Marks</span>
+                    </div>
+
+                    {blueprintFormats.map((f) => (
+                      <div key={f.id} className="grid grid-cols-12 gap-2.5 items-center">
+                        {/* Question Type Dropdown */}
+                        <div className="col-span-5 relative">
+                          <select
+                            value={f.label}
+                            onChange={(e) => updateFormatType(f.id, e.target.value)}
+                            className="w-full h-10 pl-3 pr-8 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 cursor-pointer appearance-none truncate"
+                          >
+                            {[
+                              "MCQ (Single Correct)",
+                              "MCQ (Multiple Correct)",
+                              "Assertion & Reason",
+                              "True / False",
+                              "Fill in the Blanks",
+                              "Description / Descriptive",
+                              "Diagram / Visual",
+                            ].map((t) => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+
+                        {/* Marks per Question Dropdown */}
+                        <div className="col-span-3 relative">
+                          <select
+                            value={f.marks}
+                            onChange={(e) => updateFormatMarks(f.id, Number(e.target.value))}
+                            className="w-full h-10 px-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 cursor-pointer text-center appearance-none"
+                          >
+                            {[1, 2, 3, 4, 5, 6, 8, 10].map((m) => (
+                              <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+
+                        {/* Total Questions Input */}
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={200}
+                            value={f.count === 0 ? "0" : f.count}
+                            onChange={(e) => {
+                              const val = Math.max(0, parseInt(e.target.value, 10) || 0)
+                              updateFormatCount(f.id, val)
+                            }}
+                            className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10"
+                          />
+                        </div>
+
+                        {/* Total Marks (Calculated) */}
+                        <div className="col-span-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={(f.count || 0) * (f.marks || 0)}
+                            className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-slate-50/80 text-xs font-bold text-slate-700 shadow-2xs select-none"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bottom Summary Bar */}
+                  <div className="mt-4 px-4 py-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-2 text-xs font-semibold text-blue-950">
+                    <Info size={14} className="text-blue-600 shrink-0" />
+                    <span>Total Questions: <b className="text-slate-900">{totalQuestions}</b></span>
+                    <span className="text-blue-200 mx-1">|</span>
+                    <span>Total Marks: <b className="text-slate-900">{totalMarks}</b></span>
+                  </div>
                 </div>
 
-                <div className="md:w-80">
-                  <select
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value as any)}
-                    className="w-full h-10 px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-normal text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer"
-                  >
-                    <option value="easy">Easy (Concept & Formula Foundations)</option>
-                    <option value="medium">Medium (Standard Entrance Level)</option>
-                    <option value="balanced">Balanced (NTA Standard 30:50:20)</option>
-                    <option value="hard">Hard (Rank Booster / High Rigor)</option>
-                  </select>
+                {/* Right Column: Subject-wise Marks + Syllabus Weightage */}
+                <div className="lg:col-span-5 xl:col-span-5 space-y-5">
+                  {/* Box 1: Subject-wise Marks */}
+                  <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5 mb-3">
+                      Subject-wise Marks <Info size={13} className="text-slate-400" />
+                    </h4>
+
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-12 gap-2 text-[11px] font-semibold text-slate-400 pb-1.5 border-b border-slate-100">
+                        <span className="col-span-6">Subject</span>
+                        <span className="col-span-3 text-center">Questions</span>
+                        <span className="col-span-3 text-center">Marks</span>
+                      </div>
+
+                      {selectedSubjects.map((sub) => (
+                        <div key={sub} className="grid grid-cols-12 gap-2 items-center py-1">
+                          <span className="col-span-6 text-xs font-medium text-slate-800 truncate">{sub}</span>
+                          <div className="col-span-3 flex justify-center">
+                            <input
+                              type="number"
+                              min={0}
+                              value={subjectDist[sub]?.questions ?? 50}
+                              onChange={(e) => updateSubjectDist(sub, "questions", parseInt(e.target.value, 10) || 0)}
+                              className="w-16 h-8 px-2 text-center rounded-lg border border-slate-200 bg-slate-50/70 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#324158]/10 shadow-2xs"
+                            />
+                          </div>
+                          <div className="col-span-3 flex justify-center">
+                            <input
+                              type="number"
+                              min={0}
+                              value={subjectDist[sub]?.marks ?? (sub === "Mathematics" ? 100 : 50)}
+                              onChange={(e) => updateSubjectDist(sub, "marks", parseInt(e.target.value, 10) || 0)}
+                              className="w-16 h-8 px-2 text-center rounded-lg border border-slate-200 bg-slate-50/70 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#324158]/10 shadow-2xs"
+                            />
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Total Row */}
+                      <div className="grid grid-cols-12 gap-2 items-center pt-2.5 border-t border-slate-100 font-bold text-xs text-slate-900">
+                        <span className="col-span-6">Total</span>
+                        <span className="col-span-3 text-center">{totalSubjectQuestions}</span>
+                        <span className="col-span-3 text-center">{totalSubjectMarks}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Box 2: Syllabus Weightage */}
+                  <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5 mb-3">
+                      Syllabus Weightage <Info size={13} className="text-slate-400" />
+                    </h4>
+
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-12 gap-2 text-[11px] font-semibold text-slate-400 pb-1.5 border-b border-slate-100">
+                        <span className="col-span-6">Class</span>
+                        <span className="col-span-6 text-center">Weightage</span>
+                      </div>
+
+                      <div className="grid grid-cols-12 gap-2 items-center py-1">
+                        <span className="col-span-6 text-xs font-medium text-slate-800">Class 11</span>
+                        <div className="col-span-6 flex justify-center relative">
+                          <select
+                            value={class11Weightage}
+                            onChange={(e) => handleClass11WeightageChange(Number(e.target.value))}
+                            className="w-24 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 appearance-none"
+                          >
+                            {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((v) => (
+                              <option key={v} value={v}>{v}%</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-12 gap-2 items-center py-1">
+                        <span className="col-span-6 text-xs font-medium text-slate-800">Class 12</span>
+                        <div className="col-span-6 flex justify-center relative">
+                          <select
+                            value={class12Weightage}
+                            onChange={(e) => handleClass12WeightageChange(Number(e.target.value))}
+                            className="w-24 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 appearance-none"
+                          >
+                            {[90, 80, 70, 60, 50, 40, 30, 20, 10].map((v) => (
+                              <option key={v} value={v}>{v}%</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3523,74 +3647,41 @@ function AIGeneratorContent() {
                     {errorMsg}
                   </span>
                 )}
-                {generatedQuestions.length > 0 ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleGenerate}
-                      disabled={
-                        isGenerating ||
-                        (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
-                        totalQuestions === 0
-                      }
-                      className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-xs active:scale-[0.99]"
-                      title="Re-run AI question generation"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-                          <span>Generating ({totalQuestions})...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 text-amber-500" />
-                          <span>Regenerate Questions ({totalQuestions})</span>
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCurrentStep(3)
-                        window.scrollTo({ top: 0, behavior: "smooth" })
-                      }}
-                      className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
-                    >
-                      <span>Next: View Questions ({generatedQuestions.length})</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleGenerate}
-                    disabled={
-                      isGenerating ||
-                      (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
-                      totalQuestions === 0
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (generatedQuestions.length > 0) {
+                      setCurrentStep(3)
+                      window.scrollTo({ top: 0, behavior: "smooth" })
+                    } else {
+                      handleGenerate()
                     }
-                    className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
-                        <span>
-                          {generationStep === 1
-                            ? "Analyzing PYQs..."
-                            : generationStep === 2
-                            ? "Generating Parallel Batches (Fast AI)..."
-                            : "Validating Questions & LaTeX..."}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 text-amber-300" />
-                        <span>Create Questions ({totalQuestions})</span>
-                      </>
-                    )}
-                  </button>
-                )}
+                  }}
+                  disabled={
+                    isGenerating ||
+                    (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
+                    totalQuestions === 0
+                  }
+                  className="px-6 py-2.5 rounded-xl bg-[#324158] hover:bg-[#253244] text-white font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>
+                        {generationStep === 1
+                          ? "Analyzing PYQs..."
+                          : generationStep === 2
+                          ? "Generating Questions..."
+                          : "Validating Questions..."}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Next Step</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
               </div>
             )}
 
