@@ -913,6 +913,19 @@ function AIGeneratorContent() {
     return selectedSubjects.length > 1 ? totalSubjectMarks : totalMarks
   }, [selectedSubjects.length, totalSubjectMarks, totalMarks])
 
+  // Keep examTotalMarks in Step 4 automatically synchronized with selected questions / blueprint
+  useEffect(() => {
+    if (generatedQuestions.length > 0) {
+      const activeQs = generatedQuestions.filter((q) => selectedQuestionIds.has(q.id))
+      const calculatedTotal = activeQs.reduce((sum, q) => sum + (q.marks || 1), 0)
+      if (calculatedTotal > 0 && calculatedTotal !== examTotalMarks) {
+        setExamTotalMarks(calculatedTotal)
+      }
+    } else if (targetTotalMarks > 0 && targetTotalMarks !== examTotalMarks) {
+      setExamTotalMarks(targetTotalMarks)
+    }
+  }, [generatedQuestions, selectedQuestionIds, targetTotalMarks, examTotalMarks])
+
   // One-click Auto-Sync Helpers
   const syncTypesToSubjects = () => {
     const targetQ = totalSubjectQuestions
@@ -3663,15 +3676,19 @@ function AIGeneratorContent() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-medium text-slate-500 mb-1.5 truncate">
-                          Total Marks <span className="text-red-500">*</span>
+                        <label className="block text-[11px] font-medium text-slate-500 mb-1.5 truncate flex items-center justify-between">
+                          <span>Total Marks</span>
+                          <span className="text-[10px] text-slate-400 font-normal flex items-center gap-1">
+                            <Lock size={10} className="text-slate-400" /> Auto-calculated
+                          </span>
                         </label>
                         <input
                           type="number"
-                          min={1}
+                          readOnly
+                          disabled
                           value={examTotalMarks}
-                          onChange={(e) => setExamTotalMarks(Number(e.target.value) || 0)}
-                          className="w-full px-3.5 py-2 text-xs font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
+                          title="Total marks are calculated automatically from the question paper and cannot be changed manually."
+                          className="w-full px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-slate-100/80 text-slate-700 cursor-not-allowed select-none shadow-2xs focus:outline-none"
                         />
                       </div>
 
