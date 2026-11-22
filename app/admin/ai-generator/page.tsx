@@ -66,6 +66,8 @@ export interface GeneratedCompetitiveQuestion {
   correctAnswer: string
   explanation: string
   chapter: string
+  subject?: string
+  grade?: string
   pyqReference?: string
   wordLimit?: number
 }
@@ -562,6 +564,24 @@ function AIGeneratorContent() {
     )
   }, [availableChapters, chapterSearch])
 
+  const getInitialSubjectDist = (exam: ExamTarget, subjects: CompetitiveSubject[]) => {
+    const dist: Record<string, { questions: number; marks: number }> = {}
+    subjects.forEach((sub) => {
+      if (exam === "MHT_CET") {
+        dist[sub] = sub === "Mathematics" ? { questions: 50, marks: 100 } : { questions: 50, marks: 50 }
+      } else if (exam === "NEET") {
+        dist[sub] = sub === "Biology" ? { questions: 90, marks: 360 } : { questions: 45, marks: 180 }
+      } else if (exam === "JEE_MAIN") {
+        dist[sub] = { questions: 25, marks: 100 }
+      } else if (exam === "JEE_ADVANCED") {
+        dist[sub] = { questions: 18, marks: 60 }
+      } else {
+        dist[sub] = { questions: 50, marks: 50 }
+      }
+    })
+    return dist
+  }
+
   // Automatically switch subject if not available in selected exam
   const handleExamChange = (exam: ExamTarget) => {
     setSelectedExam(exam)
@@ -570,6 +590,7 @@ function AIGeneratorContent() {
       setSelectedSubjects(targetMeta.subjects)
       setSelectedSubject(targetMeta.subjects[0] || "Physics")
       setActiveSubjectTab(targetMeta.subjects[0] || "Physics")
+      setSubjectDist(getInitialSubjectDist(exam, targetMeta.subjects))
     }
     // Reset selected chapters when exam changes
     setSelectedChapters([])
@@ -692,6 +713,27 @@ function AIGeneratorContent() {
   const totalSubjectMarks = useMemo(() => {
     return selectedSubjects.reduce((acc, sub) => acc + (subjectDist[sub]?.marks ?? (sub === "Mathematics" ? 100 : 50)), 0)
   }, [selectedSubjects, subjectDist])
+
+  const targetTotalQuestions = useMemo(() => {
+    return selectedSubjects.length > 1 ? totalSubjectQuestions : totalQuestions
+  }, [selectedSubjects.length, totalSubjectQuestions, totalQuestions])
+
+  const targetTotalMarks = useMemo(() => {
+    return selectedSubjects.length > 1 ? totalSubjectMarks : totalMarks
+  }, [selectedSubjects.length, totalSubjectMarks, totalMarks])
+
+  // Keep single-subject distribution in sync with blueprintFormats
+  useEffect(() => {
+    if (selectedSubjects.length === 1) {
+      const sub = selectedSubjects[0]
+      if (sub && (subjectDist[sub]?.questions !== totalQuestions || subjectDist[sub]?.marks !== totalMarks)) {
+        setSubjectDist((prev) => ({
+          ...prev,
+          [sub]: { questions: totalQuestions, marks: totalMarks },
+        }))
+      }
+    }
+  }, [selectedSubjects, totalQuestions, totalMarks])
 
   const handleClass11WeightageChange = (val: number) => {
     setClass11Weightage(val)
@@ -848,8 +890,8 @@ function AIGeneratorContent() {
       return
     }
 
-    if (totalQuestions === 0) {
-      setErrorMsg("Please specify at least one question format with count > 0 in the blueprint.")
+    if (targetTotalQuestions === 0) {
+      setErrorMsg("Please specify at least one question format or subject question count > 0.")
       return
     }
 
@@ -871,18 +913,19 @@ function AIGeneratorContent() {
         : ""
     const targetSubject = activeSubjectTab || selectedSubject
     const examCode = selectedExam.replace("-", "_")
-    const nextTitle = `${examCode} ${targetSubject}${chapterTitle ? ` - ${chapterTitle}` : ""}`
+    const nextTitle = `${examCode} ${selectedSubjects.length > 1 ? selectedSubjects.join(" + ") : targetSubject}${chapterTitle ? ` - ${chapterTitle}` : ""}`
 
-    const countToGenerate = Math.max(1, Number(totalQuestions) || Number(questionCount) || 10)
+    const countToGenerate = Math.max(1, targetTotalQuestions)
 
     const showQuestions = (questions: GeneratedCompetitiveQuestion[]) => {
-      setGeneratedQuestions(questions)
-      setSelectedQuestionIds(new Set(questions.map((q) => q.id)))
+      const safeQuestions = questions.slice(0, countToGenerate)
+      setGeneratedQuestions(safeQuestions)
+      setSelectedQuestionIds(new Set(safeQuestions.map((q) => q.id)))
       setExamTitle(nextTitle)
-      const calculatedTotal = questions.reduce((sum, q) => sum + (q.marks || 4), 0) || totalMarks || 200
+      const calculatedTotal = safeQuestions.reduce((sum, q) => sum + (q.marks || 1), 0) || targetTotalMarks || 200
       setExamTotalMarks(calculatedTotal)
       setPassMarks(Math.round(calculatedTotal * 0.4))
-      setDuration(30)
+      setDuration(Math.max(30, Math.round(safeQuestions.length * 1.2)))
       setCurrentStep(3)
     }
 
@@ -890,47 +933,229 @@ function AIGeneratorContent() {
       // Build micro-batches (max 3 questions, 2 for diagram) so each HTTP request finishes in ~2s
       interface BatchItem {
         id: string
+        subject: string
+        grade: string
+        chapters: string[]
         formatId: string
         formatLabel: string
         count: number
         marks: number
+        negativeMark: number
       }
 
       const activeFormats = blueprintFormats.filter((f) => f.checked && Number(f.count) > 0)
       const batches: BatchItem[] = []
 
-      if (activeFormats.length > 0) {
-        for (const fmt of activeFormats) {
-          let remaining = Number(fmt.count) || 0
-          const marks = Number(fmt.marks) || currentExamMeta.defaultMarksPerQuestion
-          const chunkSize = fmt.id === "diagram" ? 2 : 3
-          while (remaining > 0) {
-            const take = Math.min(remaining, chunkSize)
-            batches.push({
-              id: `${fmt.id}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
+      // Helper to apportion a number N among active formats
+      const apportionFormats = (n: number, defaultMarks: number) => {
+        if (n <= 0) return []
+        if (activeFormats.length === 0) {
+          return [{
+            formatId: "mcq",
+            formatLabel: "MCQ (Single Correct)",
+            count: n,
+            marks: defaultMarks,
+          }]
+        }
+        const sumFmtCounts = activeFormats.reduce((s, f) => s + (Number(f.count) || 0), 0) || 1
+        let allocated = 0
+        const items: { formatId: string; formatLabel: string; count: number; marks: number }[] = []
+        for (let i = 0; i < activeFormats.length; i++) {
+          const fmt = activeFormats[i]
+          const isLast = i === activeFormats.length - 1
+          const share = isLast ? (n - allocated) : Math.round(n * ((Number(fmt.count) || 0) / sumFmtCounts))
+          const safeShare = Math.max(0, Math.min(n - allocated, share))
+          if (safeShare > 0) {
+            items.push({
               formatId: fmt.id,
               formatLabel: fmt.label || fmt.id,
-              count: take,
-              marks,
+              count: safeShare,
+              marks: Number(fmt.marks) || defaultMarks,
             })
-            remaining -= take
+            allocated += safeShare
+          }
+        }
+        if (allocated < n && items.length > 0) {
+          items[0].count += (n - allocated)
+        }
+        return items
+      }
+
+      if (selectedSubjects.length > 1) {
+        for (const sub of selectedSubjects) {
+          const subCount = Math.max(0, subjectDist[sub]?.questions ?? 50)
+          const subMarks = Math.max(0, subjectDist[sub]?.marks ?? 50)
+          if (subCount <= 0) continue
+
+          const subDefaultMarks = Math.max(1, Math.round(subMarks / subCount))
+          const allSubChapters = getChapters(selectedExam, selectedGrade, sub)
+          const subSelected = selectedChapters.filter((name) => allSubChapters.some((c) => c.name === name))
+          const usableChapters = subSelected.length > 0 ? subSelected : allSubChapters.map((c) => c.name)
+
+          const all11Chapters = getChapters(selectedExam, "11", sub).map((c) => c.name)
+          const all12Chapters = getChapters(selectedExam, "12", sub).map((c) => c.name)
+
+          const ch11 = usableChapters.filter((name) => all11Chapters.includes(name))
+          const ch12 = usableChapters.filter((name) => all12Chapters.includes(name))
+
+          let q11 = 0
+          let q12 = 0
+
+          if (selectedGrade === "11") {
+            q11 = subCount
+            q12 = 0
+          } else if (selectedGrade === "12") {
+            q11 = 0
+            q12 = subCount
+          } else {
+            if (ch11.length > 0 && ch12.length > 0) {
+              q11 = Math.round(subCount * (class11Weightage / 100))
+              q12 = subCount - q11
+            } else if (ch11.length > 0) {
+              q11 = subCount
+              q12 = 0
+            } else if (ch12.length > 0) {
+              q11 = 0
+              q12 = subCount
+            } else {
+              q11 = Math.round(subCount * (class11Weightage / 100))
+              q12 = subCount - q11
+            }
+          }
+
+          // Class 11 batches for this subject
+          if (q11 > 0) {
+            const sliceFormats = apportionFormats(q11, subDefaultMarks)
+            for (const sf of sliceFormats) {
+              let rem = sf.count
+              const chunkSize = sf.formatId === "diagram" ? 2 : 3
+              while (rem > 0) {
+                const take = Math.min(rem, chunkSize)
+                batches.push({
+                  id: `${sub}_11_${sf.formatId}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
+                  subject: sub,
+                  grade: "11",
+                  chapters: ch11.length > 0 ? ch11 : all11Chapters,
+                  formatId: sf.formatId,
+                  formatLabel: sf.formatLabel,
+                  count: take,
+                  marks: sf.marks,
+                  negativeMark: evalSettings.enableNegativeMarking ? (currentExamMeta.defaultNegativeMarks || 1) : 0,
+                })
+                rem -= take
+              }
+            }
+          }
+
+          // Class 12 batches for this subject
+          if (q12 > 0) {
+            const sliceFormats = apportionFormats(q12, subDefaultMarks)
+            for (const sf of sliceFormats) {
+              let rem = sf.count
+              const chunkSize = sf.formatId === "diagram" ? 2 : 3
+              while (rem > 0) {
+                const take = Math.min(rem, chunkSize)
+                batches.push({
+                  id: `${sub}_12_${sf.formatId}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
+                  subject: sub,
+                  grade: "12",
+                  chapters: ch12.length > 0 ? ch12 : all12Chapters,
+                  formatId: sf.formatId,
+                  formatLabel: sf.formatLabel,
+                  count: take,
+                  marks: sf.marks,
+                  negativeMark: evalSettings.enableNegativeMarking ? (currentExamMeta.defaultNegativeMarks || 1) : 0,
+                })
+                rem -= take
+              }
+            }
           }
         }
       } else {
-        let remaining = countToGenerate
-        while (remaining > 0) {
-          const isDiagram = (pattern as string) === "diagram" || (pattern as string) === "diagram_based"
-          const isAssertion = pattern === "assertion_reason" || (pattern as string) === "assertion"
-          const chunkSize = isDiagram ? 2 : 3
-          const take = Math.min(remaining, chunkSize)
-          batches.push({
-            id: `batch_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
-            formatId: isDiagram ? "diagram" : isAssertion ? "assertion" : "mcq",
-            formatLabel: isDiagram ? "Diagram / Visual" : isAssertion ? "Assertion & Reason" : "MCQ",
-            count: take,
-            marks: currentExamMeta.defaultMarksPerQuestion,
-          })
-          remaining -= take
+        // Single subject
+        const targetSub = selectedSubjects[0] || activeSubjectTab || "Physics"
+        const subTargetCount = countToGenerate
+        const subMarksPerQ = currentExamMeta.defaultMarksPerQuestion
+
+        const allSubChapters = getChapters(selectedExam, selectedGrade, targetSub)
+        const subSelected = selectedChapters.filter((name) => allSubChapters.some((c) => c.name === name))
+        const usableChapters = subSelected.length > 0 ? subSelected : allSubChapters.map((c) => c.name)
+
+        const all11Chapters = getChapters(selectedExam, "11", targetSub).map((c) => c.name)
+        const all12Chapters = getChapters(selectedExam, "12", targetSub).map((c) => c.name)
+
+        const ch11 = usableChapters.filter((name) => all11Chapters.includes(name))
+        const ch12 = usableChapters.filter((name) => all12Chapters.includes(name))
+
+        let q11 = 0
+        let q12 = 0
+
+        if (selectedGrade === "11") {
+          q11 = subTargetCount
+          q12 = 0
+        } else if (selectedGrade === "12") {
+          q11 = 0
+          q12 = subTargetCount
+        } else {
+          if (ch11.length > 0 && ch12.length > 0) {
+            q11 = Math.round(subTargetCount * (class11Weightage / 100))
+            q12 = subTargetCount - q11
+          } else if (ch11.length > 0) {
+            q11 = subTargetCount
+            q12 = 0
+          } else if (ch12.length > 0) {
+            q11 = 0
+            q12 = subTargetCount
+          } else {
+            q11 = Math.round(subTargetCount * (class11Weightage / 100))
+            q12 = subTargetCount - q11
+          }
+        }
+
+        if (q11 > 0) {
+          const sliceFormats = apportionFormats(q11, subMarksPerQ)
+          for (const sf of sliceFormats) {
+            let rem = sf.count
+            const chunkSize = sf.formatId === "diagram" ? 2 : 3
+            while (rem > 0) {
+              const take = Math.min(rem, chunkSize)
+              batches.push({
+                id: `${targetSub}_11_${sf.formatId}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
+                subject: targetSub,
+                grade: "11",
+                chapters: ch11.length > 0 ? ch11 : all11Chapters,
+                formatId: sf.formatId,
+                formatLabel: sf.formatLabel,
+                count: take,
+                marks: sf.marks,
+                negativeMark: evalSettings.enableNegativeMarking ? (currentExamMeta.defaultNegativeMarks || 1) : 0,
+              })
+              rem -= take
+            }
+          }
+        }
+
+        if (q12 > 0) {
+          const sliceFormats = apportionFormats(q12, subMarksPerQ)
+          for (const sf of sliceFormats) {
+            let rem = sf.count
+            const chunkSize = sf.formatId === "diagram" ? 2 : 3
+            while (rem > 0) {
+              const take = Math.min(rem, chunkSize)
+              batches.push({
+                id: `${targetSub}_12_${sf.formatId}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
+                subject: targetSub,
+                grade: "12",
+                chapters: ch12.length > 0 ? ch12 : all12Chapters,
+                formatId: sf.formatId,
+                formatLabel: sf.formatLabel,
+                count: take,
+                marks: sf.marks,
+                negativeMark: evalSettings.enableNegativeMarking ? (currentExamMeta.defaultNegativeMarks || 1) : 0,
+              })
+              rem -= take
+            }
+          }
         }
       }
 
@@ -945,6 +1170,11 @@ function AIGeneratorContent() {
 
       const runWorker = async () => {
         while (queue.length > 0) {
+          if (allGenerated.length >= countToGenerate) {
+            queue.length = 0
+            break
+          }
+
           const batch = queue.shift()
           if (!batch) break
 
@@ -952,6 +1182,11 @@ function AIGeneratorContent() {
           let batchSuccess = false
 
           while (retries >= 0 && !batchSuccess) {
+            if (allGenerated.length >= countToGenerate) {
+              queue.length = 0
+              break
+            }
+
             try {
               const existingTexts = allGenerated.map((q) => q.questionText).slice(-25)
 
@@ -961,9 +1196,9 @@ function AIGeneratorContent() {
                 credentials: "include",
                 body: JSON.stringify({
                   exam: selectedExam,
-                  grade: selectedGrade,
-                  subject: targetSubject,
-                  chapters: selectedChapters,
+                  grade: batch.grade,
+                  subject: batch.subject,
+                  chapters: batch.chapters,
                   topics: selectedTopics,
                   syllabusText: uploadedSyllabusText,
                   difficulty,
@@ -978,8 +1213,8 @@ function AIGeneratorContent() {
                       checked: true,
                     },
                   ],
-                  marksPerQuestion: batch.marks || currentExamMeta.defaultMarksPerQuestion,
-                  negativeMarks: currentExamMeta.defaultNegativeMarks,
+                  marksPerQuestion: batch.marks,
+                  negativeMarks: batch.negativeMark,
                   focusPYQ,
                   existingQuestions: existingTexts,
                   stream: false,
@@ -998,19 +1233,36 @@ function AIGeneratorContent() {
                   const norm = (q.questionText || "").toLowerCase().replace(/[^a-z0-9]/g, "")
                   if (norm && !seenTexts.has(norm)) {
                     seenTexts.add(norm)
-                    uniqueNew.push(q)
+                    uniqueNew.push({
+                      ...q,
+                      subject: batch.subject,
+                      grade: batch.grade,
+                      marks: batch.marks,
+                      negativeMark: batch.negativeMark,
+                      chapter: q.chapter && q.chapter !== "General" ? q.chapter : (batch.chapters[0] || batch.subject),
+                    })
                   }
                 }
 
                 if (uniqueNew.length > 0) {
-                  allGenerated = [...allGenerated, ...uniqueNew]
-                  showQuestions(allGenerated)
+                  const remainingSlots = countToGenerate - allGenerated.length
+                  if (remainingSlots > 0) {
+                    const toAdd = uniqueNew.slice(0, remainingSlots)
+                    allGenerated = [...allGenerated, ...toAdd]
+                    showQuestions(allGenerated)
 
-                  if (!openedReview) {
-                    openedReview = true
-                    window.scrollTo({ top: 0, behavior: "auto" })
+                    if (!openedReview) {
+                      openedReview = true
+                      window.scrollTo({ top: 0, behavior: "auto" })
+                    }
                   }
                 }
+
+                if (allGenerated.length >= countToGenerate) {
+                  queue.length = 0
+                  break
+                }
+
                 batchSuccess = true
               } else {
                 throw new Error("No questions in batch response")
@@ -1033,9 +1285,11 @@ function AIGeneratorContent() {
 
       await Promise.all(activeWorkers)
 
+      allGenerated = allGenerated.slice(0, countToGenerate)
+
       if (allGenerated.length === 0) {
         throw new Error(
-          batchErrors[0] || "No questions were created. Please verify your connection and click Create Questions again."
+          batchErrors[0] || "No questions were created. Please verify your connection and click Next Step again."
         )
       }
 
@@ -1049,9 +1303,9 @@ function AIGeneratorContent() {
             credentials: "include",
             body: JSON.stringify({
               exam: selectedExam,
-              grade: selectedGrade,
+              grade: selectedGrade === "both" ? "12" : selectedGrade,
               subject: targetSubject,
-              chapters: selectedChapters,
+              chapters: selectedChapters.length > 0 ? selectedChapters : undefined,
               topics: selectedTopics,
               syllabusText: uploadedSyllabusText,
               difficulty,
@@ -1071,12 +1325,19 @@ function AIGeneratorContent() {
           const topUpData = await topUpRes.json()
           if (topUpData.success && Array.isArray(topUpData.questions) && topUpData.questions.length > 0) {
             for (const q of topUpData.questions) {
+              if (allGenerated.length >= countToGenerate) break
               const norm = (q.questionText || "").toLowerCase().replace(/[^a-z0-9]/g, "")
               if (norm && !seenTexts.has(norm)) {
                 seenTexts.add(norm)
-                allGenerated.push(q)
+                allGenerated.push({
+                  ...q,
+                  subject: targetSubject,
+                  marks: q.marks || currentExamMeta.defaultMarksPerQuestion,
+                  negativeMark: q.negativeMark ?? currentExamMeta.defaultNegativeMarks,
+                })
               }
             }
+            allGenerated = allGenerated.slice(0, countToGenerate)
             showQuestions(allGenerated)
           }
         } catch (gapErr) {
@@ -1084,6 +1345,8 @@ function AIGeneratorContent() {
         }
       }
 
+      allGenerated = allGenerated.slice(0, countToGenerate)
+      showQuestions(allGenerated)
       toast.success(`Generated ${allGenerated.length} questions successfully!`)
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred while generating.")
@@ -1098,7 +1361,7 @@ function AIGeneratorContent() {
 
   // Generate missing questions to reach blueprint target
   const handleGenerateMissing = async () => {
-    const missingCount = Math.max(0, totalQuestions - generatedQuestions.length)
+    const missingCount = Math.max(0, targetTotalQuestions - generatedQuestions.length)
     if (missingCount <= 0 || isGeneratingMissing) return
 
     setIsGeneratingMissing(true)
@@ -1143,14 +1406,15 @@ function AIGeneratorContent() {
 
       const data = await res.json()
       if (res.ok && data.success && Array.isArray(data.questions) && data.questions.length > 0) {
-        const updated = [...generatedQuestions, ...data.questions]
+        const toAdd = data.questions.slice(0, missingCount)
+        const updated = [...generatedQuestions, ...toAdd].slice(0, targetTotalQuestions)
         setGeneratedQuestions(updated)
         setSelectedQuestionIds(new Set(updated.map((q) => q.id)))
         setExamTitle(nextTitle)
-        const calculatedTotal = updated.reduce((sum, q) => sum + (q.marks || 4), 0) || totalMarks || 200
+        const calculatedTotal = updated.reduce((sum, q) => sum + (q.marks || 1), 0)
         setExamTotalMarks(calculatedTotal)
         setPassMarks(Math.round(calculatedTotal * 0.4))
-        toast.success(`Generated ${data.questions.length} more question(s)! Total: ${updated.length}/${totalQuestions}`)
+        toast.success(`Generated ${toAdd.length} more question(s)! Total: ${updated.length}/${targetTotalQuestions}`)
       } else {
         toast.error("Could not generate remaining questions. Please try again.")
       }
@@ -1160,6 +1424,7 @@ function AIGeneratorContent() {
       setIsGeneratingMissing(false)
     }
   }
+
 
   // Toggle question selection in review
   const toggleQuestionSelection = (id: string) => {
@@ -1293,40 +1558,63 @@ function AIGeneratorContent() {
           correctAnswer,
           explanation: q.explanation,
           wordLimit: q.wordLimit || 150,
+          chapter: q.chapter,
+          subject: (q as any).subject,
         }
       })
 
-      const typeOrder: ("mcq" | "assertion" | "truefalse" | "fillblanks" | "descriptive")[] = ["mcq", "assertion", "truefalse", "fillblanks", "descriptive"]
-      const groupedTypes = typeOrder.filter(t => mappedQuestions.some(q => q.type === t))
-
       let sections: any[] = []
-      if (groupedTypes.length <= 1) {
-        sections = [{
-          name: mappedQuestions[0]?.type ? (typeTitles[mappedQuestions[0].type] || "Questions") : "Questions",
-          title: `${activeSubjectTab || selectedSubject} - Section 1`,
-          type: mappedQuestions[0]?.type || "mcq",
-          negativeMarking: isNegativeEnabled,
-          sectionNegativeMark: defaultNegMark,
-          questionRange: `1-${mappedQuestions.length}`,
-          questions: mappedQuestions,
-        }]
-      } else {
+      const distinctSubjects = Array.from(new Set(mappedQuestions.map((q) => q.subject).filter(Boolean)))
+
+      if (distinctSubjects.length > 1) {
         let runningCount = 1
-        sections = groupedTypes.map(t => {
-          const qs = mappedQuestions.filter(q => q.type === t)
+        sections = distinctSubjects.map((subName) => {
+          const qs = mappedQuestions.filter((q) => q.subject === subName)
           const startNum = runningCount
           const endNum = runningCount + qs.length - 1
           runningCount = endNum + 1
           return {
-            name: typeTitles[t] || "Questions",
-            title: `${activeSubjectTab || selectedSubject} - ${typeTitles[t]}`,
-            type: t,
+            name: String(subName),
+            title: `${subName} Section`,
+            type: qs[0]?.type || "mcq",
             negativeMarking: isNegativeEnabled,
             sectionNegativeMark: defaultNegMark,
             questionRange: `${startNum}-${endNum}`,
             questions: qs,
           }
         })
+      } else {
+        const typeOrder: ("mcq" | "assertion" | "truefalse" | "fillblanks" | "descriptive")[] = ["mcq", "assertion", "truefalse", "fillblanks", "descriptive"]
+        const groupedTypes = typeOrder.filter(t => mappedQuestions.some(q => q.type === t))
+
+        if (groupedTypes.length <= 1) {
+          sections = [{
+            name: mappedQuestions[0]?.type ? (typeTitles[mappedQuestions[0].type] || "Questions") : "Questions",
+            title: `${activeSubjectTab || selectedSubject} - Section 1`,
+            type: mappedQuestions[0]?.type || "mcq",
+            negativeMarking: isNegativeEnabled,
+            sectionNegativeMark: defaultNegMark,
+            questionRange: `1-${mappedQuestions.length}`,
+            questions: mappedQuestions,
+          }]
+        } else {
+          let runningCount = 1
+          sections = groupedTypes.map(t => {
+            const qs = mappedQuestions.filter(q => q.type === t)
+            const startNum = runningCount
+            const endNum = runningCount + qs.length - 1
+            runningCount = endNum + 1
+            return {
+              name: typeTitles[t] || "Questions",
+              title: `${activeSubjectTab || selectedSubject} - ${typeTitles[t]}`,
+              type: t,
+              negativeMarking: isNegativeEnabled,
+              sectionNegativeMark: defaultNegMark,
+              questionRange: `${startNum}-${endNum}`,
+              questions: qs,
+            }
+          })
+        }
       }
 
       const finalExamDuration = duration || Math.max(toSave.length * 2, 30)
@@ -2335,7 +2623,7 @@ function AIGeneratorContent() {
                           {isGenerating ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
-                              <span>Generating ({generatedQuestions.length}/{totalQuestions})...</span>
+                              <span>Generating ({generatedQuestions.length}/{targetTotalQuestions})...</span>
                             </>
                           ) : (
                             <>
@@ -2429,7 +2717,7 @@ function AIGeneratorContent() {
                         {isGenerating ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-300" />
-                            <span>Generating ({generatedQuestions.length}/{totalQuestions})...</span>
+                            <span>Generating ({generatedQuestions.length}/{targetTotalQuestions})...</span>
                           </>
                         ) : (
                           <>
@@ -2531,10 +2819,10 @@ function AIGeneratorContent() {
                         </div>
                         <div>
                           <p className="font-bold text-slate-900 text-xs sm:text-sm">
-                            Creating Questions in Progress ({generatedQuestions.length} of {totalQuestions} completed)...
+                            Creating Questions in Progress ({generatedQuestions.length} of {targetTotalQuestions} completed)...
                           </p>
                           <p className="text-[11px] text-slate-600 font-normal mt-0.5">
-                            Please wait while AI generates all questions. Proceeding to the next step will unlock once all {totalQuestions} questions are ready.
+                            Please wait while AI generates all questions. Proceeding to the next step will unlock once all {targetTotalQuestions} questions are ready.
                           </p>
                         </div>
                       </div>
@@ -2543,18 +2831,18 @@ function AIGeneratorContent() {
                           <div
                             className="bg-[#1E293B] h-full rounded-full transition-all duration-300"
                             style={{
-                              width: `${Math.min(100, Math.round((generatedQuestions.length / Math.max(1, totalQuestions)) * 100))}%`
+                              width: `${Math.min(100, Math.round((generatedQuestions.length / Math.max(1, targetTotalQuestions)) * 100))}%`
                             }}
                           />
                         </div>
                         <span className="text-[11px] font-bold text-slate-900 tabular-nums">
-                          {Math.min(100, Math.round((generatedQuestions.length / Math.max(1, totalQuestions)) * 100))}%
+                          {Math.min(100, Math.round((generatedQuestions.length / Math.max(1, targetTotalQuestions)) * 100))}%
                         </span>
                       </div>
                     </div>
                   )}
 
-                  {!isGenerating && generatedQuestions.length > 0 && generatedQuestions.length < totalQuestions && (
+                  {!isGenerating && generatedQuestions.length > 0 && generatedQuestions.length < targetTotalQuestions && (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-xs font-medium text-slate-700 shadow-xs">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-xl bg-[#1E293B] text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -2562,10 +2850,10 @@ function AIGeneratorContent() {
                         </div>
                         <div>
                           <p className="font-bold text-slate-900 text-xs sm:text-sm">
-                            {generatedQuestions.length} of {totalQuestions} Questions Ready
+                            {generatedQuestions.length} of {targetTotalQuestions} Questions Ready
                           </p>
                           <p className="text-[11px] text-slate-600 font-normal mt-0.5">
-                            {totalQuestions - generatedQuestions.length} questions remaining to reach your target blueprint. Click below to generate the rest!
+                            {targetTotalQuestions - generatedQuestions.length} questions remaining to reach your target blueprint. Click below to generate the rest!
                           </p>
                         </div>
                       </div>
@@ -2578,12 +2866,12 @@ function AIGeneratorContent() {
                         {isGeneratingMissing ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-300" />
-                            <span>Generating {totalQuestions - generatedQuestions.length} Remaining...</span>
+                            <span>Generating {targetTotalQuestions - generatedQuestions.length} Remaining...</span>
                           </>
                         ) : (
                           <>
                             <Plus className="w-3.5 h-3.5 text-amber-300" />
-                            <span>Generate Remaining {totalQuestions - generatedQuestions.length} Questions</span>
+                            <span>Generate Remaining {targetTotalQuestions - generatedQuestions.length} Questions</span>
                           </>
                         )}
                       </button>
@@ -2636,6 +2924,16 @@ function AIGeneratorContent() {
                                 <span className="w-6 h-6 rounded-lg bg-[#1E293B] text-white text-xs font-medium flex items-center justify-center shadow-2xs shrink-0">
                                   {idx + 1}
                                 </span>
+                                {q.subject && (
+                                  <span className="text-[10px] font-bold text-blue-900 bg-blue-50 border border-blue-200/70 px-2 py-0.5 rounded-md shrink-0">
+                                    {q.subject}
+                                  </span>
+                                )}
+                                {q.grade && (
+                                  <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0">
+                                    Class {q.grade}th
+                                  </span>
+                                )}
                                 <span className="text-xs font-medium text-slate-800 truncate" title={q.chapter}>
                                   {q.chapter}
                                 </span>
@@ -3647,6 +3945,21 @@ function AIGeneratorContent() {
                     {errorMsg}
                   </span>
                 )}
+                {generatedQuestions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={
+                      isGenerating ||
+                      (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
+                      targetTotalQuestions === 0
+                    }
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? "animate-spin" : ""}`} />
+                    <span>Re-create Questions</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -3660,7 +3973,7 @@ function AIGeneratorContent() {
                   disabled={
                     isGenerating ||
                     (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
-                    totalQuestions === 0
+                    targetTotalQuestions === 0
                   }
                   className="px-6 py-2.5 rounded-xl bg-[#324158] hover:bg-[#253244] text-white font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
                 >
