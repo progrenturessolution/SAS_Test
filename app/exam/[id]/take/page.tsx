@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect, useCallback, use, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -1172,7 +1172,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       "You can navigate between questions using the Previous and Next buttons. Questions can be answered in any order.",
       'Use the "Mark for Review" feature to flag questions you want to revisit before final submission.',
       "The timer will be displayed on the screen. Once time expires, your answers will be automatically submitted.",
-      "A virtual scientific calculator (NPTEL / GATE style) is available at the top of the screen during the examination.",
+      "A virtual calculator is available at the top of the screen during the examination.",
       "Review your answers carefully before clicking the Submit button. Once submitted, you cannot change your answers."
     ];
 
@@ -2316,7 +2316,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         maxWarnings={exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
       />
 
-      {/* Virtual Scientific Calculator (NPTEL / GATE style) */}
+      {/* Virtual Calculator */}
       {Boolean(exam.settings?.allowCalculator || exam.settings?.enableCalculator || (exam as any)?.allowCalculator) && (
         <ScientificCalculator
           isOpen={showCalculator}

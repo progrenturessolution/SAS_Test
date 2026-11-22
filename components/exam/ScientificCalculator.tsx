@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { X, Minus, RotateCcw, Move, Delete } from "lucide-react"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { X, Delete, Calculator, Move } from "lucide-react"
 
 interface ScientificCalculatorProps {
   isOpen: boolean
@@ -15,6 +15,7 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
   const [memory, setMemory] = useState<number>(0)
   const [hasMemory, setHasMemory] = useState(false)
   const [isNewNumber, setIsNewNumber] = useState(true)
+  const [mode, setMode] = useState<"basic" | "scientific">("scientific")
 
   // Dragging state
   const [position, setPosition] = useState({ x: 80, y: 80 })
@@ -27,9 +28,8 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
   })
 
   useEffect(() => {
-    // Center calculator on screen when first opened
-    if (typeof window !== "undefined") {
-      const x = Math.max(20, Math.min(window.innerWidth - 380, window.innerWidth / 2 - 180))
+    if (typeof window !== "undefined" && isOpen) {
+      const x = Math.max(20, Math.min(window.innerWidth - 370, window.innerWidth / 2 - 180))
       const y = Math.max(60, Math.min(window.innerHeight - 520, 100))
       setPosition({ x, y })
     }
@@ -51,8 +51,8 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
       if (!isDragging) return
       const dx = e.clientX - dragRef.current.startX
       const dy = e.clientY - dragRef.current.startY
-      const newX = Math.max(10, Math.min(window.innerWidth - 360, dragRef.current.posX + dx))
-      const newY = Math.max(10, Math.min(window.innerHeight - 400, dragRef.current.posY + dy))
+      const newX = Math.max(10, Math.min(window.innerWidth - 350, dragRef.current.posX + dx))
+      const newY = Math.max(10, Math.min(window.innerHeight - 350, dragRef.current.posY + dy))
       setPosition({ x: newX, y: newY })
     }
 
@@ -70,53 +70,54 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
     }
   }, [isDragging])
 
-  if (!isOpen) return null
-
   // Calculator actions
-  const handleNumber = (n: string) => {
-    if (isNewNumber) {
-      setDisplay(n === "." ? "0." : n)
-      setIsNewNumber(false)
-    } else {
-      if (n === "." && display.includes(".")) return
-      setDisplay(display === "0" && n !== "." ? n : display + n)
-    }
-  }
+  const handleNumber = useCallback((n: string) => {
+    setDisplay((prevDisplay) => {
+      if (isNewNumber) {
+        setIsNewNumber(false)
+        return n === "." ? "0." : n
+      } else {
+        if (n === "." && prevDisplay.includes(".")) return prevDisplay
+        return prevDisplay === "0" && n !== "." ? n : prevDisplay + n
+      }
+    })
+  }, [isNewNumber])
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setDisplay("0")
     setExpression("")
     setIsNewNumber(true)
-  }
+  }, [])
 
-  const handleClearEntry = () => {
+  const handleClearEntry = useCallback(() => {
     setDisplay("0")
     setIsNewNumber(true)
-  }
+  }, [])
 
-  const handleBackspace = () => {
+  const handleBackspace = useCallback(() => {
     if (isNewNumber) return
-    if (display.length <= 1) {
-      setDisplay("0")
-      setIsNewNumber(true)
-    } else {
-      setDisplay(display.slice(0, -1))
-    }
-  }
+    setDisplay((prev) => {
+      if (prev.length <= 1) {
+        setIsNewNumber(true)
+        return "0"
+      }
+      return prev.slice(0, -1)
+    })
+  }, [isNewNumber])
 
-  const handleOperator = (op: string) => {
+  const handleOperator = useCallback((op: string) => {
     const currentVal = parseFloat(display)
     if (isNaN(currentVal)) return
     setExpression(`${display} ${op} `)
     setIsNewNumber(true)
-  }
+  }, [display])
 
-  const handleToggleSign = () => {
+  const handleToggleSign = useCallback(() => {
     const val = parseFloat(display)
     if (!isNaN(val)) {
       setDisplay((-val).toString())
     }
-  }
+  }, [display])
 
   // Factorial helper
   const factorial = (n: number): number => {
@@ -129,7 +130,7 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
   }
 
   // Scientific function handlers
-  const handleScientific = (fn: string) => {
+  const handleScientific = useCallback((fn: string) => {
     const val = parseFloat(display)
     if (isNaN(val)) return
 
@@ -208,15 +209,14 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
         return
     }
 
-    // Round clean floats
     const rounded = Number(res.toFixed(10))
     setDisplay(isNaN(rounded) ? "Error" : rounded.toString())
     setExpression(`${fn}(${val}) =`)
     setIsNewNumber(true)
-  }
+  }, [display, isDegree])
 
   // Calculate binary expression
-  const handleEquals = () => {
+  const handleEquals = useCallback(() => {
     if (!expression) return
     const parts = expression.trim().split(" ")
     if (parts.length < 2) return
@@ -256,10 +256,10 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
     setExpression(`${expression}${display} =`)
     setDisplay(isNaN(rounded) ? "Error" : rounded.toString())
     setIsNewNumber(true)
-  }
+  }, [expression, display])
 
   // Memory functions
-  const handleMemory = (action: string) => {
+  const handleMemory = useCallback((action: string) => {
     const val = parseFloat(display) || 0
     switch (action) {
       case "MC":
@@ -286,12 +286,44 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
         setIsNewNumber(true)
         break
     }
-  }
+  }, [display, memory])
+
+  // Keyboard shortcut listener
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return
+      }
+
+      if (e.key >= "0" && e.key <= "9") handleNumber(e.key)
+      else if (e.key === ".") handleNumber(".")
+      else if (e.key === "+") handleOperator("+")
+      else if (e.key === "-") handleOperator("-")
+      else if (e.key === "*") handleOperator("×")
+      else if (e.key === "/") {
+        e.preventDefault()
+        handleOperator("÷")
+      } else if (e.key === "Enter" || e.key === "=") {
+        e.preventDefault()
+        handleEquals()
+      } else if (e.key === "Backspace") handleBackspace()
+      else if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isOpen, handleNumber, handleOperator, handleEquals, handleBackspace, onClose])
+
+  if (!isOpen) return null
 
   return (
     <div
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
-      className="fixed z-50 w-[360px] sm:w-[380px] bg-[#1E293B] text-white rounded-2xl shadow-2xl border border-slate-700/80 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150 font-sans"
+      className="fixed z-50 w-[330px] sm:w-[350px] bg-[#1E293B] text-white rounded-2xl shadow-2xl border border-slate-700/80 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150 font-sans"
     >
       {/* Draggable Title Bar */}
       <div
@@ -299,16 +331,44 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
         className="flex items-center justify-between px-3.5 py-2.5 bg-[#0F172A] border-b border-slate-700/60 cursor-move"
       >
         <div className="flex items-center gap-2">
-          <Move size={14} className="text-slate-400" />
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
-            NPTEL Scientific Calculator
+          <Calculator size={15} className="text-slate-300" />
+          <span className="text-xs font-semibold text-slate-100 tracking-wide">
+            Calculator
           </span>
         </div>
-        <div className="flex items-center gap-1">
+
+        <div className="flex items-center gap-2">
+          {/* Basic / Scientific Mode Segmented Toggle */}
+          <div className="flex items-center bg-slate-800/90 rounded-lg p-0.5 border border-slate-700/70 text-[10px]">
+            <button
+              type="button"
+              onClick={() => setMode("basic")}
+              className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                mode === "basic"
+                  ? "bg-[#324158] text-white shadow-2xs"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Basic
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("scientific")}
+              className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                mode === "scientific"
+                  ? "bg-[#324158] text-white shadow-2xs"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Scientific
+            </button>
+          </div>
+
           <button
+            type="button"
             onClick={onClose}
             className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Close Calculator"
+            title="Close"
           >
             <X size={15} />
           </button>
@@ -316,337 +376,219 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
       </div>
 
       {/* Calculator Display Screen */}
-      <div className="p-3 bg-[#0B1120] border-b border-slate-800">
+      <div className="px-3.5 py-2.5 bg-[#0B1120] border-b border-slate-800/80">
         <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1 font-mono">
-          <div className="flex items-center gap-2">
-            <span
-              onClick={() => setIsDegree(!isDegree)}
-              className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-bold text-[10px] cursor-pointer hover:bg-slate-700"
-              title="Click to toggle Deg/Rad"
-            >
-              {isDegree ? "DEG" : "RAD"}
-            </span>
-            {hasMemory && <span className="text-[10px] font-bold text-emerald-400">M</span>}
+          <div className="flex items-center gap-1.5">
+            {mode === "scientific" && (
+              <button
+                type="button"
+                onClick={() => setIsDegree(!isDegree)}
+                className="px-1.5 py-0.5 rounded bg-slate-800/90 hover:bg-slate-700 text-amber-400 font-bold text-[10px] cursor-pointer transition-colors"
+                title="Click to toggle Deg/Rad"
+              >
+                {isDegree ? "DEG" : "RAD"}
+              </button>
+            )}
+            {hasMemory && (
+              <span className="px-1 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 text-[9px] font-bold">
+                M
+              </span>
+            )}
           </div>
-          <span className="truncate max-w-[220px] text-right">{expression || "\u00A0"}</span>
+          <span className="truncate max-w-[200px] text-right text-slate-400 text-xs">
+            {expression || "\u00A0"}
+          </span>
         </div>
-        <div className="text-right text-2xl font-bold font-mono tracking-tight text-white overflow-x-auto whitespace-nowrap scrollbar-none py-1">
+        <div className="text-right text-2xl font-bold font-mono tracking-tight text-white overflow-x-auto whitespace-nowrap scrollbar-none py-0.5">
           {display}
         </div>
       </div>
 
-      {/* Keypad Grid */}
+      {/* Keypad */}
       <div className="p-2.5 bg-[#1E293B] space-y-1.5 text-xs">
-        {/* Memory Row */}
-        <div className="grid grid-cols-5 gap-1.5 text-[11px] font-semibold">
-          {["MC", "MR", "MS", "M+", "M-"].map((m) => (
-            <button
-              key={m}
-              onClick={() => handleMemory(m)}
-              className="py-1.5 bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 text-slate-300 rounded-lg transition-colors cursor-pointer"
-            >
-              {m}
-            </button>
-          ))}
-        </div>
+        {mode === "scientific" && (
+          <>
+            {/* Memory Buttons */}
+            <div className="grid grid-cols-5 gap-1 text-[10px] font-medium text-slate-400 pb-0.5">
+              {["MC", "MR", "MS", "M+", "M-"].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => handleMemory(m)}
+                  className="py-1 bg-slate-800/70 hover:bg-slate-700 hover:text-white rounded-md transition-colors cursor-pointer active:scale-95"
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
 
-        {/* Scientific Row 1 */}
-        <div className="grid grid-cols-6 gap-1 text-[11px] font-medium">
-          <button
-            onClick={() => setIsDegree(!isDegree)}
-            className="py-1.5 bg-amber-600/20 text-amber-400 border border-amber-500/30 hover:bg-amber-600/30 rounded-lg transition-colors font-bold"
-          >
-            {isDegree ? "Deg" : "Rad"}
-          </button>
-          <button
-            onClick={() => handleScientific("sin")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            sin
-          </button>
-          <button
-            onClick={() => handleScientific("cos")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            cos
-          </button>
-          <button
-            onClick={() => handleScientific("tan")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            tan
-          </button>
-          <button
-            onClick={() => handleScientific("ln")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            ln
-          </button>
-          <button
-            onClick={() => handleScientific("log")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            log
-          </button>
-        </div>
+            {/* Scientific Keys Grid */}
+            <div className="grid grid-cols-5 gap-1 text-[11px] font-medium text-slate-300">
+              <button type="button" onClick={() => handleScientific("sin")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">sin</button>
+              <button type="button" onClick={() => handleScientific("cos")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">cos</button>
+              <button type="button" onClick={() => handleScientific("tan")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">tan</button>
+              <button type="button" onClick={() => handleScientific("log")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">log</button>
+              <button type="button" onClick={() => handleScientific("ln")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">ln</button>
 
-        {/* Scientific Row 2 */}
-        <div className="grid grid-cols-6 gap-1 text-[11px] font-medium">
-          <button
-            onClick={() => handleScientific("pi")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors font-serif"
-          >
-            π
-          </button>
-          <button
-            onClick={() => handleScientific("asin")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            sin⁻¹
-          </button>
-          <button
-            onClick={() => handleScientific("acos")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            cos⁻¹
-          </button>
-          <button
-            onClick={() => handleScientific("atan")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            tan⁻¹
-          </button>
-          <button
-            onClick={() => handleScientific("exp")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            eˣ
-          </button>
-          <button
-            onClick={() => handleScientific("10x")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            10ˣ
-          </button>
-        </div>
+              <button type="button" onClick={() => handleScientific("asin")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">sin⁻¹</button>
+              <button type="button" onClick={() => handleScientific("acos")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">cos⁻¹</button>
+              <button type="button" onClick={() => handleScientific("atan")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">tan⁻¹</button>
+              <button type="button" onClick={() => handleScientific("pi")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer font-serif">π</button>
+              <button type="button" onClick={() => handleScientific("e")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer font-serif">e</button>
 
-        {/* Scientific Row 3 */}
-        <div className="grid grid-cols-6 gap-1 text-[11px] font-medium">
-          <button
-            onClick={() => handleScientific("e")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors font-serif"
-          >
-            e
-          </button>
-          <button
-            onClick={() => handleScientific("sinh")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            sinh
-          </button>
-          <button
-            onClick={() => handleScientific("cosh")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            cosh
-          </button>
-          <button
-            onClick={() => handleScientific("tanh")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            tanh
-          </button>
-          <button
-            onClick={() => handleScientific("sqr")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            x²
-          </button>
-          <button
-            onClick={() => handleScientific("cube")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            x³
-          </button>
-        </div>
+              <button type="button" onClick={() => handleScientific("sqrt")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">√</button>
+              <button type="button" onClick={() => handleScientific("sqr")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">x²</button>
+              <button type="button" onClick={() => handleOperator("^")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">xʸ</button>
+              <button type="button" onClick={() => handleScientific("fact")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">n!</button>
+              <button type="button" onClick={() => handleScientific("recip")} className="py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">1/x</button>
+            </div>
+          </>
+        )}
 
-        {/* Scientific Row 4 + Standard keypad */}
-        <div className="grid grid-cols-6 gap-1 text-[11px] font-medium">
+        {/* Standard Keypad (Clean 4-column layout) */}
+        <div className="grid grid-cols-4 gap-1.5 pt-1">
           <button
-            onClick={() => handleScientific("fact")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
+            type="button"
+            onClick={handleClear}
+            className="py-2.5 bg-rose-500/20 hover:bg-rose-500/30 active:bg-rose-500/40 text-rose-300 font-bold text-sm rounded-xl transition-colors cursor-pointer"
           >
-            n!
+            C
           </button>
           <button
-            onClick={() => handleScientific("sqrt")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            √
-          </button>
-          <button
-            onClick={() => handleScientific("cbrt")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            ³√
-          </button>
-          <button
-            onClick={() => handleOperator("^")}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg transition-colors"
-          >
-            xʸ
-          </button>
-          <button
+            type="button"
             onClick={handleClearEntry}
-            className="py-1.5 bg-rose-900/40 hover:bg-rose-900/60 text-rose-300 font-bold rounded-lg transition-colors"
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-slate-300 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
           >
             CE
           </button>
           <button
-            onClick={handleClear}
-            className="py-1.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-lg transition-colors"
-          >
-            C
-          </button>
-        </div>
-
-        {/* Main 5-row Keypad */}
-        <div className="grid grid-cols-5 gap-1.5 pt-1 text-sm font-medium">
-          {/* Row: 1/x, 7, 8, 9, ÷ */}
-          <button
-            onClick={() => handleScientific("recip")}
-            className="py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-xl text-xs font-medium"
-          >
-            1/x
-          </button>
-          <button
-            onClick={() => handleNumber("7")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold"
-          >
-            7
-          </button>
-          <button
-            onClick={() => handleNumber("8")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold"
-          >
-            8
-          </button>
-          <button
-            onClick={() => handleNumber("9")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold"
-          >
-            9
-          </button>
-          <button
-            onClick={() => handleOperator("÷")}
-            className="py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-base rounded-xl"
-          >
-            ÷
-          </button>
-
-          {/* Row: |x|, 4, 5, 6, × */}
-          <button
-            onClick={() => handleScientific("abs")}
-            className="py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-xl text-xs font-medium"
-          >
-            |x|
-          </button>
-          <button
-            onClick={() => handleNumber("4")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold"
-          >
-            4
-          </button>
-          <button
-            onClick={() => handleNumber("5")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold"
-          >
-            5
-          </button>
-          <button
-            onClick={() => handleNumber("6")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold"
-          >
-            6
-          </button>
-          <button
-            onClick={() => handleOperator("×")}
-            className="py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-base rounded-xl"
-          >
-            ×
-          </button>
-
-          {/* Row: %, 1, 2, 3, - */}
-          <button
-            onClick={() => handleOperator("%")}
-            className="py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-xl text-xs font-medium"
-          >
-            mod
-          </button>
-          <button
-            onClick={() => handleNumber("1")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold"
-          >
-            1
-          </button>
-          <button
-            onClick={() => handleNumber("2")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold"
-          >
-            2
-          </button>
-          <button
-            onClick={() => handleNumber("3")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold"
-          >
-            3
-          </button>
-          <button
-            onClick={() => handleOperator("-")}
-            className="py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-base rounded-xl"
-          >
-            -
-          </button>
-
-          {/* Row: ±, 0, ., ⌫, + */}
-          <button
-            onClick={handleToggleSign}
-            className="py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-xl text-xs font-medium"
-          >
-            ±
-          </button>
-          <button
-            onClick={() => handleNumber("0")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold"
-          >
-            0
-          </button>
-          <button
-            onClick={() => handleNumber(".")}
-            className="py-2 bg-slate-700/60 hover:bg-slate-700 active:bg-slate-600 rounded-xl font-bold text-base"
-          >
-            .
-          </button>
-          <button
+            type="button"
             onClick={handleBackspace}
-            className="py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-xl flex items-center justify-center text-slate-300"
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-slate-300 font-semibold rounded-xl flex items-center justify-center transition-colors cursor-pointer"
             title="Backspace"
           >
             <Delete size={16} />
           </button>
           <button
+            type="button"
+            onClick={() => handleOperator("÷")}
+            className="py-2.5 bg-[#324158] hover:bg-[#253244] active:bg-[#1a2330] text-blue-300 font-bold text-lg rounded-xl transition-colors cursor-pointer"
+          >
+            ÷
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleNumber("7")}
+            className="py-2.5 bg-slate-850 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            7
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNumber("8")}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            8
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNumber("9")}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            9
+          </button>
+          <button
+            type="button"
+            onClick={() => handleOperator("×")}
+            className="py-2.5 bg-[#324158] hover:bg-[#253244] active:bg-[#1a2330] text-blue-300 font-bold text-lg rounded-xl transition-colors cursor-pointer"
+          >
+            ×
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleNumber("4")}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            4
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNumber("5")}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            5
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNumber("6")}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            6
+          </button>
+          <button
+            type="button"
+            onClick={() => handleOperator("-")}
+            className="py-2.5 bg-[#324158] hover:bg-[#253244] active:bg-[#1a2330] text-blue-300 font-bold text-lg rounded-xl transition-colors cursor-pointer"
+          >
+            −
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleNumber("1")}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            1
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNumber("2")}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            2
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNumber("3")}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            3
+          </button>
+          <button
+            type="button"
             onClick={() => handleOperator("+")}
-            className="py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-base rounded-xl"
+            className="py-2.5 bg-[#324158] hover:bg-[#253244] active:bg-[#1a2330] text-blue-300 font-bold text-lg rounded-xl transition-colors cursor-pointer"
           >
             +
           </button>
-        </div>
 
-        {/* Equals Button Full Width */}
-        <div className="pt-1">
           <button
+            type="button"
+            onClick={handleToggleSign}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 text-slate-300 font-semibold text-sm rounded-xl transition-colors cursor-pointer"
+          >
+            ±
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNumber("0")}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-600 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            0
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNumber(".")}
+            className="py-2.5 bg-slate-800/90 hover:bg-slate-700 text-white font-bold text-base rounded-xl transition-colors cursor-pointer"
+          >
+            .
+          </button>
+          <button
+            type="button"
             onClick={handleEquals}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-base rounded-xl transition-all shadow-md shadow-emerald-900/30 cursor-pointer"
+            className="py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-lg rounded-xl transition-all shadow-md shadow-blue-900/40 cursor-pointer active:scale-95"
           >
             =
           </button>
@@ -655,4 +597,3 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
     </div>
   )
 }
-

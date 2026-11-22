@@ -158,7 +158,7 @@ export function ExamHeader({
             type="button"
             onClick={onToggleCalculator}
             className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#324158] text-xs font-bold shadow-2xs transition-colors cursor-pointer shrink-0"
-            title="Open Scientific Calculator (NPTEL / GATE style)"
+            title="Open Calculator"
           >
             <Calculator className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#324158]" />
             <span className="hidden sm:inline">Calculator</span>
