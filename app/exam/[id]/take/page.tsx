@@ -195,6 +195,8 @@ interface ExamData {
     showResults?: boolean;
     allowReview?: boolean;
     negativeMarking?: boolean;
+    allowCalculator?: boolean;
+    enableCalculator?: boolean;
     minDuration?: number;
     proctoring?: {
       enabled?: boolean;
@@ -1484,6 +1486,11 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         const endTimeLabel = scheduledEndDt
           ? scheduledEndDt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
           : undefined
+        const isCalculatorAllowed = Boolean(
+          exam.settings?.allowCalculator ||
+          exam.settings?.enableCalculator ||
+          (exam as any)?.allowCalculator
+        )
 
         return (
           <ExamHeader
@@ -1493,7 +1500,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             duration={exam.duration * 60}
             studentName={studentName}
             rollNo={studentRoll}
-            onToggleCalculator={() => setShowCalculator(p => !p)}
+            onToggleCalculator={isCalculatorAllowed ? () => setShowCalculator(p => !p) : undefined}
             warningCount={procState.warnings}
             maxWarnings={exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
             endTimeLabel={endTimeLabel}
@@ -2310,10 +2317,12 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       />
 
       {/* Virtual Scientific Calculator (NPTEL / GATE style) */}
-      <ScientificCalculator
-        isOpen={showCalculator}
-        onClose={() => setShowCalculator(false)}
-      />
+      {Boolean(exam.settings?.allowCalculator || exam.settings?.enableCalculator || (exam as any)?.allowCalculator) && (
+        <ScientificCalculator
+          isOpen={showCalculator}
+          onClose={() => setShowCalculator(false)}
+        />
+      )}
       {/* Micro-notification toasts */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none text-right">
         {toasts.map((t) => (

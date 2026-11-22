@@ -40,6 +40,7 @@ import {
   Printer,
   Lock,
   AlertTriangle,
+  Calculator,
 } from "lucide-react"
 import {
   EXAM_TARGETS,
@@ -367,6 +368,7 @@ function AIGeneratorContent() {
             showResultsImmediately: exam.settings.showResults ?? prev.showResultsImmediately,
             allowReview: exam.settings.allowReview ?? prev.allowReview,
             enableNegativeMarking: exam.settings.negativeMarking ?? prev.enableNegativeMarking,
+            allowCalculator: exam.settings.allowCalculator ?? exam.settings.enableCalculator ?? (exam as any).allowCalculator ?? prev.allowCalculator,
           }))
           if (exam.settings.proctoring) {
             setProctoringSettings((prev) => ({
@@ -455,6 +457,7 @@ function AIGeneratorContent() {
     showResultsImmediately: true,
     allowReview: false,
     enableNegativeMarking: false,
+    allowCalculator: false,
   })
 
   // Proctoring Security
@@ -2038,6 +2041,8 @@ function AIGeneratorContent() {
             showResults: evalSettings.showResultsImmediately,
             allowReview: evalSettings.allowReview,
             negativeMarking: isNegativeEnabled,
+            allowCalculator: evalSettings.allowCalculator,
+            enableCalculator: evalSettings.allowCalculator,
             startDate: startDate,
             startTime: formattedStartTime,
             endDate: endDate,
@@ -3940,7 +3945,7 @@ function AIGeneratorContent() {
                     {/* ── Start Date & Time ── */}
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="w-1.5 h-4.5 bg-[#1E293B] rounded-full inline-block" />
+                        <span className="w-1.5 h-4.5 bg-[#324158] rounded-full inline-block" />
                         <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
                           Start Date &amp; Time
                         </h3>
@@ -3952,14 +3957,14 @@ function AIGeneratorContent() {
                           onClick={() => openDatePicker(startDateInputRef)}
                           className="relative flex-1 min-w-[140px] cursor-pointer group"
                         >
-                          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 group-hover:bg-slate-50/80 transition-all shadow-2xs">
+                          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#324158]/50 group-hover:bg-slate-50/80 transition-all shadow-2xs">
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
+                              <Calendar className="w-4 h-4 text-[#324158] shrink-0" />
                               <span className="text-xs sm:text-sm font-medium text-slate-800 truncate">
                                 {formatDateDisplay(startDate)}
                               </span>
                             </div>
-                            <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 shrink-0">
+                            <span className="text-[10px] font-medium text-[#324158] bg-[#eaf0f8] px-2 py-0.5 rounded-md border border-[#324158]/20 shrink-0">
                               Select Date
                             </span>
                           </div>
@@ -4013,7 +4018,7 @@ function AIGeneratorContent() {
                               onClick={() => setStartPeriod("AM")}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                                 startPeriod === "AM"
-                                  ? "bg-[#1E293B] text-white shadow-2xs"
+                                  ? "bg-[#324158] text-white shadow-2xs"
                                   : "text-slate-500 hover:text-slate-800"
                               }`}
                             >
@@ -4024,7 +4029,7 @@ function AIGeneratorContent() {
                               onClick={() => setStartPeriod("PM")}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                                 startPeriod === "PM"
-                                  ? "bg-[#1E293B] text-white shadow-2xs"
+                                  ? "bg-[#324158] text-white shadow-2xs"
                                   : "text-slate-500 hover:text-slate-800"
                               }`}
                             >
@@ -4038,7 +4043,7 @@ function AIGeneratorContent() {
                     {/* ── End Date & Time ── */}
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="w-1.5 h-4.5 bg-rose-500 rounded-full inline-block" />
+                        <span className="w-1.5 h-4.5 bg-[#324158] rounded-full inline-block" />
                         <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
                           End Date &amp; Time
                         </h3>
@@ -4050,14 +4055,14 @@ function AIGeneratorContent() {
                           onClick={() => openDatePicker(endDateInputRef)}
                           className="relative flex-1 min-w-[140px] cursor-pointer group"
                         >
-                          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-rose-400 group-hover:bg-slate-50/80 transition-all shadow-2xs">
+                          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#324158]/50 group-hover:bg-slate-50/80 transition-all shadow-2xs">
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <Calendar className="w-4 h-4 text-rose-600 shrink-0" />
+                              <Calendar className="w-4 h-4 text-[#324158] shrink-0" />
                               <span className="text-xs sm:text-sm font-medium text-slate-800 truncate">
                                 {formatDateDisplay(endDate)}
                               </span>
                             </div>
-                            <span className="text-[10px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 shrink-0">
+                            <span className="text-[10px] font-medium text-[#324158] bg-[#eaf0f8] px-2 py-0.5 rounded-md border border-[#324158]/20 shrink-0">
                               Select Date
                             </span>
                           </div>
@@ -4111,7 +4116,7 @@ function AIGeneratorContent() {
                               onClick={() => setEndPeriod("AM")}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                                 endPeriod === "AM"
-                                  ? "bg-[#1E293B] text-white shadow-2xs"
+                                  ? "bg-[#324158] text-white shadow-2xs"
                                   : "text-slate-500 hover:text-slate-800"
                               }`}
                             >
@@ -4122,7 +4127,7 @@ function AIGeneratorContent() {
                               onClick={() => setEndPeriod("PM")}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                                 endPeriod === "PM"
-                                  ? "bg-[#1E293B] text-white shadow-2xs"
+                                  ? "bg-[#324158] text-white shadow-2xs"
                                   : "text-slate-500 hover:text-slate-800"
                               }`}
                             >
@@ -4240,6 +4245,38 @@ function AIGeneratorContent() {
                           <div
                             className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
                               evalSettings.enableNegativeMarking ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2.5">
+                        <div className="flex items-center gap-2">
+                          <Calculator className="w-4 h-4 text-[#324158]" />
+                          <div>
+                            <span className="text-xs font-normal text-slate-700 block">
+                              Enable Student Calculator
+                            </span>
+                            <span className="text-[10px] text-slate-400 block">
+                              Allow on-screen scientific calculator during exam
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEvalSettings((prev) => ({
+                              ...prev,
+                              allowCalculator: !prev.allowCalculator,
+                            }))
+                          }
+                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
+                            evalSettings.allowCalculator ? "bg-[#1E293B]" : "bg-slate-200"
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
+                              evalSettings.allowCalculator ? "translate-x-5" : "translate-x-0"
                             }`}
                           />
                         </button>

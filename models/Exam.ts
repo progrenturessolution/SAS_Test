@@ -60,6 +60,8 @@ export interface IExam extends Document {
     showResults: boolean
     allowReview: boolean
     negativeMarking: boolean
+    allowCalculator?: boolean
+    enableCalculator?: boolean
     startDate?: Date
     startTime?: string
     endDate?: Date
@@ -144,6 +146,8 @@ const ExamSchema = new Schema<IExam>(
       showResults: { type: Boolean, default: true },
       allowReview: { type: Boolean, default: false },
       negativeMarking: { type: Boolean, default: false },
+      allowCalculator: { type: Boolean, default: false },
+      enableCalculator: { type: Boolean, default: false },
       startDate: { type: Date },
       startTime: { type: String },
       endDate: { type: Date },
