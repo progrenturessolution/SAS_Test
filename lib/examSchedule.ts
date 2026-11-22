@@ -12,18 +12,38 @@ export interface ExamScheduleSettings {
 export function getExamStartDateTime(settings?: ExamScheduleSettings): Date | null {
   if (!settings?.startDate) return null
   try {
-    // 1. If it's already a Date instance, return it directly
+    // 1. If it's already a Date instance
     if (settings.startDate instanceof Date) {
-      return isNaN(settings.startDate.getTime()) ? null : settings.startDate
+      if (isNaN(settings.startDate.getTime())) return null
+      if (settings.startTime) {
+        const [hours, mins] = settings.startTime.split(":").map(Number)
+        if (!isNaN(hours) && !isNaN(mins)) {
+          const isMidnightUTC = settings.startDate.getUTCHours() === 0 && settings.startDate.getUTCMinutes() === 0
+          if (isMidnightUTC && settings.startTime !== "00:00") {
+            return new Date(settings.startDate.getUTCFullYear(), settings.startDate.getUTCMonth(), settings.startDate.getUTCDate(), hours, mins, 0, 0)
+          }
+        }
+      }
+      return settings.startDate
     }
 
     if (typeof settings.startDate === "string") {
       const trimmed = settings.startDate.trim()
-      // 2. If it's an ISO timestamp (e.g. "2026-10-14T20:00:00.000Z"), parse it directly!
-      // DO NOT split on "T" because that extracts the UTC date which causes timezone day shifts!
+      // 2. If it's an ISO timestamp (e.g. "2026-10-14T20:00:00.000Z")
       if (trimmed.includes("T")) {
         const parsed = new Date(trimmed)
-        if (!isNaN(parsed.getTime())) return parsed
+        if (!isNaN(parsed.getTime())) {
+          if (settings.startTime) {
+            const [hours, mins] = settings.startTime.split(":").map(Number)
+            if (!isNaN(hours) && !isNaN(mins)) {
+              const isMidnightUTC = trimmed.includes("T00:00:00") || (parsed.getUTCHours() === 0 && parsed.getUTCMinutes() === 0)
+              if (isMidnightUTC && settings.startTime !== "00:00") {
+                return new Date(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), hours, mins, 0, 0)
+              }
+            }
+          }
+          return parsed
+        }
       }
 
       // 3. If it's a plain local date string "YYYY-MM-DD" from form inputs
@@ -51,17 +71,36 @@ export function getExamStartDateTime(settings?: ExamScheduleSettings): Date | nu
 export function getExamEndDateTime(settings?: ExamScheduleSettings): Date | null {
   if (!settings?.endDate) return null
   try {
-    // 1. If it's already a Date instance, return it directly
+    // 1. If it's already a Date instance
     if (settings.endDate instanceof Date) {
-      return isNaN(settings.endDate.getTime()) ? null : settings.endDate
+      if (isNaN(settings.endDate.getTime())) return null
+      const endTime = settings.endTime || "23:59"
+      const [hours, mins] = endTime.split(":").map(Number)
+      if (!isNaN(hours) && !isNaN(mins)) {
+        const isMidnightUTC = settings.endDate.getUTCHours() === 0 && settings.endDate.getUTCMinutes() === 0
+        if (isMidnightUTC) {
+          return new Date(settings.endDate.getUTCFullYear(), settings.endDate.getUTCMonth(), settings.endDate.getUTCDate(), hours, mins, 59, 999)
+        }
+      }
+      return settings.endDate
     }
 
     if (typeof settings.endDate === "string") {
       const trimmed = settings.endDate.trim()
-      // 2. If it's an ISO timestamp (e.g. "2026-10-14T21:00:00.000Z"), parse it directly!
+      // 2. If it's an ISO timestamp (e.g. "2026-10-14T21:00:00.000Z")
       if (trimmed.includes("T")) {
         const parsed = new Date(trimmed)
-        if (!isNaN(parsed.getTime())) return parsed
+        if (!isNaN(parsed.getTime())) {
+          const endTime = settings.endTime || "23:59"
+          const [hours, mins] = endTime.split(":").map(Number)
+          if (!isNaN(hours) && !isNaN(mins)) {
+            const isMidnightUTC = trimmed.includes("T00:00:00") || (parsed.getUTCHours() === 0 && parsed.getUTCMinutes() === 0)
+            if (isMidnightUTC) {
+              return new Date(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), hours, mins, 59, 999)
+            }
+          }
+          return parsed
+        }
       }
 
       // 3. If it's a plain local date string "YYYY-MM-DD" from form inputs
@@ -132,11 +171,12 @@ export function getScheduleStatus(settings?: ExamScheduleSettings, now: number =
   const startDt = getExamStartDateTime(settings)
   const endDt = getExamEndDateTime(settings)
 
-  const isBeforeStart = startDt ? now < startDt.getTime() : false
+  // 2-second grace period for clock latency/network drift
+  const isBeforeStart = startDt ? now < (startDt.getTime() - 2000) : false
   const isAfterEnd = endDt ? now > endDt.getTime() : false
   const canStart = !isBeforeStart && !isAfterEnd
 
-  const secondsUntilStart = startDt && isBeforeStart ? Math.ceil((startDt.getTime() - now) / 1000) : 0
+  const secondsUntilStart = startDt && isBeforeStart ? Math.max(0, Math.ceil((startDt.getTime() - now) / 1000)) : 0
   const secondsUntilEnd = endDt ? Math.max(0, Math.floor((endDt.getTime() - now) / 1000)) : null
 
   // Candidates can enter the setup/instructions screen if the exam is not ended AND

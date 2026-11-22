@@ -744,17 +744,25 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         setIsExamEnded(false)
       }
 
-      // Check if start time reached
-      if (!startDt || now >= startDt.getTime()) {
+      // Check if start time reached (with 2-second grace period for clock latency)
+      if (!startDt || now >= (startDt.getTime() - 2000)) {
         setCountdownTime(null)
         if (!scheduleStartReached) {
           setScheduleStartReached(true)
           setShowStartModal(true)
         }
       } else {
-        const diffSecs = Math.ceil((startDt.getTime() - now) / 1000)
-        setCountdownTime(diffSecs)
-        setScheduleStartReached(false)
+        const diffSecs = Math.max(0, Math.ceil((startDt.getTime() - now) / 1000))
+        if (diffSecs <= 0) {
+          setCountdownTime(null)
+          if (!scheduleStartReached) {
+            setScheduleStartReached(true)
+            setShowStartModal(true)
+          }
+        } else {
+          setCountdownTime(diffSecs)
+          setScheduleStartReached(false)
+        }
       }
     }
 
@@ -1212,7 +1220,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             </div>
           )}
 
-          {!scheduleStartReached && countdownTime !== null && (
+          {!scheduleStartReached && countdownTime !== null && countdownTime > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
@@ -1393,7 +1401,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                   >
                     {isExamEnded 
                       ? "Exam Ended" 
-                      : !scheduleStartReached && countdownTime !== null 
+                      : !scheduleStartReached && countdownTime !== null && countdownTime > 0
                         ? `Starts in ${formatCountdown(countdownTime)}` 
                         : "Start Exam"}
                   </Button>

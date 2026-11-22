@@ -387,12 +387,60 @@ function AIGeneratorContent() {
         if (exam.schedule?.startDate || exam.settings?.startDate) {
           const raw = exam.schedule?.startDate || exam.settings?.startDate
           const d = new Date(raw)
-          if (!isNaN(d.getTime())) setStartDate(d.toISOString().split("T")[0])
+          if (!isNaN(d.getTime())) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, "0")
+            const day = String(d.getDate()).padStart(2, "0")
+            setStartDate(`${y}-${m}-${day}`)
+
+            const timeStr = exam.schedule?.startTime || exam.settings?.startTime
+            if (timeStr && timeStr.includes(":")) {
+              const [th, tm] = timeStr.split(":").map(Number)
+              if (!isNaN(th) && !isNaN(tm)) {
+                const p = th >= 12 ? "PM" : "AM"
+                let h12 = th % 12
+                if (h12 === 0) h12 = 12
+                setStartHour(String(h12).padStart(2, "0"))
+                setStartMinute(String(tm).padStart(2, "0"))
+                setStartPeriod(p)
+              }
+            } else {
+              let h12 = d.getHours() % 12
+              if (h12 === 0) h12 = 12
+              setStartHour(String(h12).padStart(2, "0"))
+              setStartMinute(String(d.getMinutes()).padStart(2, "0"))
+              setStartPeriod(d.getHours() >= 12 ? "PM" : "AM")
+            }
+          }
         }
         if (exam.schedule?.endDate || exam.settings?.endDate) {
           const raw = exam.schedule?.endDate || exam.settings?.endDate
           const d = new Date(raw)
-          if (!isNaN(d.getTime())) setEndDate(d.toISOString().split("T")[0])
+          if (!isNaN(d.getTime())) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, "0")
+            const day = String(d.getDate()).padStart(2, "0")
+            setEndDate(`${y}-${m}-${day}`)
+
+            const timeStr = exam.schedule?.endTime || exam.settings?.endTime
+            if (timeStr && timeStr.includes(":")) {
+              const [th, tm] = timeStr.split(":").map(Number)
+              if (!isNaN(th) && !isNaN(tm)) {
+                const p = th >= 12 ? "PM" : "AM"
+                let h12 = th % 12
+                if (h12 === 0) h12 = 12
+                setEndHour(String(h12).padStart(2, "0"))
+                setEndMinute(String(tm).padStart(2, "0"))
+                setEndPeriod(p)
+              }
+            } else {
+              let h12 = d.getHours() % 12
+              if (h12 === 0) h12 = 12
+              setEndHour(String(h12).padStart(2, "0"))
+              setEndMinute(String(d.getMinutes()).padStart(2, "0"))
+              setEndPeriod(d.getHours() >= 12 ? "PM" : "AM")
+            }
+          }
         }
 
         // Eval & proctoring
@@ -474,15 +522,52 @@ function AIGeneratorContent() {
   ])
 
   // Step 5: Schedule & Settings States
-  const [startDate, setStartDate] = useState<string>("2026-11-12")
-  const [startHour, setStartHour] = useState<string>("10")
-  const [startMinute, setStartMinute] = useState<string>("00")
-  const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM")
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date()
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    return `${y}-${m}-${day}`
+  })
+  const [startHour, setStartHour] = useState<string>(() => {
+    const d = new Date()
+    let h = d.getHours() % 12
+    if (h === 0) h = 12
+    return String(h).padStart(2, "0")
+  })
+  const [startMinute, setStartMinute] = useState<string>(() => {
+    const d = new Date()
+    const min = Math.floor(d.getMinutes() / 5) * 5
+    return String(min).padStart(2, "0")
+  })
+  const [startPeriod, setStartPeriod] = useState<"AM" | "PM">(() => {
+    return new Date().getHours() >= 12 ? "PM" : "AM"
+  })
 
-  const [endDate, setEndDate] = useState<string>("2026-11-12")
-  const [endHour, setEndHour] = useState<string>("01")
-  const [endMinute, setEndMinute] = useState<string>("00")
-  const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("PM")
+  const [endDate, setEndDate] = useState<string>(() => {
+    const d = new Date()
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    return `${y}-${m}-${day}`
+  })
+  const [endHour, setEndHour] = useState<string>(() => {
+    const d = new Date()
+    d.setHours(d.getHours() + 2)
+    let h = d.getHours() % 12
+    if (h === 0) h = 12
+    return String(h).padStart(2, "0")
+  })
+  const [endMinute, setEndMinute] = useState<string>(() => {
+    const d = new Date()
+    const min = Math.floor(d.getMinutes() / 5) * 5
+    return String(min).padStart(2, "0")
+  })
+  const [endPeriod, setEndPeriod] = useState<"AM" | "PM">(() => {
+    const d = new Date()
+    d.setHours(d.getHours() + 2)
+    return d.getHours() >= 12 ? "PM" : "AM"
+  })
 
   const startDateInputRef = useRef<HTMLInputElement>(null)
   const endDateInputRef = useRef<HTMLInputElement>(null)
@@ -1940,6 +2025,15 @@ function AIGeneratorContent() {
       const formattedStartTime = to24HourTime(startHour, startMinute, startPeriod)
       const formattedEndTime = to24HourTime(endHour, endMinute, endPeriod)
 
+      // Construct accurate Date objects in the user's browser timezone
+      const [sy, sm, sd] = startDate.split("-").map(Number)
+      const [sh, smin] = formattedStartTime.split(":").map(Number)
+      const startDateTime = new Date(sy, sm - 1, sd, sh || 0, smin || 0, 0, 0)
+
+      const [ey, em, ed] = endDate.split("-").map(Number)
+      const [eh, emin] = formattedEndTime.split(":").map(Number)
+      const endDateTime = new Date(ey, em - 1, ed, eh ?? 23, emin ?? 59, 59, 999)
+
       const finalInstructions = instructions && instructions.length > 0 ? instructions : [
         "Read each question carefully before submitting your answer.",
         `Each question carries ${currentExamMeta.defaultMarksPerQuestion} marks.`,
@@ -2088,10 +2182,11 @@ function AIGeneratorContent() {
             maxWarnings: 3,
           },
           schedule: {
-            startDate,
+            startDate: startDateTime.toISOString(),
             startTime: formattedStartTime,
-            endDate,
+            endDate: endDateTime.toISOString(),
             endTime: formattedEndTime,
+            isScheduled: true,
           },
           settings: {
             randomize: evalSettings.randomizeQuestions,
@@ -2100,9 +2195,9 @@ function AIGeneratorContent() {
             negativeMarking: isNegativeEnabled,
             allowCalculator: evalSettings.allowCalculator,
             enableCalculator: evalSettings.allowCalculator,
-            startDate: startDate,
+            startDate: startDateTime.toISOString(),
             startTime: formattedStartTime,
-            endDate: endDate,
+            endDate: endDateTime.toISOString(),
             endTime: formattedEndTime,
             proctoring: {
               faceDetection: proctoringSettings.faceDetection,

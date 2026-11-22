@@ -408,14 +408,34 @@ function OtherExamsContent() {
   ])
 
   // Step 6: Settings & Proctoring
-  const [startDate, setStartDate] = useState<string>(() => new Date().toISOString().split("T")[0])
-  const [startHour, setStartHour] = useState<string>("09")
-  const [startMinute, setStartMinute] = useState<string>("00")
-  const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM")
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date()
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    return `${y}-${m}-${day}`
+  })
+  const [startHour, setStartHour] = useState<string>(() => {
+    const d = new Date()
+    let h = d.getHours() % 12
+    if (h === 0) h = 12
+    return String(h).padStart(2, "0")
+  })
+  const [startMinute, setStartMinute] = useState<string>(() => {
+    const d = new Date()
+    const min = Math.floor(d.getMinutes() / 5) * 5
+    return String(min).padStart(2, "0")
+  })
+  const [startPeriod, setStartPeriod] = useState<"AM" | "PM">(() => {
+    return new Date().getHours() >= 12 ? "PM" : "AM"
+  })
   const [endDate, setEndDate] = useState<string>(() => {
     const d = new Date()
     d.setDate(d.getDate() + 7)
-    return d.toISOString().split("T")[0]
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    return `${y}-${m}-${day}`
   })
   const [endHour, setEndHour] = useState<string>("11")
   const [endMinute, setEndMinute] = useState<string>("59")
@@ -544,12 +564,60 @@ function OtherExamsContent() {
         if (exam.schedule?.startDate || exam.settings?.startDate) {
           const raw = exam.schedule?.startDate || exam.settings?.startDate
           const d = new Date(raw)
-          if (!isNaN(d.getTime())) setStartDate(d.toISOString().split("T")[0])
+          if (!isNaN(d.getTime())) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, "0")
+            const day = String(d.getDate()).padStart(2, "0")
+            setStartDate(`${y}-${m}-${day}`)
+
+            const timeStr = exam.schedule?.startTime || exam.settings?.startTime
+            if (timeStr && timeStr.includes(":")) {
+              const [th, tm] = timeStr.split(":").map(Number)
+              if (!isNaN(th) && !isNaN(tm)) {
+                const p = th >= 12 ? "PM" : "AM"
+                let h12 = th % 12
+                if (h12 === 0) h12 = 12
+                setStartHour(String(h12).padStart(2, "0"))
+                setStartMinute(String(tm).padStart(2, "0"))
+                setStartPeriod(p)
+              }
+            } else {
+              let h12 = d.getHours() % 12
+              if (h12 === 0) h12 = 12
+              setStartHour(String(h12).padStart(2, "0"))
+              setStartMinute(String(d.getMinutes()).padStart(2, "0"))
+              setStartPeriod(d.getHours() >= 12 ? "PM" : "AM")
+            }
+          }
         }
         if (exam.schedule?.endDate || exam.settings?.endDate) {
           const raw = exam.schedule?.endDate || exam.settings?.endDate
           const d = new Date(raw)
-          if (!isNaN(d.getTime())) setEndDate(d.toISOString().split("T")[0])
+          if (!isNaN(d.getTime())) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, "0")
+            const day = String(d.getDate()).padStart(2, "0")
+            setEndDate(`${y}-${m}-${day}`)
+
+            const timeStr = exam.schedule?.endTime || exam.settings?.endTime
+            if (timeStr && timeStr.includes(":")) {
+              const [th, tm] = timeStr.split(":").map(Number)
+              if (!isNaN(th) && !isNaN(tm)) {
+                const p = th >= 12 ? "PM" : "AM"
+                let h12 = th % 12
+                if (h12 === 0) h12 = 12
+                setEndHour(String(h12).padStart(2, "0"))
+                setEndMinute(String(tm).padStart(2, "0"))
+                setEndPeriod(p)
+              }
+            } else {
+              let h12 = d.getHours() % 12
+              if (h12 === 0) h12 = 12
+              setEndHour(String(h12).padStart(2, "0"))
+              setEndMinute(String(d.getMinutes()).padStart(2, "0"))
+              setEndPeriod(d.getHours() >= 12 ? "PM" : "AM")
+            }
+          }
         }
 
         // Settings
@@ -1119,9 +1187,9 @@ function OtherExamsContent() {
             negativeMarking: isNegativeEnabled,
             allowCalculator: evalSettings.allowCalculator,
             enableCalculator: evalSettings.allowCalculator,
-            startDate: startDate,
+            startDate: startDateTime.toISOString(),
             startTime: formattedStartTime,
-            endDate: endDate,
+            endDate: endDateTime.toISOString(),
             endTime: formattedEndTime,
             shuffleQuestions: evalSettings.randomizeQuestions,
             shuffleOptions: evalSettings.randomizeQuestions,
