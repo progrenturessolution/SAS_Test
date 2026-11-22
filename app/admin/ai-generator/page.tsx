@@ -39,6 +39,7 @@ import {
   BarChart2,
   Printer,
   Lock,
+  AlertTriangle,
 } from "lucide-react"
 import {
   EXAM_TARGETS,
@@ -72,6 +73,132 @@ export interface GeneratedCompetitiveQuestion {
   wordLimit?: number
 }
 
+export interface SubjectConfig {
+  questions: number
+  marksPerQuestion: number
+  marks: number
+}
+
+export const getSynchronizedConfigs = (exam: ExamTarget, subjects: CompetitiveSubject[]) => {
+  const dist: Record<string, SubjectConfig> = {}
+
+  let defaultFormats = [
+    { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: 50, marks: 1 },
+    { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
+    { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
+    { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
+    { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
+    { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 2 },
+    { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
+  ]
+
+  let c11Weight = 20
+  let c12Weight = 80
+
+  if (exam === "MHT_CET") {
+    c11Weight = 20
+    c12Weight = 80
+    let totalQ = 0
+    let totalM = 0
+    subjects.forEach((sub) => {
+      const q = 50
+      const mpq = sub === "Mathematics" ? 2 : 1
+      const m = q * mpq
+      dist[sub] = { questions: q, marksPerQuestion: mpq, marks: m }
+      totalQ += q
+      totalM += m
+    })
+
+    const hasMath = subjects.includes("Mathematics")
+    const nonMathCount = subjects.filter((s) => s !== "Mathematics").length * 50
+    const mathCount = hasMath ? 50 : 0
+
+    if (hasMath && nonMathCount > 0) {
+      defaultFormats = [
+        { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: nonMathCount, marks: 1 },
+        { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
+        { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
+        { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
+        { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
+        { id: "descriptive", label: "Description / Descriptive", checked: true, count: mathCount, marks: 2 },
+        { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
+      ]
+    } else {
+      const mpq = hasMath ? 2 : 1
+      defaultFormats = [
+        { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: totalQ, marks: mpq },
+        { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
+        { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
+        { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
+        { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
+        { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 2 },
+        { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
+      ]
+    }
+  } else if (exam === "NEET") {
+    c11Weight = 50
+    c12Weight = 50
+    let totalQ = 0
+    subjects.forEach((sub) => {
+      const q = sub === "Biology" ? 90 : 45
+      const mpq = 4
+      dist[sub] = { questions: q, marksPerQuestion: mpq, marks: q * mpq }
+      totalQ += q
+    })
+    defaultFormats = [
+      { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: totalQ, marks: 4 },
+      { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 4 },
+      { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 4 },
+      { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
+      { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
+      { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 4 },
+      { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 4 },
+    ]
+  } else if (exam === "JEE_MAIN") {
+    c11Weight = 45
+    c12Weight = 55
+    let totalQ = 0
+    subjects.forEach((sub) => {
+      const q = 25
+      const mpq = 4
+      dist[sub] = { questions: q, marksPerQuestion: mpq, marks: q * mpq }
+      totalQ += q
+    })
+    defaultFormats = [
+      { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: totalQ, marks: 4 },
+      { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 4 },
+      { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 4 },
+      { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
+      { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
+      { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 4 },
+      { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 4 },
+    ]
+  } else {
+    c11Weight = 50
+    c12Weight = 50
+    let totalQ = 0
+    subjects.forEach((sub) => {
+      const q = 50
+      const mpq = 1
+      dist[sub] = { questions: q, marksPerQuestion: mpq, marks: q * mpq }
+      totalQ += q
+    })
+    defaultFormats = [
+      { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: totalQ, marks: 1 },
+      { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
+      { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
+      { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
+      { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
+      { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 2 },
+      { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
+    ]
+  }
+
+  return { dist, formats: defaultFormats, c11Weight, c12Weight }
+}
+
+const initialSynchronizedSetup = getSynchronizedConfigs("MHT_CET", ["Physics", "Chemistry", "Mathematics"])
+
 function AIGeneratorContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -80,10 +207,10 @@ function AIGeneratorContent() {
   const [isLoadingExistingExam, setIsLoadingExistingExam] = useState(false)
 
   // ─── Filter & Selection States ───
-  const [selectedExam, setSelectedExam] = useState<ExamTarget>("NEET")
-  const [selectedGrade, setSelectedGrade] = useState<GradeLevel | "both">("12")
+  const [selectedExam, setSelectedExam] = useState<ExamTarget>("MHT_CET")
+  const [selectedGrade, setSelectedGrade] = useState<GradeLevel | "both">("both")
   const [selectedSubject, setSelectedSubject] = useState<CompetitiveSubject>("Physics")
-  const [selectedSubjects, setSelectedSubjects] = useState<CompetitiveSubject[]>(["Physics", "Chemistry", "Biology"])
+  const [selectedSubjects, setSelectedSubjects] = useState<CompetitiveSubject[]>(["Physics", "Chemistry", "Mathematics"])
   const [examDropdownOpen, setExamDropdownOpen] = useState(false)
   const [subjectDropdownOpen, setSubjectDropdownOpen] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
@@ -106,24 +233,12 @@ function AIGeneratorContent() {
   })
 
   // Blueprint Format Matrix - Match Screenshot (No Coding)
-  const [blueprintFormats, setBlueprintFormats] = useState([
-    { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: 50, marks: 1 },
-    { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
-    { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
-    { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
-    { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
-    { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 2 },
-    { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
-  ])
+  const [blueprintFormats, setBlueprintFormats] = useState(initialSynchronizedSetup.formats)
 
   // Subject-wise Marks & Syllabus Weightage States (Screenshot Match)
-  const [subjectDist, setSubjectDist] = useState<Record<string, { questions: number; marks: number }>>({
-    Physics: { questions: 50, marks: 50 },
-    Chemistry: { questions: 50, marks: 50 },
-    Mathematics: { questions: 50, marks: 100 },
-  })
-  const [class11Weightage, setClass11Weightage] = useState<number>(20)
-  const [class12Weightage, setClass12Weightage] = useState<number>(80)
+  const [subjectDist, setSubjectDist] = useState<Record<string, SubjectConfig>>(initialSynchronizedSetup.dist)
+  const [class11Weightage, setClass11Weightage] = useState<number>(initialSynchronizedSetup.c11Weight)
+  const [class12Weightage, setClass12Weightage] = useState<number>(initialSynchronizedSetup.c12Weight)
 
   // Chapter Selection
   const [selectedChapters, setSelectedChapters] = useState<string[]>([])
@@ -564,24 +679,6 @@ function AIGeneratorContent() {
     )
   }, [availableChapters, chapterSearch])
 
-  const getInitialSubjectDist = (exam: ExamTarget, subjects: CompetitiveSubject[]) => {
-    const dist: Record<string, { questions: number; marks: number }> = {}
-    subjects.forEach((sub) => {
-      if (exam === "MHT_CET") {
-        dist[sub] = sub === "Mathematics" ? { questions: 50, marks: 100 } : { questions: 50, marks: 50 }
-      } else if (exam === "NEET") {
-        dist[sub] = sub === "Biology" ? { questions: 90, marks: 360 } : { questions: 45, marks: 180 }
-      } else if (exam === "JEE_MAIN") {
-        dist[sub] = { questions: 25, marks: 100 }
-      } else if (exam === "JEE_ADVANCED") {
-        dist[sub] = { questions: 18, marks: 60 }
-      } else {
-        dist[sub] = { questions: 50, marks: 50 }
-      }
-    })
-    return dist
-  }
-
   // Automatically switch subject if not available in selected exam
   const handleExamChange = (exam: ExamTarget) => {
     setSelectedExam(exam)
@@ -590,7 +687,11 @@ function AIGeneratorContent() {
       setSelectedSubjects(targetMeta.subjects)
       setSelectedSubject(targetMeta.subjects[0] || "Physics")
       setActiveSubjectTab(targetMeta.subjects[0] || "Physics")
-      setSubjectDist(getInitialSubjectDist(exam, targetMeta.subjects))
+      const sync = getSynchronizedConfigs(exam, targetMeta.subjects)
+      setSubjectDist(sync.dist)
+      setBlueprintFormats(sync.formats)
+      setClass11Weightage(sync.c11Weight)
+      setClass12Weightage(sync.c12Weight)
     }
     // Reset selected chapters when exam changes
     setSelectedChapters([])
@@ -600,18 +701,24 @@ function AIGeneratorContent() {
 
   // Handle multi-select toggle of subjects in Step 1
   const handleToggleSubject = (sub: CompetitiveSubject) => {
+    let next: CompetitiveSubject[] = []
     if (selectedSubjects.includes(sub)) {
       if (selectedSubjects.length > 1) {
-        const next = selectedSubjects.filter((s) => s !== sub)
+        next = selectedSubjects.filter((s) => s !== sub)
         setSelectedSubjects(next)
         if (selectedSubject === sub) setSelectedSubject(next[0])
         if (activeSubjectTab === sub) setActiveSubjectTab(next[0])
+      } else {
+        return
       }
     } else {
-      const next = [...selectedSubjects, sub]
+      next = [...selectedSubjects, sub]
       setSelectedSubjects(next)
       if (!selectedSubject) setSelectedSubject(sub)
     }
+    const sync = getSynchronizedConfigs(selectedExam, next)
+    setSubjectDist(sync.dist)
+    setBlueprintFormats(sync.formats)
   }
 
   const handleRemoveSubject = (e: React.MouseEvent, sub: CompetitiveSubject) => {
@@ -621,6 +728,9 @@ function AIGeneratorContent() {
       setSelectedSubjects(next)
       if (selectedSubject === sub) setSelectedSubject(next[0])
       if (activeSubjectTab === sub) setActiveSubjectTab(next[0])
+      const sync = getSynchronizedConfigs(selectedExam, next)
+      setSubjectDist(sync.dist)
+      setBlueprintFormats(sync.formats)
     }
   }
 
@@ -636,7 +746,11 @@ function AIGeneratorContent() {
     setSelectedSubject(subject)
     setActiveSubjectTab(subject)
     if (!selectedSubjects.includes(subject)) {
-      setSelectedSubjects([subject])
+      const next = [subject]
+      setSelectedSubjects(next)
+      const sync = getSynchronizedConfigs(selectedExam, next)
+      setSubjectDist(sync.dist)
+      setBlueprintFormats(sync.formats)
     }
     setSelectedChapters([])
     setChapterSearch("")
@@ -653,7 +767,7 @@ function AIGeneratorContent() {
   const totalMarks = useMemo(() => {
     return blueprintFormats.reduce((acc, f) => {
       const c = f.checked ? Number(f.count) : 0
-      const m = Number(f.marks) || 4
+      const m = Number(f.marks) || 1
       return acc + ((isNaN(c) ? 0 : c) * (isNaN(m) ? 0 : m))
     }, 0)
   }, [blueprintFormats])
@@ -677,17 +791,49 @@ function AIGeneratorContent() {
   const updateFormatCount = (id: string, count: any) => {
     const parsed = typeof count === "number" ? count : parseInt(String(count), 10)
     const safeCount = isNaN(parsed) ? 0 : Math.max(0, Math.min(200, Math.round(parsed)))
-    setBlueprintFormats((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, count: safeCount, checked: safeCount > 0 ? true : f.checked } : f))
-    )
+    setBlueprintFormats((prev) => {
+      const updated = prev.map((f) =>
+        f.id === id ? { ...f, count: safeCount, checked: safeCount > 0 ? true : f.checked } : f
+      )
+      if (selectedSubjects.length === 1) {
+        const sub = selectedSubjects[0]
+        const totalQ = updated.reduce((acc, f) => acc + (f.checked ? Number(f.count) || 0 : 0), 0)
+        const totalM = updated.reduce((acc, f) => acc + (f.checked ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
+        const mpq = totalQ > 0 ? Math.max(1, Math.round(totalM / totalQ)) : 1
+        setSubjectDist((sPrev) => ({
+          ...sPrev,
+          [sub]: {
+            questions: totalQ,
+            marksPerQuestion: mpq,
+            marks: totalQ === 0 ? 0 : totalM,
+          },
+        }))
+      }
+      return updated
+    })
   }
 
   const updateFormatMarks = (id: string, marks: any) => {
     const parsed = typeof marks === "number" ? marks : parseInt(String(marks), 10)
-    const safeMarks = isNaN(parsed) ? 1 : Math.max(0, Math.min(20, Math.round(parsed)))
-    setBlueprintFormats((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, marks: safeMarks } : f))
-    )
+    const safeMarks = isNaN(parsed) ? 1 : Math.max(1, Math.min(20, Math.round(parsed)))
+    setBlueprintFormats((prev) => {
+      const updated = prev.map((f) => (f.id === id ? { ...f, marks: safeMarks } : f))
+      if (selectedSubjects.length === 1) {
+        const sub = selectedSubjects[0]
+        const totalQ = updated.reduce((acc, f) => acc + (f.checked ? Number(f.count) || 0 : 0), 0)
+        const totalM = updated.reduce((acc, f) => acc + (f.checked ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
+        const mpq = totalQ > 0 ? Math.max(1, Math.round(totalM / totalQ)) : safeMarks
+        setSubjectDist((sPrev) => ({
+          ...sPrev,
+          [sub]: {
+            questions: totalQ,
+            marksPerQuestion: mpq,
+            marks: totalQ === 0 ? 0 : totalM,
+          },
+        }))
+      }
+      return updated
+    })
   }
 
   const updateFormatType = (id: string, newLabel: string) => {
@@ -697,21 +843,66 @@ function AIGeneratorContent() {
   }
 
   const updateSubjectDist = (sub: string, field: "questions" | "marks", val: number) => {
-    setSubjectDist((prev) => ({
-      ...prev,
-      [sub]: {
-        questions: field === "questions" ? val : (prev[sub]?.questions ?? 50),
-        marks: field === "marks" ? val : (prev[sub]?.marks ?? 50),
-      },
-    }))
+    setSubjectDist((prev) => {
+      const cur = prev[sub] || {
+        questions: 0,
+        marksPerQuestion: sub === "Mathematics" && selectedExam === "MHT_CET" ? 2 : 1,
+        marks: 0,
+      }
+      let nextQ = cur.questions
+      let nextMarksPerQ = cur.marksPerQuestion || 1
+      let nextMarks = cur.marks
+
+      if (field === "questions") {
+        nextQ = Math.max(0, val)
+        if (nextQ === 0) {
+          // Requirement 3: A subject with 0 questions must not have non-zero marks.
+          nextMarks = 0
+        } else {
+          // Requirement 4: Calculate total marks dynamically using the number of questions multiplied by marks per question.
+          nextMarks = nextQ * nextMarksPerQ
+        }
+      } else if (field === "marks") {
+        if (nextQ === 0) {
+          // Requirement 3: A subject with 0 questions must not have non-zero marks.
+          nextMarks = 0
+        } else {
+          const rawMarks = Math.max(0, val)
+          nextMarksPerQ = Math.max(1, Math.round(rawMarks / nextQ))
+          nextMarks = nextQ * nextMarksPerQ
+        }
+      }
+
+      const nextDist = {
+        ...prev,
+        [sub]: {
+          questions: nextQ,
+          marksPerQuestion: nextMarksPerQ,
+          marks: nextMarks,
+        },
+      }
+
+      // If single subject, auto-sync blueprintFormats immediately
+      if (selectedSubjects.length === 1 && selectedSubjects[0] === sub) {
+        setBlueprintFormats((bPrev) =>
+          bPrev.map((f, i) =>
+            i === 0
+              ? { ...f, checked: true, count: nextQ, marks: nextMarksPerQ }
+              : { ...f, count: 0 }
+          )
+        )
+      }
+
+      return nextDist
+    })
   }
 
   const totalSubjectQuestions = useMemo(() => {
-    return selectedSubjects.reduce((acc, sub) => acc + (subjectDist[sub]?.questions ?? 50), 0)
+    return selectedSubjects.reduce((acc, sub) => acc + (subjectDist[sub]?.questions ?? 0), 0)
   }, [selectedSubjects, subjectDist])
 
   const totalSubjectMarks = useMemo(() => {
-    return selectedSubjects.reduce((acc, sub) => acc + (subjectDist[sub]?.marks ?? (sub === "Mathematics" ? 100 : 50)), 0)
+    return selectedSubjects.reduce((acc, sub) => acc + (subjectDist[sub]?.marks ?? 0), 0)
   }, [selectedSubjects, subjectDist])
 
   const targetTotalQuestions = useMemo(() => {
@@ -722,28 +913,170 @@ function AIGeneratorContent() {
     return selectedSubjects.length > 1 ? totalSubjectMarks : totalMarks
   }, [selectedSubjects.length, totalSubjectMarks, totalMarks])
 
-  // Keep single-subject distribution in sync with blueprintFormats
-  useEffect(() => {
-    if (selectedSubjects.length === 1) {
-      const sub = selectedSubjects[0]
-      if (sub && (subjectDist[sub]?.questions !== totalQuestions || subjectDist[sub]?.marks !== totalMarks)) {
-        setSubjectDist((prev) => ({
-          ...prev,
-          [sub]: { questions: totalQuestions, marks: totalMarks },
-        }))
-      }
+  // One-click Auto-Sync Helpers
+  const syncTypesToSubjects = () => {
+    const targetQ = totalSubjectQuestions
+    const targetM = totalSubjectMarks
+    if (targetQ === 0) {
+      setBlueprintFormats((prev) => prev.map((f) => ({ ...f, count: 0 })))
+      toast.success("Question types synchronized to 0.")
+      return
     }
-  }, [selectedSubjects, totalQuestions, totalMarks])
+
+    const avgMarks = targetM / targetQ
+    if (Number.isInteger(avgMarks) && avgMarks >= 1) {
+      setBlueprintFormats((prev) =>
+        prev.map((f, i) =>
+          i === 0
+            ? { ...f, checked: true, count: targetQ, marks: avgMarks }
+            : { ...f, count: 0 }
+        )
+      )
+      toast.success("Question types synchronized with subject totals!")
+      return
+    }
+
+    // Solve: x + y = targetQ and 1*x + 2*y = targetM => y = targetM - targetQ, x = targetQ - y
+    const twoMarkCount = targetM - targetQ
+    const oneMarkCount = targetQ - twoMarkCount
+
+    if (twoMarkCount >= 0 && oneMarkCount >= 0) {
+      setBlueprintFormats((prev) =>
+        prev.map((f) => {
+          if (f.id === "mcq") {
+            return { ...f, checked: oneMarkCount > 0, count: oneMarkCount, marks: 1 }
+          }
+          if (f.id === "descriptive") {
+            return { ...f, checked: twoMarkCount > 0, count: twoMarkCount, marks: 2 }
+          }
+          return { ...f, count: 0 }
+        })
+      )
+      toast.success("Question types synchronized: 1-mark & 2-mark distribution matched!")
+      return
+    }
+
+    const roundMarks = Math.max(1, Math.round(avgMarks))
+    setBlueprintFormats((prev) =>
+      prev.map((f, i) =>
+        i === 0
+          ? { ...f, checked: true, count: targetQ, marks: roundMarks }
+          : { ...f, count: 0 }
+      )
+    )
+    toast.success("Question types count synchronized!")
+  }
+
+  const syncSubjectsToTypes = () => {
+    const targetQ = totalQuestions
+    const targetM = totalMarks
+    if (selectedSubjects.length === 0) return
+
+    if (targetQ === 0) {
+      setSubjectDist((prev) => {
+        const next: Record<string, SubjectConfig> = {}
+        selectedSubjects.forEach((sub) => {
+          next[sub] = { questions: 0, marksPerQuestion: prev[sub]?.marksPerQuestion || 1, marks: 0 }
+        })
+        return next
+      })
+      toast.success("Subject questions set to 0.")
+      return
+    }
+
+    const perSubQ = Math.floor(targetQ / selectedSubjects.length)
+    let remainderQ = targetQ % selectedSubjects.length
+
+    setSubjectDist((prev) => {
+      const next: Record<string, SubjectConfig> = {}
+      selectedSubjects.forEach((sub, idx) => {
+        const q = perSubQ + (idx < remainderQ ? 1 : 0)
+        const curMpq = prev[sub]?.marksPerQuestion || (sub === "Mathematics" && selectedExam === "MHT_CET" ? 2 : 1)
+        next[sub] = {
+          questions: q,
+          marksPerQuestion: curMpq,
+          marks: q * curMpq,
+        }
+      })
+      return next
+    })
+    toast.success("Subjects synchronized with question type counts!")
+  }
 
   const handleClass11WeightageChange = (val: number) => {
-    setClass11Weightage(val)
-    setClass12Weightage(Math.max(0, 100 - val))
+    const clamped = Math.max(0, Math.min(100, val))
+    setClass11Weightage(clamped)
+    setClass12Weightage(100 - clamped)
   }
 
   const handleClass12WeightageChange = (val: number) => {
-    setClass12Weightage(val)
-    setClass11Weightage(Math.max(0, 100 - val))
+    const clamped = Math.max(0, Math.min(100, val))
+    setClass12Weightage(clamped)
+    setClass11Weightage(100 - clamped)
   }
+
+  // Step 2 Comprehensive Validation
+  const validationErrors = useMemo(() => {
+    const errors: string[] = []
+
+    // 1. Chapter selection
+    const hasContent = selectedChapters.length > 0 || selectedTopics.length > 0 || Boolean(uploadedSyllabusText)
+    if (!hasContent) {
+      errors.push("Please select at least one chapter, topic, or upload a syllabus PDF.")
+    }
+
+    // 2. Question counts > 0
+    if (totalQuestions <= 0) {
+      errors.push("Total Questions in Question Type & Marks must be greater than 0.")
+    }
+    if (totalSubjectQuestions <= 0) {
+      errors.push("Total Questions across subjects must be greater than 0.")
+    }
+
+    // 3. Question Count Synchronization (Requirement 1)
+    if (totalQuestions !== totalSubjectQuestions) {
+      errors.push(
+        `Question count mismatch: Question Types total is ${totalQuestions}, but Subject-wise total is ${totalSubjectQuestions}. Both totals must match.`
+      )
+    }
+
+    // 4. Total Marks Synchronization (Requirement 2)
+    if (totalMarks !== totalSubjectMarks) {
+      errors.push(
+        `Total marks mismatch: Question Types total is ${totalMarks} marks, but Subject-wise total is ${totalSubjectMarks} marks. Both totals must match.`
+      )
+    }
+
+    // 5. Zero Questions Subject Marks Invariant (Requirement 3)
+    for (const sub of selectedSubjects) {
+      const sConf = subjectDist[sub]
+      if (sConf && sConf.questions === 0 && sConf.marks > 0) {
+        errors.push(`${sub} has 0 questions but has ${sConf.marks} marks. A subject with 0 questions must have 0 marks.`)
+      }
+    }
+
+    // 6. Syllabus Weightage Invariant (Requirement 6)
+    const totalWeightage = (Number(class11Weightage) || 0) + (Number(class12Weightage) || 0)
+    if (totalWeightage !== 100) {
+      errors.push(`Syllabus weightage must total exactly 100% (currently ${totalWeightage}%).`)
+    }
+
+    return errors
+  }, [
+    selectedChapters.length,
+    selectedTopics.length,
+    uploadedSyllabusText,
+    totalQuestions,
+    totalSubjectQuestions,
+    totalMarks,
+    totalSubjectMarks,
+    selectedSubjects,
+    subjectDist,
+    class11Weightage,
+    class12Weightage,
+  ])
+
+  const isStep2Valid = validationErrors.length === 0
 
   // Step 2: Chapters by subject & grade
   const currentSubjectChapters = useMemo(() => {
@@ -777,7 +1110,7 @@ function AIGeneratorContent() {
       return selectedSubjects.length > 0
     }
     if (step === 2) {
-      return selectedChapters.length > 0 || selectedTopics.length > 0 || Boolean(uploadedSyllabusText)
+      return isStep2Valid
     }
     return true
   }
@@ -2309,10 +2642,57 @@ function AIGeneratorContent() {
                 </div>
 
                 {/* Selected Status Bar */}
-                <div className="px-4 py-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-2 text-xs font-bold text-blue-900 mb-8">
+                <div className="px-4 py-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-2 text-xs font-bold text-blue-900 mb-6">
                   <Check className="w-4 h-4 text-blue-600 stroke-[2.5]" />
                   <span>Selected: {selectedChapters.length} Chapters</span>
                 </div>
+
+                {/* ─── Validation Alert Box (Requirements 1, 2, 3, 6, 8) ─── */}
+                {validationErrors.length > 0 && (
+                  <div className="mb-6 p-4 rounded-2xl bg-amber-50/90 border border-amber-200/90 shadow-2xs animate-in fade-in-50">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                          <AlertTriangle className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-amber-950">
+                            Blueprint Configuration Alignment Needed ({validationErrors.length})
+                          </h4>
+                          <ul className="mt-1.5 space-y-1 text-xs text-amber-900">
+                            {validationErrors.map((err, idx) => (
+                              <li key={idx} className="flex items-start gap-1.5">
+                                <span className="text-amber-500 font-bold">•</span>
+                                <span>{err}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      {(totalQuestions !== totalSubjectQuestions || totalMarks !== totalSubjectMarks) && (
+                        <div className="flex items-center gap-2 shrink-0 self-start md:self-center pt-1 md:pt-0">
+                          <button
+                            type="button"
+                            onClick={syncTypesToSubjects}
+                            className="px-3 py-1.5 rounded-lg bg-amber-700 hover:bg-amber-800 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                            title="Auto-adjust Question Types to match Subject-wise total questions & marks"
+                          >
+                            Auto-Sync Question Types
+                          </button>
+                          <button
+                            type="button"
+                            onClick={syncSubjectsToTypes}
+                            className="px-3 py-1.5 rounded-lg bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                            title="Auto-adjust Subject-wise distribution to match Question Types totals"
+                          >
+                            Auto-Sync Subjects
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* ─── Bottom Section: Question Type & Marks (Left) + Subject Breakdown & Syllabus Weightage (Right) ─── */}
@@ -2403,11 +2783,49 @@ function AIGeneratorContent() {
                   </div>
 
                   {/* Bottom Summary Bar */}
-                  <div className="mt-4 px-4 py-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-2 text-xs font-semibold text-blue-950">
-                    <Info size={14} className="text-blue-600 shrink-0" />
-                    <span>Total Questions: <b className="text-slate-900">{totalQuestions}</b></span>
-                    <span className="text-blue-200 mx-1">|</span>
-                    <span>Total Marks: <b className="text-slate-900">{totalMarks}</b></span>
+                  <div
+                    className={`mt-4 px-4 py-2.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-semibold ${
+                      totalQuestions === totalSubjectQuestions && totalMarks === totalSubjectMarks
+                        ? "bg-blue-50/70 border-blue-100 text-blue-950"
+                        : "bg-amber-50/70 border-amber-200 text-amber-950"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Info
+                        size={14}
+                        className={
+                          totalQuestions === totalSubjectQuestions && totalMarks === totalSubjectMarks
+                            ? "text-blue-600 shrink-0"
+                            : "text-amber-600 shrink-0"
+                        }
+                      />
+                      <span>
+                        Total Questions: <b className="text-slate-900">{totalQuestions}</b>
+                      </span>
+                      <span className="text-slate-300 mx-1">|</span>
+                      <span>
+                        Total Marks: <b className="text-slate-900">{totalMarks}</b>
+                      </span>
+                    </div>
+
+                    {totalQuestions === totalSubjectQuestions && totalMarks === totalSubjectMarks ? (
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md self-start sm:self-auto">
+                        ✓ Matches Subject Totals
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <span className="text-[11px] font-bold text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md">
+                          Subjects: {totalSubjectQuestions} Qs / {totalSubjectMarks} M
+                        </span>
+                        <button
+                          type="button"
+                          onClick={syncTypesToSubjects}
+                          className="text-[11px] font-bold text-blue-700 hover:text-blue-900 underline cursor-pointer"
+                        >
+                          Sync Now
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2415,9 +2833,20 @@ function AIGeneratorContent() {
                 <div className="lg:col-span-5 xl:col-span-5 space-y-5">
                   {/* Box 1: Subject-wise Marks */}
                   <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs">
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5 mb-3">
-                      Subject-wise Marks <Info size={13} className="text-slate-400" />
-                    </h4>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                        Subject-wise Marks <Info size={13} className="text-slate-400" />
+                      </h4>
+                      {totalQuestions === totalSubjectQuestions && totalMarks === totalSubjectMarks ? (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                          Synchronized ✓
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          Mismatch
+                        </span>
+                      )}
+                    </div>
 
                     <div className="space-y-2">
                       <div className="grid grid-cols-12 gap-2 text-[11px] font-semibold text-slate-400 pb-1.5 border-b border-slate-100">
@@ -2426,44 +2855,81 @@ function AIGeneratorContent() {
                         <span className="col-span-3 text-center">Marks</span>
                       </div>
 
-                      {selectedSubjects.map((sub) => (
-                        <div key={sub} className="grid grid-cols-12 gap-2 items-center py-1">
-                          <span className="col-span-6 text-xs font-medium text-slate-800 truncate">{sub}</span>
-                          <div className="col-span-3 flex justify-center">
-                            <input
-                              type="number"
-                              min={0}
-                              value={subjectDist[sub]?.questions ?? 50}
-                              onChange={(e) => updateSubjectDist(sub, "questions", parseInt(e.target.value, 10) || 0)}
-                              className="w-16 h-8 px-2 text-center rounded-lg border border-slate-200 bg-slate-50/70 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#324158]/10 shadow-2xs"
-                            />
+                      {selectedSubjects.map((sub) => {
+                        const qVal = subjectDist[sub]?.questions ?? 0
+                        const mVal = subjectDist[sub]?.marks ?? 0
+                        const isZeroQ = qVal === 0
+
+                        return (
+                          <div key={sub} className="grid grid-cols-12 gap-2 items-center py-1">
+                            <span className="col-span-6 text-xs font-medium text-slate-800 truncate">{sub}</span>
+                            <div className="col-span-3 flex justify-center">
+                              <input
+                                type="number"
+                                min={0}
+                                max={200}
+                                value={qVal}
+                                onChange={(e) => updateSubjectDist(sub, "questions", parseInt(e.target.value, 10) || 0)}
+                                className="w-16 h-8 px-2 text-center rounded-lg border border-slate-200 bg-slate-50/70 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#324158]/10 shadow-2xs"
+                              />
+                            </div>
+                            <div className="col-span-3 flex justify-center">
+                              <input
+                                type="number"
+                                min={0}
+                                max={1000}
+                                disabled={isZeroQ}
+                                value={isZeroQ ? 0 : mVal}
+                                onChange={(e) => updateSubjectDist(sub, "marks", parseInt(e.target.value, 10) || 0)}
+                                title={isZeroQ ? "Subject has 0 questions (Marks must be 0)" : "Total marks for this subject"}
+                                className={`w-16 h-8 px-2 text-center rounded-lg border text-xs font-semibold shadow-2xs ${
+                                  isZeroQ
+                                    ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed select-none"
+                                    : "border-slate-200 bg-slate-50/70 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#324158]/10"
+                                }`}
+                              />
+                            </div>
                           </div>
-                          <div className="col-span-3 flex justify-center">
-                            <input
-                              type="number"
-                              min={0}
-                              value={subjectDist[sub]?.marks ?? (sub === "Mathematics" ? 100 : 50)}
-                              onChange={(e) => updateSubjectDist(sub, "marks", parseInt(e.target.value, 10) || 0)}
-                              className="w-16 h-8 px-2 text-center rounded-lg border border-slate-200 bg-slate-50/70 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#324158]/10 shadow-2xs"
-                            />
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
 
                       {/* Total Row */}
                       <div className="grid grid-cols-12 gap-2 items-center pt-2.5 border-t border-slate-100 font-bold text-xs text-slate-900">
                         <span className="col-span-6">Total</span>
-                        <span className="col-span-3 text-center">{totalSubjectQuestions}</span>
-                        <span className="col-span-3 text-center">{totalSubjectMarks}</span>
+                        <span
+                          className={`col-span-3 text-center ${
+                            totalSubjectQuestions === totalQuestions ? "text-slate-900" : "text-amber-700"
+                          }`}
+                        >
+                          {totalSubjectQuestions}
+                        </span>
+                        <span
+                          className={`col-span-3 text-center ${
+                            totalSubjectMarks === totalMarks ? "text-slate-900" : "text-amber-700"
+                          }`}
+                        >
+                          {totalSubjectMarks}
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Box 2: Syllabus Weightage */}
                   <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs">
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5 mb-3">
-                      Syllabus Weightage <Info size={13} className="text-slate-400" />
-                    </h4>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                        Syllabus Weightage <Info size={13} className="text-slate-400" />
+                      </h4>
+                      {class11Weightage + class12Weightage === 100 ? (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                          100% Total ✓
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          {class11Weightage + class12Weightage}% Total
+                        </span>
+                      )}
+                    </div>
 
                     <div className="space-y-2.5">
                       <div className="grid grid-cols-12 gap-2 text-[11px] font-semibold text-slate-400 pb-1.5 border-b border-slate-100">
@@ -2479,8 +2945,10 @@ function AIGeneratorContent() {
                             onChange={(e) => handleClass11WeightageChange(Number(e.target.value))}
                             className="w-24 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 appearance-none"
                           >
-                            {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((v) => (
-                              <option key={v} value={v}>{v}%</option>
+                            {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((v) => (
+                              <option key={v} value={v}>
+                                {v}%
+                              </option>
                             ))}
                           </select>
                           <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -2495,11 +2963,29 @@ function AIGeneratorContent() {
                             onChange={(e) => handleClass12WeightageChange(Number(e.target.value))}
                             className="w-24 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 appearance-none"
                           >
-                            {[90, 80, 70, 60, 50, 40, 30, 20, 10].map((v) => (
-                              <option key={v} value={v}>{v}%</option>
+                            {[100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0].map((v) => (
+                              <option key={v} value={v}>
+                                {v}%
+                              </option>
                             ))}
                           </select>
                           <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                      </div>
+
+                      {/* Total Weightage Summary Row */}
+                      <div className="grid grid-cols-12 gap-2 items-center pt-2.5 border-t border-slate-100 font-bold text-xs text-slate-900">
+                        <span className="col-span-6">Total Weightage</span>
+                        <div className="col-span-6 flex justify-center">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                              class11Weightage + class12Weightage === 100
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-amber-50 text-amber-700 border border-amber-200"
+                            }`}
+                          >
+                            {class11Weightage + class12Weightage}% {class11Weightage + class12Weightage === 100 ? "✓" : "⚠️"}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -3949,11 +4435,7 @@ function AIGeneratorContent() {
                   <button
                     type="button"
                     onClick={handleGenerate}
-                    disabled={
-                      isGenerating ||
-                      (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
-                      targetTotalQuestions === 0
-                    }
+                    disabled={isGenerating || !isStep2Valid}
                     className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? "animate-spin" : ""}`} />
@@ -3970,10 +4452,11 @@ function AIGeneratorContent() {
                       handleGenerate()
                     }
                   }}
-                  disabled={
-                    isGenerating ||
-                    (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) ||
-                    targetTotalQuestions === 0
+                  disabled={isGenerating || !isStep2Valid}
+                  title={
+                    !isStep2Valid
+                      ? validationErrors[0] || "Please resolve configuration alignment issues before proceeding"
+                      : "Proceed to next step"
                   }
                   className="px-6 py-2.5 rounded-xl bg-[#324158] hover:bg-[#253244] text-white font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
                 >
