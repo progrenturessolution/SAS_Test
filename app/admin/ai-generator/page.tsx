@@ -1101,10 +1101,12 @@ function AIGeneratorContent() {
       }
     }
 
-    // 6. Syllabus Weightage Invariant (Requirement 6)
-    const totalWeightage = (Number(class11Weightage) || 0) + (Number(class12Weightage) || 0)
-    if (totalWeightage !== 100) {
-      errors.push(`Syllabus weightage must total exactly 100% (currently ${totalWeightage}%).`)
+    // 6. Syllabus Weightage Invariant (Only applies when Class 11 + 12 is selected)
+    if (selectedGrade === "both") {
+      const totalWeightage = (Number(class11Weightage) || 0) + (Number(class12Weightage) || 0)
+      if (totalWeightage !== 100) {
+        errors.push(`Syllabus weightage must total exactly 100% (currently ${totalWeightage}%).`)
+      }
     }
 
     return errors
@@ -1120,6 +1122,7 @@ function AIGeneratorContent() {
     subjectDist,
     class11Weightage,
     class12Weightage,
+    selectedGrade,
   ])
 
   const isStep2Valid = validationErrors.length === 0
@@ -2971,82 +2974,84 @@ function AIGeneratorContent() {
                     </div>
                   </div>
 
-                  {/* Box 2: Syllabus Weightage */}
-                  <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs">
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                        Syllabus Weightage <Info size={13} className="text-slate-400" />
-                      </h4>
-                      {class11Weightage + class12Weightage === 100 ? (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                          100% Total ✓
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                          {class11Weightage + class12Weightage}% Total
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="space-y-2.5">
-                      <div className="grid grid-cols-12 gap-2 text-[11px] font-semibold text-slate-400 pb-1.5 border-b border-slate-100">
-                        <span className="col-span-6">Class</span>
-                        <span className="col-span-6 text-center">Weightage</span>
-                      </div>
-
-                      <div className="grid grid-cols-12 gap-2 items-center py-1">
-                        <span className="col-span-6 text-xs font-medium text-slate-800">Class 11</span>
-                        <div className="col-span-6 flex justify-center relative">
-                          <select
-                            value={class11Weightage}
-                            onChange={(e) => handleClass11WeightageChange(Number(e.target.value))}
-                            className="w-24 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 appearance-none"
-                          >
-                            {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((v) => (
-                              <option key={v} value={v}>
-                                {v}%
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-12 gap-2 items-center py-1">
-                        <span className="col-span-6 text-xs font-medium text-slate-800">Class 12</span>
-                        <div className="col-span-6 flex justify-center relative">
-                          <select
-                            value={class12Weightage}
-                            onChange={(e) => handleClass12WeightageChange(Number(e.target.value))}
-                            className="w-24 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 appearance-none"
-                          >
-                            {[100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0].map((v) => (
-                              <option key={v} value={v}>
-                                {v}%
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        </div>
-                      </div>
-
-                      {/* Total Weightage Summary Row */}
-                      <div className="grid grid-cols-12 gap-2 items-center pt-2.5 border-t border-slate-100 font-bold text-xs text-slate-900">
-                        <span className="col-span-6">Total Weightage</span>
-                        <div className="col-span-6 flex justify-center">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                              class11Weightage + class12Weightage === 100
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-amber-50 text-amber-700 border border-amber-200"
-                            }`}
-                          >
-                            {class11Weightage + class12Weightage}% {class11Weightage + class12Weightage === 100 ? "✓" : "⚠️"}
+                  {/* Box 2: Syllabus Weightage - Only show when Class 11 + 12 is selected */}
+                  {selectedGrade === "both" && (
+                    <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                          Syllabus Weightage <Info size={13} className="text-slate-400" />
+                        </h4>
+                        {class11Weightage + class12Weightage === 100 ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            100% Total ✓
                           </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                            {class11Weightage + class12Weightage}% Total
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <div className="grid grid-cols-12 gap-2 text-[11px] font-semibold text-slate-400 pb-1.5 border-b border-slate-100">
+                          <span className="col-span-6">Class</span>
+                          <span className="col-span-6 text-center">Weightage</span>
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-2 items-center py-1">
+                          <span className="col-span-6 text-xs font-medium text-slate-800">Class 11</span>
+                          <div className="col-span-6 flex justify-center relative">
+                            <select
+                              value={class11Weightage}
+                              onChange={(e) => handleClass11WeightageChange(Number(e.target.value))}
+                              className="w-24 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 appearance-none"
+                            >
+                              {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((v) => (
+                                <option key={v} value={v}>
+                                  {v}%
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-2 items-center py-1">
+                          <span className="col-span-6 text-xs font-medium text-slate-800">Class 12</span>
+                          <div className="col-span-6 flex justify-center relative">
+                            <select
+                              value={class12Weightage}
+                              onChange={(e) => handleClass12WeightageChange(Number(e.target.value))}
+                              className="w-24 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 appearance-none"
+                            >
+                              {[100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0].map((v) => (
+                                <option key={v} value={v}>
+                                  {v}%
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                          </div>
+                        </div>
+
+                        {/* Total Weightage Summary Row */}
+                        <div className="grid grid-cols-12 gap-2 items-center pt-2.5 border-t border-slate-100 font-bold text-xs text-slate-900">
+                          <span className="col-span-6">Total Weightage</span>
+                          <div className="col-span-6 flex justify-center">
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                class11Weightage + class12Weightage === 100
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : "bg-amber-50 text-amber-700 border border-amber-200"
+                              }`}
+                            >
+                              {class11Weightage + class12Weightage}% {class11Weightage + class12Weightage === 100 ? "✓" : "⚠️"}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
