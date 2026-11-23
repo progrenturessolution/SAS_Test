@@ -1,9 +1,9 @@
-﻿"use client"
+"use client"
 
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useState, useMemo, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Filter, Share2, Check, Globe, Users } from "lucide-react"
+import { Filter, Share2, Check, Globe, Users, Search, X } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { Toaster } from "@/components/ui/toaster"
 import { ResultActionMenu } from "@/components/ResultActionMenu"
@@ -34,6 +34,7 @@ function ResultsPageInner() {
   const [results, setResults] = useState<Result[]>([])
   const [exams, setExams] = useState<{_id: string, title: string}[]>([])
   const [candidateTypeFilter, setCandidateTypeFilter] = useState<"all" | "institute" | "public">("all")
+  const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
 
@@ -72,11 +73,22 @@ function ResultsPageInner() {
     }
   }
 
-  const avg = results.length
-    ? Math.round(results.reduce((s, r) => s + (r.percentage || 0), 0) / results.length)
+  const filteredResults = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return results
+    return results.filter(
+      (r) =>
+        r.studentName?.toLowerCase().includes(q) ||
+        r.rollNumber?.toLowerCase().includes(q) ||
+        r.studentEmail?.toLowerCase().includes(q)
+    )
+  }, [results, search])
+
+  const avg = filteredResults.length
+    ? Math.round(filteredResults.reduce((s, r) => s + (r.percentage || 0), 0) / filteredResults.length)
     : 0
 
-  const passed = results.filter((r) => r.passed).length
+  const passed = filteredResults.filter((r) => r.passed).length
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
@@ -90,51 +102,107 @@ function ResultsPageInner() {
             Real-time candidate submissions, proctoring alerts, and automated scoring analysis
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3.5 py-2 shadow-2xs hover:border-slate-300 transition-colors">
-            <Filter size={15} className="text-slate-400" />
-            <select 
-              value={examId || "all"} 
-              onChange={(e) => handleExamChange(e.target.value)}
-              className="bg-transparent border-none text-xs sm:text-sm font-semibold focus:ring-0 cursor-pointer text-slate-800 min-w-[180px] sm:min-w-[220px] outline-none"
-            >
-              <option value="all">All Exams</option>
-              {exams.map(e => (
-                <option key={e._id} value={e._id}>{e.title}</option>
-              ))}
-            </select>
-          </div>
 
-          {/* Candidate Registration Type Filter */}
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3.5 py-2 shadow-2xs hover:border-slate-300 transition-colors">
-            <Users size={15} className="text-slate-400" />
-            <select
-              value={candidateTypeFilter}
-              onChange={(e) => setCandidateTypeFilter(e.target.value as "all" | "institute" | "public")}
-              className="bg-transparent border-none text-xs sm:text-sm font-semibold focus:ring-0 cursor-pointer text-slate-800 min-w-[170px] sm:min-w-[210px] outline-none"
-            >
-              <option value="all">All Candidates</option>
-              <option value="institute">Enrolled Students (Institute)</option>
-              <option value="public">External / Public Candidates</option>
-            </select>
-          </div>
+        {examId && (
+          <button
+            onClick={copyShareLink}
+            className={`self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer ${
+              copied
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs"
+                : "bg-[#1E293B] hover:bg-[#0F172A] text-white hover:shadow-md"
+            }`}
+          >
+            {copied ? (
+              <><Check size={14} className="stroke-[2.5]" /> Link Copied!</>
+            ) : (
+              <><Share2 size={14} /> Share Results Link</>
+            )}
+          </button>
+        )}
+      </div>
 
-          {examId && (
-            <button
-              onClick={copyShareLink}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer ${
-                copied
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs"
-                  : "bg-[#1E293B] hover:bg-[#0F172A] text-white hover:shadow-md"
-              }`}
-            >
-              {copied ? (
-                <><Check size={14} className="stroke-[2.5]" /> Link Copied!</>
-              ) : (
-                <><Share2 size={14} /> Share Results Link</>
+      {/* Dedicated Filter & Search Bar - Side by Side Dropdowns */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Controls: Search + Side-by-side Dropdown Filters */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 flex-1 flex-wrap">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-64 md:w-72 shrink-0">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+              <input
+                type="text"
+                placeholder="Search candidates by name, roll..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-all shadow-2xs"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
               )}
-            </button>
-          )}
+            </div>
+
+            {/* Dropdown 1: Exam Filter */}
+            <div className="flex items-center gap-2 bg-slate-50/80 hover:bg-slate-50 focus-within:bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs transition-colors flex-1 sm:flex-initial sm:min-w-[210px] focus-within:border-slate-800 focus-within:ring-2 focus-within:ring-slate-900/10">
+              <Filter size={14} className="text-slate-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <select 
+                  value={examId || "all"} 
+                  onChange={(e) => handleExamChange(e.target.value)}
+                  className="w-full bg-transparent border-none text-xs sm:text-sm font-semibold focus:ring-0 cursor-pointer text-slate-800 outline-none truncate pr-1"
+                >
+                  <option value="all">All Exams</option>
+                  {exams.map(e => (
+                    <option key={e._id} value={e._id}>{e.title}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Dropdown 2: Candidate Registration Type Filter */}
+            <div className="flex items-center gap-2 bg-slate-50/80 hover:bg-slate-50 focus-within:bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs transition-colors flex-1 sm:flex-initial sm:min-w-[210px] focus-within:border-slate-800 focus-within:ring-2 focus-within:ring-slate-900/10">
+              <Users size={14} className="text-slate-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <select
+                  value={candidateTypeFilter}
+                  onChange={(e) => setCandidateTypeFilter(e.target.value as "all" | "institute" | "public")}
+                  className="w-full bg-transparent border-none text-xs sm:text-sm font-semibold focus:ring-0 cursor-pointer text-slate-800 outline-none truncate pr-1"
+                >
+                  <option value="all">All Candidates</option>
+                  <option value="institute">Enrolled Students (Institute)</option>
+                  <option value="public">External / Public Candidates</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Reset Filter Button */}
+            {(search || examId || candidateTypeFilter !== "all") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("")
+                  setCandidateTypeFilter("all")
+                  if (examId) router.push("/admin/results")
+                }}
+                className="px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                title="Reset all filters and search"
+              >
+                <X size={13} />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
+
+          {/* Right: Counter badge */}
+          <div className="text-xs font-medium text-slate-400 shrink-0 text-left md:text-right pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
+            Showing <span className="font-bold text-slate-800">{filteredResults.length}</span> of <span className="font-semibold text-slate-600">{results.length}</span> attempts
+          </div>
         </div>
       </div>
 
@@ -146,7 +214,7 @@ function ResultsPageInner() {
             Total Attempts
           </p>
           <p className="text-2xl sm:text-3xl font-extrabold text-[#324158] tracking-tight">
-            {results.length}
+            {filteredResults.length}
           </p>
           <p className="text-xs text-slate-500 mt-1">
             {candidateTypeFilter === "public"
@@ -168,7 +236,7 @@ function ResultsPageInner() {
             {passed}
           </p>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            {results.length > 0 ? `${Math.round((passed / results.length) * 100)}% Pass Rate` : "No attempts yet"}
+            {filteredResults.length > 0 ? `${Math.round((passed / filteredResults.length) * 100)}% Pass Rate` : "No attempts yet"}
           </p>
         </div>
 
@@ -178,10 +246,10 @@ function ResultsPageInner() {
             Failed / Retake
           </p>
           <p className="text-2xl sm:text-3xl font-extrabold text-[#324158] tracking-tight">
-            {results.length - passed}
+            {filteredResults.length - passed}
           </p>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            {results.length > 0 ? `${Math.round(((results.length - passed) / results.length) * 100)}% Below Passing` : "0% Fail Rate"}
+            {filteredResults.length > 0 ? `${Math.round(((filteredResults.length - passed) / filteredResults.length) * 100)}% Below Passing` : "0% Fail Rate"}
           </p>
         </div>
 
@@ -212,10 +280,37 @@ function ResultsPageInner() {
               </tr>
             </thead>
             <tbody>
-              {results.length === 0 && (
-                <tr><td colSpan={8} className="text-center py-12 text-gray-400 text-sm">No results yet.</td></tr>
+              {filteredResults.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="text-center py-16 text-gray-400 text-sm">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
+                        <Search size={22} />
+                      </div>
+                      <p className="font-semibold text-slate-700 text-sm">No results match your criteria</p>
+                      <p className="text-xs text-gray-400 max-w-sm">
+                        {search
+                          ? `No candidates match "${search}". Try adjusting your search query.`
+                          : "No candidate attempts found for the selected filter combination."}
+                      </p>
+                      {(search || examId || candidateTypeFilter !== "all") && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearch("")
+                            setCandidateTypeFilter("all")
+                            if (examId) router.push("/admin/results")
+                          }}
+                          className="mt-1 text-xs text-primary font-semibold hover:underline cursor-pointer"
+                        >
+                          Clear all filters
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
               )}
-              {results.map((r) => (
+              {filteredResults.map((r) => (
                 <tr key={r._id} className="border-b border-gray-50 hover:bg-gray-50 last:border-0">
                   <td className="px-5 py-4">
                     <p className="text-sm font-medium text-foreground">{r.studentName}</p>
