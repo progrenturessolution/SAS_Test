@@ -128,8 +128,8 @@ export async function POST(req: Request) {
       )
     }
 
-    // Determine expanded exam types based on the access options (Competitive, Standard Exam, Other Exams)
-    const rawIncomingTypes = Array.isArray(examTypes) ? examTypes : ["COMPETITIVE", "EXAM", "OTHER"]
+    // Determine expanded exam types based on the access options (Competitive, Other Exams)
+    const rawIncomingTypes = Array.isArray(examTypes) ? examTypes : ["COMPETITIVE", "OTHER"]
     const hasCompetitive = rawIncomingTypes.some((t: string) =>
       ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(t).toUpperCase())
     )

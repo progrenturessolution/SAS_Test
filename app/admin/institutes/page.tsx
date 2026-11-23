@@ -53,11 +53,6 @@ const EXAM_ACCESS_OPTIONS = [
     description: "Access to AI Competitive Test Studio (NEET, JEE, MHT-CET, etc.)",
   },
   {
-    value: "EXAM",
-    label: "Exam",
-    description: "Access to Standard Exam creation and manual question paper generator",
-  },
-  {
     value: "OTHER",
     label: "Other Exams",
     description: "Access to Other Competitive & Government Exams Studio",
@@ -69,10 +64,8 @@ function normalizeExamTypes(rawTypes: string[] = []): string[] {
   const hasComp = rawTypes.some((t) =>
     ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(t).toUpperCase())
   )
-  const hasExam = rawTypes.some((t) => ["EXAM", "CUSTOM"].includes(String(t).toUpperCase()))
   const hasOther = rawTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(String(t).toUpperCase()))
   if (hasComp) result.push("COMPETITIVE")
-  if (hasExam) result.push("EXAM")
   if (hasOther) result.push("OTHER")
   return result
 }
@@ -151,7 +144,7 @@ export default function InstitutesManagementPage() {
   const [formContactPerson, setFormContactPerson] = useState("")
   const [formMaxStudents, setFormMaxStudents] = useState(100)
   const [formMaxExams, setFormMaxExams] = useState(20)
-  const [formExamTypes, setFormExamTypes] = useState<string[]>(["COMPETITIVE", "EXAM", "OTHER"])
+  const [formExamTypes, setFormExamTypes] = useState<string[]>(["COMPETITIVE", "OTHER"])
   const [formCustomQuestionTypes, setFormCustomQuestionTypes] = useState<string[]>(ALL_CUSTOM_QUESTION_TYPES)
   const [formPdfImport, setFormPdfImport] = useState(true)
   const [formValidUntil, setFormValidUntil] = useState("")
@@ -266,7 +259,7 @@ export default function InstitutesManagementPage() {
       setFormContactPerson("")
       setFormMaxStudents(100)
       setFormMaxExams(20)
-      setFormExamTypes(["COMPETITIVE", "EXAM", "OTHER"])
+      setFormExamTypes(["COMPETITIVE", "OTHER"])
       setFormCustomQuestionTypes(ALL_CUSTOM_QUESTION_TYPES)
       setFormValidUntil("")
       await fetchInstitutes()
@@ -1275,7 +1268,7 @@ export default function InstitutesManagementPage() {
                 <div className="flex flex-wrap gap-2">
                   {normalizeExamTypes(selectedInstitute.limits?.examTypes || []).map((type) => (
                     <span key={type} className="rounded-full border border-[#324158]/20 bg-[#324158]/5 px-2.5 py-1 text-[11px] font-bold text-[#324158]">
-                      {type === "COMPETITIVE" ? "Competitive Test" : type === "OTHER" ? "Other Exams" : "Exam"}
+                      {type === "COMPETITIVE" ? "Competitive Test" : "Other Exams"}
                     </span>
                   ))}
                   {normalizeExamTypes(selectedInstitute.limits?.examTypes || []).length === 0 && (
@@ -1466,7 +1459,7 @@ export default function InstitutesManagementPage() {
                   <span className="font-semibold text-gray-700 block mb-1.5">
                     Exam Creation Access
                   </span>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     {EXAM_ACCESS_OPTIONS.map((option) => {
                       const isChecked = formExamTypes.includes(option.value)
                       return (
@@ -1770,7 +1763,7 @@ export default function InstitutesManagementPage() {
                   <label className="font-semibold text-gray-700 block mb-1.5">
                     Exam Creation Access
                   </label>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     {EXAM_ACCESS_OPTIONS.map((option) => {
                       const isChecked = editExamTypes.includes(option.value)
                       return (
