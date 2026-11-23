@@ -25,11 +25,80 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     // Editable fields
-    if (body.name !== undefined) institute.name = body.name.trim()
-    if (body.phone !== undefined) institute.phone = body.phone.trim()
-    if (body.city !== undefined) institute.city = body.city.trim()
-    if (body.address !== undefined) institute.address = body.address.trim()
-    if (body.contactPerson !== undefined) institute.contactPerson = body.contactPerson.trim()
+    if (body.name !== undefined && body.name.trim()) {
+      institute.name = body.name.trim()
+    }
+
+    // Code validation and update
+    if (body.code !== undefined && body.code.trim()) {
+      const cleanCode = body.code.trim().toUpperCase()
+      if (cleanCode !== institute.code) {
+        const existingCode = await Institute.findOne({ code: cleanCode, _id: { $ne: id } })
+        if (existingCode) {
+          return NextResponse.json(
+            { error: `Organization code "${cleanCode}" is already taken.` },
+            { status: 400 }
+          )
+        }
+        institute.code = cleanCode
+      }
+    }
+
+    // Email validation and update
+    if (body.email !== undefined && body.email.trim()) {
+      const cleanEmail = body.email.trim().toLowerCase()
+      if (cleanEmail !== institute.email) {
+        const existingEmail = await Institute.findOne({ email: cleanEmail, _id: { $ne: id } })
+        if (existingEmail) {
+          return NextResponse.json(
+            { error: `Email "${cleanEmail}" is already registered to another organization.` },
+            { status: 400 }
+          )
+        }
+        const existingUser = await User.findOne({
+          email: cleanEmail,
+          instituteId: { $ne: institute._id },
+        })
+        if (existingUser && existingUser.role !== "student") {
+          return NextResponse.json(
+            { error: `User with email "${cleanEmail}" already exists in the system.` },
+            { status: 400 }
+          )
+        }
+        institute.email = cleanEmail
+
+        // Also update linked User account's email
+        const user = await User.findOne({
+          $or: [
+            ...(institute.adminUserId ? [{ _id: institute.adminUserId }] : []),
+            { instituteId: institute._id, role: "institute" },
+          ],
+        })
+        if (user) {
+          user.email = cleanEmail
+          await user.save()
+        }
+      }
+    }
+
+    // Also sync User name if institute.name updated
+    if (body.name !== undefined && body.name.trim()) {
+      const user = await User.findOne({
+        $or: [
+          ...(institute.adminUserId ? [{ _id: institute.adminUserId }] : []),
+          { instituteId: institute._id, role: "institute" },
+        ],
+      })
+      if (user) {
+        user.name = institute.name + " Admin"
+        await user.save()
+      }
+    }
+
+    if (body.phone !== undefined) institute.phone = body.phone ? body.phone.trim() : ""
+    if (body.city !== undefined) institute.city = body.city ? body.city.trim() : ""
+    if (body.address !== undefined) institute.address = body.address ? body.address.trim() : ""
+    if (body.contactPerson !== undefined) institute.contactPerson = body.contactPerson ? body.contactPerson.trim() : ""
     if (body.status !== undefined) institute.status = body.status
 
     if (body.validUntil !== undefined) {
@@ -44,6 +113,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const user = await User.findOne({
         $or: [
           ...(institute.adminUserId ? [{ _id: institute.adminUserId }] : []),
+          { instituteId: institute._id, role: "institute" },
           ...(institute.email ? [{ email: institute.email.toLowerCase() }] : []),
         ],
       })

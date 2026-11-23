@@ -159,6 +159,13 @@ export default function InstitutesManagementPage() {
   const [formError, setFormError] = useState("")
 
   // Edit Organization state
+  const [editName, setEditName] = useState("")
+  const [editCode, setEditCode] = useState("")
+  const [editEmail, setEditEmail] = useState("")
+  const [editPhone, setEditPhone] = useState("")
+  const [editCity, setEditCity] = useState("")
+  const [editAddress, setEditAddress] = useState("")
+  const [editContactPerson, setEditContactPerson] = useState("")
   const [editMaxStudents, setEditMaxStudents] = useState(100)
   const [editMaxExams, setEditMaxExams] = useState(20)
   const [editExamTypes, setEditExamTypes] = useState<string[]>([])
@@ -169,6 +176,7 @@ export default function InstitutesManagementPage() {
   const [editPassword, setEditPassword] = useState("")
   const [showEditPassword, setShowEditPassword] = useState(false)
   const [savingLimits, setSavingLimits] = useState(false)
+  const [editError, setEditError] = useState("")
 
   // Password reset state
   const [newPassword, setNewPassword] = useState("")
@@ -272,6 +280,13 @@ export default function InstitutesManagementPage() {
   // Open Edit Organization Modal
   const openEditLimits = (inst: Institute) => {
     setShowEditLimitsModal(inst)
+    setEditName(inst.name || "")
+    setEditCode(inst.code || "")
+    setEditEmail(inst.email || "")
+    setEditPhone(inst.phone || "")
+    setEditCity(inst.city || "")
+    setEditAddress(inst.address || "")
+    setEditContactPerson(inst.contactPerson || "")
     setEditPassword("")
     setShowEditPassword(false)
     setEditMaxStudents(inst.limits?.maxStudents ?? 100)
@@ -283,19 +298,41 @@ export default function InstitutesManagementPage() {
     setEditValidUntil(
       inst.validUntil ? new Date(inst.validUntil).toISOString().split("T")[0] : ""
     )
+    setEditError("")
   }
 
   // Handle Save Organization Changes
   const handleSaveLimits = async () => {
     if (!showEditLimitsModal) return
+    setEditError("")
+
+    if (!editName.trim()) {
+      setEditError("Organization Name is required.")
+      return
+    }
+    if (!editCode.trim()) {
+      setEditError("Organization Code is required.")
+      return
+    }
+    if (!editEmail.trim()) {
+      setEditError("Login Email is required.")
+      return
+    }
     if (editPassword.trim() && editPassword.trim().length < 6) {
-      alert("Password must be at least 6 characters long.")
+      setEditError("Password must be at least 6 characters long.")
       return
     }
     setSavingLimits(true)
 
     try {
       const payload: any = {
+        name: editName.trim(),
+        code: editCode.trim().toUpperCase(),
+        email: editEmail.trim().toLowerCase(),
+        phone: editPhone.trim(),
+        city: editCity.trim(),
+        address: editAddress.trim(),
+        contactPerson: editContactPerson.trim(),
         status: editStatus,
         validUntil: editValidUntil || null,
         limits: {
@@ -304,6 +341,8 @@ export default function InstitutesManagementPage() {
           examTypes: editExamTypes,
           customQuestionTypes: editCustomQuestionTypes,
           features: {
+            neetJeeGenerator: editExamTypes.includes("COMPETITIVE"),
+            aiProctoring: true,
             pdfImport: true,
           },
         },
@@ -319,13 +358,25 @@ export default function InstitutesManagementPage() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to update organization")
+      if (!res.ok) {
+        setEditError(data.error || "Failed to update organization")
+        return
+      }
+
+      setSuccessMessage(data.message || "Organization details updated successfully!")
 
       if (selectedInstitute && selectedInstitute._id === showEditLimitsModal._id) {
         setSelectedInstitute((prev) =>
           prev
             ? {
                 ...prev,
+                name: editName.trim(),
+                code: editCode.trim().toUpperCase(),
+                email: editEmail.trim().toLowerCase(),
+                phone: editPhone.trim(),
+                city: editCity.trim(),
+                address: editAddress.trim(),
+                contactPerson: editContactPerson.trim(),
                 ...(editPassword.trim() ? { adminPassword: editPassword.trim() } : {}),
                 status: editStatus,
                 validUntil: editValidUntil || undefined,
@@ -337,6 +388,7 @@ export default function InstitutesManagementPage() {
                   customQuestionTypes: editCustomQuestionTypes,
                   features: {
                     ...prev.limits?.features,
+                    neetJeeGenerator: editExamTypes.includes("COMPETITIVE"),
                     pdfImport: true,
                   },
                 },
@@ -348,7 +400,7 @@ export default function InstitutesManagementPage() {
       setShowEditLimitsModal(null)
       await fetchInstitutes()
     } catch (err: any) {
-      alert("Error: " + err.message)
+      setEditError(err.message || "Failed to update organization")
     } finally {
       setSavingLimits(false)
     }
@@ -1493,166 +1545,328 @@ export default function InstitutesManagementPage() {
 
       {/* ─── Modal 2: Edit Organization ─── */}
       {showEditLimitsModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-lg">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 shrink-0">
               <div>
-                <h3 className="text-sm font-bold text-[#324158]">
+                <h3 className="text-sm sm:text-base font-bold text-[#324158]">
                   Edit Organization: {showEditLimitsModal.name}
                 </h3>
-                <span className="font-mono text-[10px] text-gray-400">
-                  Code: {showEditLimitsModal.code}
-                </span>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Update profile, login credentials, quota limits, and access permissions
+                </p>
               </div>
               <button
+                type="button"
                 onClick={() => setShowEditLimitsModal(null)}
-                className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                className="text-gray-400 hover:text-gray-600 cursor-pointer p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs">
-              {/* Status Toggle */}
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">Account Status</label>
-                <select
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white font-medium focus:outline-none focus:border-[#324158]"
-                >
-                  <option value="active">Active (Access Allowed)</option>
-                  <option value="suspended">Deactivated (Access Blocked)</option>
-                </select>
-              </div>
-
-              {/* Change Portal Password */}
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">
-                  Change Portal Password <span className="text-[10px] font-normal text-gray-400">(Leave blank to keep existing password)</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showEditPassword ? "text" : "password"}
-                    value={editPassword}
-                    onChange={(e) => setEditPassword(e.target.value)}
-                    placeholder="Enter new portal password"
-                    className="w-full px-3 py-2 pr-10 rounded-lg border border-gray-200 bg-white font-medium focus:outline-none focus:border-[#324158]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowEditPassword(!showEditPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#324158] cursor-pointer"
-                    title={showEditPassword ? "Hide password" : "Show password"}
-                  >
-                    {showEditPassword ? <EyeOff className="w-4 h-4 text-[#324158]" /> : <Eye className="w-4 h-4 text-[#324158]" />}
-                  </button>
+            {/* Modal Body (Scrollable) */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs">
+              {/* Error Message */}
+              {editError && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{editError}</span>
                 </div>
-              </div>
+              )}
 
-              {/* Quota inputs */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* ── 1. Basic Details ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">Max Student Quota</label>
+                  <label className="font-bold text-gray-700 block mb-1">
+                    Organization Name <span className="text-red-500">*</span>
+                  </label>
                   <input
-                    type="number"
-                    min={1}
-                    value={editMaxStudents}
-                    onChange={(e) => setEditMaxStudents(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158]"
+                    type="text"
+                    required
+                    placeholder="e.g. Apex Science Academy"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158] font-medium"
                   />
-                  <span className="text-[10px] text-gray-400">
-                    Currently: {showEditLimitsModal.usage?.studentsEnrolled || 0} enrolled
-                  </span>
                 </div>
 
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">Max Exams Quota</label>
+                  <label className="font-bold text-gray-700 block mb-1">
+                    Unique Code (Prefix) <span className="text-red-500">*</span>
+                  </label>
                   <input
-                    type="number"
-                    min={1}
-                    value={editMaxExams}
-                    onChange={(e) => setEditMaxExams(Number(e.target.value))}
+                    type="text"
+                    required
+                    placeholder="e.g. APEX01"
+                    value={editCode}
+                    onChange={(e) => setEditCode(e.target.value.toUpperCase())}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 uppercase font-mono focus:outline-none focus:border-[#324158] font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* ── 2. Login Credentials ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">
+                    Login Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="admin@apexacademy.com"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158] font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">
+                    Change Password{" "}
+                    <span className="text-[10px] font-normal text-gray-400">
+                      (Leave blank to keep existing)
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showEditPassword ? "text" : "password"}
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      placeholder="Enter new portal password"
+                      className="w-full px-3 py-2 pr-10 rounded-lg border border-gray-200 bg-white font-medium focus:outline-none focus:border-[#324158]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEditPassword(!showEditPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#324158] cursor-pointer"
+                      title={showEditPassword ? "Hide password" : "Show password"}
+                    >
+                      {showEditPassword ? (
+                        <EyeOff className="w-4 h-4 text-[#324158]" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-[#324158]" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── 3. Contact & Location ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="font-medium text-gray-700 block mb-1">Contact Person</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Dr. Rajesh Sharma"
+                    value={editContactPerson}
+                    onChange={(e) => setEditContactPerson(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158]"
                   />
-                  <span className="text-[10px] text-gray-400">
-                    Currently: {showEditLimitsModal.usage?.examsCreated || 0} created
-                  </span>
+                </div>
+
+                <div>
+                  <label className="font-medium text-gray-700 block mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="+91 98765 43210"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158]"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-medium text-gray-700 block mb-1">City / Region</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Pune / Mumbai"
+                    value={editCity}
+                    onChange={(e) => setEditCity(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158]"
+                  />
                 </div>
               </div>
 
-              {/* Exam Creation Access */}
+              {/* Address */}
               <div>
-                <label className="font-bold text-gray-700 block mb-2">Exam Creation Access</label>
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-                  {EXAM_ACCESS_OPTIONS.map((option) => {
-                    const isChecked = editExamTypes.includes(option.value)
-                    return (
-                      <label
-                        key={option.value}
-                        className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-all ${
-                          isChecked
-                            ? "border-[#324158] bg-[#324158]/5 shadow-xs"
-                            : "border-gray-200 bg-white hover:bg-gray-50"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) =>
-                            setEditExamTypes((current) =>
-                              e.target.checked
-                                ? [...current, option.value]
-                                : current.filter((value) => value !== option.value)
-                            )
-                          }
-                          className="mt-0.5 rounded text-[#324158]"
-                        />
-                        <div className="flex-1">
-                          <span className="text-xs font-semibold text-gray-800 block">{option.label}</span>
-                          <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">{option.description}</span>
-                        </div>
-                      </label>
-                    )
-                  })}
-                </div>
-                <span className="mt-1.5 block text-[10px] text-gray-400">
-                  Control which test creation modules this institute can access. Unchecked options will remain visible but disabled.
-                </span>
-              </div>
-
-              {/* Validity Expiry */}
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">
-                  Subscription Valid Until (Optional)
-                </label>
+                <label className="font-medium text-gray-700 block mb-1">Address (Optional)</label>
                 <input
-                  type="date"
-                  value={editValidUntil}
-                  onChange={(e) => setEditValidUntil(e.target.value)}
+                  type="text"
+                  placeholder="e.g. 402, Knowledge Park, Senapati Bapat Road"
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158]"
                 />
               </div>
 
-              {/* Save Button */}
-              <div className="pt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEditLimitsModal(null)}
-                  className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveLimits}
-                  disabled={savingLimits}
-                  className="px-5 py-2 rounded-lg bg-[#324158] hover:bg-[#1e2a38] text-white font-medium shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {savingLimits && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{savingLimits ? "Saving..." : "Update Organization"}</span>
-                </button>
+              {/* ── 4. Status & Subscription Expiry ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Account Status</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white font-medium focus:outline-none focus:border-[#324158]"
+                  >
+                    <option value="active">Active (Access Allowed)</option>
+                    <option value="suspended">Deactivated (Access Blocked)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">
+                    Subscription Valid Until (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={editValidUntil}
+                    onChange={(e) => setEditValidUntil(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#324158]"
+                  />
+                </div>
               </div>
+
+              {/* ── 5. Quota Limits ── */}
+              <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 space-y-3">
+                <span className="font-bold text-[#324158] block">
+                  Quota Limits & Access Configuration
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-gray-700 block mb-1">Max Student Quota</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={editMaxStudents}
+                      onChange={(e) => setEditMaxStudents(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#324158]"
+                    />
+                    <span className="text-[10px] text-gray-400">
+                      Currently: {showEditLimitsModal.usage?.studentsEnrolled || 0} enrolled
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-gray-700 block mb-1">Max Exams Quota</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={editMaxExams}
+                      onChange={(e) => setEditMaxExams(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#324158]"
+                    />
+                    <span className="text-[10px] text-gray-400">
+                      Currently: {showEditLimitsModal.usage?.examsCreated || 0} created
+                    </span>
+                  </div>
+                </div>
+
+                {/* Exam Creation Access */}
+                <div>
+                  <label className="font-semibold text-gray-700 block mb-1.5">
+                    Exam Creation Access
+                  </label>
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                    {EXAM_ACCESS_OPTIONS.map((option) => {
+                      const isChecked = editExamTypes.includes(option.value)
+                      return (
+                        <label
+                          key={option.value}
+                          className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-all ${
+                            isChecked
+                              ? "border-[#324158] bg-[#324158]/5 shadow-xs"
+                              : "border-gray-200 bg-white hover:bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) =>
+                              setEditExamTypes((current) =>
+                                e.target.checked
+                                  ? [...current, option.value]
+                                  : current.filter((value) => value !== option.value)
+                              )
+                            }
+                            className="mt-0.5 rounded text-[#324158]"
+                          />
+                          <div className="flex-1">
+                            <span className="text-xs font-semibold text-gray-800 block">
+                              {option.label}
+                            </span>
+                            <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">
+                              {option.description}
+                            </span>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <span className="mt-1.5 block text-[10px] text-gray-400">
+                    Control which test creation modules this institute can access. Unchecked options will remain visible but disabled.
+                  </span>
+                </div>
+
+                {/* Question Types Access */}
+                <div>
+                  <label className="font-semibold text-gray-700 block mb-1.5">
+                    Permitted Question Types
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {CUSTOM_QUESTION_TYPE_OPTIONS.map((qType) => {
+                      const isChecked = editCustomQuestionTypes.includes(qType.value)
+                      return (
+                        <label
+                          key={qType.value}
+                          className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-all ${
+                            isChecked
+                              ? "border-[#324158] bg-[#324158]/5 font-semibold text-slate-900"
+                              : "border-gray-200 bg-white text-slate-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) =>
+                              setEditCustomQuestionTypes((current) =>
+                                e.target.checked
+                                  ? [...current, qType.value]
+                                  : current.filter((v) => v !== qType.value)
+                              )
+                            }
+                            className="rounded text-[#324158]"
+                          />
+                          <span className="text-xs">{qType.label}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 border-t border-gray-100 flex items-center justify-end gap-2.5 shrink-0 bg-gray-50/50">
+              <button
+                type="button"
+                onClick={() => setShowEditLimitsModal(null)}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 cursor-pointer font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveLimits}
+                disabled={savingLimits}
+                className="px-5 py-2 rounded-lg bg-[#324158] hover:bg-[#1e2a38] text-white font-medium shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-colors"
+              >
+                {savingLimits && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>{savingLimits ? "Saving Changes..." : "Update Organization"}</span>
+              </button>
             </div>
           </div>
         </div>
