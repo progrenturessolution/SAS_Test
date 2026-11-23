@@ -20,10 +20,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!exam) return NextResponse.json({ error: "Exam not found" }, { status: 404 })
 
     // Attach coaching institute branding (logo, themeColor, name)
-    if (exam.instituteId) {
+    let targetInstId = exam.instituteId
+    if (!targetInstId && exam.createdBy) {
+      try {
+        const User = (await import("@/models/User")).default
+        const creator: any = await User.findById(exam.createdBy).select("instituteId").lean()
+        if (creator?.instituteId) targetInstId = creator.instituteId
+      } catch {}
+    }
+    if (targetInstId) {
       try {
         const Institute = (await import("@/models/Institute")).default
-        const inst: any = await Institute.findById(exam.instituteId).select("name code logo themeColor").lean()
+        const inst: any = await Institute.findById(targetInstId).select("name code logo themeColor").lean()
         if (inst) {
           exam.institute = {
             name: inst.name,

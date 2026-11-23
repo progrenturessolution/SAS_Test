@@ -284,6 +284,19 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false) // Mobile sidebar toggle
   const [showCalculator, setShowCalculator] = useState(false)
+  const instituteThemeColor = exam?.institute?.themeColor || "#2D3A4A"
+
+  // Sync theme color with CSS variable
+  useEffect(() => {
+    if (exam?.institute?.themeColor) {
+      document.documentElement.style.setProperty("--primary", exam.institute.themeColor)
+      document.documentElement.style.setProperty("--brand-theme", exam.institute.themeColor)
+    }
+    return () => {
+      document.documentElement.style.removeProperty("--primary")
+      document.documentElement.style.removeProperty("--brand-theme")
+    }
+  }, [exam?.institute?.themeColor])
 
   const addToast = useCallback((message: string, type: Toast["type"] = "warn") => {
     const id = ++_toastId
@@ -1187,11 +1200,50 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col p-4 md:p-8 animate-in fade-in duration-500">
         {/* Top Header */}
-        <div className="max-w-6xl mx-auto w-full flex items-center justify-between mb-8">
-          <ProcrentureLogo />
-          <Button variant="outline" className="rounded-xl font-bold text-[#324158] border-gray-200">
-            need help ?
-          </Button>
+        <div className="max-w-6xl mx-auto w-full flex items-center justify-between gap-4 mb-8">
+          {exam?.institute?.logo ? (
+            <div className="flex items-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={exam.institute.logo}
+                alt={exam.institute.name || "Coaching Institute"}
+                className="h-9 sm:h-11 max-w-[170px] sm:max-w-[240px] object-contain"
+              />
+            </div>
+          ) : exam?.institute?.name ? (
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm sm:text-base shrink-0 shadow-xs"
+                style={{ backgroundColor: instituteThemeColor }}
+              >
+                {exam.institute.name.charAt(0).toUpperCase()}
+              </div>
+              <span className="font-bold text-base sm:text-lg text-gray-800 line-clamp-1">
+                {exam.institute.name}
+              </span>
+            </div>
+          ) : (
+            <ProcrentureLogo />
+          )}
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            {studentName && studentName !== "Aspirant" && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-700 shadow-2xs">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: instituteThemeColor }} />
+                <span>{studentName}</span>
+                {studentRoll && studentRoll !== "N/A" && (
+                  <span className="text-gray-400 font-normal">({studentRoll})</span>
+                )}
+              </div>
+            )}
+            <Button
+              variant="outline"
+              className="rounded-xl font-bold text-xs sm:text-sm border-gray-200"
+              style={{ color: instituteThemeColor }}
+            >
+              Need Help?
+            </Button>
+          </div>
         </div>
 
         <div className="max-w-6xl mx-auto w-full flex-1">
@@ -1300,7 +1352,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             <Card className="bg-white border-gray-100 shadow-sm rounded-2xl overflow-hidden">
               <CardContent className="p-8">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-1 h-6 bg-[#2D3A4A] rounded-full" />
+                  <div className="w-1 h-6 rounded-full" style={{ backgroundColor: instituteThemeColor }} />
                   <h2 className="text-xl font-black text-[#324158]">Exam Rules & Guidelines</h2>
                 </div>
                 <div className="space-y-4">
@@ -1320,7 +1372,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             <Card className="bg-white border-gray-100 shadow-sm rounded-2xl">
               <CardContent className="p-8">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-1 h-6 bg-[#2D3A4A] rounded-full" />
+                  <div className="w-1 h-6 rounded-full" style={{ backgroundColor: instituteThemeColor }} />
                   <h2 className="text-xl font-black text-[#324158]">Technical Requirements</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1380,7 +1432,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                     id="agreement" 
                     checked={agreed} 
                     onCheckedChange={(checked) => setAgreed(!!checked)} 
-                    className="mt-1 w-5 h-5 rounded-md border-gray-300 data-[state=checked]:bg-[#2D3A4A] data-[state=checked]:border-[#2D3A4A]"
+                    className="mt-1 w-5 h-5 rounded-md border-gray-300 transition-colors"
+                    style={agreed ? { backgroundColor: instituteThemeColor, borderColor: instituteThemeColor } : undefined}
                   />
                   <label htmlFor="agreement" className="text-xs sm:text-sm text-gray-600 font-medium cursor-pointer leading-relaxed">
                     I have read and understood all the instructions and agree to abide by the exam rules.
@@ -1389,7 +1442,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                 <div className="flex flex-col-reverse sm:flex-row items-center gap-2.5 sm:gap-3 w-full md:w-auto">
                   <Button 
                     variant="outline" 
-                    className="w-full sm:w-auto h-11 sm:h-12 px-6 sm:px-8 rounded-xl font-bold text-gray-500 border-gray-200"
+                    className="w-full sm:w-auto h-11 sm:h-12 px-6 sm:px-8 rounded-xl font-bold text-gray-500 border-gray-200 hover:bg-gray-100"
                     onClick={() => router.back()}
                   >
                     Go Back
@@ -1397,7 +1450,11 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                   <Button 
                     disabled={!agreed || (isFaceDetectionEnabled && camStatus !== "active") || !scheduleStartReached || isExamEnded}
                     onClick={() => setIsStarted(true)}
-                    className="w-full sm:w-auto h-11 sm:h-12 px-8 sm:px-10 rounded-xl font-black uppercase text-xs tracking-widest bg-[#2D3A4A] text-white hover:bg-[#1a2535] shadow-xl shadow-[#2D3A4A]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto h-11 sm:h-12 px-8 sm:px-10 rounded-xl font-black uppercase text-xs tracking-widest text-white shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+                    style={{
+                      backgroundColor: instituteThemeColor,
+                      boxShadow: `0 10px 25px -5px ${instituteThemeColor}40`
+                    }}
                   >
                     {isExamEnded 
                       ? "Exam Ended" 
@@ -1425,7 +1482,11 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                   setShowStartModal(false)
                   setIsStarted(true)
                 }}
-                className="w-full py-4 bg-[#303e52] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.03] transition-all shadow-xl shadow-primary/20"
+                className="w-full py-4 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.03] transition-all shadow-xl"
+                style={{
+                  backgroundColor: instituteThemeColor,
+                  boxShadow: `0 10px 25px -5px ${instituteThemeColor}40`
+                }}
               >
                 Start Examination
               </button>
@@ -2131,8 +2192,13 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                     ? "bg-emerald-600 hover:bg-emerald-700"
                     : isLastQuestionInSection && nextSectionTab
                       ? "bg-purple-700 hover:bg-purple-800"
-                      : "bg-[#2D3A4A] hover:bg-[#1a2535]"
+                      : "hover:opacity-90"
                 }`}
+                style={
+                  !isLastQuestionOverall && !(isLastQuestionInSection && nextSectionTab)
+                    ? { backgroundColor: instituteThemeColor }
+                    : undefined
+                }
               >
                 <span>
                   {isLastQuestionOverall
@@ -2164,8 +2230,13 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               className={`flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors truncate cursor-pointer ${
                 isLastQuestionInSection && nextSectionTab
                   ? "bg-purple-700 active:bg-purple-800"
-                  : "bg-[#2D3A4A] active:bg-[#1a2535]"
+                  : "active:opacity-80"
               }`}
+              style={
+                !(isLastQuestionInSection && nextSectionTab)
+                  ? { backgroundColor: instituteThemeColor }
+                  : undefined
+              }
             >
               <span className="truncate">
                 {isLastQuestionOverall

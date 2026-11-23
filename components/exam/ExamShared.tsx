@@ -116,7 +116,13 @@ export function ExamHeader({
             />
           </div>
         ) : instituteName ? (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 border border-gray-200">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs"
+              style={{ backgroundColor: themeColor || "#2D3A4A" }}
+            >
+              {instituteName.charAt(0).toUpperCase()}
+            </div>
             <span className="text-xs sm:text-sm font-bold text-gray-800 line-clamp-1 max-w-[140px] sm:max-w-[200px]">
               {instituteName}
             </span>

@@ -239,117 +239,117 @@ export function ExamActionMenu({
             }}
             className="w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] overflow-y-auto overscroll-contain divide-y divide-gray-100"
           >
-          {/* Status Toggle */}
-          <button
-            type="button"
-            onClick={handleToggleStatus}
-            disabled={loading}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
-          >
-            {exam.status === "active" ? (
-              <>
-                <Eye size={15} className="text-[#324158] shrink-0" />
-                <span className="flex-1">Unpublish</span>
-                <span className="text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Active</span>
-              </>
-            ) : (
-              <>
-                <EyeOff size={15} className="text-[#324158] shrink-0" />
-                <span className="flex-1">Publish</span>
-                <span className="text-[10px] font-semibold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">Draft</span>
-              </>
-            )}
-          </button>
+            {/* Status Toggle */}
+            <button
+              type="button"
+              onClick={handleToggleStatus}
+              disabled={loading}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
+            >
+              {exam.status === "active" ? (
+                <>
+                  <Eye size={15} className="text-[#324158] shrink-0" />
+                  <span className="flex-1">Unpublish</span>
+                  <span className="text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Active</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff size={15} className="text-[#324158] shrink-0" />
+                  <span className="flex-1">Publish</span>
+                  <span className="text-[10px] font-semibold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">Draft</span>
+                </>
+              )}
+            </button>
 
-          {/* Copy Link */}
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={loading}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
-          >
-            {copied ? (
-              <>
-                <Check size={15} className="text-[#324158] shrink-0" />
-                <span className="flex-1 text-[#324158]">Link Copied!</span>
-              </>
-            ) : (
-              <>
-                <Link2 size={15} className="text-[#324158] shrink-0" />
-                <span className="flex-1">Copy Link</span>
-              </>
-            )}
-          </button>
+            {/* Copy Link */}
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={loading}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
+            >
+              {copied ? (
+                <>
+                  <Check size={15} className="text-[#324158] shrink-0" />
+                  <span className="flex-1 text-[#324158]">Link Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Link2 size={15} className="text-[#324158] shrink-0" />
+                  <span className="flex-1">Copy Link</span>
+                </>
+              )}
+            </button>
 
-          {/* Copy Public Link */}
-          <button
-            type="button"
-            onClick={handleCopyPublic}
-            disabled={loading}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
-          >
-            {isPublicCopied ? (
-              <>
-                <Check size={15} className="text-emerald-600 shrink-0" />
-                <span className="flex-1 text-emerald-700 font-semibold">Public Link Copied!</span>
-              </>
-            ) : (
-              <>
-                <Globe size={15} className="text-[#324158] shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <span className="block leading-tight">Copy Public Link</span>
-                  <span className="text-[10px] text-gray-400 block font-normal">Open to any aspirant</span>
-                </div>
-                <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200/60 shrink-0">Public</span>
-              </>
-            )}
-          </button>
+            {/* Copy Public Link */}
+            <button
+              type="button"
+              onClick={handleCopyPublic}
+              disabled={loading}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
+            >
+              {isPublicCopied ? (
+                <>
+                  <Check size={15} className="text-emerald-600 shrink-0" />
+                  <span className="flex-1 text-emerald-700 font-semibold">Public Link Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Globe size={15} className="text-[#324158] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="block leading-tight">Copy Public Link</span>
+                    <span className="text-[10px] text-gray-400 block font-normal">Open to any aspirant</span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200/60 shrink-0">Public</span>
+                </>
+              )}
+            </button>
 
-          {/* Edit */}
-          <Link
-            href={getExamEditUrl(exam)}
-            onClick={() => setOpen(false)}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm font-medium text-gray-700"
-          >
-            <Pencil size={15} className="text-[#324158] shrink-0" />
-            <span className="flex-1">Edit Exam</span>
-          </Link>
+            {/* Edit */}
+            <Link
+              href={getExamEditUrl(exam)}
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm font-medium text-gray-700"
+            >
+              <Pencil size={15} className="text-[#324158] shrink-0" />
+              <span className="flex-1">Edit Exam</span>
+            </Link>
 
-          {/* View Results */}
-          <Link
-            href={`/admin/results?examId=${exam._id}`}
-            onClick={() => setOpen(false)}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm font-medium text-gray-700"
-          >
-            <BarChart2 size={15} className="text-[#324158] shrink-0" />
-            <span className="flex-1">View Results</span>
-          </Link>
+            {/* View Results */}
+            <Link
+              href={`/admin/results?examId=${exam._id}`}
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm font-medium text-gray-700"
+            >
+              <BarChart2 size={15} className="text-[#324158] shrink-0" />
+              <span className="flex-1">View Results</span>
+            </Link>
 
-          {/* Share */}
-          <button
-            type="button"
-            onClick={handleShare}
-            disabled={loading}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
-          >
-            <Share2 size={15} className="text-[#324158] shrink-0" />
-            <span className="flex-1">Share Exam</span>
-          </button>
+            {/* Share */}
+            <button
+              type="button"
+              onClick={handleShare}
+              disabled={loading}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
+            >
+              <Share2 size={15} className="text-[#324158] shrink-0" />
+              <span className="flex-1">Share Exam</span>
+            </button>
 
-          {/* Delete - Always visible, never cut off */}
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={loading}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-red-50 text-red-600 transition-colors text-sm text-left font-medium"
-          >
-            <Trash2 size={15} className="text-[#324158] group-hover:text-red-600 shrink-0" />
-            <span className="flex-1">Delete Exam</span>
-          </button>
-        </div>
-      </>,
-      document.body
-    )}
+            {/* Delete - Always visible, never cut off */}
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={loading}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-red-50 text-red-600 transition-colors text-sm text-left font-medium"
+            >
+              <Trash2 size={15} className="text-[#324158] group-hover:text-red-600 shrink-0" />
+              <span className="flex-1">Delete Exam</span>
+            </button>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   )
 }
