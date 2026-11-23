@@ -582,37 +582,37 @@ export default function AdminQueriesPage() {
               <button
                 type="button"
                 onClick={() => setStatusFilter("pending")}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                style={statusFilter === "pending" ? { backgroundColor: themeColor || "#2D3A4A" } : undefined}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
                   statusFilter === "pending"
-                    ? "bg-amber-600 text-white shadow-xs shadow-amber-600/30 font-bold"
-                    : "bg-white text-amber-700 hover:bg-amber-50 border border-amber-200/80"
+                    ? "text-white shadow-xs font-bold"
+                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
                 }`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === "pending" ? "bg-white" : "bg-amber-500"}`} />
                 Pending {totalPending > 0 && `(${totalPending})`}
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter("unread")}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                style={statusFilter === "unread" ? { backgroundColor: themeColor || "#2D3A4A" } : undefined}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
                   statusFilter === "unread"
-                    ? "bg-rose-600 text-white shadow-xs shadow-rose-600/30 font-bold"
-                    : "bg-white text-rose-700 hover:bg-rose-50 border border-rose-200/80"
+                    ? "text-white shadow-xs font-bold"
+                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
                 }`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === "unread" ? "bg-white" : "bg-rose-500"}`} />
                 Unread {totalUnread > 0 && `(${totalUnread})`}
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter("replied")}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                style={statusFilter === "replied" ? { backgroundColor: themeColor || "#2D3A4A" } : undefined}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
                   statusFilter === "replied"
-                    ? "bg-emerald-600 text-white shadow-xs shadow-emerald-600/30 font-bold"
-                    : "bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200/80"
+                    ? "text-white shadow-xs font-bold"
+                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
                 }`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === "replied" ? "bg-white" : "bg-emerald-500"}`} />
                 Replied
               </button>
             </div>
