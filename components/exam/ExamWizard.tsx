@@ -3054,26 +3054,26 @@ function Step3({
   return (
     <div className="space-y-6">
       {/* ─── 1. Question Summary Toolbar ─── */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 sm:p-4 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
           {/* Heading */}
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#324158]">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-base sm:text-lg font-semibold tracking-tight text-[#324158]">
               Questions ({questions.length})
             </h2>
           </div>
 
           {/* Badges & Actions */}
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             {/* Total Questions Badge */}
-            <div className="flex items-center gap-1.5 bg-[#eaf0f8] border border-[#cbd5e1] text-[#324158] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-2xs">
-              <FileText size={15} className="shrink-0 text-[#324158]" />
+            <div className="flex items-center gap-1.5 bg-[#eaf0f8] border border-[#cbd5e1] text-[#324158] px-3 py-1.5 rounded-xl text-xs font-medium shadow-2xs">
+              <FileText size={14} className="shrink-0 text-[#324158]" />
               <span>Total Questions: {questions.length}</span>
             </div>
 
             {/* Total Marks Badge */}
-            <div className="flex items-center gap-1.5 bg-[#eaf0f8] border border-[#cbd5e1] text-[#324158] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-2xs">
-              <Star size={15} className="shrink-0 text-[#324158] fill-[#324158]/20" />
+            <div className="flex items-center gap-1.5 bg-[#eaf0f8] border border-[#cbd5e1] text-[#324158] px-3 py-1.5 rounded-xl text-xs font-medium shadow-2xs">
+              <Star size={14} className="shrink-0 text-[#324158] fill-[#324158]/20" />
               <span>Total Marks: {totalMarks}</span>
             </div>
 
@@ -3084,9 +3084,9 @@ function Step3({
                 setIsAddFormOpen(true)
                 setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)
               }}
-              className="flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100/80 border border-purple-200 text-purple-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+              className="flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100/80 border border-purple-200 text-purple-700 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-2xs cursor-pointer active:scale-95"
             >
-              <Sparkles size={14} className="shrink-0 text-purple-600" />
+              <Sparkles size={13} className="shrink-0 text-purple-600" />
               <span>Generate with AI</span>
             </button>
 
@@ -3102,9 +3102,9 @@ function Step3({
               type="button"
               onClick={() => canUsePdfImport && fileRef.current?.click()}
               disabled={pdfUploading || !canUsePdfImport}
-              className="flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-2xs cursor-pointer disabled:opacity-50"
             >
-              <Upload size={14} className="shrink-0 text-slate-500" />
+              <Upload size={13} className="shrink-0 text-slate-500" />
               <span>{pdfUploading ? "Uploading..." : "Upload from PDF"}</span>
             </button>
 
@@ -3112,20 +3112,20 @@ function Step3({
             <button
               type="button"
               onClick={handleToggleAddForm}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer active:scale-95 ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium shadow-xs transition-all cursor-pointer active:scale-95 ${
                 isAddFormOpen
                   ? "bg-[#253244] text-white ring-2 ring-slate-800/20"
                   : "bg-[#324158] hover:bg-[#253244] text-white"
               }`}
             >
-              <Plus size={16} className={`shrink-0 transition-transform ${isAddFormOpen ? "rotate-45" : ""}`} />
+              <Plus size={14} className={`shrink-0 transition-transform ${isAddFormOpen ? "rotate-45" : ""}`} />
               <span>{isAddFormOpen ? "Close Form" : "Add Question"}</span>
             </button>
           </div>
         </div>
 
         {pdfError && (
-          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 flex items-center gap-2">
+          <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 flex items-center gap-2">
             <AlertCircle size={14} className="shrink-0" />
             <span>{pdfError}</span>
           </div>
@@ -3136,35 +3136,35 @@ function Step3({
       {isAddFormOpen && (
         <div
           ref={formRef}
-          className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-7 shadow-sm transition-all animate-in fade-in slide-in-from-top-4 duration-200 space-y-6"
+          className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-xs transition-all animate-in fade-in slide-in-from-top-4 duration-200 space-y-5"
         >
           {/* Header of Form */}
-          <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-              <h3 className="text-lg font-bold text-[#324158]">
+              <h3 className="text-sm sm:text-base font-semibold text-[#324158]">
                 {editingIndex !== null ? "Edit Question" : "Add Question"}
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Create manually with rich options or auto-generate with AI topics
               </p>
             </div>
             <button
               type="button"
               onClick={handleCloseForm}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               title="Close form without saving"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
 
           {/* ── Box 1: Generate up to 10 topics at once ── */}
-          <div className="rounded-2xl border border-cyan-100 bg-[#ecfeff]/40 p-4 sm:p-5 space-y-3">
+          <div className="rounded-xl border border-cyan-100 bg-[#ecfeff]/40 p-3.5 sm:p-4 space-y-2.5">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-cyan-800">
+              <p className="text-xs font-semibold text-cyan-800">
                 Generate up to 10 topics at once
               </p>
-              <span className="text-[10px] font-semibold text-cyan-700 bg-cyan-100/70 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-medium text-cyan-700 bg-cyan-100/70 px-2 py-0.5 rounded-full">
                 AI Batch Generator
               </span>
             </div>
@@ -3179,7 +3179,7 @@ function Step3({
                       setBulkTopics(rows => rows.map((r, i) => i === index ? { ...r, topic: val } : r))
                     }}
                     placeholder={`Topic ${index + 1}`}
-                    className="flex-1 h-10 px-3.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-colors"
+                    className="flex-1 h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-colors"
                   />
                   <input
                     type="number"
@@ -3190,13 +3190,13 @@ function Step3({
                       const countVal = Math.max(1, Math.min(20, Number(e.target.value) || 1))
                       setBulkTopics(rows => rows.map((r, i) => i === index ? { ...r, count: countVal } : r))
                     }}
-                    className="w-16 sm:w-20 h-10 px-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-center font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158]"
+                    className="w-14 sm:w-16 h-9 px-2 rounded-xl border border-slate-200 bg-white text-xs text-center font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158]"
                   />
                   {index === bulkTopics.length - 1 && bulkTopics.length < 10 && (
                     <button
                       type="button"
                       onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])}
-                      className="w-10 h-10 rounded-xl border border-cyan-200 bg-white hover:bg-cyan-50 flex items-center justify-center text-cyan-700 text-lg font-bold cursor-pointer transition-colors shadow-2xs shrink-0"
+                      className="w-9 h-9 rounded-xl border border-cyan-200 bg-white hover:bg-cyan-50 flex items-center justify-center text-cyan-700 text-base font-bold cursor-pointer transition-colors shadow-2xs shrink-0"
                       title="Add topic row"
                     >
                       +
@@ -3206,10 +3206,10 @@ function Step3({
                     <button
                       type="button"
                       onClick={() => setBulkTopics(rows => rows.filter((_, i) => i !== index))}
-                      className="w-10 h-10 rounded-xl border border-red-100 bg-white hover:bg-red-50 flex items-center justify-center text-red-500 cursor-pointer transition-colors shrink-0"
+                      className="w-9 h-9 rounded-xl border border-red-100 bg-white hover:bg-red-50 flex items-center justify-center text-red-500 cursor-pointer transition-colors shrink-0"
                       title="Remove row"
                     >
-                      <X size={15} />
+                      <X size={14} />
                     </button>
                   )}
                 </div>
@@ -3220,7 +3220,7 @@ function Step3({
               type="button"
               onClick={handleGenerateBulkTopics}
               disabled={isGeneratingBulk}
-              className="h-10 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+              className="h-9 px-3.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
             >
               {isGeneratingBulk ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
               <span>+ Generate All Topics</span>
@@ -3228,13 +3228,13 @@ function Step3({
           </div>
 
           {/* ── Box 2: Single Topic Generator ── */}
-          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3">
+          <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-2.5 sm:p-3">
             <div className="flex gap-2">
               <input
                 value={aiSingleTopic}
                 onChange={(e) => setAiSingleTopic(e.target.value)}
                 placeholder="AI topic, e.g. JavaScript basics, Photosynthesis, Thermodynamics..."
-                className="flex-1 h-10 px-3.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-colors"
+                className="flex-1 h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-colors"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault()
@@ -3246,7 +3246,7 @@ function Step3({
                 type="button"
                 onClick={handleGenerateSingleTopic}
                 disabled={isGeneratingSingle}
-                className="h-10 px-5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+                className="h-9 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-medium flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
               >
                 {isGeneratingSingle ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                 <span>+ Generate</span>
@@ -3255,21 +3255,21 @@ function Step3({
           </div>
 
           {/* ── Create Manually Divider ── */}
-          <div className="relative flex items-center justify-center my-6">
+          <div className="relative flex items-center justify-center my-4">
             <div className="w-full border-t border-slate-200" />
-            <div className="absolute bg-white px-4">
-              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700 shadow-2xs">
-                <Pencil size={12} className="text-slate-500" />
+            <div className="absolute bg-white px-3">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-700 shadow-2xs">
+                <Pencil size={11} className="text-slate-500" />
                 Create Manually
               </span>
             </div>
           </div>
 
           {/* ── Two-Column Manual Creator ── */}
-          <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-[210px_1fr] gap-5 items-start">
             {/* Left Column: Question Types */}
             <div>
-              <label className="block text-xs font-bold text-[#324158] mb-2">
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
                 Question Type <span className="text-red-500">*</span>
               </label>
               <div className="space-y-1.5 bg-slate-50/70 p-2 rounded-2xl border border-slate-200/80">
@@ -3286,13 +3286,13 @@ function Step3({
                         else if (item.id === "mcq_multi") setCorrectAnswer(["A"])
                         else if (item.id === "assertion") setCorrectAnswer("A")
                       }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium transition-all text-left cursor-pointer ${
                         isSelected
                           ? "bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"
                           : "text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent"
                       }`}
                     >
-                      <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                      <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
                         isSelected ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white"
                       }`}>
                         {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -3305,16 +3305,16 @@ function Step3({
             </div>
 
             {/* Right Column: Question Content & Options */}
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               {/* Question Description / Rich Text Editor */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-[#324158]">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-slate-700">
                     Question Description / Text <span className="text-red-500">*</span>
                   </label>
 
                   {/* Toolbar */}
-                  <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-0.5">
+                  <div className="flex items-center gap-0.5 bg-slate-50 border border-slate-200 rounded-lg p-0.5">
                     <button
                       type="button"
                       onClick={() => insertFormatting("**", "**")}
@@ -3358,7 +3358,7 @@ function Step3({
                     <button
                       type="button"
                       onClick={() => insertFormatting("$", "$")}
-                      className="p-1 hover:bg-white rounded text-slate-700 text-[11px] font-mono font-bold w-6 h-6 flex items-center justify-center cursor-pointer"
+                      className="p-1 hover:bg-white rounded text-slate-700 text-[11px] font-mono font-medium w-6 h-6 flex items-center justify-center cursor-pointer"
                       title="Formula / Math LaTeX"
                     >
                       fx
@@ -3382,7 +3382,7 @@ function Step3({
                   onChange={(e) => setQuestionText(e.target.value)}
                   placeholder="Enter your question here..."
                   rows={4}
-                  className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-all font-medium"
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-all font-normal leading-relaxed"
                 />
 
                 {showImageInput && (
@@ -3392,7 +3392,7 @@ function Step3({
                       value={questionImage}
                       onChange={(e) => setQuestionImage(e.target.value)}
                       placeholder="Enter question diagram/image URL (e.g. https://...)"
-                      className="flex-1 h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#324158]"
+                      className="flex-1 h-8 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#324158]"
                     />
                     {questionImage && (
                       <button
@@ -3409,9 +3409,9 @@ function Step3({
 
               {/* ── Type Specific: Assertion & Reason Statements ── */}
               {activeType === "assertion" && (
-                <div className="space-y-3 pt-1">
+                <div className="space-y-2.5 pt-1">
                   <div>
-                    <label className="block text-xs font-bold text-amber-900 mb-1">
+                    <label className="block text-xs font-medium text-amber-900 mb-1">
                       Assertion (A) Statement <span className="text-red-500">*</span>
                     </label>
                     <textarea
@@ -3419,11 +3419,11 @@ function Step3({
                       onChange={(e) => setAssertionText(e.target.value)}
                       placeholder="Enter Assertion (A) statement..."
                       rows={2}
-                      className="w-full p-3 bg-amber-50/40 border border-amber-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-amber-400 font-medium"
+                      className="w-full p-2.5 bg-amber-50/40 border border-amber-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-amber-400 font-normal leading-relaxed"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-purple-900 mb-1">
+                    <label className="block text-xs font-medium text-purple-900 mb-1">
                       Reason (R) Statement <span className="text-red-500">*</span>
                     </label>
                     <textarea
@@ -3431,7 +3431,7 @@ function Step3({
                       onChange={(e) => setReasonText(e.target.value)}
                       placeholder="Enter Reason (R) statement..."
                       rows={2}
-                      className="w-full p-3 bg-purple-50/40 border border-purple-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-purple-400 font-medium"
+                      className="w-full p-2.5 bg-purple-50/40 border border-purple-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-purple-400 font-normal leading-relaxed"
                     />
                   </div>
                 </div>
@@ -3439,12 +3439,12 @@ function Step3({
 
               {/* ── Type Specific: Options for MCQ / Multiple Correct / Assertion ── */}
               {(activeType === "mcq" || activeType === "mcq_multi" || activeType === "assertion") && (
-                <div className="space-y-2.5 pt-1">
+                <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-[#324158]">
+                    <label className="text-xs font-medium text-slate-700">
                       Options & Correct Answer <span className="text-red-500">*</span>
                     </label>
-                    <span className="text-[10px] text-slate-400 font-medium">
+                    <span className="text-[10px] text-slate-400 font-normal">
                       {activeType === "mcq_multi" ? "Click checkboxes to select multiple correct answers" : "Click radio button to mark correct answer"}
                     </span>
                   </div>
@@ -3459,14 +3459,14 @@ function Step3({
                           <button
                             type="button"
                             onClick={() => toggleOptionSelection(letter)}
-                            className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 cursor-pointer transition-all ${
+                            className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 cursor-pointer transition-all ${
                               isCorrect
                                 ? "bg-blue-600 border-blue-600 text-white shadow-2xs"
                                 : "bg-white border-slate-300 text-slate-500 hover:border-slate-400"
                             }`}
                             title={`Mark Option ${letter} as correct answer`}
                           >
-                            {isCorrect ? <Check size={13} strokeWidth={3} /> : <span className="text-xs font-bold">{letter}</span>}
+                            {isCorrect ? <Check size={12} strokeWidth={3} /> : <span className="text-xs font-medium">{letter}</span>}
                           </button>
 
                           {/* Option text input */}
@@ -3478,9 +3478,9 @@ function Step3({
                               setOptions(opts => opts.map((o, idx) => idx === oi ? val : o))
                             }}
                             placeholder={`Enter option ${letter}`}
-                            className={`flex-1 h-10 px-3.5 rounded-xl border text-xs sm:text-sm transition-all focus:outline-none ${
+                            className={`flex-1 h-9 px-3 rounded-xl border text-xs sm:text-sm transition-all focus:outline-none font-normal ${
                               isCorrect
-                                ? "bg-blue-50/40 border-blue-200 text-slate-900 font-medium focus:border-blue-400"
+                                ? "bg-blue-50/40 border-blue-200 text-slate-900 font-normal focus:border-blue-400"
                                 : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-[#324158]"
                             }`}
                           />
@@ -3493,10 +3493,10 @@ function Step3({
                                 setOptions(opts => opts.filter((_, idx) => idx !== oi))
                                 if (correctAnswer === letter) setCorrectAnswer("A")
                               }}
-                              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                               title="Delete option"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={13} />
                             </button>
                           )}
                         </div>
@@ -3508,9 +3508,9 @@ function Step3({
                     <button
                       type="button"
                       onClick={() => setOptions(opts => [...opts, ""])}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer pt-1"
+                      className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer pt-0.5"
                     >
-                      <Plus size={13} />
+                      <Plus size={12} />
                       <span>Add Option</span>
                     </button>
                   )}
@@ -3519,11 +3519,11 @@ function Step3({
 
               {/* ── Type Specific: True / False ── */}
               {activeType === "truefalse" && (
-                <div className="space-y-2 pt-1">
-                  <label className="text-xs font-bold text-[#324158]">
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-medium text-slate-700">
                     Select Correct Answer <span className="text-red-500">*</span>
                   </label>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     {["True", "False"].map((opt) => {
                       const isCorrect = correctAnswer === opt
                       return (
@@ -3531,13 +3531,13 @@ function Step3({
                           key={opt}
                           type="button"
                           onClick={() => setCorrectAnswer(opt)}
-                          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                          className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs sm:text-sm font-medium transition-all cursor-pointer ${
                             isCorrect
                               ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs"
                               : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                           }`}
                         >
-                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
                             isCorrect ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300"
                           }`}>
                             {isCorrect && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -3552,19 +3552,19 @@ function Step3({
 
               {/* ── Type Specific: Fill in the Blanks ── */}
               {activeType === "fillblanks" && (
-                <div className="space-y-2.5 pt-1">
+                <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-[#324158]">
+                    <label className="text-xs font-medium text-slate-700">
                       Blank Answers <span className="text-red-500">*</span>
                     </label>
-                    <span className="text-[10px] text-slate-400 font-medium">
+                    <span className="text-[10px] text-slate-400 font-normal">
                       Place ___ (3 underscores) in the question text for each blank
                     </span>
                   </div>
                   <div className="space-y-2">
                     {blanks.map((b, bi) => (
                       <div key={bi} className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-500 w-16">
+                        <span className="text-xs font-medium text-slate-500 w-16">
                           Blank {bi + 1}:
                         </span>
                         <input
@@ -3575,15 +3575,15 @@ function Step3({
                             setBlanks(list => list.map((item, idx) => idx === bi ? { ...item, answer: val } : item))
                           }}
                           placeholder={`Correct answer for blank ${bi + 1}`}
-                          className="flex-1 h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#324158]"
+                          className="flex-1 h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#324158] font-normal"
                         />
                         {blanks.length > 1 && (
                           <button
                             type="button"
                             onClick={() => setBlanks(list => list.filter((_, idx) => idx !== bi))}
-                            className="p-2 text-slate-400 hover:text-red-500 rounded-lg cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg cursor-pointer"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </button>
                         )}
                       </div>
@@ -3592,9 +3592,9 @@ function Step3({
                   <button
                     type="button"
                     onClick={() => setBlanks(list => [...list, { answer: "", alsoAccept: [] }])}
-                    className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <Plus size={13} />
+                    <Plus size={12} />
                     <span>Add Blank</span>
                   </button>
                 </div>
@@ -3602,9 +3602,9 @@ function Step3({
 
               {/* ── Type Specific: Descriptive / Short Answer / Case Study ── */}
               {(activeType === "descriptive" || activeType === "short_answer" || activeType === "case_study") && (
-                <div className="space-y-3 pt-1">
+                <div className="space-y-2.5 pt-1">
                   <div>
-                    <label className="block text-xs font-bold text-[#324158] mb-1">
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
                       Model / Reference Answer <span className="text-slate-400 font-normal">(Optional)</span>
                     </label>
                     <textarea
@@ -3612,11 +3612,11 @@ function Step3({
                       onChange={(e) => setModelAnswer(e.target.value)}
                       placeholder="Enter sample/model answer for evaluation reference..."
                       rows={3}
-                      className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#324158] font-medium"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#324158] font-normal leading-relaxed"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#324158] mb-1">
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
                       Approximate Word Limit
                     </label>
                     <input
@@ -3624,7 +3624,7 @@ function Step3({
                       value={wordLimit}
                       onChange={(e) => setWordLimit(e.target.value)}
                       placeholder="e.g. 50 words, 150-200 words"
-                      className="w-48 h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#324158]"
+                      className="w-48 h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#324158] font-normal"
                     />
                   </div>
                 </div>
@@ -3632,14 +3632,14 @@ function Step3({
 
               {/* ── Type Specific: Coding ── */}
               {activeType === "coding" && (
-                <div className="space-y-3 pt-1">
+                <div className="space-y-2.5 pt-1">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-[#324158] mb-1">Language</label>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Language</label>
                       <select
                         value={codingLang}
                         onChange={(e) => setCodingLang(e.target.value)}
-                        className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#324158]"
+                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-[#324158]"
                       >
                         <option value="python">Python</option>
                         <option value="javascript">JavaScript</option>
@@ -3649,12 +3649,12 @@ function Step3({
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#324158] mb-1">Starter Code Template</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Starter Code Template</label>
                     <textarea
                       value={codingStarter}
                       onChange={(e) => setCodingStarter(e.target.value)}
                       rows={4}
-                      className="w-full p-3 bg-slate-900 text-emerald-400 font-mono text-xs rounded-xl focus:outline-none"
+                      className="w-full p-2.5 bg-slate-900 text-emerald-400 font-mono text-xs rounded-xl focus:outline-none"
                     />
                   </div>
                 </div>
@@ -3663,13 +3663,13 @@ function Step3({
               {/* ── Bottom Row: Difficulty, Marks, Negative Mark ── */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
                 <div>
-                  <label className="block text-xs font-bold text-[#324158] mb-1.5">
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
                     Difficulty <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={difficulty}
                     onChange={(e) => setDifficulty(e.target.value as Difficulty)}
-                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#324158] cursor-pointer"
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-normal text-slate-800 focus:outline-none focus:border-[#324158] cursor-pointer"
                   >
                     <option value="easy">Easy</option>
                     <option value="medium">Medium</option>
@@ -3678,7 +3678,7 @@ function Step3({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#324158] mb-1.5">
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
                     Marks <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -3686,12 +3686,12 @@ function Step3({
                     min={1}
                     value={marks}
                     onChange={(e) => setMarks(Math.max(1, Number(e.target.value) || 1))}
-                    className="w-full h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:border-[#324158]"
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-normal text-slate-800 focus:outline-none focus:border-[#324158]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#324158] mb-1.5">
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
                     Negative Mark
                   </label>
                   <input
@@ -3700,24 +3700,24 @@ function Step3({
                     step={0.25}
                     value={negativeMark}
                     onChange={(e) => setNegativeMark(Math.max(0, Number(e.target.value) || 0))}
-                    className="w-full h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:border-[#324158]"
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-normal text-slate-800 focus:outline-none focus:border-[#324158]"
                   />
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={handleCloseForm}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs sm:text-sm font-semibold text-slate-700 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs sm:text-sm font-medium text-slate-700 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveQuestion}
-                  className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                  className="px-5 py-2 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-medium transition-all shadow-xs cursor-pointer active:scale-95"
                 >
                   {editingIndex !== null ? "Update Question" : "Add Question"}
                 </button>
@@ -3739,35 +3739,35 @@ function Step3({
             return (
               <div
                 key={q.id || i}
-                className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-6 shadow-xs hover:border-slate-300 transition-all space-y-3"
+                className="bg-white rounded-2xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs hover:border-slate-300 transition-all space-y-3"
               >
                 {/* Card Top Row Header */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-slate-100">
                   {/* Left Badges */}
-                  <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
                     {/* Question Number Badge */}
-                    <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs">
+                    <span className="w-6 h-6 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium flex items-center justify-center shrink-0 shadow-2xs">
                       {i + 1}
                     </span>
 
                     {/* Question Type Badge */}
-                    <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200/80">
+                    <span className="px-2.5 py-0.5 rounded-md text-[11px] font-normal bg-blue-50 text-blue-800 border border-blue-200/80">
                       {typeLabel}
                     </span>
 
                     {/* Difficulty Badge */}
-                    <span className="text-xs font-semibold capitalize text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-md">
+                    <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
                       {q.difficulty}
                     </span>
 
                     {/* Marks Badge */}
-                    <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md">
-                      {q.marks} {q.marks === 1 ? "Mark" : "Marks"}
+                    <span className="text-[11px] sm:text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                      +{q.marks}m
                     </span>
 
                     {/* Negative Marks Badge */}
-                    <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                      {q.negativeMark || 0} Negative
+                    <span className="text-[11px] sm:text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                      -{q.negativeMark || 0}m
                     </span>
                   </div>
 
@@ -3826,7 +3826,7 @@ function Step3({
                 </div>
 
                 {/* Question Statement */}
-                <div className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+                <div className="text-xs sm:text-sm font-normal text-slate-800 leading-relaxed overflow-x-auto">
                   <MathRenderer content={q.questionText} />
                 </div>
 
@@ -3840,7 +3840,7 @@ function Step3({
 
                 {/* Options in 2 Columns (for MCQ / Assertion) */}
                 {(q.type === "mcq" || q.type === "assertion") && Array.isArray((q as MCQQuestion).options) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
                     {(q as MCQQuestion).options.map((opt, oi) => {
                       const letter = ["A", "B", "C", "D", "E", "F"][oi]
                       const isCorrect = Array.isArray(q.correctAnswer)
@@ -3849,15 +3849,15 @@ function Step3({
                       return (
                         <div
                           key={oi}
-                          className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700"
+                          className="flex items-center gap-2 text-xs sm:text-sm text-slate-700"
                         >
-                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
                             isCorrect ? "border-blue-600 bg-blue-600" : "border-slate-300"
                           }`}>
                             {isCorrect && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                           </span>
-                          <span className="font-semibold text-slate-900 shrink-0">{letter}.</span>
-                          <span className="flex-1 min-w-0 truncate">
+                          <span className="font-medium text-slate-900 shrink-0">{letter}.</span>
+                          <span className="flex-1 min-w-0 truncate font-normal text-slate-800">
                             <MathRenderer content={opt} />
                           </span>
                         </div>
@@ -3868,17 +3868,17 @@ function Step3({
 
                 {/* True / False Options */}
                 {q.type === "truefalse" && (
-                  <div className="flex items-center gap-6 pt-1 text-xs sm:text-sm text-slate-700">
+                  <div className="flex items-center gap-5 pt-0.5 text-xs sm:text-sm text-slate-700">
                     {["True", "False"].map((opt) => {
                       const isCorrect = (q as TrueFalseQuestion).correctAnswer === opt
                       return (
                         <div key={opt} className="flex items-center gap-2">
-                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
                             isCorrect ? "border-blue-600 bg-blue-600" : "border-slate-300"
                           }`}>
                             {isCorrect && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                           </span>
-                          <span className="font-medium text-slate-800">{opt}</span>
+                          <span className="font-normal text-slate-800">{opt}</span>
                         </div>
                       )
                     })}
@@ -3886,8 +3886,8 @@ function Step3({
                 )}
 
                 {/* Correct Answer Banner */}
-                <div className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl px-3.5 py-2 flex items-center gap-2 text-xs font-bold text-[#047857]">
-                  <CheckCircle2 size={15} className="text-[#059669] shrink-0" />
+                <div className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-medium text-[#047857]">
+                  <CheckCircle2 size={14} className="text-[#059669] shrink-0" />
                   <span>Correct Answer: {getCorrectAnswerDisplay(q)}</span>
                 </div>
               </div>
