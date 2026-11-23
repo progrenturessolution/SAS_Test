@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
@@ -74,24 +75,16 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
         <div className="grid w-full grid-cols-1 items-center gap-12 lg:grid-cols-[1.12fr_0.88fr] lg:gap-16">
           {/* Left Column: Brand & Platform Value Proposition */}
           <div>
-            {/* Logo: Lab Flask + Testro Lab */}
-            <Link href="/" className="inline-flex items-center gap-3 group">
-              <svg
-                className="h-8 w-8 text-[#324158] transition-transform group-hover:scale-105"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M10 2v7.31L4.75 18.1A2 2 0 0 0 6.46 21h11.08a2 2 0 0 0 1.71-2.9L14 9.31V2" />
-                <line x1="8.5" y1="2" x2="15.5" y2="2" />
-                <path d="M8.5 14h7" />
-              </svg>
-              <span className="text-[26px] font-bold tracking-tight text-[#324158]">
-                Testro Lab
-              </span>
+            {/* Logo: Progrentures TestroLab */}
+            <Link href="/" className="inline-block group">
+              <Image
+                src="/Progrentures TestroLab Logo (White Backroung).png"
+                alt="Progrentures TestroLab"
+                width={260}
+                height={70}
+                priority
+                className="h-12 sm:h-14 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+              />
             </Link>
 
             {/* Horizontal Dark Accent Line */}
@@ -119,6 +112,20 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
 
           {/* Right Column: Clean White Login Card */}
           <div className="w-full max-w-[430px] rounded-2xl border border-gray-100 bg-white p-7 shadow-[0_15px_40px_-12px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.03)] sm:p-9">
+            {/* Mobile Brand Logo */}
+            <div className="lg:hidden mb-6 flex justify-center sm:justify-start">
+              <Link href="/" className="inline-block">
+                <Image
+                  src="/Progrentures TestroLab Logo (White Backroung).png"
+                  alt="Progrentures TestroLab"
+                  width={200}
+                  height={54}
+                  priority
+                  className="h-10 sm:h-11 w-auto object-contain"
+                />
+              </Link>
+            </div>
+
             {/* Card Header */}
             <h2 className="text-[24px] font-bold tracking-tight text-[#324158]">
               {isInstitute ? "Organization Login" : "Platform Admin Login"}
