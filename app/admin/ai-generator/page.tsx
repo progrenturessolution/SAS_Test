@@ -3348,7 +3348,7 @@ function AIGeneratorContent() {
                                   <BookOpen className="w-4 h-4" />
                                 </div>
                                 <div>
-                                  <div className="font-semibold text-slate-800">Student Copy</div>
+                                  <div className="font-semibold text-slate-800">Aspirant Copy</div>
                                   <div className="text-[11px] text-slate-500">Only questions &amp; options (No solutions)</div>
                                 </div>
                               </button>
@@ -3450,10 +3450,10 @@ function AIGeneratorContent() {
                         }}
                         disabled={isGenerating}
                         className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/70 text-blue-800 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        title="Print clean question paper for students"
+                        title="Print clean question paper for aspirants"
                       >
                         <Printer className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Print for Students</span>
+                        <span>Print for Aspirants</span>
                       </button>
 
                       <button
@@ -4445,7 +4445,7 @@ function AIGeneratorContent() {
                           <Calculator className="w-4 h-4 text-[#324158]" />
                           <div>
                             <span className="text-xs font-normal text-slate-700 block">
-                              Enable Student Calculator
+                              Enable Aspirant Calculator
                             </span>
                             <span className="text-[10px] text-slate-400 block">
                               Allow on-screen scientific calculator during exam
@@ -4587,7 +4587,7 @@ function AIGeneratorContent() {
                 <div className="mt-6 rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE]/70 p-3.5 sm:p-4 flex items-center gap-2.5 text-xs text-[#1E40AF]">
                   <Info className="w-4 h-4 text-[#2563EB] shrink-0" />
                   <span className="leading-relaxed">
-                    <strong className="font-medium text-[#1E40AF]">Pro-Tip:</strong> Face Detection &amp; AI Status Analysis require students to have a working webcam.
+                    <strong className="font-medium text-[#1E40AF]">Pro-Tip:</strong> Face Detection &amp; AI Status Analysis require aspirants to have a working webcam.
                   </span>
                 </div>
               </div>
@@ -4784,10 +4784,10 @@ function AIGeneratorContent() {
                   }}
                   disabled={isGenerating || generatedQuestions.length === 0}
                   className="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Print question paper for students (Without Solutions)"
+                  title="Print question paper for aspirants (Without Solutions)"
                 >
                   <Printer className="w-4 h-4 text-blue-600" />
-                  <span>Print Student Copy</span>
+                  <span>Print Aspirant Copy</span>
                 </button>
 
                 <button

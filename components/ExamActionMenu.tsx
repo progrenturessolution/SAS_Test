@@ -298,7 +298,7 @@ export function ExamActionMenu({
                 <Globe size={15} className="text-[#324158] shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="block leading-tight">Copy Public Link</span>
-                  <span className="text-[10px] text-gray-400 block font-normal">Open to any student</span>
+                  <span className="text-[10px] text-gray-400 block font-normal">Open to any aspirant</span>
                 </div>
                 <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200/60 shrink-0">Public</span>
               </>

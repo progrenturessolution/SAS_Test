@@ -177,7 +177,7 @@ export default function FillBlanksPage({ params }: { params: Promise<{ id: strin
         section={section.name}
         timeLeft={timeLeft}
         duration={exam.duration}
-        studentName="Student"
+        studentName="Aspirant"
         rollNo="N/A"
         onSubmit={() => handleSubmitSection()}
         warningCount={procState.warnings}

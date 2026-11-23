@@ -144,7 +144,7 @@ export async function POST(req: Request) {
     })
 
     const categoryLabels: Record<string, string> = {
-      quota_increase: "Exam / Student Quota Increase",
+      quota_increase: "Exam / Aspirant Quota Increase",
       billing_fees: "Billing, License & Validity",
       feature_request: "Feature Request / Customization",
       technical_issue: "Technical Support / Bug",

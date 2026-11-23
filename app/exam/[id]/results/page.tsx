@@ -154,7 +154,7 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
               {/* Roll Number */}
               <div>
                 <label className="block text-sm font-medium text-[#324158] mb-1.5">
-                  Roll Number / Student ID
+                  Roll Number / Aspirant ID
                 </label>
                 <input
                   type="text"

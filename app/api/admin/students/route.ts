@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     (["super_admin", "admin", "institute", "coaching_institute"].includes(session.role) ||
       Boolean(session.instituteId))
   if (!canManage) {
-    return NextResponse.json({ error: "Only an institute admin can add students." }, { status: 403 })
+    return NextResponse.json({ error: "Only an institute admin can add aspirants." }, { status: 403 })
   }
 
   try {
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       if (institute) {
         const studentCount = await User.countDocuments({ instituteId, role: "student" })
         if (studentCount >= (institute.limits?.maxStudents ?? 200)) {
-          return NextResponse.json({ error: "Student limit reached. Please contact platform admin." }, { status: 403 })
+          return NextResponse.json({ error: "Aspirant limit reached. Please contact platform admin." }, { status: 403 })
         }
       }
     }
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     const existing = await User.findOne(collisionQuery)
     if (existing) {
       if (existing.email === cleanEmail) {
-        return NextResponse.json({ error: "A student with this email is already registered." }, { status: 409 })
+        return NextResponse.json({ error: "An aspirant with this email is already registered." }, { status: 409 })
       }
       return NextResponse.json({ error: "Roll number is already in use at this institute." }, { status: 409 })
     }
@@ -217,7 +217,7 @@ export async function PUT(req: Request) {
     (["super_admin", "admin", "institute", "coaching_institute"].includes(session.role) ||
       Boolean(session.instituteId))
   if (!canManage) {
-    return NextResponse.json({ error: "Only an institute admin can edit students." }, { status: 403 })
+    return NextResponse.json({ error: "Only an institute admin can edit aspirants." }, { status: 403 })
   }
 
   try {
@@ -225,7 +225,7 @@ export async function PUT(req: Request) {
     const { id, name, email, rollNumber, password, phone, batch, totalFees, completedFees, action, status, deactivationReason } = body
 
     if (!id && !email) {
-      return NextResponse.json({ error: "Student ID or email is required." }, { status: 400 })
+      return NextResponse.json({ error: "Aspirant ID or email is required." }, { status: 400 })
     }
 
     await connectDB()
@@ -237,7 +237,7 @@ export async function PUT(req: Request) {
 
     const student = await User.findOne(query)
     if (!student) {
-      return NextResponse.json({ error: "Student not found." }, { status: 404 })
+      return NextResponse.json({ error: "Aspirant not found." }, { status: 404 })
     }
 
     // Status Toggle Action (Activate / Deactivate)
@@ -260,12 +260,12 @@ export async function PUT(req: Request) {
         { new: true, lean: true }
       )
       if (!updated) {
-        return NextResponse.json({ error: "Failed to update student status." }, { status: 404 })
+        return NextResponse.json({ error: "Failed to update aspirant status." }, { status: 404 })
       }
 
       return NextResponse.json({
         ok: true,
-        message: newStatus === "active" ? "Student activated successfully." : "Student deactivated successfully.",
+        message: newStatus === "active" ? "Aspirant activated successfully." : "Aspirant deactivated successfully.",
         student: {
           _id: updated._id.toString(),
           studentName: updated.name,
@@ -309,9 +309,9 @@ export async function PUT(req: Request) {
       const collision = await User.findOne(collisionQuery)
       if (collision) {
         if (collision.email === cleanEmail) {
-          return NextResponse.json({ error: "Email is already used by another student." }, { status: 409 })
+          return NextResponse.json({ error: "Email is already used by another aspirant." }, { status: 409 })
         }
-        return NextResponse.json({ error: "Roll number is already in use by another student." }, { status: 409 })
+        return NextResponse.json({ error: "Roll number is already in use by another aspirant." }, { status: 409 })
       }
     }
 
@@ -340,7 +340,7 @@ export async function PUT(req: Request) {
 
     const updated = await User.findByIdAndUpdate(student._id, { $set: updateSet }, { new: true, lean: true })
     if (!updated) {
-      return NextResponse.json({ error: "Failed to update student." }, { status: 404 })
+      return NextResponse.json({ error: "Failed to update aspirant." }, { status: 404 })
     }
 
     return NextResponse.json({
@@ -374,14 +374,14 @@ export async function DELETE(req: Request) {
     (["super_admin", "admin", "institute", "coaching_institute"].includes(session.role) ||
       Boolean(session.instituteId))
   if (!canManage) {
-    return NextResponse.json({ error: "Only an institute admin can remove students." }, { status: 403 })
+    return NextResponse.json({ error: "Only an institute admin can remove aspirants." }, { status: 403 })
   }
 
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")
     if (!id) {
-      return NextResponse.json({ error: "Student ID is required." }, { status: 400 })
+      return NextResponse.json({ error: "Aspirant ID is required." }, { status: 400 })
     }
 
     await connectDB()
@@ -392,12 +392,12 @@ export async function DELETE(req: Request) {
 
     const deleted = await User.findOneAndDelete(query)
     if (!deleted) {
-      return NextResponse.json({ error: "Student not found or already removed." }, { status: 404 })
+      return NextResponse.json({ error: "Aspirant not found or already removed." }, { status: 404 })
     }
 
-    return NextResponse.json({ ok: true, message: "Student removed successfully." })
+    return NextResponse.json({ ok: true, message: "Aspirant removed successfully." })
   } catch (error) {
     console.error("Delete student error:", error)
-    return NextResponse.json({ error: "Failed to remove student." }, { status: 500 })
+    return NextResponse.json({ error: "Failed to remove aspirant." }, { status: 500 })
   }
 }

@@ -1808,7 +1808,7 @@ function CodingModal({ onSave, onClose, initial }: {
           <ol className="list-decimal list-inside space-y-1 ml-1 text-[11.5px] text-slate-600">
             <li>Write the <b>Problem Statement</b> and configure <b>Difficulty</b> & <b>Marks</b>.</li>
             <li>Select the <b>Languages</b> you want candidates to be able to choose from.</li>
-            <li>Under each language tab, the <b>Initial Template</b> is what the student sees in their code editor.</li>
+            <li>Under each language tab, the <b>Initial Template</b> is what the aspirant sees in their code editor.</li>
             <li>The <b>Driver Code</b> (hidden internal runner) executes the candidate's code and feeds test cases via <code>stdin</code>.</li>
             <li>Add <b>Test Cases</b> with sample inputs & expected outputs matching your driver logic.</li>
           </ol>
@@ -2208,7 +2208,7 @@ function Step1({ form, setForm }: { form: Step1Form; setForm: React.Dispatch<Rea
         </div>
 
         <div>
-          <label className={labelCls}>Instructions for Students</label>
+          <label className={labelCls}>Instructions for Aspirants</label>
           <textarea
             value={form.instructions}
             onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
@@ -2226,9 +2226,9 @@ function Step1({ form, setForm }: { form: Step1Form; setForm: React.Dispatch<Rea
 
 function Step2({ form, setForm, canUseAiProctoring }: { form: Step2Form; setForm: React.Dispatch<React.SetStateAction<Step2Form>>; canUseAiProctoring: boolean }) {
   const toggles: { key: keyof Step2Form; label: string; desc: string }[] = [
-    { key: "randomize",      label: "Randomize Questions",       desc: "Display questions in random order for each student" },
-    { key: "showResults",    label: "Show Results Immediately",  desc: "Students can see their score & answers right after submission" },
-    { key: "allowReview",    label: "Allow Review Mode",         desc: "Students can review question explanations after submitting" },
+    { key: "randomize",      label: "Randomize Questions",       desc: "Display questions in random order for each aspirant" },
+    { key: "showResults",    label: "Show Results Immediately",  desc: "Aspirants can see their score & answers right after submission" },
+    { key: "allowReview",    label: "Allow Review Mode",         desc: "Aspirants can review question explanations after submitting" },
     { key: "negativeMarking", label: "Enable Negative Marking",  desc: "Deduct marks for incorrect answers across sections" },
   ]
 
@@ -2268,7 +2268,7 @@ function Step2({ form, setForm, canUseAiProctoring }: { form: Step2Form; setForm
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <ExamDateTimePicker
                     label="Start Date & Time"
-                    sublabel="Students can only begin the exam at or after this time"
+                    sublabel="Aspirants can only begin the exam at or after this time"
                     date={form.startDate}
                     time={form.startTime}
                     onDateChange={(d) => setForm(f => ({ ...f, startDate: d }))}
@@ -2276,7 +2276,7 @@ function Step2({ form, setForm, canUseAiProctoring }: { form: Step2Form; setForm
                   />
                   <ExamDateTimePicker
                     label="End Date & Time"
-                    sublabel="Exam automatically submits for all students at this time"
+                    sublabel="Exam automatically submits for all aspirants at this time"
                     date={form.endDate}
                     time={form.endTime}
                     onDateChange={(d) => setForm(f => ({ ...f, endDate: d }))}
@@ -2382,7 +2382,7 @@ function Step2({ form, setForm, canUseAiProctoring }: { form: Step2Form; setForm
                   <span>Proctoring Notice</span>
                 </p>
                 <p className="leading-relaxed">
-                  Enabling Face Detection and Fullscreen ensures student integrity by monitoring presence and preventing split-screen cheating.
+                  Enabling Face Detection and Fullscreen ensures aspirant integrity by monitoring presence and preventing split-screen cheating.
                 </p>
               </div>
             </div>

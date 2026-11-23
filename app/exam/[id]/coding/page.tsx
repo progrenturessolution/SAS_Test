@@ -179,7 +179,7 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
         section={section?.name || ""}
         timeLeft={timeLeft}
         duration={exam?.duration || 0}
-        studentName="Student"
+        studentName="Aspirant"
         rollNo="N/A"
         onSubmit={handleSubmitCode}
         warningCount={procState.warnings}

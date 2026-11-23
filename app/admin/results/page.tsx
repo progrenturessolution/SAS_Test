@@ -175,7 +175,7 @@ function ResultsPageInner() {
                   className="w-full bg-transparent border-none text-xs sm:text-sm font-semibold focus:ring-0 cursor-pointer text-slate-800 outline-none truncate pr-1"
                 >
                   <option value="all">All Candidates</option>
-                  <option value="institute">Enrolled Students (Institute)</option>
+                  <option value="institute">Enrolled Aspirants (Institute)</option>
                   <option value="public">External / Public Candidates</option>
                 </select>
               </div>
@@ -220,7 +220,7 @@ function ResultsPageInner() {
             {candidateTypeFilter === "public"
               ? "External public attempts"
               : candidateTypeFilter === "institute"
-              ? "Enrolled student attempts"
+              ? "Enrolled aspirant attempts"
               : examId
               ? "Selected exam"
               : "Across all active exams"}
@@ -230,7 +230,7 @@ function ResultsPageInner() {
         {/* Card 2: Passed */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-sm transition-all">
           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-            Passed Students
+            Passed Aspirants
           </p>
           <p className="text-2xl sm:text-3xl font-extrabold text-[#324158] tracking-tight">
             {passed}
@@ -274,7 +274,7 @@ function ResultsPageInner() {
           <table className="w-full min-w-[1000px] border-collapse">
             <thead className="sticky top-0 bg-white z-10 shadow-sm">
               <tr className="border-b border-gray-100">
-                {["Student", "Exam", "Score", "Result", "Grading", "Warnings", "Submitted", "Actions"].map((h) => (
+                {["Aspirant", "Exam", "Score", "Result", "Grading", "Warnings", "Submitted", "Actions"].map((h) => (
                   <th key={h} className={`text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-4 ${h === "Actions" ? "text-right" : "text-left"}`}>{h}</th>
                 ))}
               </tr>

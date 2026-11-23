@@ -156,7 +156,7 @@ export default function ResultDetailPage({ params }: { params: Promise<{ id: str
 
         {/* 3 Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Card 1: Student Information */}
+          {/* Card 1: Aspirant Information */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#131B2A] text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs">

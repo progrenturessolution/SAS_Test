@@ -68,7 +68,7 @@ export default function SuperAdminOverviewPage() {
 
         <div className="p-5 rounded-xl bg-white border border-gray-200 shadow-xs">
           <div className="flex items-center justify-between text-gray-400 text-xs font-medium mb-1">
-            <span>Total Enrolled Students</span>
+            <span>Total Enrolled Aspirants</span>
             <Users className="w-4 h-4 text-[#324158]" />
           </div>
           <div className="text-3xl font-bold text-[#324158]">
@@ -98,7 +98,7 @@ export default function SuperAdminOverviewPage() {
           <div className="text-3xl font-bold text-[#324158]">
             {stats?.totalAttempts ?? "—"}
           </div>
-          <span className="text-[11px] text-gray-400">Total student attempt records</span>
+          <span className="text-[11px] text-gray-400">Total aspirant attempt records</span>
         </div>
       </div>
 
@@ -113,7 +113,7 @@ export default function SuperAdminOverviewPage() {
               Coaching Institutes Directory
             </h3>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Register new academies, adjust student limits, configure exam limits, and control feature permissions for each institute.
+              Register new academies, adjust aspirant limits, configure exam limits, and control feature permissions for each institute.
             </p>
           </div>
           <Link

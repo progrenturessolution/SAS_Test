@@ -1032,7 +1032,7 @@ export default function AdminQueriesPage() {
                   onChange={(e) => setNewCategory(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white font-medium focus:outline-none focus:border-[#324158]"
                 >
-                  <option value="quota_increase">Exam / Student Quota Increase</option>
+                  <option value="quota_increase">Exam / Aspirant Quota Increase</option>
                   <option value="billing_fees">Billing, License & Validity</option>
                   <option value="feature_request">Feature Request / Customization</option>
                   <option value="technical_issue">Technical Support / Bug</option>

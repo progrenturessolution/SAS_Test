@@ -97,14 +97,14 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
 
             {/* Sub-description */}
             <p className="mt-4 max-w-[460px] text-[15px] font-normal leading-relaxed text-[#64748b] sm:text-base">
-              Create secure competitive and board mock exams, manage questions, and track student performance with a simple and reliable system.
+              Create secure competitive and board mock exams, manage questions, and track aspirant performance with a simple and reliable system.
             </p>
 
             {/* 3 Feature Pills */}
             <div className="mt-9 flex flex-wrap items-center gap-3.5 text-xs font-semibold text-[#324158] sm:text-[13px]">
               <div>Create Exams</div>
               <span className="text-gray-300">|</span>
-              <div>Manage Students</div>
+              <div>Manage Aspirants</div>
               <span className="text-gray-300">|</span>
               <div>Track Performance</div>
             </div>

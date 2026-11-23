@@ -272,7 +272,7 @@ export default function AdminDashboardClient() {
               )}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Your organization portal is authorized to conduct tests and enroll students within your allocated quotas.
+              Your organization portal is authorized to conduct tests and enroll aspirants within your allocated quotas.
             </p>
           </div>
 
@@ -285,7 +285,7 @@ export default function AdminDashboardClient() {
             </div>
             <div className="w-px h-8 bg-gray-200" />
             <div>
-              <span className="text-gray-500 text-[11px] block">Students Quota</span>
+              <span className="text-gray-500 text-[11px] block">Aspirants Quota</span>
               <span className="font-bold text-[#324158] text-sm">
                 {stats.studentsEnrolled} / {stats.institute.maxStudents}
               </span>
@@ -300,7 +300,7 @@ export default function AdminDashboardClient() {
           { label: "Total Exams", value: stats?.totalExams ?? "—", sub: `+${stats?.examsThisMonth ?? 0} this month`, icon: FileText, iconBg: "bg-[#eaf0f8] border border-[#cbd5e1]/60", iconColor: "text-[#324158]" },
           { label: "Active Exams", value: stats?.activeExams ?? "—", sub: "Live now", icon: PlayCircle, iconBg: "bg-[#eaf0f8] border border-[#cbd5e1]/60", iconColor: "text-[#324158]" },
           { label: "Total Questions", value: stats?.totalQuestions?.toLocaleString() ?? "—", sub: "Across all exams", icon: HelpCircle, iconBg: "bg-[#eaf0f8] border border-[#cbd5e1]/60", iconColor: "text-[#324158]" },
-          { label: "Students Enrolled", value: stats?.studentsEnrolled?.toLocaleString() ?? "—", sub: `+${stats?.studentsThisMonth ?? 0} this month`, icon: UserCheck, iconBg: "bg-[#eaf0f8] border border-[#cbd5e1]/60", iconColor: "text-[#324158]" },
+          { label: "Aspirants Enrolled", value: stats?.studentsEnrolled?.toLocaleString() ?? "—", sub: `+${stats?.studentsThisMonth ?? 0} this month`, icon: UserCheck, iconBg: "bg-[#eaf0f8] border border-[#cbd5e1]/60", iconColor: "text-[#324158]" },
         ].map((stat) => (
           <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex justify-between items-start shadow-xs">
             <div>

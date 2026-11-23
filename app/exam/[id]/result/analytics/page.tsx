@@ -812,7 +812,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         <p style="font-size:13px;color:#6b7280;margin-bottom:16px">${examFull.subject || 'Assessment'}</p>
 
         <div class="student-info">
-          <div class="item"><div class="lbl">Student Name</div><div class="val">${attempt.studentName}</div></div>
+          <div class="item"><div class="lbl">Aspirant Name</div><div class="val">${attempt.studentName}</div></div>
           <div class="item"><div class="lbl">Roll Number</div><div class="val">${attempt.rollNumber}</div></div>
           ${showResults ? `<div class="item"><div class="lbl">Score</div><div class="val">${displayScore} / ${totalScore}</div></div>
           <div class="item"><div class="lbl">Percentage</div><div class="val">${totalScore > 0 ? Math.round((displayScore / totalScore) * 100) : 0}%</div></div>` : ''}

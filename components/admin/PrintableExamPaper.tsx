@@ -179,7 +179,7 @@ export function PrintableExamPaper({
                 Print Question Paper &amp; Solutions
               </h2>
               <p className="text-[11px] sm:text-xs text-slate-500">
-                Official high-resolution A4 printable layout for coaching institutes &amp; students
+                Official high-resolution A4 printable layout for coaching institutes &amp; aspirants
               </p>
             </div>
           </div>
@@ -218,7 +218,7 @@ export function PrintableExamPaper({
               }`}
             >
               <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-              <span>Student Copy (Without Solutions)</span>
+              <span>Aspirant Copy (Without Solutions)</span>
             </button>
 
             <button
@@ -321,7 +321,7 @@ export function PrintableExamPaper({
             <div className="mt-4 p-3 border border-slate-300 rounded bg-slate-50/50 text-xs space-y-2 print-avoid-break">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold shrink-0">Student Name:</span>
+                  <span className="font-semibold shrink-0">Aspirant Name:</span>
                   <div className="flex-1 border-b border-dotted border-slate-400 h-4"></div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -541,7 +541,7 @@ export function PrintableExamPaper({
 
         {/* ─── Footer of Document ─── */}
         <footer className="mt-8 pt-4 border-t border-slate-300 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 print-avoid-break">
-          <span>{examTitle ? (subject && examTitle.includes(subject) ? examTitle.replaceAll(subject, customSubject) : examTitle) : `${examTarget} ${customSubject}`} · {printMode === "student" ? "Student Examination Booklet" : "Teacher Solution Key"}</span>
+          <span>{examTitle ? (subject && examTitle.includes(subject) ? examTitle.replaceAll(subject, customSubject) : examTitle) : `${examTarget} ${customSubject}`} · {printMode === "student" ? "Aspirant Examination Booklet" : "Teacher Solution Key"}</span>
           <span className="font-medium text-slate-700">*** END OF QUESTION PAPER ***</span>
           <span>{customInstitute}</span>
         </footer>

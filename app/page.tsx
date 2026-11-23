@@ -161,7 +161,7 @@ export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null)
   const [activeSecurityTab, setActiveSecurityTab] = useState(0)
-  const [activeMockupTab, setActiveMockupTab] = useState<"Overview" | "Examinations" | "Question Bank" | "Students" | "Results">("Overview")
+  const [activeMockupTab, setActiveMockupTab] = useState<"Overview" | "Examinations" | "Question Bank" | "Aspirants" | "Results">("Overview")
   const locomotiveScrollRef = useRef<any>(null)
 
   // Initialize Locomotive Scroll for smooth scrolling
@@ -389,7 +389,7 @@ export default function HomePage() {
               </h1>
 
               <p className="mx-auto max-w-[540px] text-[13.5px] sm:text-base lg:text-lg leading-[1.6] text-[#c4cedb] lg:mx-0">
-                Create AI-powered examinations, conduct secure online assessments, automate evaluations and monitor student performance — all through one integrated platform.
+                Create AI-powered examinations, conduct secure online assessments, automate evaluations and monitor aspirant performance — all through one integrated platform.
               </p>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 pt-1">
@@ -476,7 +476,7 @@ export default function HomePage() {
                           { name: "Overview" as const, icon: Layers },
                           { name: "Examinations" as const, icon: FileText },
                           { name: "Question Bank" as const, icon: BookOpen },
-                          { name: "Students" as const, icon: GraduationCap },
+                          { name: "Aspirants" as const, icon: GraduationCap },
                           { name: "Results" as const, icon: BarChart2 },
                         ].map((item) => {
                           const ItemIcon = item.icon
@@ -526,7 +526,7 @@ export default function HomePage() {
                             { label: "Total Exams", value: "248" },
                             { label: "Active Exams", value: "12" },
                             { label: "Total Questions", value: "4,826" },
-                            { label: "Students", value: "1,842" },
+                            { label: "Aspirants", value: "1,842" },
                           ].map((stat) => (
                             <div key={stat.label} className="rounded-lg border border-slate-200 bg-white p-2 sm:p-2.5 shadow-2xs h-[46px] sm:h-[52px] flex flex-col justify-center">
                               <p className="mockup-label text-[7.5px] sm:text-[8.5px] font-semibold leading-tight truncate" style={{ color: "#64748b" }}>{stat.label}</p>
@@ -783,17 +783,17 @@ export default function HomePage() {
                       </div>
                     )}
 
-                    {/* 4. STUDENTS TAB */}
-                    {activeMockupTab === "Students" && (
+                    {/* 4. ASPIRANTS TAB */}
+                    {activeMockupTab === "Aspirants" && (
                       <div className="space-y-2.5 sm:space-y-3.5 flex flex-col justify-between h-full">
                         {/* Header */}
                         <div className="flex items-start justify-between border-b border-slate-200/90 pb-2 sm:pb-2.5">
                           <div>
                             <p className="mockup-label text-[8px] sm:text-[9.5px] font-bold uppercase tracking-wider" style={{ color: "#64748b" }}>Candidate Management</p>
-                            <h2 className="mockup-title mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#324158" }}>Student Directory (1,842)</h2>
+                            <h2 className="mockup-title mb-0.5 text-xs sm:text-base font-extrabold tracking-tight" style={{ color: "#324158" }}>Aspirant Directory (1,842)</h2>
                           </div>
                           <span className="inline-flex items-center gap-1 rounded-md bg-[#324158] px-2 py-1 text-[7.5px] sm:text-[8.5px] font-bold text-white shadow-xs">
-                            + Add Student
+                            + Add Aspirant
                           </span>
                         </div>
 
@@ -814,7 +814,7 @@ export default function HomePage() {
 
                         {/* 2-Col Grid - Identical height */}
                         <div className="grid grid-cols-1 sm:grid-cols-[1.38fr_0.92fr] gap-2 sm:gap-3">
-                          {/* Left: Students Table */}
+                          {/* Left: Aspirants Table */}
                           <div className="rounded-lg border border-slate-200 bg-white p-2.5 sm:p-3 shadow-2xs h-[148px] sm:h-[158px] flex flex-col justify-between">
                             <div className="mb-1 flex items-center justify-between text-[8.5px] sm:text-[10px] font-extrabold" style={{ color: "#324158" }}>
                               <span className="mockup-title" style={{ color: "#324158" }}>Enrolled Candidates</span>
@@ -1064,7 +1064,7 @@ export default function HomePage() {
               [Shield, "Advanced Exam Proctoring", "Configure controls that promote a focused and fair testing environment."],
               [ScanFace, "Face Detection Monitoring", "Monitor candidate presence throughout an online assessment session."],
               [FileText, "Automatic Result Generation", "Generate organized outcomes instantly for supported question types."],
-              [BarChart2, "Performance Analytics", "Turn examination data into clear, actionable student performance insights."],
+              [BarChart2, "Performance Analytics", "Turn examination data into clear, actionable aspirant performance insights."],
             ].map(([Icon, title, description], index) => {
               const FeatureIcon = Icon as typeof Sparkles
               return (
@@ -1517,7 +1517,7 @@ export default function HomePage() {
               Exam Preparation.
             </h2>
             <p className="mt-5 max-w-[390px] text-[14px] sm:text-[15px] leading-relaxed text-[#718096]">
-              Give organizations a structured way to create practice tests and mock examinations for Class 11th and 12th students.
+              Give organizations a structured way to create practice tests and mock examinations for Class 11th and 12th aspirants.
             </p>
             <div className="mt-6 flex max-w-[420px] flex-wrap gap-2 text-[11px] text-[#718096]">
               {["Chapter-wise tests", "Subject-wise assessments", "Revision tests", "Practice examinations", "Full-length mock tests"].map((item) => (
@@ -1643,12 +1643,12 @@ export default function HomePage() {
           <ScrollReveal direction="up" className="mx-auto max-w-3xl space-y-4 text-center">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718096]">Automated Results &amp; Analytics</span>
             <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.035em] text-[#324158] sm:text-5xl">
-              Every Result. Every Student.
+              Every Result. Every Aspirant.
               <br />
               <span className="font-semibold italic">Every Insight.</span>
             </h2>
             <p className="text-[14px] sm:text-[15px] leading-relaxed text-[#718096]">
-              Reduce manual evaluation and understand student performance through organized examination
+              Reduce manual evaluation and understand aspirant performance through organized examination
               <br className="hidden sm:block" /> results and analytics.
             </p>
           </ScrollReveal>
@@ -1666,7 +1666,7 @@ export default function HomePage() {
                 ["Class average", "76.4%", "82%"],
                 ["Highest score", "94%", "94%"],
                 ["Pass rate", "88.2%", "88%"],
-                ["Students", "152", "65%"],
+                ["Aspirants", "152", "65%"],
               ].map(([label, value, width]) => (
                 <div key={label}>
                   <div className="flex items-end justify-between gap-2"><p className="text-[9px] text-[#899aaa]">{label}</p><b className="text-xl sm:text-2xl text-[#324158]">{value}</b></div>
@@ -1678,7 +1678,7 @@ export default function HomePage() {
             <div className="w-full overflow-x-auto">
               <div className="min-w-[700px]">
                 <div className="grid grid-cols-[1.6fr_0.7fr_0.7fr_0.8fr_0.8fr_0.7fr_1fr] border-b border-[#e5eaee] px-5 py-3 text-[8px] text-[#899aaa]">
-                  <span>Student</span><span>Obtained</span><span>Total</span><span>Percentage</span><span>Result</span><span>Grade</span><span>Exam date</span>
+                  <span>Aspirant</span><span>Obtained</span><span>Total</span><span>Percentage</span><span>Result</span><span>Grade</span><span>Exam date</span>
                 </div>
                 {[
                   ["AS", "Aarav Sharma", "282", "94%", "A+", "24 May 2025"],
@@ -1720,7 +1720,7 @@ export default function HomePage() {
           <div className="mt-10 grid gap-3 lg:grid-cols-2">
             {[
               ["01", "JEE / CET / NEET Organizations", "Create chapter-wise practice tests, subject assessments and full-length competitive examination simulations."],
-              ["02", "Schools", "Conduct regular academic assessments, unit tests and structured student evaluations."],
+              ["02", "Schools", "Conduct regular academic assessments, unit tests and structured aspirant evaluations."],
               ["03", "Colleges & Universities", "Manage technical assessments, aptitude tests, coding examinations and internal evaluations."],
               ["04", "Training & Assessment Organizations", "Evaluate knowledge, technical capabilities and candidate performance through structured online assessments."],
             ].map(([number, title, description], index) => (
@@ -1762,9 +1762,9 @@ export default function HomePage() {
 
           <div className="mt-10 grid items-stretch gap-4 sm:gap-3 lg:grid-cols-3">
             {[
-              ["Basic", "₹8,500", "Essential tools for modern examination management.", "View Pricing", ["50 students", "200 exams per year", "General examination management", "AI question generation", "Automatic results", "Proctoring"]],
-              ["Organization", "₹12,000", "Essential tools for modern examination management.", "View Pricing", ["50 students", "200 exams per year", "Everything in Basic", "JEE, MHT-CET & NEET creation", "Class and chapter-based workflow"]],
-              ["Customized Plan", "Custom", "A tailored solution designed around your organization.", "Talk to Our Team", ["Custom student capacity", "Custom examination limits", "Tailored organization requirements", "Personalized support options"]],
+              ["Basic", "₹8,500", "Essential tools for modern examination management.", "View Pricing", ["50 aspirants", "200 exams per year", "General examination management", "AI question generation", "Automatic results", "Proctoring"]],
+              ["Organization", "₹12,000", "Essential tools for modern examination management.", "View Pricing", ["50 aspirants", "200 exams per year", "Everything in Basic", "JEE, MHT-CET & NEET creation", "Class and chapter-based workflow"]],
+              ["Customized Plan", "Custom", "A tailored solution designed around your organization.", "Talk to Our Team", ["Custom aspirant capacity", "Custom examination limits", "Tailored organization requirements", "Personalized support options"]],
             ].map(([name, price, description, action, items], index) => (
               <ScrollReveal key={name as string} direction="up" delay={index * 90}>
                 <article className="group relative flex h-full min-h-[405px] box-border flex-col rounded-xl border border-[#dce3e9] bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[#304058] hover:shadow-[0_16px_34px_rgba(47,64,87,0.12)]">
@@ -1830,7 +1830,7 @@ export default function HomePage() {
                     <span className="block rounded bg-[#445872] px-1.5 py-1 font-bold text-white">Dashboard</span>
                     <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Exams</span>
                     <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Questions</span>
-                    <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Students</span>
+                    <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Aspirants</span>
                     <span className="block px-1.5 py-0.5 text-slate-300 font-medium hover:text-white">Analytics</span>
                   </div>
                 </aside>

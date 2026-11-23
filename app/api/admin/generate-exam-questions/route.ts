@@ -141,7 +141,7 @@ Rules:
         typeSpecificPrompt = `
 Generate exactly ${totalCount} Fill in the Blanks Questions (type: "fillblanks").
 Rules:
-- "questionText": A sentence containing '___' (3 underscores) at the position where the student should fill the answer. Example: "Water boils at ___ degrees Celsius at sea level."
+- "questionText": A sentence containing '___' (3 underscores) at the position where the aspirant should fill the answer. Example: "Water boils at ___ degrees Celsius at sea level."
 - "blanks": Array of objects: [{ "answer": "100", "alsoAccept": ["100°C", "hundred"] }]
 - "caseInsensitive": true
 - "difficulty": "${difficulty}"

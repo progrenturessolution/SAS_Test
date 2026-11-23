@@ -314,7 +314,7 @@ export default function GradeAttemptPage({ params }: { params: Promise<{ id: str
                   Examiner Notice
                 </span>
                 <p>
-                  Any score changes saved here immediately update the student's result report and aggregate performance.
+                  Any score changes saved here immediately update the aspirant's result report and aggregate performance.
                 </p>
               </div>
             </div>
@@ -389,10 +389,10 @@ export default function GradeAttemptPage({ params }: { params: Promise<{ id: str
                           <MathRenderer content={q.questionText} />
                         </div>
 
-                        {/* Student's Answer */}
+                        {/* Aspirant's Answer */}
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-1.5 text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
-                            <span>Student's Response:</span>
+                            <span>Aspirant's Response:</span>
                           </div>
 
                           <div
@@ -454,7 +454,7 @@ export default function GradeAttemptPage({ params }: { params: Promise<{ id: str
                                     <div className="p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200/80 text-emerald-950">
                                       <div className="flex items-center gap-1.5 mb-1 text-emerald-900 font-semibold text-[11px]">
                                         <CheckCircle size={13} className="text-emerald-600 shrink-0" />
-                                        <span>Why Student is Right (Key Concepts Hit):</span>
+                                        <span>Why Aspirant is Right (Key Concepts Hit):</span>
                                       </div>
                                       <p className="leading-relaxed pl-4 break-words">{ans.aiEvaluation.whyRight}</p>
                                     </div>
@@ -464,7 +464,7 @@ export default function GradeAttemptPage({ params }: { params: Promise<{ id: str
                                     <div className="p-2.5 rounded-lg bg-rose-50/70 border border-rose-200/80 text-rose-950">
                                       <div className="flex items-center gap-1.5 mb-1 text-rose-900 font-semibold text-[11px]">
                                         <XCircle size={13} className="text-rose-600 shrink-0" />
-                                        <span>Why Student is Wrong / Missed Points:</span>
+                                        <span>Why Aspirant is Wrong / Missed Points:</span>
                                       </div>
                                       <p className="leading-relaxed pl-4 break-words">{ans.aiEvaluation.whyWrong}</p>
                                     </div>

@@ -353,14 +353,14 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
                   </span>
                 </div>
                 <p className="text-xs text-blue-800 mt-1 leading-relaxed">
-                  Anyone with this link can take this examination. You do not need an institute student account or exam password.
+                  Anyone with this link can take this examination. You do not need an institute aspirant account or exam password.
                 </p>
               </div>
             </div>
           )}
 
           <h2 className="text-xl font-bold text-[#324158] mb-1">
-            {isPublicAccess ? "Candidate Registration" : "Student Registration"}
+            {isPublicAccess ? "Candidate Registration" : "Aspirant Registration"}
           </h2>
           <p className="text-sm text-gray-500 mb-6 font-medium">
             {isPublicAccess

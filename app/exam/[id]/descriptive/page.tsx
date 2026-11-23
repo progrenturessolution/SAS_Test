@@ -180,7 +180,7 @@ export default function DescriptivePage({ params }: { params: Promise<{ id: stri
         section={section.name}
         timeLeft={timeLeft}
         duration={exam.duration}
-        studentName="Student"
+        studentName="Aspirant"
         rollNo="N/A"
         onSubmit={handleSubmitSection}
         warningCount={procState.warnings}

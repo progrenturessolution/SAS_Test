@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
         if (!student) {
           return NextResponse.json(
-            { error: "Only students registered by this coaching institute can enter this exam." },
+            { error: "Only aspirants registered by this coaching institute can enter this exam." },
             { status: 403 }
           )
         }
@@ -45,13 +45,13 @@ export async function POST(req: Request) {
         if (student.status === "deactivated" || (student as any).isActive === false) {
           const reason =
             (student as any).deactivationReason?.trim() ||
-            "Your student account has been deactivated. Please contact your coaching administrator."
+            "Your aspirant account has been deactivated. Please contact your coaching administrator."
           return NextResponse.json({ error: reason }, { status: 403 })
         }
 
         if (!password || !(await student.comparePassword(password))) {
           return NextResponse.json(
-            { error: "Invalid student credentials or password." },
+            { error: "Invalid aspirant credentials or password." },
             { status: 403 }
           )
         }
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
         if (student && (student.status === "deactivated" || (student as any).isActive === false)) {
           const reason =
             (student as any).deactivationReason?.trim() ||
-            "Your student account has been deactivated. Please contact your coaching administrator."
+            "Your aspirant account has been deactivated. Please contact your coaching administrator."
           return NextResponse.json({ error: reason }, { status: 403 })
         }
       }

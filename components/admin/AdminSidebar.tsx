@@ -89,7 +89,7 @@ export default function AdminSidebar({
     { label: "Exams", href: "/admin/exams", icon: FileText },
     { label: "Entrance Exams", href: "/admin/ai-generator", icon: GraduationCap },
     { label: "Other Exams", href: "/admin/other-exams", icon: Layers },
-    { label: "Students", href: "/admin/students", icon: Users },
+    { label: "Aspirants", href: "/admin/students", icon: Users },
     { label: "Results", href: "/admin/results", icon: BarChart2 },
     { label: "Support & Help", href: "/admin/queries", icon: MessageSquare },
   ]
@@ -150,6 +150,7 @@ export default function AdminSidebar({
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin"
+    if (href === "/admin/students") return pathname.startsWith("/admin/students") || pathname.startsWith("/admin/aspirants")
     return pathname.startsWith(href)
   }
 

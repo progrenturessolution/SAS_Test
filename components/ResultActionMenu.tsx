@@ -204,7 +204,7 @@ export function ResultActionMenu({ result }: ResultActionMenuProps) {
               <ExternalLink size={11} className="text-slate-400" />
             </Link>
 
-            {/* Student Result Card */}
+            {/* Aspirant Result Card */}
             <Link
               href={resultCardUrl}
               target="_blank"

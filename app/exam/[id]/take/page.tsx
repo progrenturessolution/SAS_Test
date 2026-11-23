@@ -250,7 +250,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const [activeWarning, setActiveWarning] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [examSubmitted, setExamSubmitted] = useState(false)
-  const [studentName, setStudentName] = useState("Student")
+  const [studentName, setStudentName] = useState("Aspirant")
   const [studentRoll, setStudentRoll] = useState("N/A")
   // Fill-in-blank per-blank input state: map of questionId -> blank answers array
   const [blankInputs, setBlankInputs] = useState<Record<string, string[]>>({})
@@ -478,7 +478,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         
         // Load student info from attempt
         if (attempt) {
-          setStudentName(attempt.studentName || "Student")
+          setStudentName(attempt.studentName || "Aspirant")
           setStudentRoll(attempt.rollNumber || "N/A")
         }
         

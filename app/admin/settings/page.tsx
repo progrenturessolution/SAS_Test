@@ -242,7 +242,7 @@ export default function SettingsPage() {
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
             {isInstitute
-              ? "Upload your coaching logo and customize the brand theme color across your portal and student exams."
+              ? "Upload your coaching logo and customize the brand theme color across your portal and aspirant exams."
               : "Manage global platform credentials and operational preferences."}
           </p>
         </div>
@@ -308,7 +308,7 @@ export default function SettingsPage() {
             {limits && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100 text-xs">
                 <div>
-                  <span className="text-gray-400 block text-[11px]">Max Students</span>
+                  <span className="text-gray-400 block text-[11px]">Max Aspirants</span>
                   <span className="font-bold text-[#324158] text-sm mt-0.5 block">{limits.maxStudents ?? 100} Enrolled</span>
                 </div>
                 <div>
@@ -340,7 +340,7 @@ export default function SettingsPage() {
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-gray-900">Coaching Institute Logo</h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Your logo replaces the default platform logo in your portal header and on all student exam screens.
+                    Your logo replaces the default platform logo in your portal header and on all aspirant exam screens.
                   </p>
                 </div>
               </div>
@@ -423,7 +423,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200/70 text-xs text-amber-800 leading-relaxed">
-                  <strong>Student Exam Visibility:</strong> When students open or submit tests created by your coaching, your logo will appear on their exam header instead of any platform branding.
+                  <strong>Aspirant Exam Visibility:</strong> When aspirants open or submit tests created by your coaching, your logo will appear on their exam header instead of any platform branding.
                 </div>
               </div>
             </div>
@@ -442,7 +442,7 @@ export default function SettingsPage() {
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-gray-900">Theme & Brand Color</h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Customize your coaching portal and student exam accent colors to match your institute branding.
+                    Customize your coaching portal and aspirant exam accent colors to match your institute branding.
                   </p>
                 </div>
               </div>

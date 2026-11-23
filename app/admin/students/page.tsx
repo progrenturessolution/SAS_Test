@@ -185,9 +185,9 @@ export default function StudentsPage() {
         body: JSON.stringify(payload),
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || "Failed to add student")
+      if (!response.ok) throw new Error(data.error || "Failed to add aspirant")
 
-      toast.success("Student added successfully!")
+      toast.success("Aspirant added successfully!")
 
       // Optimistically update state so fees reflect immediately
       if (data.student) {
@@ -222,7 +222,7 @@ export default function StudentsPage() {
       setShowAddStudent(false)
       loadStudents()
     } catch (error) {
-      setAddError(error instanceof Error ? error.message : "Failed to add student")
+      setAddError(error instanceof Error ? error.message : "Failed to add aspirant")
     } finally {
       setSavingAdd(false)
     }
@@ -275,9 +275,9 @@ export default function StudentsPage() {
         body: JSON.stringify(payload),
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || "Failed to update student")
+      if (!response.ok) throw new Error(data.error || "Failed to update aspirant")
 
-      toast.success("Student updated successfully!")
+      toast.success("Aspirant updated successfully!")
       setEditStudent(null)
 
       // Update in-memory state
@@ -319,7 +319,7 @@ export default function StudentsPage() {
 
       loadStudents()
     } catch (error) {
-      setEditError(error instanceof Error ? error.message : "Failed to update student")
+      setEditError(error instanceof Error ? error.message : "Failed to update aspirant")
     } finally {
       setSavingEdit(false)
     }
@@ -340,7 +340,7 @@ export default function StudentsPage() {
         }),
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || "Failed to activate student")
+      if (!response.ok) throw new Error(data.error || "Failed to activate aspirant")
 
       toast.success(`"${student.studentName}" has been activated. Exam login is allowed.`)
 
@@ -358,7 +358,7 @@ export default function StudentsPage() {
         )
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to activate student")
+      toast.error(error.message || "Failed to activate aspirant")
     } finally {
       setActivatingId(null)
     }
@@ -382,7 +382,7 @@ export default function StudentsPage() {
         }),
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || "Failed to deactivate student")
+      if (!response.ok) throw new Error(data.error || "Failed to deactivate aspirant")
 
       toast.success(`"${deactivateTarget.studentName}" has been deactivated. Exam login is blocked.`)
 
@@ -403,7 +403,7 @@ export default function StudentsPage() {
       setDeactivateTarget(null)
       setDeactivateReason("")
     } catch (error: any) {
-      toast.error(error.message || "Failed to deactivate student")
+      toast.error(error.message || "Failed to deactivate aspirant")
     } finally {
       setDeactivating(false)
     }
@@ -413,7 +413,7 @@ export default function StudentsPage() {
   const handleDeleteStudent = async (student: Student) => {
     setActiveMenuStudentId(null)
     const confirmed = window.confirm(
-      `Are you sure you want to remove "${student.studentName}"? This will delete the student account from your coaching institute.`
+      `Are you sure you want to remove "${student.studentName}"? This will delete the aspirant account from your coaching institute.`
     )
     if (!confirmed) return
 
@@ -423,14 +423,14 @@ export default function StudentsPage() {
         method: "DELETE",
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || "Failed to remove student")
+      if (!response.ok) throw new Error(data.error || "Failed to remove aspirant")
 
-      toast.success(`Student "${student.studentName}" removed successfully.`)
+      toast.success(`Aspirant "${student.studentName}" removed successfully.`)
       setStudents((prev) => prev.filter((s) => s._id !== student._id))
       if (profileStudent?._id === student._id) setProfileStudent(null)
       if (editStudent?._id === student._id) setEditStudent(null)
     } catch (error: any) {
-      toast.error(error.message || "Failed to remove student")
+      toast.error(error.message || "Failed to remove aspirant")
     } finally {
       setDeletingId(null)
     }
@@ -500,9 +500,9 @@ export default function StudentsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 border-b border-gray-200 pb-5">
         {/* Left: Title & Subtitle */}
         <div className="shrink-0">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">Students</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">Aspirants</h1>
           <p className="mt-0.5 text-xs text-slate-500">
-            Registered students allowed to access your coaching portal and exams.
+            Registered aspirants allowed to access your coaching portal and exams.
           </p>
         </div>
 
@@ -541,7 +541,7 @@ export default function StudentsPage() {
             className="w-full md:w-auto rounded-xl px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
           >
             <UserPlus size={16} />
-            <span>Add Student</span>
+            <span>Add Aspirant</span>
           </button>
         </div>
       </div>
@@ -560,7 +560,7 @@ export default function StudentsPage() {
               : "border-slate-200/80 hover:border-slate-300"
           }`}
         >
-          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Students</p>
+          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Aspirants</p>
           <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#324158] tracking-tight">{students.length}</p>
         </button>
 
@@ -713,7 +713,7 @@ export default function StudentsPage() {
 
         {/* Right: Counter */}
         <div className="text-xs text-slate-500 font-medium">
-          Showing <span className="font-bold text-[#324158]">{filtered.length}</span> of {students.length} students
+          Showing <span className="font-bold text-[#324158]">{filtered.length}</span> of {students.length} aspirants
         </div>
       </div>
 
@@ -730,7 +730,7 @@ export default function StudentsPage() {
               <table className="w-full text-left border-collapse min-w-[760px]">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                    <th className="px-6 py-3.5">Student</th>
+                    <th className="px-6 py-3.5">Aspirant</th>
                     <th className="px-6 py-3.5">Roll Number</th>
                     <th className="px-6 py-3.5">Fees Status</th>
                     <th className="px-6 py-3.5 text-center">Attempts</th>
@@ -745,7 +745,7 @@ export default function StudentsPage() {
                       <td colSpan={7} className="text-center py-16 text-gray-400 text-sm">
                         {search || statusFilter !== "all" || feesFilter !== "all" ? (
                           <div className="flex flex-col items-center justify-center gap-2">
-                            <p className="font-medium text-slate-600">No students match the selected filter criteria.</p>
+                            <p className="font-medium text-slate-600">No aspirants match the selected filter criteria.</p>
                             <button
                               type="button"
                               onClick={() => {
@@ -759,7 +759,7 @@ export default function StudentsPage() {
                             </button>
                           </div>
                         ) : (
-                          "No registered students found."
+                          "No registered aspirants found."
                         )}
                       </td>
                     </tr>
@@ -922,7 +922,7 @@ export default function StudentsPage() {
                                     className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
                                   >
                                     <Edit3 size={14} className="text-[#324158]" />
-                                    <span>Edit Student</span>
+                                    <span>Edit Aspirant</span>
                                   </button>
 
                                   {isDeactivated ? (
@@ -933,7 +933,7 @@ export default function StudentsPage() {
                                       className="w-full px-3.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer transition-colors"
                                     >
                                       <UserCheck size={14} />
-                                      <span>{activatingId === s._id ? "Activating..." : "Activate Student"}</span>
+                                      <span>{activatingId === s._id ? "Activating..." : "Activate Aspirant"}</span>
                                     </button>
                                   ) : (
                                     <button
@@ -946,7 +946,7 @@ export default function StudentsPage() {
                                       className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
                                     >
                                       <UserX size={14} className="text-[#324158]" />
-                                      <span>Deactivate Student</span>
+                                      <span>Deactivate Aspirant</span>
                                     </button>
                                   )}
 
@@ -959,7 +959,7 @@ export default function StudentsPage() {
                                     className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
                                   >
                                     <Trash2 size={14} />
-                                    <span>{deletingId === s._id ? "Removing..." : "Remove Student"}</span>
+                                    <span>{deletingId === s._id ? "Removing..." : "Remove Aspirant"}</span>
                                   </button>
                                 </div>
                               </>
@@ -980,7 +980,7 @@ export default function StudentsPage() {
                 <div className="text-center py-12 px-4 text-gray-400 text-sm">
                   {search || statusFilter !== "all" || feesFilter !== "all" ? (
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <p className="font-medium text-slate-600">No students match the selected filter criteria.</p>
+                      <p className="font-medium text-slate-600">No aspirants match the selected filter criteria.</p>
                       <button
                         type="button"
                         onClick={() => {
@@ -994,7 +994,7 @@ export default function StudentsPage() {
                       </button>
                     </div>
                   ) : (
-                    "No registered students found."
+                    "No registered aspirants found."
                   )}
                 </div>
               ) : (
@@ -1056,7 +1056,7 @@ export default function StudentsPage() {
                               setActiveMenuStudentId(isMenuOpen ? null : s._id)
                             }}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
-                            aria-label="Student options"
+                            aria-label="Aspirant options"
                           >
                             <MoreVertical size={16} />
                           </button>
@@ -1090,7 +1090,7 @@ export default function StudentsPage() {
                                 className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
                               >
                                 <Edit3 size={14} className="text-[#324158]" />
-                                <span>Edit Student</span>
+                                <span>Edit Aspirant</span>
                               </button>
 
                               {isDeactivated ? (
@@ -1101,7 +1101,7 @@ export default function StudentsPage() {
                                   className="w-full px-3.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer transition-colors"
                                 >
                                   <UserCheck size={14} />
-                                  <span>{activatingId === s._id ? "Activating..." : "Activate Student"}</span>
+                                  <span>{activatingId === s._id ? "Activating..." : "Activate Aspirant"}</span>
                                 </button>
                               ) : (
                                 <button
@@ -1114,7 +1114,7 @@ export default function StudentsPage() {
                                   className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
                                 >
                                   <UserX size={14} className="text-[#324158]" />
-                                  <span>Deactivate Student</span>
+                                  <span>Deactivate Aspirant</span>
                                 </button>
                               )}
 
@@ -1127,7 +1127,7 @@ export default function StudentsPage() {
                                 className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
                               >
                                 <Trash2 size={14} />
-                                <span>{deletingId === s._id ? "Removing..." : "Remove Student"}</span>
+                                <span>{deletingId === s._id ? "Removing..." : "Remove Aspirant"}</span>
                               </button>
                             </div>
                           </>
@@ -1196,9 +1196,9 @@ export default function StudentsPage() {
             {/* Modal Header */}
             <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-start justify-between shrink-0 bg-white">
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">Add New Student</h2>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">Add New Aspirant</h2>
                 <p className="mt-0.5 text-[11px] sm:text-xs text-gray-500">
-                  Register student credentials and setup fee structure for your coaching.
+                  Register aspirant credentials and setup fee structure for your coaching.
                 </p>
               </div>
               <button
@@ -1224,7 +1224,7 @@ export default function StudentsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">
-                      Student Name <span className="text-red-500">*</span>
+                      Aspirant Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1373,10 +1373,10 @@ export default function StudentsPage() {
                 >
                   {savingAdd ? (
                     <>
-                      <Loader2 size={14} className="animate-spin" /> Adding Student...
+                      <Loader2 size={14} className="animate-spin" /> Adding Aspirant...
                     </>
                   ) : (
-                    "Add Student"
+                    "Add Aspirant"
                   )}
                 </button>
               </div>
@@ -1394,9 +1394,9 @@ export default function StudentsPage() {
             {/* Modal Header */}
             <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-start justify-between shrink-0 bg-white">
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">Edit Student Details</h2>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">Edit Aspirant Details</h2>
                 <p className="mt-0.5 text-[11px] sm:text-xs text-gray-500">
-                  Update student personal information, credentials, and fee balances.
+                  Update aspirant personal information, credentials, and fee balances.
                 </p>
               </div>
               <button
@@ -1422,7 +1422,7 @@ export default function StudentsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">
-                      Student Name <span className="text-red-500">*</span>
+                      Aspirant Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1591,10 +1591,10 @@ export default function StudentsPage() {
                 </div>
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">
-                    Deactivate Student
+                    Deactivate Aspirant
                   </h2>
                   <p className="text-[11px] sm:text-xs text-gray-500">
-                    Block exam entrance and specify reason for student
+                    Block exam entrance and specify reason for aspirant
                   </p>
                 </div>
               </div>
@@ -1637,7 +1637,7 @@ export default function StudentsPage() {
                   <ShieldAlert size={16} className="text-slate-600 shrink-0 mt-0.5" />
                   <div>
                     <strong className="font-semibold text-slate-900 block mb-0.5">Exam Login Will Be Blocked:</strong>
-                    When deactivated, this student cannot enter or attempt exams. The reason you enter below will be shown directly on their screen when they try to log in.
+                    When deactivated, this aspirant cannot enter or attempt exams. The reason you enter below will be shown directly on their screen when they try to log in.
                   </div>
                 </div>
 
@@ -1647,7 +1647,7 @@ export default function StudentsPage() {
                     <label className="block text-xs font-bold text-gray-700">
                       Deactivation Reason <span className="text-red-500">*</span>
                     </label>
-                    <span className="text-[10px] text-slate-500 font-medium">Shown on student screen</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Shown on aspirant screen</span>
                   </div>
 
                   {/* Quick Preset Buttons */}
@@ -1678,7 +1678,7 @@ export default function StudentsPage() {
                     className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-xs sm:text-sm font-normal outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-all resize-none"
                   />
                   <p className="text-[11px] text-slate-400">
-                    Be specific so the student knows why their account is locked and what steps to take.
+                    Be specific so the aspirant knows why their account is locked and what steps to take.
                   </p>
                 </div>
               </div>
@@ -1706,7 +1706,7 @@ export default function StudentsPage() {
                     </>
                   ) : (
                     <>
-                      <UserX size={14} /> Deactivate Student
+                      <UserX size={14} /> Deactivate Aspirant
                     </>
                   )}
                 </button>
@@ -1741,7 +1741,7 @@ export default function StudentsPage() {
                     style={{ backgroundColor: themeColor || "#1E293B" }}
                   />
                   <div>
-                    <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">Student Profile</h2>
+                    <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">Aspirant Profile</h2>
                     <p className="text-[11px] text-gray-500">Complete enrollment, fees balance, and exam performance</p>
                   </div>
                 </div>
@@ -1789,7 +1789,7 @@ export default function StudentsPage() {
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                              <ShieldCheck size={13} /> Active Student
+                              <ShieldCheck size={13} /> Active Aspirant
                             </span>
                           )}
                         </div>
@@ -1876,14 +1876,14 @@ export default function StudentsPage() {
                         </div>
                         <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700/80">
                           <p className="text-[10px] uppercase font-bold text-slate-400">
-                            Reason shown to student when attempting exam login:
+                            Reason shown to aspirant when attempting exam login:
                           </p>
                           <p className="text-xs text-white font-medium mt-1 leading-relaxed">
-                            {profileStudent.deactivationReason || "Your student account has been deactivated. Please contact your coaching administrator."}
+                            {profileStudent.deactivationReason || "Your aspirant account has been deactivated. Please contact your coaching administrator."}
                           </p>
                         </div>
                         <p className="text-[11px] text-slate-400">
-                          This student is currently locked out of all coaching exams. Click &ldquo;Activate Now&rdquo; to restore access.
+                          This aspirant is currently locked out of all coaching exams. Click &ldquo;Activate Now&rdquo; to restore access.
                         </p>
                       </div>
                     )}
@@ -2001,7 +2001,7 @@ export default function StudentsPage() {
                     <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70 flex items-start gap-3 text-xs text-slate-600">
                       <KeyRound size={15} className="text-slate-500 shrink-0 mt-0.5" />
                       <p className="leading-relaxed">
-                        <strong className="text-slate-800 font-semibold">Student Exam Login:</strong> Student can log in to attend coaching tests with Roll Number (<strong>{profileStudent.rollNumber}</strong>) or registered email.
+                        <strong className="text-slate-800 font-semibold">Aspirant Exam Login:</strong> Aspirant can log in to attend coaching tests with Roll Number (<strong>{profileStudent.rollNumber}</strong>) or registered email.
                       </p>
                     </div>
                   </div>
@@ -2025,7 +2025,7 @@ export default function StudentsPage() {
                     className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <UserCheck size={14} />
-                    <span>{activatingId === profileStudent._id ? "Activating..." : "Activate Student"}</span>
+                    <span>{activatingId === profileStudent._id ? "Activating..." : "Activate Aspirant"}</span>
                   </button>
                 ) : (
                   <button
@@ -2039,7 +2039,7 @@ export default function StudentsPage() {
                     className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <UserX size={14} className="text-slate-500" />
-                    <span>Deactivate Student</span>
+                    <span>Deactivate Aspirant</span>
                   </button>
                 )}
                 <button
@@ -2053,7 +2053,7 @@ export default function StudentsPage() {
                   className="px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <Edit3 size={14} />
-                  <span>Edit Student</span>
+                  <span>Edit Aspirant</span>
                 </button>
               </div>
             </div>

@@ -2332,10 +2332,10 @@ function OtherExamsContent() {
                     setShowPrintModal(true)
                   }}
                   className="px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/70 text-blue-800 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                  title="Print clean question paper for students"
+                  title="Print clean question paper for aspirants"
                 >
                   <Printer className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Print for Students</span>
+                  <span>Print for Aspirants</span>
                 </button>
 
                 {/* Print Teacher Solutions */}
@@ -3246,7 +3246,7 @@ function OtherExamsContent() {
                           <Calculator className="w-4 h-4 text-[#324158]" />
                           <div>
                             <span className="text-xs font-normal text-slate-700 block">
-                              Enable Student Calculator
+                              Enable Aspirant Calculator
                             </span>
                             <span className="text-[10px] text-slate-400 block">
                               Allow on-screen scientific calculator during exam
@@ -3388,7 +3388,7 @@ function OtherExamsContent() {
                 <div className="mt-6 rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE]/70 p-3.5 sm:p-4 flex items-center gap-2.5 text-xs text-[#1E40AF]">
                   <Info className="w-4 h-4 text-[#2563EB] shrink-0" />
                   <span className="leading-relaxed">
-                    <strong className="font-medium text-[#1E40AF]">Pro-Tip:</strong> Face Detection &amp; AI Status Analysis require students to have a working webcam.
+                    <strong className="font-medium text-[#1E40AF]">Pro-Tip:</strong> Face Detection &amp; AI Status Analysis require aspirants to have a working webcam.
                   </span>
                 </div>
               </div>

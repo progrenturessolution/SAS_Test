@@ -404,7 +404,7 @@ export default function InstitutesManagementPage() {
     const nextStatus = inst.status === "active" ? "suspended" : "active"
     const confirmMsg =
       nextStatus === "suspended"
-        ? `Are you sure you want to DEACTIVATE "${inst.name}"? Their teachers & students will be blocked from logging in.`
+        ? `Are you sure you want to DEACTIVATE "${inst.name}"? Their teachers & aspirants will be blocked from logging in.`
         : `Re-activate "${inst.name}"?`
 
     if (!confirm(confirmMsg)) return
@@ -526,7 +526,7 @@ export default function InstitutesManagementPage() {
             <span>Organizations</span>
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Register organizations, allocate student & exam quotas, and configure access permissions.
+            Register organizations, allocate aspirant & exam quotas, and configure access permissions.
           </p>
         </div>
 
@@ -593,7 +593,7 @@ export default function InstitutesManagementPage() {
 
         <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-[#324158]/40 hover:shadow-sm transition-all">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium mb-1.5">
-            <span>Total Students Enrolled</span>
+            <span>Total Aspirants Enrolled</span>
             <div className="w-8 h-8 rounded-xl bg-[#324158]/8 text-[#324158] flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
@@ -818,7 +818,7 @@ export default function InstitutesManagementPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Students</p>
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Aspirants</p>
                           <span className="text-[10px] font-semibold text-slate-500">{studentPct}%</span>
                         </div>
                         <p className="mt-0.5 text-sm font-bold text-[#324158]">
@@ -971,10 +971,10 @@ export default function InstitutesManagementPage() {
                       {/* Quota & Usage Progress Bars */}
                       <td className="py-3.5 px-4 min-w-[190px]">
                         <div className="space-y-2">
-                          {/* Students Quota */}
+                          {/* Aspirants Quota */}
                           <div>
                             <div className="flex justify-between text-[11px] font-medium mb-1">
-                              <span className="text-gray-500">Students:</span>
+                              <span className="text-gray-500">Aspirants:</span>
                               <span
                                 className={`font-bold ${
                                   studentPct >= 90 ? "text-red-600" : "text-[#324158]"
@@ -1247,9 +1247,9 @@ export default function InstitutesManagementPage() {
               <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 sm:col-span-2 shadow-xs">
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Usage and quotas</p>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100"><p className="text-xs text-slate-500 font-medium">Students</p><p className="mt-1 text-lg font-bold text-[#324158]">{selectedInstitute.usage?.studentsEnrolled || 0} <span className="text-xs font-normal text-slate-400">/ {selectedInstitute.limits?.maxStudents ?? 100}</span></p></div>
+                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100"><p className="text-xs text-slate-500 font-medium">Aspirants</p><p className="mt-1 text-lg font-bold text-[#324158]">{selectedInstitute.usage?.studentsEnrolled || 0} <span className="text-xs font-normal text-slate-400">/ {selectedInstitute.limits?.maxStudents ?? 100}</span></p></div>
                   <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100"><p className="text-xs text-slate-500 font-medium">Exams</p><p className="mt-1 text-lg font-bold text-[#324158]">{selectedInstitute.usage?.examsCreated || 0} <span className="text-xs font-normal text-slate-400">/ {selectedInstitute.limits?.maxExams ?? 20}</span></p></div>
-                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100"><p className="text-xs text-slate-500 font-medium">Student limit</p><p className="mt-1 text-lg font-bold text-[#324158]">{selectedInstitute.limits?.maxStudents ?? 100}</p></div>
+                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100"><p className="text-xs text-slate-500 font-medium">Aspirant limit</p><p className="mt-1 text-lg font-bold text-[#324158]">{selectedInstitute.limits?.maxStudents ?? 100}</p></div>
                   <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100"><p className="text-xs text-slate-500 font-medium">Exam limit</p><p className="mt-1 text-lg font-bold text-[#324158]">{selectedInstitute.limits?.maxExams ?? 20}</p></div>
                 </div>
               </div>
@@ -1293,7 +1293,7 @@ export default function InstitutesManagementPage() {
                 <div>
                   <h3 className="text-sm font-bold text-[#324158]">Register Coaching Institute</h3>
                   <p className="text-[11px] text-gray-400">
-                    Create an isolated tenant account with customized student & exam limits.
+                    Create an isolated tenant account with customized aspirant & exam limits.
                   </p>
                 </div>
               </div>
@@ -1426,7 +1426,7 @@ export default function InstitutesManagementPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="font-semibold text-gray-700 block mb-1">
-                      Max Student Limit
+                      Max Aspirant Limit
                     </label>
                     <input
                       type="number"
@@ -1436,7 +1436,7 @@ export default function InstitutesManagementPage() {
                       onChange={(e) => setFormMaxStudents(Number(e.target.value))}
                       className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2D3A4A]"
                     />
-                    <span className="text-[10px] text-gray-400">Total students permitted in tests</span>
+                    <span className="text-[10px] text-gray-400">Total aspirants permitted in tests</span>
                   </div>
 
                   <div>
@@ -1730,7 +1730,7 @@ export default function InstitutesManagementPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="font-semibold text-gray-700 block mb-1">Max Student Quota</label>
+                    <label className="font-semibold text-gray-700 block mb-1">Max Aspirant Quota</label>
                     <input
                       type="number"
                       min={1}
@@ -1994,8 +1994,8 @@ export default function InstitutesManagementPage() {
                     </p>
                     <ul className="list-disc list-inside space-y-1 font-semibold text-rose-900 text-[11px] pl-1">
                       <li>All exams, tests, and question papers</li>
-                      <li>All enrolled student accounts and credentials</li>
-                      <li>All student test attempts, scores, and analytics</li>
+                      <li>All enrolled aspirant accounts and credentials</li>
+                      <li>All aspirant test attempts, scores, and analytics</li>
                       <li>All proctoring logs and activity history</li>
                     </ul>
                   </div>
