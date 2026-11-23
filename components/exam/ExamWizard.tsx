@@ -8,7 +8,8 @@ import {
   Check, Upload, Plus, X, Trash2, AlertCircle,
   FileText, CheckSquare, List, Code2, AlignLeft, Info, Pencil, MoreVertical,
   Shield, Camera, Maximize, AlertTriangle, Sparkles, Loader2, Clock, GraduationCap,
-  ArrowRight, ArrowLeft, CheckCircle2, Zap, Layers, Lock, ChevronDown, ChevronUp, Minus
+  ArrowRight, ArrowLeft, CheckCircle2, Zap, Layers, Lock, ChevronDown, ChevronUp, Minus,
+  Star, Copy, GripVertical, Bold, Italic, Underline, ListOrdered, Image as ImageIcon, BookOpen, ArrowUp, ArrowDown
 } from "lucide-react"
 import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
@@ -35,13 +36,15 @@ type QuestionType = "mcq" | "assertion" | "truefalse" | "descriptive" | "fillbla
 
 interface MCQQuestion {
   id: string; type: "mcq"
+  questionFormat?: string
   questionText: string; difficulty: Difficulty; marks: number
   negativeMark?: number
-  options: string[]; correctAnswer: string; explanation: string
+  options: string[]; correctAnswer: string | string[]; explanation: string
   questionImage?: string; optionImages?: string[]
 }
 interface AssertionQuestion {
   id: string; type: "assertion"
+  questionFormat?: string
   assertionText?: string; reasonText?: string
   questionText: string; difficulty: Difficulty; marks: number
   negativeMark?: number
@@ -50,6 +53,7 @@ interface AssertionQuestion {
 }
 interface TrueFalseQuestion {
   id: string; type: "truefalse"
+  questionFormat?: string
   questionText: string; difficulty: Difficulty; marks: number
   negativeMark?: number
   correctAnswer: "True" | "False"; explanation: string
@@ -57,6 +61,7 @@ interface TrueFalseQuestion {
 }
 interface DescriptiveQuestion {
   id: string; type: "descriptive"
+  questionFormat?: string
   questionText: string; difficulty: Difficulty; marks: number
   negativeMark?: number
   wordLimit: string; modelAnswer: string; rubric: string[]
@@ -2456,755 +2461,1362 @@ function Step3({
   canUsePdfImport: boolean
   allowedCustomQuestionTypes: QuestionType[]
 }) {
-  const [modal, setModal] = useState<QuestionType | null>(null)
-  const [editQ, setEditQ] = useState<Question | null>(null)
-  const [menuOpen, setMenuOpen] = useState<string | null>(null)
-  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
+  // ── Form Visibility & Editing State ──
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const formRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // ── Question Form Fields State ──
+  type ActiveType =
+    | "mcq"
+    | "mcq_multi"
+    | "assertion"
+    | "truefalse"
+    | "fillblanks"
+    | "short_answer"
+    | "descriptive"
+    | "case_study"
+    | "coding"
+
+  const [activeType, setActiveType] = useState<ActiveType>("mcq")
+  const [questionText, setQuestionText] = useState("")
+  const [questionImage, setQuestionImage] = useState("")
+  const [showImageInput, setShowImageInput] = useState(false)
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium")
+  const [marks, setMarks] = useState(1)
+  const [negativeMark, setNegativeMark] = useState(0)
+  const [explanation, setExplanation] = useState("")
+
+  // MCQ / Multiple Correct options
+  const [options, setOptions] = useState<string[]>(["", "", "", ""])
+  const [correctAnswer, setCorrectAnswer] = useState<string | string[]>("A")
+
+  // Assertion & Reason
+  const [assertionText, setAssertionText] = useState("")
+  const [reasonText, setReasonText] = useState("")
+
+  // Fill in blanks
+  const [blanks, setBlanks] = useState<{ answer: string; alsoAccept: string[] }[]>([{ answer: "", alsoAccept: [] }])
+
+  // Descriptive / Short Answer / Case Study
+  const [modelAnswer, setModelAnswer] = useState("")
+  const [wordLimit, setWordLimit] = useState("150")
+
+  // Coding
+  const [codingLang, setCodingLang] = useState("python")
+  const [codingStarter, setCodingStarter] = useState("def solution():\n    # write code here\n    pass")
+  const [codingTestCases, setCodingTestCases] = useState<{ input: string; expectedOutput: string; hidden?: boolean }[]>([
+    { input: "1 2", expectedOutput: "3", hidden: false }
+  ])
+
+  // ── AI Generation State Inside Form ──
+  const [bulkTopics, setBulkTopics] = useState<{ topic: string; count: number }[]>([{ topic: "", count: 1 }])
+  const [aiSingleTopic, setAiSingleTopic] = useState("")
+  const [isGeneratingBulk, setIsGeneratingBulk] = useState(false)
+  const [isGeneratingSingle, setIsGeneratingSingle] = useState(false)
+
+  // ── PDF Import State ──
+  const fileRef = useRef<HTMLInputElement>(null)
   const [pdfUploading, setPdfUploading] = useState(false)
   const [pdfError, setPdfError] = useState("")
+
+  // ── Modal states (for fallback or deep editing) ──
   const [showCompetitiveAiModal, setShowCompetitiveAiModal] = useState(false)
-  const [expandedSolutions, setExpandedSolutions] = useState<Record<string, boolean>>({})
-  const toggleSolution = (id: string) => setExpandedSolutions(prev => ({ ...prev, [id]: !prev[id] }))
-  const fileRef = useRef<HTMLInputElement>(null)
 
-  // ── AI In-Page Question Generator State ──
-  const [aiTopic, setAiTopic] = useState("")
-  const [aiDifficulty, setAiDifficulty] = useState<Difficulty>("medium")
-  const [selectedFormats, setSelectedFormats] = useState<Record<"mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks", boolean>>({
-    mcq: true,
-    assertion: true,
-    truefalse: true,
-    descriptive: false,
-    fillblanks: true,
-  })
-  const [formatCounts, setFormatCounts] = useState<Record<"mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks", number>>({
-    mcq: 5,
-    assertion: 2,
-    truefalse: 2,
-    descriptive: 2,
-    fillblanks: 2,
-  })
-  const [isGeneratingAi, setIsGeneratingAi] = useState(false)
-  const [aiGenError, setAiGenError] = useState("")
-
-  const toggleFormat = (fmt: "mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks") => {
-    setSelectedFormats(prev => ({ ...prev, [fmt]: !prev[fmt] }))
+  // Reset form to blank state
+  const resetForm = () => {
+    setEditingIndex(null)
+    setActiveType("mcq")
+    setQuestionText("")
+    setQuestionImage("")
+    setShowImageInput(false)
+    setDifficulty("medium")
+    setMarks(1)
+    setNegativeMark(0)
+    setOptions(["", "", "", ""])
+    setCorrectAnswer("A")
+    setExplanation("")
+    setAssertionText("")
+    setReasonText("")
+    setBlanks([{ answer: "", alsoAccept: [] }])
+    setModelAnswer("")
+    setWordLimit("150")
+    setCodingLang("python")
+    setCodingStarter("def solution():\n    # write code here\n    pass")
+    setCodingTestCases([{ input: "1 2", expectedOutput: "3", hidden: false }])
+    setBulkTopics([{ topic: "", count: 1 }])
+    setAiSingleTopic("")
   }
 
-  const updateFormatCount = (fmt: "mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks", delta: number) => {
-    setFormatCounts(prev => ({
-      ...prev,
-      [fmt]: Math.max(1, Math.min(20, (prev[fmt] || 1) + delta))
-    }))
+  // Toggle top Add Question form
+  const handleToggleAddForm = () => {
+    if (isAddFormOpen) {
+      setIsAddFormOpen(false)
+      resetForm()
+    } else {
+      resetForm()
+      setIsAddFormOpen(true)
+      setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)
+    }
   }
 
-  const adjustAllCounts = (delta: number) => {
-    setFormatCounts(prev => ({
-      mcq: Math.max(1, Math.min(20, (prev.mcq || 1) + delta)),
-      assertion: Math.max(1, Math.min(20, (prev.assertion || 1) + delta)),
-      truefalse: Math.max(1, Math.min(20, (prev.truefalse || 1) + delta)),
-      descriptive: Math.max(1, Math.min(20, (prev.descriptive || 1) + delta)),
-      fillblanks: Math.max(1, Math.min(20, (prev.fillblanks || 1) + delta)),
-    }))
+  const handleCloseForm = () => {
+    setIsAddFormOpen(false)
+    resetForm()
   }
 
-  const totalAiCount = (["mcq", "assertion", "truefalse", "descriptive", "fillblanks"] as const)
-    .reduce((sum, fmt) => sum + (selectedFormats[fmt] ? (formatCounts[fmt] || 0) : 0), 0)
+  // Rich-text editor formatting helper
+  const insertFormatting = (prefix: string, suffix: string = "") => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const text = questionText
+    const selectedText = text.substring(start, end)
+    const replacement = prefix + (selectedText || "text") + suffix
+    const newText = text.substring(0, start) + replacement + text.substring(end)
+    setQuestionText(newText)
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + (selectedText.length || 4))
+    }, 10)
+  }
 
-  const handleGenerateAi = async () => {
-    if (!aiTopic.trim()) {
-      toast.error("Please enter a Topic Name first")
+  // AI Single Topic Generation
+  const handleGenerateSingleTopic = async () => {
+    if (!aiSingleTopic.trim()) {
+      toast.error("Please enter a topic name first")
       return
     }
-    if (totalAiCount === 0) {
-      toast.error("Please select at least one question format")
-      return
-    }
-    if (totalAiCount > 40) {
-      toast.error("Maximum 40 questions can be generated per batch. Please reduce quantities.")
-      return
-    }
-
-    setIsGeneratingAi(true)
-    setAiGenError("")
+    setIsGeneratingSingle(true)
     try {
-      const blueprint: Record<string, number> = {}
-      if (selectedFormats.mcq) blueprint.mcq = formatCounts.mcq
-      if (selectedFormats.assertion) blueprint.assertion = formatCounts.assertion
-      if (selectedFormats.truefalse) blueprint.truefalse = formatCounts.truefalse
-      if (selectedFormats.descriptive) blueprint.descriptive = formatCounts.descriptive
-      if (selectedFormats.fillblanks) blueprint.fillblanks = formatCounts.fillblanks
+      const genType = (activeType === "assertion" || activeType === "truefalse" || activeType === "fillblanks" || activeType === "descriptive")
+        ? activeType
+        : "mcq"
 
-      const res = await fetch("/api/admin/generate-exam-questions", {
+      const res = await fetch("/api/admin/generate-objective-question", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic: aiTopic.trim(),
-          difficulty: aiDifficulty,
-          blueprint,
+          prompt: aiSingleTopic.trim(),
+          type: genType,
+          marks,
+          difficulty,
         }),
       })
-
       const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to generate questions")
-      }
+      if (!res.ok) throw new Error(data.error || "Failed to generate question")
 
-      if (Array.isArray(data.questions) && data.questions.length > 0) {
-        setQuestions(prev => [...prev, ...data.questions])
-        toast.success(`Successfully generated ${data.questions.length} questions for "${aiTopic.trim()}"!`)
-      } else {
-        toast.error("No questions were generated. Please try with a clearer topic name.")
+      if (data.data) {
+        setQuestionText(data.data.questionText || "")
+        if (data.data.options && Array.isArray(data.data.options)) {
+          setOptions(data.data.options)
+        }
+        if (data.data.correctAnswer) {
+          setCorrectAnswer(data.data.correctAnswer)
+        }
+        if (data.data.explanation) {
+          setExplanation(data.data.explanation)
+        }
+        if (data.data.assertionText) setAssertionText(data.data.assertionText)
+        if (data.data.reasonText) setReasonText(data.data.reasonText)
+        toast.success("AI question generated! You can review or edit before saving.")
       }
     } catch (err: any) {
-      console.error("AI Question Generation error:", err)
-      setAiGenError(err.message || "Failed to generate questions")
-      toast.error(err.message || "Failed to generate questions")
+      toast.error(err.message || "Failed to generate question")
     } finally {
-      setIsGeneratingAi(false)
+      setIsGeneratingSingle(false)
     }
   }
 
-  const isCorrectOption = (opt: string, optIndex: number, correctAnswer?: string | string[]) => {
-    if (correctAnswer === undefined || correctAnswer === null || correctAnswer === "") return false
-    const ansStr = Array.isArray(correctAnswer) ? correctAnswer[0] : String(correctAnswer)
-    const trimmedAns = ansStr.trim().toLowerCase()
-    const trimmedOpt = String(opt).trim().toLowerCase()
-    if (trimmedOpt === trimmedAns) return true
-    const letter = ["a", "b", "c", "d", "e"][optIndex]
-    if (trimmedAns === letter) return true
-    if (trimmedAns === `option ${letter}`) return true
-    if (trimmedAns === String(optIndex)) return true
-    return false
-  }
-
-  const isCorrectTF = (opt: "True" | "False", correctAnswer?: string) => {
-    if (!correctAnswer) return false
-    const lowerAns = String(correctAnswer).toLowerCase()
-    if (opt === "True") {
-      return lowerAns === "true" || lowerAns === "option a" || lowerAns === "a" || lowerAns === "0"
-    } else {
-      return lowerAns === "false" || lowerAns === "option b" || lowerAns === "b" || lowerAns === "1"
-    }
-  }
-
-  const getFormatBadge = (type: QuestionType) => {
-    switch (type) {
-      case "mcq":
-        return "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1]"
-      case "assertion":
-        return "bg-purple-50 text-purple-800 border border-purple-200"
-      case "truefalse":
-        return "bg-teal-50 text-teal-800 border border-teal-200"
-      case "descriptive":
-        return "bg-blue-50 text-blue-800 border border-blue-200"
-      case "fillblanks":
-        return "bg-amber-50 text-amber-800 border border-amber-200"
-      case "coding":
-        return "bg-red-50 text-red-800 border border-red-200"
-      default:
-        return "bg-slate-100 text-slate-700 border border-slate-200"
-    }
-  }
-
-  const handleAddCompetitiveQuestions = (newQuestions: GeneratedCompetitiveQuestion[]) => {
-    const mapped: Question[] = newQuestions.map(q => {
-      const rawFormat = (q.questionFormat || "").toLowerCase()
-      const isTF =
-        rawFormat === "true_false" ||
-        rawFormat === "truefalse" ||
-        q.questionText?.toLowerCase().startsWith("true or false") ||
-        q.questionText?.toLowerCase().startsWith("true/false") ||
-        (Array.isArray(q.options) && q.options.length === 2 && q.options.includes("True"))
-
-      const isAR =
-        !isTF && (
-          rawFormat === "assertion" ||
-          rawFormat === "assertion_reason" ||
-          q.type === "assertion" ||
-          Boolean(parseAssertionReason(q.questionText || ""))
-        )
-
-      const isFIB =
-        !isTF && !isAR && (
-          rawFormat === "fib" ||
-          rawFormat === "fill_in_the_blanks" ||
-          rawFormat === "fillblanks" ||
-          q.type === "fillblanks" ||
-          q.questionText?.includes("______") ||
-          /_{2,}/.test(q.questionText || "") ||
-          q.questionText?.toLowerCase().includes("fill in the blank")
-        )
-
-      if (isAR) {
-        const parsed = parseAssertionReason(q.questionText)
-        return {
-          id: q.id,
-          type: "assertion",
-          assertionText: parsed?.assertion || "",
-          reasonText: parsed?.reason || "",
-          questionText: q.questionText,
-          questionImage: q.questionImage,
-          difficulty: q.difficulty,
-          marks: q.marks,
-          negativeMark: q.negativeMark,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          explanation: q.explanation,
-        }
-      }
-
-      if (isFIB) {
-        return {
-          id: q.id,
-          type: "fillblanks",
-          questionText: q.questionText,
-          questionImage: q.questionImage,
-          difficulty: q.difficulty,
-          marks: q.marks,
-          negativeMark: q.negativeMark,
-          blanks: [{ id: 1, label: "Blank 1", answer: q.correctAnswer || (q.options ? q.options[0] : "") }],
-          caseInsensitive: true,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          explanation: q.explanation,
-        } as any
-      }
-
-      if (isTF) {
-        return {
-          id: q.id,
-          type: "truefalse",
-          questionText: q.questionText,
-          questionImage: q.questionImage,
-          difficulty: q.difficulty,
-          marks: q.marks,
-          negativeMark: q.negativeMark,
-          correctAnswer: (String(q.correctAnswer).toLowerCase().includes("false") || q.correctAnswer === "Option B") ? "False" : "True",
-          explanation: q.explanation,
-        }
-      }
-
-      return {
-        id: q.id,
-        type: "mcq",
-        questionFormat: q.questionFormat,
-        questionText: q.questionText,
-        questionImage: q.questionImage,
-        difficulty: q.difficulty,
-        marks: q.marks,
-        negativeMark: q.negativeMark,
-        options: q.options,
-        correctAnswer: q.correctAnswer,
-        explanation: q.explanation,
-      }
-    })
-    setQuestions(prev => [...prev, ...mapped])
-  }
-
-  const openMenu = (qId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const rect = e.currentTarget.getBoundingClientRect()
-    setAnchorRect(rect)
-    setMenuOpen(qId === menuOpen ? null : qId)
-  }
-
-  const filtered = questions
-
-  const totalMarks = questions.reduce((s, q) => s + q.marks, 0)
-
-  const openModal = (type: QuestionType) => {
-    if (!allowedCustomQuestionTypes.includes(type)) return
-    console.log("Opening modal for type:", type);
-    setEditQ(null);
-    setModal(type);
-  };
-
-  const saveQuestion = (q: Question | Question[]) => {
-    if (Array.isArray(q)) {
-      setQuestions(prev => [...prev, ...q])
-      setEditQ(null)
-      setModal(null)
+  // AI Bulk Topics Generation
+  const handleGenerateBulkTopics = async () => {
+    const validTopics = bulkTopics.filter(t => t.topic.trim() && t.count > 0)
+    if (validTopics.length === 0) {
+      toast.error("Please enter at least one topic name and question count")
       return
     }
-    setQuestions(prev => {
-      const existingIdx = prev.findIndex(x => x.id === q.id)
-      if (existingIdx >= 0) {
-        const n = [...prev]
-        n[existingIdx] = q
-        return n
+    setIsGeneratingBulk(true)
+    try {
+      const genType = (activeType === "assertion" || activeType === "truefalse" || activeType === "fillblanks" || activeType === "descriptive")
+        ? activeType
+        : "mcq"
+
+      const res = await fetch("/api/admin/generate-objective-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topics: validTopics,
+          type: genType,
+          marks,
+          difficulty,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Bulk generation failed")
+
+      if (Array.isArray(data.data) && data.data.length > 0) {
+        const generatedQuestions: Question[] = data.data.map((item: any) => ({
+          id: Math.random().toString(36).slice(2),
+          type: genType,
+          questionText: item.questionText || "Question",
+          difficulty,
+          marks,
+          negativeMark,
+          options: item.options || [],
+          correctAnswer: item.correctAnswer || "A",
+          explanation: item.explanation || "",
+        }))
+        setQuestions(prev => [...prev, ...generatedQuestions])
+        toast.success(`Successfully generated and added ${generatedQuestions.length} questions!`)
+        setIsAddFormOpen(false)
+        resetForm()
+      } else {
+        toast.error("No questions were generated. Please try with clearer topics.")
       }
-      return [...prev, q]
-    })
-    setEditQ(null)
-    setModal(null)
+    } catch (err: any) {
+      toast.error(err.message || "Bulk generation failed")
+    } finally {
+      setIsGeneratingBulk(false)
+    }
   }
 
-  const removeQ = (id: string) => setQuestions(prev => prev.filter(q => q.id !== id))
-
+  // PDF Upload handler
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return
-    if (file.type !== "application/pdf") return setPdfError("Please upload a PDF file")
-    setPdfUploading(true); setPdfError("")
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.type !== "application/pdf") {
+      setPdfError("Please upload a PDF file")
+      return
+    }
+    setPdfUploading(true)
+    setPdfError("")
     try {
-      const formData = new FormData(); formData.append("file", file)
+      const formData = new FormData()
+      formData.append("file", file)
       const res = await fetch("/api/exams/parse-pdf", { method: "POST", body: formData, credentials: "include" })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to parse PDF")
       if (data.questions?.length) {
-        setQuestions(prev => [...prev, ...data.questions.map((q: Omit<Question, "id">) => ({...q, id: Math.random().toString(36).slice(2)}))])
+        setQuestions(prev => [
+          ...prev,
+          ...data.questions.map((q: Omit<Question, "id">) => ({ ...q, id: Math.random().toString(36).slice(2) }))
+        ])
+        toast.success(`Successfully imported ${data.questions.length} questions from PDF!`)
       } else {
         setPdfError("No questions could be extracted from this PDF")
       }
-    } catch (err) {
-      setPdfError(err instanceof Error ? err.message : "Failed to parse PDF")
+    } catch (err: any) {
+      setPdfError(err.message || "Failed to parse PDF")
+      toast.error(err.message || "Failed to parse PDF")
     } finally {
       setPdfUploading(false)
       if (fileRef.current) fileRef.current.value = ""
     }
   }
 
-  const openEdit = (q: Question) => { setEditQ(q); setModal(q.type) }
+  // Internal Save / Add Question function
+  const handleSaveQuestion = () => {
+    let finalQuestionText = questionText.trim()
 
-  const typeCounts = Object.fromEntries(
-    (["mcq","assertion","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).map(t => [t, questions.filter(q => q.type === t).length])
-  )
+    if (activeType === "assertion") {
+      if (!assertionText.trim() || !reasonText.trim()) {
+        toast.error("Please enter both Assertion (A) and Reason (R) statements")
+        return
+      }
+      finalQuestionText = `Assertion (A): ${assertionText.trim()}\nReason (R): ${reasonText.trim()}`
+    }
+
+    if (!finalQuestionText) {
+      toast.error("Please enter the question text/description")
+      return
+    }
+
+    if (activeType === "mcq" || activeType === "mcq_multi") {
+      const validOptions = options.filter(o => o.trim())
+      if (validOptions.length < 2) {
+        toast.error("Please provide at least 2 options for the question")
+        return
+      }
+      if (!correctAnswer || (Array.isArray(correctAnswer) && correctAnswer.length === 0)) {
+        toast.error("Please select the correct answer option")
+        return
+      }
+    }
+
+    if (activeType === "fillblanks") {
+      const validBlanks = blanks.filter(b => b.answer.trim())
+      if (validBlanks.length === 0) {
+        toast.error("Please provide at least one blank answer")
+        return
+      }
+    }
+
+    const baseId = (editingIndex !== null && questions[editingIndex])
+      ? questions[editingIndex].id
+      : Math.random().toString(36).slice(2)
+    const baseMarks = Math.max(1, Number(marks) || 1)
+    const baseNeg = Math.max(0, Number(negativeMark) || 0)
+
+    let createdQ: Question
+
+    if (activeType === "mcq") {
+      createdQ = {
+        id: baseId,
+        type: "mcq",
+        questionFormat: "mcq_single",
+        questionText: finalQuestionText,
+        questionImage: questionImage.trim() || undefined,
+        difficulty,
+        marks: baseMarks,
+        negativeMark: baseNeg,
+        options: options.map(o => o.trim()),
+        correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] || "A",
+        explanation: explanation.trim(),
+      }
+    } else if (activeType === "mcq_multi") {
+      createdQ = {
+        id: baseId,
+        type: "mcq",
+        questionFormat: "mcq_multi",
+        questionText: finalQuestionText,
+        questionImage: questionImage.trim() || undefined,
+        difficulty,
+        marks: baseMarks,
+        negativeMark: baseNeg,
+        options: options.map(o => o.trim()),
+        correctAnswer: Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer],
+        explanation: explanation.trim(),
+      } as any
+    } else if (activeType === "assertion") {
+      createdQ = {
+        id: baseId,
+        type: "assertion",
+        assertionText: assertionText.trim(),
+        reasonText: reasonText.trim(),
+        questionText: finalQuestionText,
+        questionImage: questionImage.trim() || undefined,
+        difficulty,
+        marks: baseMarks,
+        negativeMark: baseNeg,
+        options: options.length ? options : [
+          "Both A and R are true and R is the correct explanation of A",
+          "Both A and R are true but R is not the correct explanation of A",
+          "A is true but R is false",
+          "A is false but R is true"
+        ],
+        correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] || "A",
+        explanation: explanation.trim(),
+      }
+    } else if (activeType === "truefalse") {
+      createdQ = {
+        id: baseId,
+        type: "truefalse",
+        questionText: finalQuestionText,
+        questionImage: questionImage.trim() || undefined,
+        difficulty,
+        marks: baseMarks,
+        negativeMark: baseNeg,
+        correctAnswer: (correctAnswer === "False" ? "False" : "True"),
+        explanation: explanation.trim(),
+      }
+    } else if (activeType === "fillblanks") {
+      createdQ = {
+        id: baseId,
+        type: "fillblanks",
+        questionText: finalQuestionText,
+        questionImage: questionImage.trim() || undefined,
+        difficulty,
+        marks: baseMarks,
+        negativeMark: baseNeg,
+        blanks: blanks.map(b => ({ answer: b.answer.trim(), alsoAccept: b.alsoAccept || [] })),
+        caseInsensitive: true,
+        correctAnswer: blanks.map(b => b.answer.trim()).join(", "),
+        explanation: explanation.trim(),
+      }
+    } else if (activeType === "short_answer") {
+      createdQ = {
+        id: baseId,
+        type: "descriptive",
+        questionFormat: "short_answer",
+        questionText: finalQuestionText,
+        questionImage: questionImage.trim() || undefined,
+        difficulty,
+        marks: baseMarks,
+        negativeMark: baseNeg,
+        wordLimit: wordLimit || "50",
+        modelAnswer: modelAnswer.trim(),
+        rubric: [],
+      } as any
+    } else if (activeType === "case_study") {
+      createdQ = {
+        id: baseId,
+        type: "descriptive",
+        questionFormat: "case_study",
+        questionText: finalQuestionText,
+        questionImage: questionImage.trim() || undefined,
+        difficulty,
+        marks: baseMarks,
+        negativeMark: baseNeg,
+        wordLimit: wordLimit || "200",
+        modelAnswer: modelAnswer.trim(),
+        rubric: [],
+      } as any
+    } else if (activeType === "coding") {
+      createdQ = {
+        id: baseId,
+        type: "coding",
+        questionText: finalQuestionText,
+        questionImage: questionImage.trim() || undefined,
+        difficulty,
+        marks: baseMarks,
+        negativeMark: baseNeg,
+        codeTemplate: codingStarter,
+        codeTemplates: { [codingLang]: codingStarter },
+        driverCode: {},
+        testCases: codingTestCases.filter(tc => tc.input.trim() || tc.expectedOutput.trim()),
+        constraints: [],
+        languages: [codingLang],
+      }
+    } else {
+      createdQ = {
+        id: baseId,
+        type: "descriptive",
+        questionFormat: "long_answer",
+        questionText: finalQuestionText,
+        questionImage: questionImage.trim() || undefined,
+        difficulty,
+        marks: baseMarks,
+        negativeMark: baseNeg,
+        wordLimit: wordLimit || "250",
+        modelAnswer: modelAnswer.trim(),
+        rubric: [],
+      }
+    }
+
+    if (editingIndex !== null && editingIndex >= 0) {
+      setQuestions(prev => {
+        const next = [...prev]
+        next[editingIndex] = createdQ
+        return next
+      })
+      toast.success("Question updated successfully!")
+    } else {
+      setQuestions(prev => [...prev, createdQ])
+      toast.success("Question added successfully!")
+    }
+
+    setIsAddFormOpen(false)
+    resetForm()
+  }
+
+  // Edit question in form
+  const handleEditQuestion = (index: number) => {
+    const q = questions[index]
+    if (!q) return
+    setEditingIndex(index)
+    if (q.type === "mcq") {
+      const isMulti = (q as any).questionFormat === "mcq_multi" || Array.isArray(q.correctAnswer)
+      setActiveType(isMulti ? "mcq_multi" : "mcq")
+      setOptions([...((q as MCQQuestion).options || ["", "", "", ""])])
+      setCorrectAnswer((q as MCQQuestion).correctAnswer || "A")
+    } else if (q.type === "assertion") {
+      setActiveType("assertion")
+      const parsed = parseAssertionReason(q.questionText)
+      setAssertionText((q as AssertionQuestion).assertionText || parsed?.assertion || "")
+      setReasonText((q as AssertionQuestion).reasonText || parsed?.reason || "")
+      setOptions((q as AssertionQuestion).options?.length ? [...(q as AssertionQuestion).options] : [
+        "Both A and R are true and R is the correct explanation of A",
+        "Both A and R are true but R is not the correct explanation of A",
+        "A is true but R is false",
+        "A is false but R is true"
+      ])
+      setCorrectAnswer((q as AssertionQuestion).correctAnswer || "A")
+    } else if (q.type === "truefalse") {
+      setActiveType("truefalse")
+      setCorrectAnswer((q as TrueFalseQuestion).correctAnswer || "True")
+    } else if (q.type === "fillblanks") {
+      setActiveType("fillblanks")
+      setBlanks((q as FillBlanksQuestion).blanks?.length ? [...(q as FillBlanksQuestion).blanks] : [{ answer: "", alsoAccept: [] }])
+    } else if (q.type === "descriptive") {
+      const qf = (q as any).questionFormat
+      setActiveType(qf === "short_answer" ? "short_answer" : qf === "case_study" ? "case_study" : "descriptive")
+      setModelAnswer((q as DescriptiveQuestion).modelAnswer || "")
+      setWordLimit(String((q as DescriptiveQuestion).wordLimit || "150"))
+    } else if (q.type === "coding") {
+      setActiveType("coding")
+      setCodingStarter((q as CodingQuestion).codeTemplate || "")
+      setCodingTestCases((q as CodingQuestion).testCases || [])
+    }
+    setQuestionText(q.questionText || "")
+    setQuestionImage(q.questionImage || "")
+    setShowImageInput(Boolean(q.questionImage))
+    setDifficulty(q.difficulty || "medium")
+    setMarks(q.marks || 1)
+    setNegativeMark(q.negativeMark || 0)
+    setExplanation((q as any).explanation || "")
+    setIsAddFormOpen(true)
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)
+  }
+
+  // Duplicate Question
+  const handleDuplicateQuestion = (index: number) => {
+    const q = questions[index]
+    if (!q) return
+    const duplicated = { ...q, id: Math.random().toString(36).slice(2) }
+    setQuestions(prev => {
+      const next = [...prev]
+      next.splice(index + 1, 0, duplicated)
+      return next
+    })
+    toast.success("Question duplicated successfully!")
+  }
+
+  // Delete Question
+  const handleDeleteQuestion = (id: string) => {
+    setQuestions(prev => prev.filter(q => q.id !== id))
+    toast.success("Question removed")
+  }
+
+  // Reorder Questions
+  const handleMoveQuestion = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= questions.length) return
+    setQuestions(prev => {
+      const next = [...prev]
+      const [moved] = next.splice(index, 1)
+      next.splice(targetIndex, 0, moved)
+      return next
+    })
+  }
+
+  // Option helper for MCQ Correct Answer
+  const isOptionSelected = (optLetter: string) => {
+    if (Array.isArray(correctAnswer)) {
+      return correctAnswer.includes(optLetter)
+    }
+    return correctAnswer === optLetter
+  }
+
+  const toggleOptionSelection = (optLetter: string) => {
+    if (activeType === "mcq_multi") {
+      setCorrectAnswer(prev => {
+        const arr = Array.isArray(prev) ? prev : [prev]
+        if (arr.includes(optLetter)) {
+          return arr.filter(l => l !== optLetter)
+        } else {
+          return [...arr, optLetter]
+        }
+      })
+    } else {
+      setCorrectAnswer(optLetter)
+    }
+  }
+
+  // Correct answer display helper
+  const getCorrectAnswerDisplay = (q: Question) => {
+    if (q.type === "truefalse") {
+      return (q as TrueFalseQuestion).correctAnswer || "True"
+    }
+    if (q.type === "fillblanks") {
+      const b = (q as FillBlanksQuestion).blanks
+      if (b && b.length > 0) return b.map((x, idx) => `[Blank ${idx + 1}: ${x.answer}]`).join("  ")
+      return String((q as any).correctAnswer || "Answer specified")
+    }
+    if (q.type === "descriptive") {
+      return (q as DescriptiveQuestion).modelAnswer ? "Model Answer Provided" : "Evaluated by Instructor"
+    }
+    if (q.type === "coding") {
+      return "Validated against automated Test Cases"
+    }
+    // MCQ / Assertion
+    const ans = (q as any).correctAnswer
+    if (Array.isArray(ans)) return ans.join(", ")
+    return String(ans || "A")
+  }
+
+  const totalMarks = questions.reduce((s, q) => s + (Number(q.marks) || 0), 0)
+
+  // Question Types for manual creator left panel
+  const QUESTION_TYPE_ITEMS: { id: ActiveType; label: string; icon: React.ReactNode }[] = [
+    { id: "mcq", label: "MCQ - Single Correct", icon: <List size={14} /> },
+    { id: "mcq_multi", label: "MCQ - Multiple Correct", icon: <CheckSquare size={14} /> },
+    { id: "assertion", label: "Assertion & Reason", icon: <Layers size={14} /> },
+    { id: "truefalse", label: "True / False", icon: <CheckCircle2 size={14} /> },
+    { id: "fillblanks", label: "Fill in the Blanks", icon: <FileText size={14} /> },
+    { id: "short_answer", label: "Short Answer", icon: <AlignLeft size={14} /> },
+    { id: "descriptive", label: "Long Answer / Descriptive", icon: <AlignLeft size={14} /> },
+    { id: "case_study", label: "Case Study / Passage-based", icon: <BookOpen size={14} /> },
+    { id: "coding", label: "Coding / Programming", icon: <Code2 size={14} /> },
+  ]
 
   return (
-    <div className="bg-white rounded-2xl border border-[#cbd5e1] p-5 sm:p-8 shadow-xs relative">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#64748b]">
-            STEP 1 · QUESTION STUDIO
-          </p>
-          <div className="flex items-center gap-3 mt-1">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#324158]">Select & Manage Questions</h2>
-            {questions.length > 0 && (
-              <span className="px-3 py-1 bg-[#eaf0f8] rounded-full text-xs font-bold text-[#324158] border border-[#cbd5e1]">
-                {questions.length} Selected
-              </span>
-            )}
+    <div className="space-y-6">
+      {/* ─── 1. Question Summary Toolbar ─── */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Heading */}
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#324158]">
+              Questions ({questions.length})
+            </h2>
           </div>
-        </div>
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <input ref={fileRef} type="file" accept="application/pdf" onChange={handlePdfUpload} className="hidden" />
-          <button
-            type="button"
-            onClick={() => canUsePdfImport && fileRef.current?.click()}
-            disabled={pdfUploading || !canUsePdfImport}
-            className="h-10 px-4 rounded-xl border border-[#cbd5e1] bg-white hover:bg-[#eaf0f8] text-[#324158] text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
-          >
-            <Upload size={15} className="shrink-0" />
-            <span>{pdfUploading ? "Uploading..." : "Upload from PDF"}</span>
-          </button>
-          <div className="relative group">
+
+          {/* Badges & Actions */}
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            {/* Total Questions Badge */}
+            <div className="flex items-center gap-1.5 bg-[#eaf0f8] border border-[#cbd5e1] text-[#324158] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-2xs">
+              <FileText size={15} className="shrink-0 text-[#324158]" />
+              <span>Total Questions: {questions.length}</span>
+            </div>
+
+            {/* Total Marks Badge */}
+            <div className="flex items-center gap-1.5 bg-[#eaf0f8] border border-[#cbd5e1] text-[#324158] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-2xs">
+              <Star size={15} className="shrink-0 text-[#324158] fill-[#324158]/20" />
+              <span>Total Marks: {totalMarks}</span>
+            </div>
+
+            {/* Generate with AI Button */}
             <button
               type="button"
-              className="h-10 px-4 rounded-xl bg-[#324158] hover:bg-[#253244] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+              onClick={() => {
+                setIsAddFormOpen(true)
+                setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)
+              }}
+              className="flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100/80 border border-purple-200 text-purple-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
             >
-              <Plus size={16} className="shrink-0" />
-              <span>Add Question</span>
+              <Sparkles size={14} className="shrink-0 text-purple-600" />
+              <span>Generate with AI</span>
             </button>
-            <div className="absolute right-0 top-full pt-1.5 w-48 z-20 hidden group-hover:block before:absolute before:inset-0 before:h-2 before:-top-2 before:bg-transparent">
-              <div className="bg-white border border-[#cbd5e1] rounded-2xl shadow-xl overflow-hidden p-1 animate-in fade-in zoom-in-95">
-                {(["mcq","assertion","truefalse","descriptive","fillblanks","coding"] as QuestionType[]).filter(type => allowedCustomQuestionTypes.includes(type)).map(type => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => openModal(type)}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs sm:text-sm text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] rounded-xl transition-colors cursor-pointer text-left font-medium"
-                  >
-                    {TYPE_META[type].icon}
-                    <span>{TYPE_META[type].label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* ── Quick AI Question Generator Panel ── */}
-      <div className="mb-6 rounded-2xl border border-[#cbd5e1] bg-gradient-to-b from-[#f8fafc] to-[#eaf0f8]/35 p-4 sm:p-6 shadow-xs space-y-4">
-        {/* Panel Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#cbd5e1]/70">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#324158] text-white shadow-2xs">
-              <Sparkles size={16} />
-            </span>
-            <div>
-              <h3 className="text-sm sm:text-base font-bold text-[#324158]">
-                AI Question Generator
-              </h3>
-              <p className="text-[11px] sm:text-xs text-slate-500">
-                Enter topic name, select question formats, adjust quantities, and generate questions with answers instantly.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <span className="text-[11px] font-bold text-[#324158] bg-white border border-[#cbd5e1] px-3 py-1 rounded-full shadow-2xs">
-              Total to Generate: <span className="font-extrabold text-[#324158]">{totalAiCount}</span> Questions
-            </span>
-          </div>
-        </div>
-
-        {/* Row 1: Topic Input & Difficulty */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
-          <div>
-            <label className="block text-xs font-bold text-[#324158] mb-1.5">
-              Topic Name / Chapter <span className="text-rose-500">*</span>
-            </label>
+            {/* Upload from PDF Button */}
             <input
-              type="text"
-              value={aiTopic}
-              onChange={e => setAiTopic(e.target.value)}
-              placeholder="e.g. Thermodynamics, Light and Optics, Chemical Bonding, Linear Equations..."
-              className="w-full h-11 px-3.5 bg-white border border-[#cbd5e1] rounded-xl text-sm font-semibold text-[#324158] placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-all shadow-2xs"
+              ref={fileRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handlePdfUpload}
+              className="hidden"
             />
-          </div>
+            <button
+              type="button"
+              onClick={() => canUsePdfImport && fileRef.current?.click()}
+              disabled={pdfUploading || !canUsePdfImport}
+              className="flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+            >
+              <Upload size={14} className="shrink-0 text-slate-500" />
+              <span>{pdfUploading ? "Uploading..." : "Upload from PDF"}</span>
+            </button>
 
-          <div>
-            <label className="block text-xs font-bold text-[#324158] mb-1.5">
-              Difficulty Level
-            </label>
-            <div className="flex items-center gap-1.5 h-11 bg-white border border-[#cbd5e1] rounded-xl p-1 shadow-2xs">
-              {(["easy", "medium", "hard"] as Difficulty[]).map(diff => (
-                <button
-                  key={diff}
-                  type="button"
-                  onClick={() => setAiDifficulty(diff)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
-                    aiDifficulty === diff
-                      ? "bg-[#324158] text-white shadow-xs"
-                      : "text-slate-600 hover:bg-[#eaf0f8] hover:text-[#324158]"
-                  }`}
-                >
-                  {diff}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Row 2: Format Selection & Quantity Controls */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-bold text-[#324158]">
-              Select Formats & Set Quantities
-            </label>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const allSelected = (["mcq", "assertion", "truefalse", "descriptive", "fillblanks"] as const).every(f => selectedFormats[f])
-                  const targetState = !allSelected
-                  setSelectedFormats({
-                    mcq: targetState,
-                    assertion: targetState,
-                    truefalse: targetState,
-                    descriptive: targetState,
-                    fillblanks: targetState,
-                  })
-                }}
-                className="text-[11px] font-bold text-[#324158] hover:underline cursor-pointer"
-              >
-                {(["mcq", "assertion", "truefalse", "descriptive", "fillblanks"] as const).every(f => selectedFormats[f]) ? "Deselect All" : "Select All"}
-              </button>
-              <span className="text-slate-300">·</span>
-              <button
-                type="button"
-                onClick={() => adjustAllCounts(1)}
-                className="text-[11px] font-bold text-[#324158] hover:underline cursor-pointer"
-                title="Increase quantity by 1 for all formats"
-              >
-                +1 to All
-              </button>
-              <span className="text-slate-300">·</span>
-              <button
-                type="button"
-                onClick={() => adjustAllCounts(-1)}
-                className="text-[11px] font-bold text-[#324158] hover:underline cursor-pointer"
-                title="Decrease quantity by 1 for all formats"
-              >
-                -1 to All
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-            {[
-              { id: "mcq" as const, label: "MCQ", sublabel: "Multiple Choice", icon: List },
-              { id: "assertion" as const, label: "Assertion & Reason", sublabel: "A & R Statements", icon: Layers },
-              { id: "truefalse" as const, label: "True / False", sublabel: "Binary Statement", icon: CheckSquare },
-              { id: "descriptive" as const, label: "Descriptive", sublabel: "Long Answer", icon: AlignLeft },
-              { id: "fillblanks" as const, label: "Fill Blanks", sublabel: "Complete Sentence", icon: FileText },
-            ].map(item => {
-              const isSelected = selectedFormats[item.id]
-              const count = formatCounts[item.id] || 1
-              const Icon = item.icon
-              return (
-                <div
-                  key={item.id}
-                  className={`relative rounded-xl border p-3 transition-all flex flex-col justify-between ${
-                    isSelected
-                      ? "border-[#324158] bg-white shadow-xs ring-1 ring-[#324158]/10"
-                      : "border-[#cbd5e1] bg-slate-50/60 opacity-60 hover:opacity-100"
-                  }`}
-                >
-                  <div
-                    onClick={() => toggleFormat(item.id)}
-                    className="flex items-start justify-between gap-2 cursor-pointer select-none"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-xs ${
-                        isSelected ? "bg-[#eaf0f8] text-[#324158] font-bold" : "bg-slate-200 text-slate-500"
-                      }`}>
-                        <Icon size={13} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#324158] leading-tight truncate">
-                          {item.label}
-                        </p>
-                        <p className="text-[10px] text-slate-500 leading-none mt-0.5 truncate">
-                          {item.sublabel}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 mt-0.5 transition-all ${
-                      isSelected
-                        ? "bg-[#324158] border-[#324158] text-white"
-                        : "border-slate-300 bg-white"
-                    }`}>
-                      {isSelected && <Check size={11} strokeWidth={3} />}
-                    </div>
-                  </div>
-
-                  {/* Quantity Stepper */}
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Qty:
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        disabled={!isSelected || count <= 1}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          updateFormatCount(item.id, -1)
-                        }}
-                        className="w-6 h-6 rounded-md bg-[#eaf0f8] hover:bg-[#dbe6f5] text-[#324158] disabled:opacity-40 flex items-center justify-center cursor-pointer transition-colors"
-                        title="Decrease count"
-                      >
-                        <Minus size={11} />
-                      </button>
-                      <input
-                        type="number"
-                        min={1}
-                        max={20}
-                        disabled={!isSelected}
-                        value={count}
-                        onChange={(e) => {
-                          const val = Math.max(1, Math.min(20, Number(e.target.value) || 1))
-                          setFormatCounts(prev => ({ ...prev, [item.id]: val }))
-                        }}
-                        className="w-10 h-6 text-center text-xs font-bold text-[#324158] bg-white border border-[#cbd5e1] rounded-md disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:border-[#324158]"
-                      />
-                      <button
-                        type="button"
-                        disabled={!isSelected || count >= 20}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          updateFormatCount(item.id, 1)
-                        }}
-                        className="w-6 h-6 rounded-md bg-[#eaf0f8] hover:bg-[#dbe6f5] text-[#324158] disabled:opacity-40 flex items-center justify-center cursor-pointer transition-colors"
-                        title="Increase count"
-                      >
-                        <Plus size={11} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+            {/* Top Add Question Button */}
+            <button
+              type="button"
+              onClick={handleToggleAddForm}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer active:scale-95 ${
+                isAddFormOpen
+                  ? "bg-[#253244] text-white ring-2 ring-slate-800/20"
+                  : "bg-[#324158] hover:bg-[#253244] text-white"
+              }`}
+            >
+              <Plus size={16} className={`shrink-0 transition-transform ${isAddFormOpen ? "rotate-45" : ""}`} />
+              <span>{isAddFormOpen ? "Close Form" : "Add Question"}</span>
+            </button>
           </div>
         </div>
 
-        {aiGenError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 flex items-center gap-2">
-            <AlertCircle size={15} className="shrink-0"/>
-            <span>{aiGenError}</span>
+        {pdfError && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 flex items-center gap-2">
+            <AlertCircle size={14} className="shrink-0" />
+            <span>{pdfError}</span>
           </div>
         )}
-
-        {/* Action Row */}
-        <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[#cbd5e1]/60">
-          <p className="text-xs text-slate-500">
-            Generates <span className="font-bold text-[#324158]">{totalAiCount}</span> questions with options, explanations & correct answers based on your topic.
-          </p>
-          <button
-            type="button"
-            onClick={handleGenerateAi}
-            disabled={isGeneratingAi || !aiTopic.trim() || totalAiCount === 0}
-            className="h-11 px-6 rounded-xl bg-[#324158] hover:bg-[#253244] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2.5 shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-          >
-            {isGeneratingAi ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                <span>Generating {totalAiCount} Questions...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={16} />
-                <span>✦ Generate {totalAiCount} Questions</span>
-              </>
-            )}
-          </button>
-        </div>
       </div>
 
-      {/* ── Separate Coding Challenge Box ── */}
-      {allowedCustomQuestionTypes.includes("coding") && (
+      {/* ─── 2. Expandable Add Question Form (Accordion) ─── */}
+      {isAddFormOpen && (
         <div
-          onClick={() => openModal("coding")}
-          className="mb-6 rounded-2xl border border-[#cbd5e1] bg-gradient-to-b from-[#f8fafc] to-[#eaf0f8]/35 p-4 sm:p-5 shadow-xs transition-all hover:border-[#324158] hover:shadow-sm cursor-pointer group"
+          ref={formRef}
+          className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-7 shadow-sm transition-all animate-in fade-in slide-in-from-top-4 duration-200 space-y-6"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-start sm:items-center gap-3.5">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#324158] text-white shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
-                <Code2 size={22} />
-              </span>
-              <div>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h3 className="text-sm sm:text-base font-bold text-[#324158] group-hover:text-[#253244] transition-colors">
-                    Coding Challenge Studio
-                  </h3>
-                  <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1]">
-                    IDE & Test Cases
-                  </span>
-                </div>
-                <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
-                  Create programming questions with custom starter code, driver code, test cases (public/hidden), constraints, and multi-language support (Python, Java, C++, JavaScript).
-                </p>
-              </div>
+          {/* Header of Form */}
+          <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+            <div>
+              <h3 className="text-lg font-bold text-[#324158]">
+                {editingIndex !== null ? "Edit Question" : "Add Question"}
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Create manually with rich options or auto-generate with AI topics
+              </p>
             </div>
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                openModal("coding")
-              }}
-              className="h-10 px-5 rounded-xl bg-[#324158] group-hover:bg-[#253244] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+              onClick={handleCloseForm}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Close form without saving"
             >
-              <Plus size={16} />
-              <span>+ Add Coding Question</span>
+              <X size={18} />
             </button>
           </div>
-        </div>
-      )}
 
-      {pdfError && (
-        <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 flex items-center gap-2">
-          <AlertCircle size={15} className="shrink-0"/>
-          <span>{pdfError}</span>
-        </div>
-      )}
+          {/* ── Box 1: Generate up to 10 topics at once ── */}
+          <div className="rounded-2xl border border-cyan-100 bg-[#ecfeff]/40 p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-cyan-800">
+                Generate up to 10 topics at once
+              </p>
+              <span className="text-[10px] font-semibold text-cyan-700 bg-cyan-100/70 px-2 py-0.5 rounded-full">
+                AI Batch Generator
+              </span>
+            </div>
 
-      {/* Question List */}
-      {filtered.length === 0 ? (
-        <div className="py-16 text-center bg-slate-50/50 rounded-2xl border border-dashed border-[#cbd5e1]">
-          <div className="w-12 h-12 rounded-2xl bg-white border border-[#cbd5e1] shadow-2xs flex items-center justify-center mx-auto mb-3">
-            <FileText size={20} className="text-[#324158]"/>
-          </div>
-          <p className="text-sm font-bold text-[#324158]">No questions added yet</p>
-          <p className="text-xs text-slate-500 mt-1">Add questions manually above via Add Question or import from PDF.</p>
-        </div>
-      ) : (
-        <div className="space-y-4 mb-4 max-h-[640px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
-          {filtered.map((q, i) => {
-            // Keep coding question row 100% untouched as requested by user
-            if (q.type === "coding") {
-              return (
-                <div key={q.id} className="flex items-start sm:items-center gap-3 p-3.5 sm:p-4 rounded-xl border border-red-100 bg-red-50/20 transition-colors hover:border-red-200">
-                  <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-red-100 text-red-700 mt-0.5 sm:mt-0 shadow-2xs">
-                    <Code2 size={13} />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug">
-                      <MathRenderer content={q.questionText || `Coding Challenge ${i+1}`} />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1.5">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-red-100 text-red-700 border-current opacity-90">Coding</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${DIFFICULTY_COLORS[q.difficulty]} border-current opacity-90`}>{q.difficulty}</span>
-                      <span className="sm:hidden text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-700 font-semibold rounded">
-                        {q.marks} {q.marks === 1 ? "mark" : "marks"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                    <div className="text-right hidden sm:block">
-                      <p className="text-sm font-bold text-slate-800">{q.marks}</p>
-                      <p className="text-[10px] font-medium text-slate-400 uppercase">Marks</p>
-                    </div>
-                    <div className="flex items-center gap-1 relative">
-                      <button onClick={(e) => openMenu(q.id, e)} className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
-                        <MoreVertical size={16}/>
-                      </button>
-                      {menuOpen === q.id && (
-                        <QuestionMenu
-                          q={q}
-                          anchorRect={anchorRect}
-                          onEdit={q => openEdit(q)}
-                          onDelete={id => removeQ(id)}
-                          onClose={() => setMenuOpen(null)}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            }
-
-            // Rich Question Card with Questions and Answers shown (MCQ, Assertion, True/False, Descriptive, Fill Blanks)
-            return (
-              <div
-                key={q.id}
-                className="bg-white rounded-2xl border border-[#cbd5e1] p-4 sm:p-5 shadow-xs hover:border-[#324158]/50 transition-all space-y-3.5"
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap min-w-0">
-                    <span className="w-6 h-6 rounded-lg bg-[#324158] text-white text-xs font-bold flex items-center justify-center shadow-2xs shrink-0">
-                      {i + 1}
-                    </span>
-                    <span className={`text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-md font-bold uppercase tracking-wider ${getFormatBadge(q.type)}`}>
-                      {TYPE_META[q.type].label}
-                    </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${DIFFICULTY_COLORS[q.difficulty]}`}>
-                      {q.difficulty}
-                    </span>
-                    {q.questionImage && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
-                        Diagram
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-bold text-[#324158] bg-[#eaf0f8] border border-[#cbd5e1] px-2.5 py-0.5 rounded-md">
-                      +{q.marks}m{q.negativeMark ? ` / -${q.negativeMark}m` : ""}
-                    </span>
+            <div className="space-y-2">
+              {bulkTopics.map((item, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <input
+                    value={item.topic}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setBulkTopics(rows => rows.map((r, i) => i === index ? { ...r, topic: val } : r))
+                    }}
+                    placeholder={`Topic ${index + 1}`}
+                    className="flex-1 h-10 px-3.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-colors"
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={item.count}
+                    onChange={(e) => {
+                      const countVal = Math.max(1, Math.min(20, Number(e.target.value) || 1))
+                      setBulkTopics(rows => rows.map((r, i) => i === index ? { ...r, count: countVal } : r))
+                    }}
+                    className="w-16 sm:w-20 h-10 px-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-center font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158]"
+                  />
+                  {index === bulkTopics.length - 1 && bulkTopics.length < 10 && (
                     <button
                       type="button"
-                      onClick={() => openEdit(q)}
-                      className="p-1.5 text-slate-400 hover:text-[#324158] hover:bg-[#eaf0f8] rounded-lg transition-colors cursor-pointer"
+                      onClick={() => setBulkTopics(rows => [...rows, { topic: "", count: 1 }])}
+                      className="w-10 h-10 rounded-xl border border-cyan-200 bg-white hover:bg-cyan-50 flex items-center justify-center text-cyan-700 text-lg font-bold cursor-pointer transition-colors shadow-2xs shrink-0"
+                      title="Add topic row"
+                    >
+                      +
+                    </button>
+                  )}
+                  {bulkTopics.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setBulkTopics(rows => rows.filter((_, i) => i !== index))}
+                      className="w-10 h-10 rounded-xl border border-red-100 bg-white hover:bg-red-50 flex items-center justify-center text-red-500 cursor-pointer transition-colors shrink-0"
+                      title="Remove row"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGenerateBulkTopics}
+              disabled={isGeneratingBulk}
+              className="h-10 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+            >
+              {isGeneratingBulk ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              <span>+ Generate All Topics</span>
+            </button>
+          </div>
+
+          {/* ── Box 2: Single Topic Generator ── */}
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3">
+            <div className="flex gap-2">
+              <input
+                value={aiSingleTopic}
+                onChange={(e) => setAiSingleTopic(e.target.value)}
+                placeholder="AI topic, e.g. JavaScript basics, Photosynthesis, Thermodynamics..."
+                className="flex-1 h-10 px-3.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-colors"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    handleGenerateSingleTopic()
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleGenerateSingleTopic}
+                disabled={isGeneratingSingle}
+                className="h-10 px-5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+              >
+                {isGeneratingSingle ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                <span>+ Generate</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ── Create Manually Divider ── */}
+          <div className="relative flex items-center justify-center my-6">
+            <div className="w-full border-t border-slate-200" />
+            <div className="absolute bg-white px-4">
+              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700 shadow-2xs">
+                <Pencil size={12} className="text-slate-500" />
+                Create Manually
+              </span>
+            </div>
+          </div>
+
+          {/* ── Two-Column Manual Creator ── */}
+          <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 items-start">
+            {/* Left Column: Question Types */}
+            <div>
+              <label className="block text-xs font-bold text-[#324158] mb-2">
+                Question Type <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-1.5 bg-slate-50/70 p-2 rounded-2xl border border-slate-200/80">
+                {QUESTION_TYPE_ITEMS.map((item) => {
+                  const isSelected = activeType === item.id
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveType(item.id)
+                        if (item.id === "truefalse") setCorrectAnswer("True")
+                        else if (item.id === "mcq") setCorrectAnswer("A")
+                        else if (item.id === "mcq_multi") setCorrectAnswer(["A"])
+                        else if (item.id === "assertion") setCorrectAnswer("A")
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                        isSelected
+                          ? "bg-blue-50 text-blue-700 border border-blue-200 shadow-xs"
+                          : "text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent"
+                      }`}
+                    >
+                      <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                        isSelected ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white"
+                      }`}>
+                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Right Column: Question Content & Options */}
+            <div className="space-y-4">
+              {/* Question Description / Rich Text Editor */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-[#324158]">
+                    Question Description / Text <span className="text-red-500">*</span>
+                  </label>
+
+                  {/* Toolbar */}
+                  <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => insertFormatting("**", "**")}
+                      className="p-1 hover:bg-white rounded text-slate-700 text-xs font-bold w-6 h-6 flex items-center justify-center cursor-pointer"
+                      title="Bold"
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertFormatting("*", "*")}
+                      className="p-1 hover:bg-white rounded text-slate-700 text-xs italic w-6 h-6 flex items-center justify-center cursor-pointer"
+                      title="Italic"
+                    >
+                      I
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertFormatting("<u>", "</u>")}
+                      className="p-1 hover:bg-white rounded text-slate-700 text-xs underline w-6 h-6 flex items-center justify-center cursor-pointer"
+                      title="Underline"
+                    >
+                      U
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertFormatting("\n- ")}
+                      className="p-1 hover:bg-white rounded text-slate-700 w-6 h-6 flex items-center justify-center cursor-pointer"
+                      title="Bullet list"
+                    >
+                      <List size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertFormatting("\n1. ")}
+                      className="p-1 hover:bg-white rounded text-slate-700 w-6 h-6 flex items-center justify-center cursor-pointer"
+                      title="Numbered list"
+                    >
+                      <ListOrdered size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertFormatting("$", "$")}
+                      className="p-1 hover:bg-white rounded text-slate-700 text-[11px] font-mono font-bold w-6 h-6 flex items-center justify-center cursor-pointer"
+                      title="Formula / Math LaTeX"
+                    >
+                      fx
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowImageInput(s => !s)}
+                      className={`p-1 rounded w-6 h-6 flex items-center justify-center cursor-pointer ${
+                        showImageInput ? "bg-blue-100 text-blue-700" : "hover:bg-white text-slate-700"
+                      }`}
+                      title="Attach Image URL"
+                    >
+                      <ImageIcon size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                <textarea
+                  ref={textareaRef}
+                  value={questionText}
+                  onChange={(e) => setQuestionText(e.target.value)}
+                  placeholder="Enter your question here..."
+                  rows={4}
+                  className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-all font-medium"
+                />
+
+                {showImageInput && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={questionImage}
+                      onChange={(e) => setQuestionImage(e.target.value)}
+                      placeholder="Enter question diagram/image URL (e.g. https://...)"
+                      className="flex-1 h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#324158]"
+                    />
+                    {questionImage && (
+                      <button
+                        type="button"
+                        onClick={() => setQuestionImage("")}
+                        className="text-xs text-red-600 hover:underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Type Specific: Assertion & Reason Statements ── */}
+              {activeType === "assertion" && (
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-amber-900 mb-1">
+                      Assertion (A) Statement <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={assertionText}
+                      onChange={(e) => setAssertionText(e.target.value)}
+                      placeholder="Enter Assertion (A) statement..."
+                      rows={2}
+                      className="w-full p-3 bg-amber-50/40 border border-amber-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-amber-400 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-purple-900 mb-1">
+                      Reason (R) Statement <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={reasonText}
+                      onChange={(e) => setReasonText(e.target.value)}
+                      placeholder="Enter Reason (R) statement..."
+                      rows={2}
+                      className="w-full p-3 bg-purple-50/40 border border-purple-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-purple-400 font-medium"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Type Specific: Options for MCQ / Multiple Correct / Assertion ── */}
+              {(activeType === "mcq" || activeType === "mcq_multi" || activeType === "assertion") && (
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-[#324158]">
+                      Options & Correct Answer <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {activeType === "mcq_multi" ? "Click checkboxes to select multiple correct answers" : "Click radio button to mark correct answer"}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {options.map((opt, oi) => {
+                      const letter = ["A", "B", "C", "D", "E", "F"][oi]
+                      const isCorrect = isOptionSelected(letter)
+                      return (
+                        <div key={oi} className="flex items-center gap-2">
+                          {/* Selection indicator */}
+                          <button
+                            type="button"
+                            onClick={() => toggleOptionSelection(letter)}
+                            className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 cursor-pointer transition-all ${
+                              isCorrect
+                                ? "bg-blue-600 border-blue-600 text-white shadow-2xs"
+                                : "bg-white border-slate-300 text-slate-500 hover:border-slate-400"
+                            }`}
+                            title={`Mark Option ${letter} as correct answer`}
+                          >
+                            {isCorrect ? <Check size={13} strokeWidth={3} /> : <span className="text-xs font-bold">{letter}</span>}
+                          </button>
+
+                          {/* Option text input */}
+                          <input
+                            type="text"
+                            value={opt}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              setOptions(opts => opts.map((o, idx) => idx === oi ? val : o))
+                            }}
+                            placeholder={`Enter option ${letter}`}
+                            className={`flex-1 h-10 px-3.5 rounded-xl border text-xs sm:text-sm transition-all focus:outline-none ${
+                              isCorrect
+                                ? "bg-blue-50/40 border-blue-200 text-slate-900 font-medium focus:border-blue-400"
+                                : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-[#324158]"
+                            }`}
+                          />
+
+                          {/* Delete option if > 2 */}
+                          {options.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOptions(opts => opts.filter((_, idx) => idx !== oi))
+                                if (correctAnswer === letter) setCorrectAnswer("A")
+                              }}
+                              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              title="Delete option"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {options.length < 6 && (
+                    <button
+                      type="button"
+                      onClick={() => setOptions(opts => [...opts, ""])}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer pt-1"
+                    >
+                      <Plus size={13} />
+                      <span>Add Option</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* ── Type Specific: True / False ── */}
+              {activeType === "truefalse" && (
+                <div className="space-y-2 pt-1">
+                  <label className="text-xs font-bold text-[#324158]">
+                    Select Correct Answer <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {["True", "False"].map((opt) => {
+                      const isCorrect = correctAnswer === opt
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setCorrectAnswer(opt)}
+                          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                            isCorrect
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            isCorrect ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300"
+                          }`}>
+                            {isCorrect && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </span>
+                          <span>{opt}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Type Specific: Fill in the Blanks ── */}
+              {activeType === "fillblanks" && (
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-[#324158]">
+                      Blank Answers <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      Place ___ (3 underscores) in the question text for each blank
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {blanks.map((b, bi) => (
+                      <div key={bi} className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500 w-16">
+                          Blank {bi + 1}:
+                        </span>
+                        <input
+                          type="text"
+                          value={b.answer}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            setBlanks(list => list.map((item, idx) => idx === bi ? { ...item, answer: val } : item))
+                          }}
+                          placeholder={`Correct answer for blank ${bi + 1}`}
+                          className="flex-1 h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#324158]"
+                        />
+                        {blanks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setBlanks(list => list.filter((_, idx) => idx !== bi))}
+                            className="p-2 text-slate-400 hover:text-red-500 rounded-lg cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBlanks(list => [...list, { answer: "", alsoAccept: [] }])}
+                    className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    <span>Add Blank</span>
+                  </button>
+                </div>
+              )}
+
+              {/* ── Type Specific: Descriptive / Short Answer / Case Study ── */}
+              {(activeType === "descriptive" || activeType === "short_answer" || activeType === "case_study") && (
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-[#324158] mb-1">
+                      Model / Reference Answer <span className="text-slate-400 font-normal">(Optional)</span>
+                    </label>
+                    <textarea
+                      value={modelAnswer}
+                      onChange={(e) => setModelAnswer(e.target.value)}
+                      placeholder="Enter sample/model answer for evaluation reference..."
+                      rows={3}
+                      className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#324158] font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#324158] mb-1">
+                      Approximate Word Limit
+                    </label>
+                    <input
+                      type="text"
+                      value={wordLimit}
+                      onChange={(e) => setWordLimit(e.target.value)}
+                      placeholder="e.g. 50 words, 150-200 words"
+                      className="w-48 h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#324158]"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Type Specific: Coding ── */}
+              {activeType === "coding" && (
+                <div className="space-y-3 pt-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-[#324158] mb-1">Language</label>
+                      <select
+                        value={codingLang}
+                        onChange={(e) => setCodingLang(e.target.value)}
+                        className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#324158]"
+                      >
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#324158] mb-1">Starter Code Template</label>
+                    <textarea
+                      value={codingStarter}
+                      onChange={(e) => setCodingStarter(e.target.value)}
+                      rows={4}
+                      className="w-full p-3 bg-slate-900 text-emerald-400 font-mono text-xs rounded-xl focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Bottom Row: Difficulty, Marks, Negative Mark ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+                <div>
+                  <label className="block text-xs font-bold text-[#324158] mb-1.5">
+                    Difficulty <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#324158] cursor-pointer"
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#324158] mb-1.5">
+                    Marks <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={marks}
+                    onChange={(e) => setMarks(Math.max(1, Number(e.target.value) || 1))}
+                    className="w-full h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:border-[#324158]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#324158] mb-1.5">
+                    Negative Mark
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.25}
+                    value={negativeMark}
+                    onChange={(e) => setNegativeMark(Math.max(0, Number(e.target.value) || 0))}
+                    className="w-full h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:border-[#324158]"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleCloseForm}
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs sm:text-sm font-semibold text-slate-700 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveQuestion}
+                  className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  {editingIndex !== null ? "Update Question" : "Add Question"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 3. Added Questions List (Cards) ─── */}
+      {/* Kept hidden initially when questions.length === 0 as requested */}
+      {questions.length > 0 && (
+        <div className="space-y-4">
+          {questions.map((q, i) => {
+            const typeLabel = (q.type === "mcq" && (q as any).questionFormat === "mcq_multi")
+              ? "MCQ - Multiple Correct"
+              : TYPE_META[q.type]?.label || q.type.toUpperCase()
+
+            return (
+              <div
+                key={q.id || i}
+                className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-6 shadow-xs hover:border-slate-300 transition-all space-y-3"
+              >
+                {/* Card Top Row Header */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                  {/* Left Badges */}
+                  <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap min-w-0">
+                    {/* Question Number Badge */}
+                    <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs">
+                      {i + 1}
+                    </span>
+
+                    {/* Question Type Badge */}
+                    <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200/80">
+                      {typeLabel}
+                    </span>
+
+                    {/* Difficulty Badge */}
+                    <span className="text-xs font-semibold capitalize text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-md">
+                      {q.difficulty}
+                    </span>
+
+                    {/* Marks Badge */}
+                    <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md">
+                      {q.marks} {q.marks === 1 ? "Mark" : "Marks"}
+                    </span>
+
+                    {/* Negative Marks Badge */}
+                    <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {q.negativeMark || 0} Negative
+                    </span>
+                  </div>
+
+                  {/* Right Actions */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Move Up */}
+                    {i > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleMoveQuestion(i, "up")}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                        title="Move Up"
+                      >
+                        <ArrowUp size={14} />
+                      </button>
+                    )}
+                    {/* Move Down */}
+                    {i < questions.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleMoveQuestion(i, "down")}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                        title="Move Down"
+                      >
+                        <ArrowDown size={14} />
+                      </button>
+                    )}
+                    {/* Duplicate */}
+                    <button
+                      type="button"
+                      onClick={() => handleDuplicateQuestion(i)}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                      title="Duplicate Question"
+                    >
+                      <Copy size={14} />
+                    </button>
+                    {/* Edit */}
+                    <button
+                      type="button"
+                      onClick={() => handleEditQuestion(i)}
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                       title="Edit Question"
                     >
                       <Pencil size={14} />
                     </button>
+                    {/* Delete */}
                     <button
                       type="button"
-                      onClick={() => removeQ(q.id)}
+                      onClick={() => handleDeleteQuestion(q.id)}
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                       title="Delete Question"
                     >
@@ -3214,316 +3826,97 @@ function Step3({
                 </div>
 
                 {/* Question Statement */}
-                {q.type === "assertion" ? (
-                  (() => {
-                    const parsed = (q as AssertionQuestion).assertionText && (q as AssertionQuestion).reasonText
-                      ? { assertion: (q as AssertionQuestion).assertionText!, reason: (q as AssertionQuestion).reasonText! }
-                      : parseAssertionReason(q.questionText)
-                    return parsed ? (
-                      <div className="space-y-2 mb-2">
-                        <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-200 text-slate-900 text-xs sm:text-sm">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded mb-1 inline-block">
-                            Assertion (A)
-                          </span>
-                          <div className="leading-relaxed">
-                            <MathRenderer content={parsed.assertion} />
-                          </div>
-                        </div>
-                        <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-200 text-slate-900 text-xs sm:text-sm">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-900 bg-purple-100 border border-purple-300 px-2 py-0.5 rounded mb-1 inline-block">
-                            Reason (R)
-                          </span>
-                          <div className="leading-relaxed">
-                            <MathRenderer content={parsed.reason} />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
-                        <MathRenderer content={q.questionText} />
-                      </div>
-                    )
-                  })()
-                ) : (
-                  <div className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
-                    <MathRenderer content={q.questionText} />
-                  </div>
-                )}
+                <div className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+                  <MathRenderer content={q.questionText} />
+                </div>
 
-                {/* Question Image / Diagram */}
+                {/* Optional Image */}
                 {q.questionImage && (
                   <div className="my-2 max-w-sm rounded-lg overflow-hidden border border-slate-200 bg-slate-50 p-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={q.questionImage} alt="Diagram" className="max-h-48 rounded object-contain mx-auto" />
                   </div>
                 )}
 
-                {/* Options / Answers Section */}
-                {/* 1. MCQ Options */}
-                {q.type === "mcq" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                    {(q as MCQQuestion).options?.map((opt, oi) => {
-                      const isCorrect = isCorrectOption(opt, oi, (q as MCQQuestion).correctAnswer)
-                      const letter = ["A", "B", "C", "D", "E"][oi]
+                {/* Options in 2 Columns (for MCQ / Assertion) */}
+                {(q.type === "mcq" || q.type === "assertion") && Array.isArray((q as MCQQuestion).options) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    {(q as MCQQuestion).options.map((opt, oi) => {
+                      const letter = ["A", "B", "C", "D", "E", "F"][oi]
+                      const isCorrect = Array.isArray(q.correctAnswer)
+                        ? q.correctAnswer.includes(letter)
+                        : (q.correctAnswer === letter || opt.trim().toLowerCase() === String(q.correctAnswer).trim().toLowerCase())
                       return (
                         <div
                           key={oi}
-                          className={`p-3 rounded-xl border flex items-start gap-2.5 transition-all text-xs sm:text-sm ${
-                            isCorrect
-                              ? "bg-[#eaf0f8] border-2 border-[#324158] text-[#324158] font-medium shadow-xs"
-                              : "bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-white"
-                          }`}
+                          className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700"
                         >
-                          <span
-                            className={`w-6 h-6 rounded-md text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 ${
-                              isCorrect
-                                ? "bg-[#324158] text-white shadow-2xs"
-                                : "bg-white border border-slate-200 text-slate-600"
-                            }`}
-                          >
-                            {isCorrect ? "✓" : letter}
+                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                            isCorrect ? "border-blue-600 bg-blue-600" : "border-slate-300"
+                          }`}>
+                            {isCorrect && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                           </span>
-                          <div className="flex-1 pt-0.5 leading-relaxed overflow-x-auto">
+                          <span className="font-semibold text-slate-900 shrink-0">{letter}.</span>
+                          <span className="flex-1 min-w-0 truncate">
                             <MathRenderer content={opt} />
-                          </div>
-                          {isCorrect && (
-                            <span className="text-[10px] font-bold text-white bg-[#324158] px-2 py-0.5 rounded shadow-2xs shrink-0 self-start mt-0.5">
-                              Correct Answer
-                            </span>
-                          )}
+                          </span>
                         </div>
                       )
                     })}
                   </div>
                 )}
 
-                {/* 2. Assertion & Reason Options */}
-                {q.type === "assertion" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                    {((q as AssertionQuestion).options && (q as AssertionQuestion).options.length > 0
-                      ? (q as AssertionQuestion).options
-                      : [
-                          "Both A and R are true and R is the correct explanation of A",
-                          "Both A and R are true but R is not the correct explanation of A",
-                          "A is true but R is false",
-                          "A is false but R is true"
-                        ]
-                    ).map((opt, oi) => {
-                      const isCorrect = isCorrectOption(opt, oi, (q as AssertionQuestion).correctAnswer)
-                      const letter = ["A", "B", "C", "D"][oi]
-                      return (
-                        <div
-                          key={oi}
-                          className={`p-3 rounded-xl border flex items-start gap-2.5 transition-all text-xs sm:text-sm ${
-                            isCorrect
-                              ? "bg-[#eaf0f8] border-2 border-[#324158] text-[#324158] font-medium shadow-xs"
-                              : "bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-white"
-                          }`}
-                        >
-                          <span
-                            className={`w-6 h-6 rounded-md text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 ${
-                              isCorrect
-                                ? "bg-[#324158] text-white shadow-2xs"
-                                : "bg-white border border-slate-200 text-slate-600"
-                            }`}
-                          >
-                            {isCorrect ? "✓" : letter}
-                          </span>
-                          <div className="flex-1 pt-0.5 leading-relaxed overflow-x-auto">
-                            <MathRenderer content={opt} />
-                          </div>
-                          {isCorrect && (
-                            <span className="text-[10px] font-bold text-white bg-[#324158] px-2 py-0.5 rounded shadow-2xs shrink-0 self-start mt-0.5">
-                              Correct Answer
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {/* 3. True / False Options */}
+                {/* True / False Options */}
                 {q.type === "truefalse" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                    {(["True", "False"] as const).map((opt) => {
-                      const isCorrect = isCorrectTF(opt, (q as TrueFalseQuestion).correctAnswer)
+                  <div className="flex items-center gap-6 pt-1 text-xs sm:text-sm text-slate-700">
+                    {["True", "False"].map((opt) => {
+                      const isCorrect = (q as TrueFalseQuestion).correctAnswer === opt
                       return (
-                        <div
-                          key={opt}
-                          className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold transition-all ${
-                            isCorrect
-                              ? "bg-[#eaf0f8] border-2 border-[#324158] text-[#324158] shadow-xs"
-                              : "bg-slate-50/70 border-slate-200 text-slate-600 hover:bg-white"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <span
-                              className={`w-7 h-7 rounded-md text-xs font-bold flex items-center justify-center shrink-0 ${
-                                isCorrect
-                                  ? "bg-[#324158] text-white shadow-2xs"
-                                  : "bg-white border border-slate-200 text-slate-600"
-                              }`}
-                            >
-                              {isCorrect ? "✓" : opt === "True" ? "T" : "F"}
-                            </span>
-                            <span>{opt}</span>
-                          </div>
-                          {isCorrect && (
-                            <span className="text-[10px] font-bold text-white bg-[#324158] px-2.5 py-1 rounded shadow-2xs">
-                              Correct Answer
-                            </span>
-                          )}
+                        <div key={opt} className="flex items-center gap-2">
+                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                            isCorrect ? "border-blue-600 bg-blue-600" : "border-slate-300"
+                          }`}>
+                            {isCorrect && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </span>
+                          <span className="font-medium text-slate-800">{opt}</span>
                         </div>
                       )
                     })}
                   </div>
                 )}
 
-                {/* 4. Descriptive Answer */}
-                {q.type === "descriptive" && (
-                  <div className="space-y-2.5 pt-1">
-                    <div className="p-3.5 rounded-xl bg-[#eaf0f8]/60 border border-[#cbd5e1] text-xs sm:text-sm">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#324158] flex items-center gap-1.5">
-                          <CheckCircle2 size={13} className="text-[#324158]" />
-                          <span>Model / Reference Answer</span>
-                        </span>
-                        {(q as DescriptiveQuestion).wordLimit && (
-                          <span className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded">
-                            Word Limit: ~{(q as DescriptiveQuestion).wordLimit} words
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-slate-800 leading-relaxed overflow-x-auto">
-                        <MathRenderer content={(q as DescriptiveQuestion).modelAnswer || (q as any).sampleAnswer || (q as any).correctAnswer || "Model answer to be evaluated by instructor."} />
-                      </div>
-                    </div>
-
-                    {(q as DescriptiveQuestion).rubric && (q as DescriptiveQuestion).rubric.length > 0 && (
-                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                        <span className="font-bold text-[#324158] block mb-1 uppercase tracking-wider text-[10px]">
-                          Evaluation Rubric:
-                        </span>
-                        <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
-                          {(q as DescriptiveQuestion).rubric.map((r, ri) => <li key={ri}>{r}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 5. Fill in the Blanks Answer */}
-                {q.type === "fillblanks" && (
-                  <div className="p-3.5 rounded-xl bg-[#eaf0f8]/60 border border-[#cbd5e1] text-xs sm:text-sm space-y-2 pt-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#324158] flex items-center gap-1.5">
-                      <CheckCircle2 size={13} className="text-[#324158]" />
-                      <span>Correct Blank Answers</span>
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      {(q as FillBlanksQuestion).blanks && (q as FillBlanksQuestion).blanks.length > 0 ? (
-                        (q as FillBlanksQuestion).blanks.map((b, bi) => (
-                          <span key={bi} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-[#cbd5e1] text-xs font-semibold text-[#324158] shadow-2xs">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">Blank {bi + 1}:</span>
-                            <span>{b.answer}</span>
-                          </span>
-                        ))
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-[#cbd5e1] text-xs font-semibold text-[#324158] shadow-2xs">
-                          <span>{Array.isArray((q as any).correctAnswer) ? (q as any).correctAnswer.join(", ") : ((q as any).correctAnswer || "Correct answer specified")}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Solution / Explanation Accordion */}
-                {(q as any).explanation && (
-                  <div className="pt-1">
-                    <button
-                      type="button"
-                      onClick={() => toggleSolution(q.id)}
-                      className="text-xs font-semibold text-[#324158] hover:underline flex items-center gap-1.5 cursor-pointer"
-                    >
-                      {expandedSolutions[q.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      <span>{expandedSolutions[q.id] ? "Hide Solution" : "View Step-by-Step Solution"}</span>
-                    </button>
-                    {expandedSolutions[q.id] && (
-                      <div className="mt-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed overflow-x-auto">
-                        <span className="font-bold text-[#324158] block text-[11px] uppercase tracking-wider mb-1">
-                          Concept &amp; Detailed Solution:
-                        </span>
-                        <MathRenderer content={(q as any).explanation} />
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Correct Answer Banner */}
+                <div className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl px-3.5 py-2 flex items-center gap-2 text-xs font-bold text-[#047857]">
+                  <CheckCircle2 size={15} className="text-[#059669] shrink-0" />
+                  <span>Correct Answer: {getCorrectAnswerDisplay(q)}</span>
+                </div>
               </div>
             )
           })}
         </div>
       )}
 
-      {/* Footer Summary */}
-      {questions.length > 0 && (
-        <div className="pt-4 sm:pt-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
-          <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
-            <span className="font-bold text-[#324158] tracking-tight">{questions.length} questions selected</span>
-            <span className="text-slate-300">|</span>
-            <span className="font-medium text-slate-500">Total: <span className="text-[#324158] font-bold">{totalMarks} marks</span></span>
-            {Object.entries(typeCounts).filter(([,c]) => c > 0).map(([t, c]) => (
-              <span key={t} className="flex items-center gap-1.5"><span className="text-slate-300">·</span><span className="px-2 py-0.5 bg-[#eaf0f8] border border-[#cbd5e1] rounded text-xs text-[#324158] font-semibold">{c} {TYPE_META[t as QuestionType].label}</span></span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Modals */}
-      {modal === "mcq" && (
-        <MCQModal 
-          onSave={saveQuestion as (q: MCQQuestion | MCQQuestion[]) => void} 
-          onClose={() => { setModal(null); setEditQ(null); }} 
-          initial={editQ?.type === "mcq" ? editQ : undefined} 
-        />
-      )}
-      {modal === "assertion" && (
-        <AssertionModal 
-          onSave={saveQuestion as (q: AssertionQuestion | AssertionQuestion[]) => void} 
-          onClose={() => { setModal(null); setEditQ(null); }} 
-          initial={editQ?.type === "assertion" ? editQ : undefined} 
-        />
-      )}
-      {modal === "truefalse" && (
-        <TrueFalseModal 
-          onSave={saveQuestion as (q: TrueFalseQuestion | TrueFalseQuestion[]) => void} 
-          onClose={() => { setModal(null); setEditQ(null); }} 
-          initial={editQ?.type === "truefalse" ? editQ : undefined} 
-        />
-      )}
-      {modal === "descriptive" && (
-        <DescriptiveModal 
-          onSave={saveQuestion as (q: DescriptiveQuestion) => void} 
-          onClose={() => { setModal(null); setEditQ(null); }} 
-          initial={editQ?.type === "descriptive" ? editQ : undefined} 
-        />
-      )}
-      {modal === "fillblanks" && (
-        <FillBlanksModal 
-          onSave={saveQuestion as (q: FillBlanksQuestion | FillBlanksQuestion[]) => void} 
-          onClose={() => { setModal(null); setEditQ(null); }} 
-          initial={editQ?.type === "fillblanks" ? editQ : undefined} 
-        />
-      )}
-      {modal === "coding" && (
-        <CodingModal 
-          onSave={saveQuestion as (q: CodingQuestion) => void} 
-          onClose={() => { setModal(null); setEditQ(null); }} 
-          initial={editQ?.type === "coding" ? editQ : undefined} 
-        />
-      )}
+      {/* Competitive AI Generator Modal */}
       <CompetitiveExamAIGenerator
         isOpen={showCompetitiveAiModal}
         onClose={() => setShowCompetitiveAiModal(false)}
-        onAddQuestions={handleAddCompetitiveQuestions}
+        onAddQuestions={(newQuestions) => {
+          setQuestions(prev => [
+            ...prev,
+            ...newQuestions.map(q => ({
+              id: q.id,
+              type: "mcq" as const,
+              questionText: q.questionText,
+              difficulty: q.difficulty,
+              marks: q.marks,
+              negativeMark: q.negativeMark,
+              options: q.options || [],
+              correctAnswer: q.correctAnswer,
+              explanation: q.explanation,
+            }))
+          ])
+          setShowCompetitiveAiModal(false)
+        }}
       />
     </div>
   )
