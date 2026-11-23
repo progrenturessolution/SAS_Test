@@ -19,6 +19,7 @@ import {
   Lock,
   Layers,
   MessageSquare,
+  Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { formatDateDDMMYYYY } from "@/lib/utils"
@@ -27,6 +28,7 @@ interface AdminSidebarProps {
   userName: string
   userEmail: string
   role?: string
+  instituteId?: string
   instituteName?: string
   instituteCode?: string
   initialThemeColor?: string
@@ -36,12 +38,14 @@ export default function AdminSidebar({
   userName,
   userEmail,
   role = "super_admin",
+  instituteId,
   instituteName,
   instituteCode,
   initialThemeColor,
 }: AdminSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
   const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState(true)
   const [hasExamAccess, setHasExamAccess] = useState(true)
   const [hasOtherExamsAccess, setHasOtherExamsAccess] = useState(true)
@@ -54,7 +58,14 @@ export default function AdminSidebar({
   const [themeColor, setThemeColor] = useState<string>(initialThemeColor || "#2D3A4A")
   const [unreadSupportCount, setUnreadSupportCount] = useState<number>(0)
 
-  const isSuperAdmin = role === "super_admin" || (role === "admin" && !instituteName)
+  const isOrganization =
+    role === "institute" ||
+    role === "coaching_institute" ||
+    Boolean(instituteId) ||
+    Boolean(instituteName) ||
+    Boolean(instituteCode)
+
+  const isSuperAdmin = !isOrganization && (role === "super_admin" || role === "admin")
 
   const loadUnreadSupport = async () => {
     try {
@@ -94,9 +105,10 @@ export default function AdminSidebar({
     { label: "Support & Help", href: "/admin/queries", icon: MessageSquare },
   ]
 
-  // Close mobile drawer on route navigation
+  // Close mobile drawer and reset pending navigation on route change
   useEffect(() => {
     setMobileOpen(false)
+    setPendingHref(null)
   }, [pathname])
 
   // Prevent background scroll when mobile drawer is open
@@ -155,9 +167,11 @@ export default function AdminSidebar({
   }
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" })
-    router.push(isSuperAdmin ? "/admin/login" : "/institute/login")
-    router.refresh()
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } catch {}
+    const targetUrl = isSuperAdmin ? "/admin/login" : "/institute/login"
+    window.location.href = targetUrl
   }
 
   return (
@@ -340,6 +354,7 @@ export default function AdminSidebar({
                   <div key={item.href} className="relative group">
                     <Link
                       href={item.href}
+                      prefetch={true}
                       title={isRestricted ? restrictedMessage : undefined}
                       onClick={(e) => {
                         if (isRestricted) {
@@ -351,6 +366,7 @@ export default function AdminSidebar({
                           })
                           setMobileOpen(false)
                         } else {
+                          setPendingHref(item.href)
                           setMobileOpen(false)
                         }
                       }}
@@ -360,11 +376,17 @@ export default function AdminSidebar({
                           ? "opacity-60 cursor-not-allowed bg-gray-100/50 text-gray-500 hover:bg-gray-100/70"
                           : active
                             ? "text-white shadow-xs font-semibold"
-                            : "text-gray-700 hover:bg-gray-100/70 hover:text-gray-900"
+                            : pendingHref === item.href
+                              ? "bg-gray-100 text-gray-900 font-semibold"
+                              : "text-gray-700 hover:bg-gray-100/70 hover:text-gray-900"
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <Icon size={17} />
+                        {pendingHref === item.href && !active ? (
+                          <Loader2 size={17} className="animate-spin text-gray-700 shrink-0" />
+                        ) : (
+                          <Icon size={17} className="shrink-0" />
+                        )}
                         <span>{item.label}</span>
                       </div>
                       {item.href === "/admin/queries" && unreadSupportCount > 0 ? (
@@ -406,15 +428,25 @@ export default function AdminSidebar({
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={() => setMobileOpen(false)}
+                      prefetch={true}
+                      onClick={() => {
+                        setPendingHref(item.href)
+                        setMobileOpen(false)
+                      }}
                       style={{ backgroundColor: active ? themeColor : undefined }}
                       className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-colors ${
                         active
                           ? "text-white shadow-xs font-semibold"
-                          : "text-gray-700 hover:bg-gray-100/70 hover:text-gray-900"
+                          : pendingHref === item.href
+                            ? "bg-gray-100 text-gray-900 font-semibold"
+                            : "text-gray-700 hover:bg-gray-100/70 hover:text-gray-900"
                       }`}
                     >
-                      <Icon size={17} />
+                      {pendingHref === item.href && !active ? (
+                        <Loader2 size={17} className="animate-spin text-gray-700 shrink-0" />
+                      ) : (
+                        <Icon size={17} className="shrink-0" />
+                      )}
                       <span>{item.label}</span>
                     </Link>
                   )
@@ -553,6 +585,7 @@ export default function AdminSidebar({
               <div key={item.href} className="relative group">
                 <Link
                   href={item.href}
+                  prefetch={true}
                   title={isRestricted ? restrictedMessage : undefined}
                   onClick={(e) => {
                     if (isRestricted) {
@@ -562,6 +595,8 @@ export default function AdminSidebar({
                       toast.info("Other Exams: Work in progress soon! 🚀", {
                         description: "Other exam modules and additional board formats are currently under development.",
                       })
+                    } else {
+                      setPendingHref(item.href)
                     }
                   }}
                   style={{ backgroundColor: active ? themeColor : undefined }}
@@ -570,11 +605,17 @@ export default function AdminSidebar({
                       ? "opacity-60 cursor-not-allowed bg-gray-100/50 text-gray-500 hover:bg-gray-100/70"
                       : active
                         ? "text-white font-medium shadow-xs"
-                        : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
+                        : pendingHref === item.href
+                          ? "bg-gray-100 text-gray-900 font-semibold"
+                          : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon size={16} />
+                    {pendingHref === item.href && !active ? (
+                      <Loader2 size={16} className="animate-spin text-gray-700 shrink-0" />
+                    ) : (
+                      <Icon size={16} className="shrink-0" />
+                    )}
                     <span>{item.label}</span>
                   </div>
                   {item.href === "/admin/queries" && unreadSupportCount > 0 ? (
@@ -615,14 +656,22 @@ export default function AdminSidebar({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={true}
+                onClick={() => setPendingHref(item.href)}
                 style={{ backgroundColor: active ? themeColor : undefined }}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
                   active
                     ? "text-white font-medium shadow-xs"
-                    : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
+                    : pendingHref === item.href
+                      ? "bg-gray-100 text-gray-900 font-semibold"
+                      : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
                 }`}
               >
-                <Icon size={16} />
+                {pendingHref === item.href && !active ? (
+                  <Loader2 size={16} className="animate-spin text-gray-700 shrink-0" />
+                ) : (
+                  <Icon size={16} className="shrink-0" />
+                )}
                 <span>{item.label}</span>
               </Link>
             )

@@ -617,14 +617,16 @@ export default function StudentsPage() {
         {/* Left: Filter Buttons */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Status Filters */}
+          {/* Status Filters */}
           <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200/70">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2">Status:</span>
             <button
               type="button"
               onClick={() => setStatusFilter("all")}
+              style={statusFilter === "all" ? { backgroundColor: themeColor } : undefined}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 statusFilter === "all"
-                  ? "bg-[#2D3A4A] text-white shadow-xs"
+                  ? "text-white shadow-xs font-bold"
                   : "text-slate-600 hover:text-slate-900 hover:bg-white"
               }`}
             >
@@ -635,8 +637,8 @@ export default function StudentsPage() {
               onClick={() => setStatusFilter("active")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                 statusFilter === "active"
-                  ? "bg-emerald-700 text-white shadow-xs"
-                  : "text-slate-600 hover:text-emerald-700 hover:bg-white"
+                  ? "bg-emerald-600 text-white shadow-xs shadow-emerald-600/30 font-bold"
+                  : "text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50/70"
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === "active" ? "bg-white" : "bg-emerald-500"}`} />
@@ -647,11 +649,11 @@ export default function StudentsPage() {
               onClick={() => setStatusFilter("deactivated")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                 statusFilter === "deactivated"
-                  ? "bg-slate-700 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white"
+                  ? "bg-rose-600 text-white shadow-xs shadow-rose-600/30 font-bold"
+                  : "text-rose-700 hover:text-rose-800 hover:bg-rose-50/70"
               }`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === "deactivated" ? "bg-white" : "bg-slate-400"}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === "deactivated" ? "bg-white" : "bg-rose-500"}`} />
               Deactivated ({deactivatedCount})
             </button>
           </div>
@@ -662,9 +664,10 @@ export default function StudentsPage() {
             <button
               type="button"
               onClick={() => setFeesFilter("all")}
+              style={feesFilter === "all" ? { backgroundColor: themeColor } : undefined}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 feesFilter === "all"
-                  ? "bg-[#2D3A4A] text-white shadow-xs"
+                  ? "text-white shadow-xs font-bold"
                   : "text-slate-600 hover:text-slate-900 hover:bg-white"
               }`}
             >
@@ -675,10 +678,11 @@ export default function StudentsPage() {
               onClick={() => setFeesFilter("completed")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                 feesFilter === "completed"
-                  ? "bg-emerald-700 text-white shadow-xs"
-                  : "text-slate-600 hover:text-emerald-700 hover:bg-white"
+                  ? "bg-emerald-600 text-white shadow-xs shadow-emerald-600/30 font-bold"
+                  : "text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50/70"
               }`}
             >
+              <span className={`w-1.5 h-1.5 rounded-full ${feesFilter === "completed" ? "bg-white" : "bg-emerald-500"}`} />
               Completed Fees ({completedFeesCount})
             </button>
             <button
@@ -686,10 +690,11 @@ export default function StudentsPage() {
               onClick={() => setFeesFilter("pending")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                 feesFilter === "pending"
-                  ? "bg-amber-600 text-white shadow-xs"
-                  : "text-slate-600 hover:text-amber-700 hover:bg-white"
+                  ? "bg-amber-600 text-white shadow-xs shadow-amber-600/30 font-bold"
+                  : "text-amber-700 hover:text-amber-800 hover:bg-amber-50/70"
               }`}
             >
+              <span className={`w-1.5 h-1.5 rounded-full ${feesFilter === "pending" ? "bg-white" : "bg-amber-500"}`} />
               Pending Fees ({pendingFeesCount})
             </button>
           </div>
