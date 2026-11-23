@@ -1286,7 +1286,7 @@ function OtherExamsContent() {
         </div>
         <h2 className="text-xl font-bold text-[#324158] mb-2">Access Restricted</h2>
         <p className="text-gray-500 max-w-md text-sm mb-6 leading-relaxed">
-          Your coaching institute does not have permission to access the Other Exams Studio. Please contact your administrator to enable this module.
+          Your coaching institute does not have permission to access the Other Exam Section. Please contact your administrator to enable this module.
         </p>
         <Link
           href="/admin"
@@ -1311,14 +1311,14 @@ function OtherExamsContent() {
             Exams
           </Link>
           <span>/</span>
-          <span className="text-slate-900 font-semibold">Other Exams Studio</span>
+          <span className="text-slate-900 font-semibold">Other Exam Section</span>
         </div>
 
         {/* ─── Studio Title & Badges Header ─── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
           <div>
             <h1 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900">
-              Other Competitive Exams Studio
+              Other Exam Section
             </h1>
             <p className="sm:hidden text-xs text-slate-500 mt-0.5">
               Step {currentStep} of {STEPS.length}: {STEPS.find((s) => s.step === currentStep)?.label}
@@ -3624,7 +3624,7 @@ export default function OtherExamsPage() {
         <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
           <div className="flex items-center gap-3 text-gray-500">
             <Loader2 className="animate-spin text-slate-700" size={24} />
-            <span className="text-sm font-medium">Loading Other Exams Studio...</span>
+            <span className="text-sm font-medium">Loading Other Exam Section...</span>
           </div>
         </div>
       }
