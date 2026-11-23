@@ -9,7 +9,8 @@ import {
   FileText, CheckSquare, List, Code2, AlignLeft, Info, Pencil, MoreVertical,
   Shield, Camera, Maximize, AlertTriangle, Sparkles, Loader2, Clock, GraduationCap,
   ArrowRight, ArrowLeft, CheckCircle2, Zap, Layers, Lock, ChevronDown, ChevronUp, Minus,
-  Star, Copy, GripVertical, Bold, Italic, Underline, ListOrdered, Image as ImageIcon, BookOpen, ArrowUp, ArrowDown
+  Star, Copy, GripVertical, Bold, Italic, Underline, ListOrdered, Image as ImageIcon, BookOpen, ArrowUp, ArrowDown,
+  Calendar, Calculator
 } from "lucide-react"
 import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from "@/lib/examSchedule"
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
@@ -100,6 +101,7 @@ interface Step2Form {
   startDate: string; startTime: string; endDate: string; endTime: string
   randomize: boolean; showResults: boolean; allowReview: boolean; negativeMarking: boolean
   sectionNegativeMark: number;
+  allowCalculator?: boolean;
   proctoring: {
     faceDetection: boolean
     tabSwitch: boolean
@@ -2225,168 +2227,469 @@ function Step1({ form, setForm }: { form: Step1Form; setForm: React.Dispatch<Rea
 // ─── Step 2 ───────────────────────────────────────────────────────────────────
 
 function Step2({ form, setForm, canUseAiProctoring }: { form: Step2Form; setForm: React.Dispatch<React.SetStateAction<Step2Form>>; canUseAiProctoring: boolean }) {
-  const toggles: { key: keyof Step2Form; label: string; desc: string }[] = [
-    { key: "randomize",      label: "Randomize Questions",       desc: "Display questions in random order for each aspirant" },
-    { key: "showResults",    label: "Show Results Immediately",  desc: "Aspirants can see their score & answers right after submission" },
-    { key: "allowReview",    label: "Allow Review Mode",         desc: "Aspirants can review question explanations after submitting" },
-    { key: "negativeMarking", label: "Enable Negative Marking",  desc: "Deduct marks for incorrect answers across sections" },
-  ]
+  const startDateInputRef = useRef<HTMLInputElement>(null)
+  const endDateInputRef = useRef<HTMLInputElement>(null)
 
-  const proctoringToggles = [
-    { key: "faceDetection", label: "Face Detection Monitoring", desc: "Monitors candidate presence and face positioning during exam", icon: <Camera size={16} /> },
-    { key: "tabSwitch",     label: "Tab-Switch Prevention",    desc: "Detects and warns when candidate leaves or switches tabs", icon: <AlertTriangle size={16} /> },
-    { key: "fullscreen",    label: "Enforce Fullscreen Mode",   desc: "Requires exam to be taken in full screen with auto-termination", icon: <Maximize size={16} /> },
-    { key: "aiProctoring",  label: "AI Proctoring Analysis",    desc: "Analyzes webcam stream in real-time for anomaly warnings", icon: <Shield size={16} /> },
-  ] as const
+  const openDatePicker = (inputRef: React.RefObject<HTMLInputElement | null>) => {
+    if (!inputRef.current) return
+    try {
+      inputRef.current.showPicker?.()
+    } catch {
+      inputRef.current.focus()
+    }
+  }
+
+  const formatDateDisplay = (dateStr: string) => {
+    try {
+      const [y, m, d] = dateStr.split("-").map(Number)
+      if (!y || !m || !d) return dateStr || "Select Date"
+      const date = new Date(y, m - 1, d)
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    } catch {
+      return dateStr || "Select Date"
+    }
+  }
+
+  const parseTimeTo12h = (timeStr?: string) => {
+    if (!timeStr) return { hour: "10", minute: "00", period: "AM" as const }
+    const [hStr, mStr] = timeStr.split(":")
+    let h = parseInt(hStr, 10)
+    if (isNaN(h)) h = 10
+    const m = mStr && !isNaN(parseInt(mStr, 10)) ? mStr.padStart(2, "0") : "00"
+    const period: "AM" | "PM" = h >= 12 ? "PM" : "AM"
+    const h12 = h % 12 === 0 ? 12 : h % 12
+    return {
+      hour: String(h12).padStart(2, "0"),
+      minute: m,
+      period
+    }
+  }
+
+  const format12hTo24h = (hourStr: string, minStr: string, period: "AM" | "PM") => {
+    let h = parseInt(hourStr, 10)
+    if (isNaN(h)) h = 12
+    if (period === "AM") {
+      if (h === 12) h = 0
+    } else {
+      if (h < 12) h += 12
+    }
+    return `${String(h).padStart(2, "0")}:${minStr.padStart(2, "0")}`
+  }
+
+  const startTimeParts = parseTimeTo12h(form.startTime)
+  const endTimeParts = parseTimeTo12h(form.endTime)
+
+  const updateStartTime = (h: string, m: string, p: "AM" | "PM") => {
+    const time24 = format12hTo24h(h, m, p)
+    setForm(f => ({ ...f, startTime: time24 }))
+  }
+
+  const updateEndTime = (h: string, m: string, p: "AM" | "PM") => {
+    const time24 = format12hTo24h(h, m, p)
+    setForm(f => ({ ...f, endTime: time24 }))
+  }
+
+  const MINUTE_OPTIONS = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"]
+  const getMinuteOptions = (currMin: string) => {
+    if (currMin && !MINUTE_OPTIONS.includes(currMin)) {
+      return [...MINUTE_OPTIONS, currMin].sort()
+    }
+    return MINUTE_OPTIONS
+  }
+
+  const startDt = form.startDate ? getExamStartDateTime({ startDate: form.startDate, startTime: form.startTime || "10:00" }) : null
+  const endDt = form.endDate ? getExamEndDateTime({ endDate: form.endDate, endTime: form.endTime || "11:00" }) : null
+  const isInvalid = !!(startDt && endDt && endDt.getTime() <= startDt.getTime())
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs relative">
-      <div className="mb-6 sm:mb-8 pb-5 border-b border-slate-100">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-          STEP 3 · TIMELINE & POLICIES
-        </p>
-        <h2 className="mt-1 text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
-          Exam Settings & Proctoring
-        </h2>
-      </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      {/* Left Card: Exam Schedule */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-8 shadow-xs relative overflow-hidden flex flex-col justify-between">
+        {/* Subtle decorative background wave in top right */}
+        <div className="absolute top-0 right-0 w-48 h-32 bg-gradient-to-bl from-blue-50/70 to-transparent rounded-bl-full pointer-events-none" />
 
-      <div className="space-y-6 sm:space-y-8">
-        {/* Schedule & Timeline */}
         <div>
-          <div className="flex items-center gap-2 mb-4">
-            <span className="w-1.5 h-5 bg-slate-900 rounded-full" />
-            <h3 className="text-base font-semibold text-slate-900">Schedule & Timeline</h3>
+          <div className="mb-5 relative z-10">
+            <h2 className="text-base sm:text-lg font-medium tracking-tight text-slate-900">
+              Exam Schedule
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Set the exam start and end date with time.
+            </p>
           </div>
 
-          {(() => {
-            const startDt = form.startDate ? getExamStartDateTime({ startDate: form.startDate, startTime: form.startTime }) : null
-            const endDt = form.endDate ? getExamEndDateTime({ endDate: form.endDate, endTime: form.endTime }) : null
-            const isInvalid = !!(startDt && endDt && endDt.getTime() <= startDt.getTime())
+          <div className="space-y-6 relative z-10">
+            {/* ── Start Date & Time ── */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-1.5 h-4.5 bg-[#324158] rounded-full inline-block" />
+                <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
+                  Start Date &amp; Time
+                </h3>
+              </div>
 
-            return (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                  <ExamDateTimePicker
-                    label="Start Date & Time"
-                    sublabel="Aspirants can only begin the exam at or after this time"
-                    date={form.startDate}
-                    time={form.startTime}
-                    onDateChange={(d) => setForm(f => ({ ...f, startDate: d }))}
-                    onTimeChange={(t) => setForm(f => ({ ...f, startTime: t }))}
-                  />
-                  <ExamDateTimePicker
-                    label="End Date & Time"
-                    sublabel="Exam automatically submits for all aspirants at this time"
-                    date={form.endDate}
-                    time={form.endTime}
-                    onDateChange={(d) => setForm(f => ({ ...f, endDate: d }))}
-                    onTimeChange={(t) => setForm(f => ({ ...f, endTime: t }))}
-                    referenceStart={{ date: form.startDate, time: form.startTime }}
-                  />
-                </div>
-
-                {isInvalid && (
-                  <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 font-medium flex items-center gap-2">
-                    <AlertCircle size={16} className="shrink-0" />
-                    <span>End Date & Time must be after Start Date & Time!</span>
-                  </div>
-                )}
-
-                {startDt && endDt && !isInvalid && (
-                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs sm:text-sm text-emerald-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 shadow-2xs">
-                    <div className="flex items-center gap-2.5">
-                      <Clock size={16} className="text-emerald-600 shrink-0" />
-                      <span className="leading-snug">
-                        <strong className="font-semibold text-emerald-950">Active Exam Window: </strong>
-                        {formatScheduleDateTime(startDt)} → {formatScheduleDateTime(endDt)}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+                {/* Interactive Active Date Picker */}
+                <div
+                  onClick={() => openDatePicker(startDateInputRef)}
+                  className="relative flex-1 min-w-[140px] cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#324158]/50 group-hover:bg-slate-50/80 transition-all shadow-2xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Calendar className="w-4 h-4 text-[#324158] shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-slate-800 truncate">
+                        {form.startDate ? formatDateDisplay(form.startDate) : "Select Date"}
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-0.5 rounded-full shrink-0 self-start sm:self-auto">
-                      Strict Timed Access
+                    <span className="text-[10px] font-medium text-[#324158] bg-[#eaf0f8] px-2 py-0.5 rounded-md border border-[#324158]/20 shrink-0">
+                      Select Date
                     </span>
                   </div>
-                )}
-              </div>
-            )
-          })()}
-        </div>
-
-        {/* 2 Columns: Evaluation Options & Proctoring Security */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 pt-4 border-t border-slate-100">
-          {/* Evaluation Options */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-1.5 h-5 bg-slate-900 rounded-full" />
-              <h3 className="text-base font-semibold text-slate-900">Evaluation Options</h3>
-            </div>
-            <div className="space-y-3">
-              {toggles.map(t => (
-                <div key={t.key} className="rounded-xl border border-slate-200/80 p-3.5 hover:border-slate-300 transition-colors bg-white">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex-1 pr-2">
-                      <p className="text-sm font-semibold text-slate-900">{t.label}</p>
-                      <p className="text-xs text-slate-500 leading-relaxed mt-0.5">{t.desc}</p>
-                    </div>
-                    <Toggle checked={form[t.key] as boolean} onChange={() => setForm(f => ({ ...f, [t.key]: !f[t.key] }))} />
-                  </div>
-                  {t.key === "negativeMarking" && form.negativeMarking && (
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                      <label className="text-xs font-semibold text-slate-700 block mb-1.5">Default Negative Mark</label>
-                      <input
-                        type="number"
-                        step="0.25"
-                        min="0"
-                        value={form.sectionNegativeMark}
-                        onChange={e => setForm(f => ({ ...f, sectionNegativeMark: +e.target.value }))}
-                        className={inputCls}
-                        placeholder="e.g. 0.25"
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Proctoring Security */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-1.5 h-5 bg-red-500 rounded-full" />
-              <h3 className="text-base font-semibold text-slate-900">Proctoring Security</h3>
-            </div>
-            <div className="space-y-3">
-              {proctoringToggles.map(pt => (
-                <div key={pt.key} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 hover:border-slate-300 transition-colors bg-white gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center ${form.proctoring[pt.key] ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}>
-                      {pt.icon}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{pt.label}</p>
-                      <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{pt.desc}</p>
-                    </div>
-                  </div>
-                  <Toggle
-                    checked={form.proctoring[pt.key]}
-                    disabled={pt.key === "aiProctoring" && !canUseAiProctoring}
-                    onChange={() => setForm(f => ({
+                  <input
+                    ref={startDateInputRef}
+                    type="date"
+                    value={form.startDate}
+                    onChange={(e) => setForm(f => ({
                       ...f,
-                      proctoring: { ...f.proctoring, [pt.key]: !f.proctoring[pt.key] }
+                      startDate: e.target.value,
+                      startTime: f.startTime || "10:00"
                     }))}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   />
                 </div>
-              ))}
-              <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 text-xs text-blue-800">
-                <p className="font-semibold flex items-center gap-1.5 mb-1 text-blue-900">
-                  <Info size={14} className="text-blue-600" />
-                  <span>Proctoring Notice</span>
-                </p>
-                <p className="leading-relaxed">
-                  Enabling Face Detection and Fullscreen ensures aspirant integrity by monitoring presence and preventing split-screen cheating.
-                </p>
+
+                {/* Time Controls Group */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {/* Hour Dropdown */}
+                  <div className="relative flex-1 sm:w-20 sm:flex-none">
+                    <select
+                      value={startTimeParts.hour}
+                      onChange={(e) => updateStartTime(e.target.value, startTimeParts.minute, startTimeParts.period)}
+                      className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                    >
+                      {["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map((h) => (
+                        <option key={h} value={h}>
+                          {h}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+
+                  {/* Minute Dropdown */}
+                  <div className="relative flex-1 sm:w-20 sm:flex-none">
+                    <select
+                      value={startTimeParts.minute}
+                      onChange={(e) => updateStartTime(startTimeParts.hour, e.target.value, startTimeParts.period)}
+                      className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                    >
+                      {getMinuteOptions(startTimeParts.minute).map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+
+                  {/* AM / PM Segmented Toggle */}
+                  <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/70 p-1 shadow-2xs shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => updateStartTime(startTimeParts.hour, startTimeParts.minute, "AM")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        startTimeParts.period === "AM"
+                          ? "bg-[#324158] text-white shadow-2xs"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      AM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateStartTime(startTimeParts.hour, startTimeParts.minute, "PM")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        startTimeParts.period === "PM"
+                          ? "bg-[#324158] text-white shadow-2xs"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      PM
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── End Date & Time ── */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-1.5 h-4.5 bg-[#324158] rounded-full inline-block" />
+                <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
+                  End Date &amp; Time
+                </h3>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+                {/* Interactive Active Date Picker */}
+                <div
+                  onClick={() => openDatePicker(endDateInputRef)}
+                  className="relative flex-1 min-w-[140px] cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#324158]/50 group-hover:bg-slate-50/80 transition-all shadow-2xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Calendar className="w-4 h-4 text-[#324158] shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-slate-800 truncate">
+                        {form.endDate ? formatDateDisplay(form.endDate) : "Select Date"}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-medium text-[#324158] bg-[#eaf0f8] px-2 py-0.5 rounded-md border border-[#324158]/20 shrink-0">
+                      Select Date
+                    </span>
+                  </div>
+                  <input
+                    ref={endDateInputRef}
+                    type="date"
+                    value={form.endDate}
+                    onChange={(e) => setForm(f => ({
+                      ...f,
+                      endDate: e.target.value,
+                      endTime: f.endTime || "11:00"
+                    }))}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                </div>
+
+                {/* Time Controls Group */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {/* Hour Dropdown */}
+                  <div className="relative flex-1 sm:w-20 sm:flex-none">
+                    <select
+                      value={endTimeParts.hour}
+                      onChange={(e) => updateEndTime(e.target.value, endTimeParts.minute, endTimeParts.period)}
+                      className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                    >
+                      {["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map((h) => (
+                        <option key={h} value={h}>
+                          {h}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+
+                  {/* Minute Dropdown */}
+                  <div className="relative flex-1 sm:w-20 sm:flex-none">
+                    <select
+                      value={endTimeParts.minute}
+                      onChange={(e) => updateEndTime(endTimeParts.hour, e.target.value, endTimeParts.period)}
+                      className="w-full appearance-none px-3.5 py-2.5 text-xs sm:text-sm font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all cursor-pointer pr-7 shadow-2xs"
+                    >
+                      {getMinuteOptions(endTimeParts.minute).map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+
+                  {/* AM / PM Segmented Toggle */}
+                  <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/70 p-1 shadow-2xs shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => updateEndTime(endTimeParts.hour, endTimeParts.minute, "AM")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        endTimeParts.period === "AM"
+                          ? "bg-[#324158] text-white shadow-2xs"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      AM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateEndTime(endTimeParts.hour, endTimeParts.minute, "PM")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        endTimeParts.period === "PM"
+                          ? "bg-[#324158] text-white shadow-2xs"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      PM
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Validation & Active Window Notice */}
+            {isInvalid && (
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs sm:text-sm text-red-600 font-medium flex items-center gap-2">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>End Date &amp; Time must be after Start Date &amp; Time!</span>
+              </div>
+            )}
+
+            {startDt && endDt && !isInvalid && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs sm:text-sm text-emerald-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <Clock size={16} className="text-emerald-600 shrink-0" />
+                  <span className="leading-snug">
+                    <strong className="font-semibold text-emerald-950">Active Exam Window: </strong>
+                    {formatScheduleDateTime(startDt)} → {formatScheduleDateTime(endDt)}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-0.5 rounded-full shrink-0 self-start sm:self-auto">
+                  Strict Timed Access
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Right Card: Evaluation Options & Proctoring Security */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-8 shadow-xs flex flex-col justify-between">
+        <div>
+          {/* ── Evaluation Options ── */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1.5 h-4.5 bg-[#1E293B] rounded-full inline-block" />
+              <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
+                Evaluation Options
+              </h3>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              <div className="flex items-center justify-between py-2.5">
+                <span className="text-xs font-normal text-slate-700">
+                  Randomize Questions
+                </span>
+                <Toggle
+                  checked={form.randomize}
+                  onChange={() => setForm(f => ({ ...f, randomize: !f.randomize }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between py-2.5">
+                <span className="text-xs font-normal text-slate-700">
+                  Show Results Immediately
+                </span>
+                <Toggle
+                  checked={form.showResults}
+                  onChange={() => setForm(f => ({ ...f, showResults: !f.showResults }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between py-2.5">
+                <span className="text-xs font-normal text-slate-700">
+                  Allow Review
+                </span>
+                <Toggle
+                  checked={form.allowReview}
+                  onChange={() => setForm(f => ({ ...f, allowReview: !f.allowReview }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between py-2.5">
+                <div className="flex items-center gap-2">
+                  <Calculator className="w-4 h-4 text-[#324158]" />
+                  <div>
+                    <span className="text-xs font-normal text-slate-700 block">
+                      Enable Aspirant Calculator
+                    </span>
+                    <span className="text-[10px] text-slate-400 block">
+                      Allow on-screen scientific calculator during exam
+                    </span>
+                  </div>
+                </div>
+                <Toggle
+                  checked={Boolean(form.allowCalculator)}
+                  onChange={() => setForm(f => ({ ...f, allowCalculator: !f.allowCalculator }))}
+                />
               </div>
             </div>
           </div>
+
+          {/* ── Proctoring Security ── */}
+          <div className="mt-5">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1.5 h-4.5 bg-[#1E293B] rounded-full inline-block" />
+              <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
+                Proctoring Security
+              </h3>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              <div className="flex items-center justify-between py-2.5">
+                <span className="text-xs font-normal text-slate-700">
+                  Face Detection
+                </span>
+                <Toggle
+                  checked={form.proctoring.faceDetection}
+                  onChange={() => setForm(f => ({
+                    ...f,
+                    proctoring: { ...f.proctoring, faceDetection: !f.proctoring.faceDetection }
+                  }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between py-2.5">
+                <span className="text-xs font-normal text-slate-700">
+                  Tab-Switch Prevention
+                </span>
+                <Toggle
+                  checked={form.proctoring.tabSwitch}
+                  onChange={() => setForm(f => ({
+                    ...f,
+                    proctoring: { ...f.proctoring, tabSwitch: !f.proctoring.tabSwitch }
+                  }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between py-2.5">
+                <span className="text-xs font-normal text-slate-700">
+                  Enforce Fullscreen
+                </span>
+                <Toggle
+                  checked={form.proctoring.fullscreen}
+                  onChange={() => setForm(f => ({
+                    ...f,
+                    proctoring: { ...f.proctoring, fullscreen: !f.proctoring.fullscreen }
+                  }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between py-2.5">
+                <span className="text-xs font-normal text-slate-700">
+                  AI Proctoring Analysis
+                </span>
+                <Toggle
+                  checked={form.proctoring.aiProctoring}
+                  disabled={!canUseAiProctoring}
+                  onChange={() => setForm(f => ({
+                    ...f,
+                    proctoring: { ...f.proctoring, aiProctoring: !f.proctoring.aiProctoring }
+                  }))}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 text-xs text-blue-800">
+          <p className="font-semibold flex items-center gap-1.5 mb-1 text-blue-900">
+            <Info size={14} className="text-blue-600" />
+            <span>Proctoring Notice</span>
+          </p>
+          <p className="leading-relaxed">
+            Enabling Face Detection and Fullscreen ensures aspirant integrity by monitoring presence and preventing split-screen cheating.
+          </p>
         </div>
       </div>
     </div>
@@ -3944,6 +4247,7 @@ export default function ExamWizard({ editId }: { editId?: string } = {}) {
     startDate: "", startTime: "", endDate: "", endTime: "",
     randomize: true, showResults: true, allowReview: false, negativeMarking: false,
     sectionNegativeMark: 0,
+    allowCalculator: false,
     proctoring: {
       faceDetection: true,
       tabSwitch: true,
@@ -4040,6 +4344,7 @@ export default function ExamWizard({ editId }: { editId?: string } = {}) {
           allowReview: Boolean(exam.settings?.allowReview),
           negativeMarking: Boolean(exam.settings?.negativeMarking),
           sectionNegativeMark: exam.sections?.[0]?.sectionNegativeMark || 0,
+          allowCalculator: Boolean(exam.settings?.allowCalculator ?? exam.allowCalculator),
           proctoring: {
             faceDetection: exam.settings?.proctoring?.faceDetection !== undefined 
               ? Boolean(exam.settings.proctoring.faceDetection)
@@ -4296,13 +4601,17 @@ export default function ExamWizard({ editId }: { editId?: string } = {}) {
           randomize: step2.randomize,
           showResults: step2.showResults,
           allowReview: step2.allowReview,
+          allowCalculator: Boolean(step2.allowCalculator),
+          enableCalculator: Boolean(step2.allowCalculator),
           negativeMarking: step2.negativeMarking,
           startDate: startDt ? startDt.toISOString() : undefined,
           startTime: step2.startTime || undefined,
           endDate: endDt ? endDt.toISOString() : undefined,
           endTime: step2.endTime || undefined,
           proctoring: step2.proctoring,
-        }
+        },
+        allowCalculator: Boolean(step2.allowCalculator),
+        enableCalculator: Boolean(step2.allowCalculator),
       }
       const endpoint = isEdit ? `/api/exams/${activeEditId}` : "/api/exams"
       const method = isEdit ? "PUT" : "POST"
