@@ -9,11 +9,12 @@ import { getExamStartDateTime, getExamEndDateTime } from "@/lib/examSchedule"
 export async function POST(req: Request) {
   try {
     await connectDB()
-    const { examId, studentName, studentEmail, rollNumber, password } = await req.json()
+    const { examId, studentName, studentEmail, rollNumber, password, candidateType } = await req.json()
+    const isPublic = candidateType === "public"
     const normalizedEmail = String(studentEmail || "").trim().toLowerCase()
-    const normalizedRollNumber = String(rollNumber || "").trim()
-    if (!examId || !studentName || !studentEmail || !rollNumber) {
-      return NextResponse.json({ error: "All fields required" }, { status: 400 })
+    const normalizedRollNumber = String(rollNumber || "").trim() || (isPublic ? `PUB-${Date.now().toString().slice(-6)}` : "")
+    if (!examId || !studentName || !normalizedEmail || (!isPublic && !normalizedRollNumber)) {
+      return NextResponse.json({ error: "All required fields must be provided" }, { status: 400 })
     }
 
     // Verify exam status and schedule window
@@ -22,49 +23,52 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Exam is not active or available" }, { status: 400 })
     }
 
-    if (exam.instituteId) {
-      const student = await User.findOne({
-        role: "student",
-        instituteId: exam.instituteId,
-        $or: [
-          { email: normalizedEmail },
-          { rollNumber: normalizedRollNumber },
-        ],
-      })
+    // For non-public (institute registered) candidates, verify coaching student credentials and password
+    if (!isPublic) {
+      if (exam.instituteId) {
+        const student = await User.findOne({
+          role: "student",
+          instituteId: exam.instituteId,
+          $or: [
+            { email: normalizedEmail },
+            { rollNumber: normalizedRollNumber },
+          ],
+        })
 
-      if (!student) {
-        return NextResponse.json(
-          { error: "Only students registered by this coaching institute can enter this exam." },
-          { status: 403 }
-        )
-      }
+        if (!student) {
+          return NextResponse.json(
+            { error: "Only students registered by this coaching institute can enter this exam." },
+            { status: 403 }
+          )
+        }
 
-      if (student.status === "deactivated" || (student as any).isActive === false) {
-        const reason =
-          (student as any).deactivationReason?.trim() ||
-          "Your student account has been deactivated. Please contact your coaching administrator."
-        return NextResponse.json({ error: reason }, { status: 403 })
-      }
+        if (student.status === "deactivated" || (student as any).isActive === false) {
+          const reason =
+            (student as any).deactivationReason?.trim() ||
+            "Your student account has been deactivated. Please contact your coaching administrator."
+          return NextResponse.json({ error: reason }, { status: 403 })
+        }
 
-      if (!password || !(await student.comparePassword(password))) {
-        return NextResponse.json(
-          { error: "Invalid student credentials or password." },
-          { status: 403 }
-        )
-      }
-    } else {
-      const student = await User.findOne({
-        role: "student",
-        $or: [
-          { email: normalizedEmail },
-          { rollNumber: normalizedRollNumber },
-        ],
-      })
-      if (student && (student.status === "deactivated" || (student as any).isActive === false)) {
-        const reason =
-          (student as any).deactivationReason?.trim() ||
-          "Your student account has been deactivated. Please contact your coaching administrator."
-        return NextResponse.json({ error: reason }, { status: 403 })
+        if (!password || !(await student.comparePassword(password))) {
+          return NextResponse.json(
+            { error: "Invalid student credentials or password." },
+            { status: 403 }
+          )
+        }
+      } else {
+        const student = await User.findOne({
+          role: "student",
+          $or: [
+            { email: normalizedEmail },
+            { rollNumber: normalizedRollNumber },
+          ],
+        })
+        if (student && (student.status === "deactivated" || (student as any).isActive === false)) {
+          const reason =
+            (student as any).deactivationReason?.trim() ||
+            "Your student account has been deactivated. Please contact your coaching administrator."
+          return NextResponse.json({ error: reason }, { status: 403 })
+        }
       }
     }
 
@@ -93,7 +97,10 @@ export async function POST(req: Request) {
     // Prevents a student who already submitted from starting a fresh attempt.
     const existing = await Attempt.findOne({
       examId,
-      rollNumber: normalizedRollNumber,
+      $or: [
+        { rollNumber: normalizedRollNumber },
+        { studentEmail: normalizedEmail },
+      ],
       status: { $in: ["in-progress", "submitted", "auto-submitted", "graded"] },
     })
     if (existing) {
@@ -108,6 +115,7 @@ export async function POST(req: Request) {
       studentName,
       studentEmail: normalizedEmail,
       rollNumber: normalizedRollNumber,
+      candidateType: isPublic ? "public" : "institute",
       startedAt: new Date(),
       answers: [],
       proctoring: { warnings: 0, events: [] },

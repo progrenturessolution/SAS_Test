@@ -18,11 +18,21 @@ export async function GET(req: Request) {
     await connectDB()
     const { searchParams } = new URL(req.url)
     const examId = searchParams.get("examId")
+    const candidateType = searchParams.get("candidateType")
     const page = parseInt(searchParams.get("page") || "1", 10)
     const limit = parseInt(searchParams.get("limit") || "50", 10)
     const skip = (page - 1) * limit
 
     let query: any = { status: { $ne: "in-progress" } }
+    if (candidateType === "public") {
+      query.candidateType = "public"
+    } else if (candidateType === "institute") {
+      query.$or = [
+        { candidateType: "institute" },
+        { candidateType: { $exists: false } },
+        { candidateType: null },
+      ]
+    }
     if (session.instituteId) {
       const instituteExamQuery = {
         $or: [{ instituteId: session.instituteId }, { createdBy: session.id }],
@@ -54,12 +64,13 @@ export async function GET(req: Request) {
     const exams = await Exam.find({ _id: { $in: examIds } }, "title subject").lean()
     const examMap = Object.fromEntries(exams.map((e) => [e._id.toString(), e]))
 
-    const enriched = attempts.map((a) => ({
+    const enriched = attempts.map((a: any) => ({
       ...a,
       examId: a.examId.toString(), // Keep as string for API response
       examTitle: examMap[a.examId?.toString()]?.title || "Unknown",
       examSubject: examMap[a.examId?.toString()]?.subject || "",
-      isGraded: !!a.isGraded
+      isGraded: !!a.isGraded,
+      candidateType: a.candidateType || "institute",
     }))
 
     return NextResponse.json({ 

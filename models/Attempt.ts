@@ -56,6 +56,7 @@ export interface IAttempt extends Document {
   }
   timeLeft?: number
   lastSavedAt?: Date
+  candidateType?: "institute" | "public"
 }
 
 const SectionResultSchema = new Schema(
@@ -78,6 +79,7 @@ const AttemptSchema = new Schema<IAttempt>(
     studentEmail: { type: String, required: true },
     rollNumber: { type: String, required: true },
     startedAt: { type: Date, default: Date.now },
+    candidateType: { type: String, enum: ["institute", "public"], default: "institute", index: true },
     submittedAt: Date,
     timeSpent: Number,
     status: { type: String, enum: ["in-progress", "submitted", "auto-submitted", "graded"], default: "in-progress" },

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
 import Link from "next/link"
-import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Share2, MoreVertical, Check } from "lucide-react"
+import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Share2, MoreVertical, Check, Globe } from "lucide-react"
 import { toast } from "sonner"
 import { getExamEditUrl } from "@/lib/examEditHelper"
 
@@ -19,7 +19,9 @@ interface ExamActionMenuProps {
   onDelete: (id: string) => Promise<void>
   onShare: (id: string, email: string) => Promise<void>
   onCopy: (id: string) => void
+  onCopyPublic?: (id: string) => void
   copied: boolean
+  copiedPublic?: boolean
 }
 
 interface MenuPosition {
@@ -35,11 +37,14 @@ export function ExamActionMenu({
   onDelete,
   onShare,
   onCopy,
+  onCopyPublic,
   copied,
+  copiedPublic = false,
 }: ExamActionMenuProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [localCopiedPublic, setLocalCopiedPublic] = useState(false)
   const [menuPos, setMenuPos] = useState<MenuPosition>({ top: 0, left: 0, maxHeight: 300 })
   const menuRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -178,9 +183,23 @@ export function ExamActionMenu({
     }
   }
 
+  const isPublicCopied = copiedPublic || localCopiedPublic
+
   const handleCopy = () => {
     onCopy(exam._id)
     toast.success("Link copied to clipboard")
+    setOpen(false)
+  }
+
+  const handleCopyPublic = () => {
+    if (onCopyPublic) {
+      onCopyPublic(exam._id)
+    } else {
+      navigator.clipboard.writeText(`${window.location.origin}/exam/${exam._id}?type=public`)
+      setLocalCopiedPublic(true)
+      setTimeout(() => setLocalCopiedPublic(false), 2000)
+      toast.success("Public exam link copied! Anyone can take this exam without institute login.")
+    }
     setOpen(false)
   }
 
@@ -258,6 +277,30 @@ export function ExamActionMenu({
               <>
                 <Link2 size={15} className="text-[#324158] shrink-0" />
                 <span className="flex-1">Copy Link</span>
+              </>
+            )}
+          </button>
+
+          {/* Copy Public Link */}
+          <button
+            type="button"
+            onClick={handleCopyPublic}
+            disabled={loading}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700"
+          >
+            {isPublicCopied ? (
+              <>
+                <Check size={15} className="text-emerald-600 shrink-0" />
+                <span className="flex-1 text-emerald-700 font-semibold">Public Link Copied!</span>
+              </>
+            ) : (
+              <>
+                <Globe size={15} className="text-[#324158] shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="block leading-tight">Copy Public Link</span>
+                  <span className="text-[10px] text-gray-400 block font-normal">Open to any student</span>
+                </div>
+                <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200/60 shrink-0">Public</span>
               </>
             )}
           </button>

@@ -47,6 +47,7 @@ export default function AdminDashboardClient() {
   const [exams, setExams] = useState<Exam[]>([])
   const [search, setSearch] = useState("")
   const [copied, setCopied] = useState<string | null>(null)
+  const [copiedPublic, setCopiedPublic] = useState<string | null>(null)
   const [hasExamAccess, setHasExamAccess] = useState(true)
   const [isExamQuotaReached, setIsExamQuotaReached] = useState(false)
   const [maxExams, setMaxExams] = useState(20)
@@ -122,7 +123,15 @@ export default function AdminDashboardClient() {
   const handleCopyLink = (id: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/exam/${id}`)
     setCopied(id)
+    toast.success("Exam link copied to clipboard")
     setTimeout(() => setCopied(null), 2000)
+  }
+
+  const handleCopyPublic = (id: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}/exam/${id}?type=public`)
+    setCopiedPublic(id)
+    toast.success("Public exam link copied! Anyone can take this exam without institute login.")
+    setTimeout(() => setCopiedPublic(null), 2000)
   }
 
   const totalQuestions = (exam: Exam) =>
@@ -364,7 +373,9 @@ export default function AdminDashboardClient() {
                       onDelete={handleDelete}
                       onShare={handleShare}
                       onCopy={handleCopyLink}
+                      onCopyPublic={handleCopyPublic}
                       copied={copied === exam._id}
+                      copiedPublic={copiedPublic === exam._id}
                     />
                   </div>
                 </div>
@@ -470,7 +481,9 @@ export default function AdminDashboardClient() {
                       onDelete={handleDelete}
                       onShare={handleShare}
                       onCopy={handleCopyLink}
+                      onCopyPublic={handleCopyPublic}
                       copied={copied === exam._id}
+                      copiedPublic={copiedPublic === exam._id}
                     />
                   </td>
                 </tr>

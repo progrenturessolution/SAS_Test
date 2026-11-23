@@ -25,6 +25,7 @@ export default function ExamsListPage() {
   const [exams, setExams] = useState<Exam[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState<string | null>(null)
+  const [copiedPublic, setCopiedPublic] = useState<string | null>(null)
   const [filter, setFilter] = useState("all")
   const [search, setSearch] = useState("")
   const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState(true)
@@ -93,7 +94,15 @@ export default function ExamsListPage() {
   const handleCopy = (id: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/exam/${id}`)
     setCopied(id)
+    toast.success("Exam link copied to clipboard")
     setTimeout(() => setCopied(null), 2000)
+  }
+
+  const handleCopyPublic = (id: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}/exam/${id}?type=public`)
+    setCopiedPublic(id)
+    toast.success("Public exam link copied! Anyone can take this exam without institute login.")
+    setTimeout(() => setCopiedPublic(null), 2000)
   }
 
   const totalQ = (e: Exam) => e.sections?.reduce((s, sec) => s + (sec.questions?.length || 0), 0) || 0
@@ -324,7 +333,9 @@ export default function ExamsListPage() {
                           onDelete={handleDelete}
                           onShare={handleShare}
                           onCopy={handleCopy}
+                          onCopyPublic={handleCopyPublic}
                           copied={copied === exam._id}
+                          copiedPublic={copiedPublic === exam._id}
                         />
                       </div>
                     </div>
@@ -450,7 +461,9 @@ export default function ExamsListPage() {
                           onDelete={handleDelete}
                           onShare={handleShare}
                           onCopy={handleCopy}
+                          onCopyPublic={handleCopyPublic}
                           copied={copied === exam._id}
+                          copiedPublic={copiedPublic === exam._id}
                         />
                       </td>
                     </tr>

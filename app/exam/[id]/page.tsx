@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Clock, FileText, CheckCircle, Award, User, Mail, Hash, LockKeyhole, Shield, AlertCircle, Camera, Maximize, AlertTriangle } from "lucide-react"
+import { Clock, FileText, CheckCircle, Award, User, Mail, Hash, LockKeyhole, Shield, AlertCircle, Camera, Maximize, AlertTriangle, Globe } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
 import { getScheduleStatus, formatCountdown, formatScheduleDateTime } from "@/lib/examSchedule"
 
@@ -67,6 +67,18 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
   const [studentStats, setStudentStats] = useState<{ totalExams: number; avgScore: number } | null>(null)
   const [existingAttempt, setExistingAttempt] = useState<ExistingAttempt | null>(null)
   const [currentTime, setCurrentTime] = useState(Date.now())
+  const [isPublicAccess, setIsPublicAccess] = useState(false)
+
+  // Detect public access link (?type=public, ?access=public, ?mode=open)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search)
+      const p = sp.get("type") || sp.get("access") || sp.get("mode")
+      if (p === "public" || p === "open") {
+        setIsPublicAccess(true)
+      }
+    }
+  }, [])
 
   // Ticker for live scheduled exam countdown
   useEffect(() => {
@@ -130,8 +142,8 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
     const newErrors: Record<string, string> = {}
     if (!form.name.trim()) newErrors.name = "Full name is required"
     if (!form.email.trim()) newErrors.email = "Email address is required"
-    if (!form.roll.trim()) newErrors.roll = "Roll number is required"
-    if (!form.password) newErrors.password = "Exam password is required"
+    if (!isPublicAccess && !form.roll.trim()) newErrors.roll = "Roll number is required"
+    if (!isPublicAccess && !form.password) newErrors.password = "Exam password is required"
     if (!form.agreed) newErrors.agreed = "You must agree to the exam rules"
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -139,16 +151,18 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
     }
 
     setSubmitting(true)
+    const effectiveRoll = form.roll.trim() || `PUB-${Date.now().toString().slice(-6)}`
     try {
       const res = await fetch("/api/attempts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           examId: id,
-          studentName: form.name,
-          studentEmail: form.email,
-          rollNumber: form.roll,
+          studentName: form.name.trim(),
+          studentEmail: form.email.trim(),
+          rollNumber: effectiveRoll,
           password: form.password,
+          candidateType: isPublicAccess ? "public" : "institute",
         }),
       })
       const data = await res.json()
@@ -327,8 +341,32 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
 
         {/* Right - Form */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 lg:sticky lg:top-24">
-          <h2 className="text-xl font-bold text-[#324158] mb-1">Student Registration</h2>
-          <p className="text-sm text-gray-500 mb-6 font-medium">Please enter your details to start the exam</p>
+          {/* Public Access Mode Banner */}
+          {isPublicAccess && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3 shadow-xs">
+              <Globe className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-blue-900 uppercase tracking-wide">Public / Open Access</span>
+                  <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200">
+                    Open to Anyone
+                  </span>
+                </div>
+                <p className="text-xs text-blue-800 mt-1 leading-relaxed">
+                  Anyone with this link can take this examination. You do not need an institute student account or exam password.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <h2 className="text-xl font-bold text-[#324158] mb-1">
+            {isPublicAccess ? "Candidate Registration" : "Student Registration"}
+          </h2>
+          <p className="text-sm text-gray-500 mb-6 font-medium">
+            {isPublicAccess
+              ? "Please enter your name and email to begin your examination"
+              : "Please enter your details to start the exam"}
+          </p>
 
           {/* Schedule Status Banner */}
           {/* Schedule Status Banner: More than 5 mins before start */}
@@ -390,7 +428,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
             </div>
           )}
 
-          {studentStats && studentStats.totalExams > 0 && (
+          {!isPublicAccess && studentStats && studentStats.totalExams > 0 && (
             <div className="mb-6 bg-primary p-5 rounded-xl border border-primary/20 text-white shadow-lg flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">Your Quick Stats</h3>
@@ -414,14 +452,23 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {[
-              { key: "name", label: "Full Name", icon: User, type: "text", placeholder: "Enter your full name" },
-              { key: "email", label: "Email Address", icon: Mail, type: "email", placeholder: "Enter your email address" },
-              { key: "roll", label: "Roll Number", icon: Hash, type: "text", placeholder: "Enter your roll number" },
-              { key: "password", label: "Exam Password", icon: LockKeyhole, type: "password", placeholder: "Enter the password given by your organization" },
-            ].map(({ key, label, icon: Icon, type, placeholder }) => (
+              { key: "name", label: "Full Name", icon: User, type: "text", placeholder: "Enter your full name", required: true },
+              { key: "email", label: "Email Address", icon: Mail, type: "email", placeholder: "Enter your email address", required: true },
+              {
+                key: "roll",
+                label: isPublicAccess ? "Candidate ID / Roll Number (Optional)" : "Roll Number",
+                icon: Hash,
+                type: "text",
+                placeholder: isPublicAccess ? "Optional (auto-generated if left blank)" : "Enter your roll number",
+                required: !isPublicAccess,
+              },
+              ...(!isPublicAccess
+                ? [{ key: "password", label: "Exam Password", icon: LockKeyhole, type: "password", placeholder: "Enter the password given by your organization", required: true }]
+                : []),
+            ].map(({ key, label, icon: Icon, type, placeholder, required }) => (
               <div key={key}>
                 <label className="block text-sm font-semibold text-[#324158] mb-1.5">
-                  {label} <span className="text-red-500">*</span>
+                  {label} {required && <span className="text-red-500">*</span>}
                 </label>
                 <div className="relative">
                   <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 font-bold" />

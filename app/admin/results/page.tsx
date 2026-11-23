@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Filter, Share2, Check } from "lucide-react"
+import { Filter, Share2, Check, Globe, Users } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { Toaster } from "@/components/ui/toaster"
 import { ResultActionMenu } from "@/components/ResultActionMenu"
@@ -16,6 +16,7 @@ interface Result {
   studentName: string
   studentEmail: string
   rollNumber: string
+  candidateType?: "institute" | "public"
   score?: number
   maxScore?: number
   percentage?: number
@@ -32,6 +33,7 @@ function ResultsPageInner() {
   const examId = searchParams.get("examId")
   const [results, setResults] = useState<Result[]>([])
   const [exams, setExams] = useState<{_id: string, title: string}[]>([])
+  const [candidateTypeFilter, setCandidateTypeFilter] = useState<"all" | "institute" | "public">("all")
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
 
@@ -51,12 +53,16 @@ function ResultsPageInner() {
   }, [])
 
   useEffect(() => {
-    const url = examId ? `/api/admin/results?examId=${examId}` : "/api/admin/results"
+    const params = new URLSearchParams()
+    if (examId) params.append("examId", examId)
+    if (candidateTypeFilter !== "all") params.append("candidateType", candidateTypeFilter)
+    const qs = params.toString()
+    const url = qs ? `/api/admin/results?${qs}` : "/api/admin/results"
     setLoading(true)
     fetch(url)
       .then((r) => r.json())
       .then((d) => { setResults(d.results || []); setLoading(false) })
-  }, [examId])
+  }, [examId, candidateTypeFilter])
 
   const handleExamChange = (id: string) => {
     if (id === "all") {
@@ -98,6 +104,21 @@ function ResultsPageInner() {
               ))}
             </select>
           </div>
+
+          {/* Candidate Registration Type Filter */}
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3.5 py-2 shadow-2xs hover:border-slate-300 transition-colors">
+            <Users size={15} className="text-slate-400" />
+            <select
+              value={candidateTypeFilter}
+              onChange={(e) => setCandidateTypeFilter(e.target.value as "all" | "institute" | "public")}
+              className="bg-transparent border-none text-xs sm:text-sm font-semibold focus:ring-0 cursor-pointer text-slate-800 min-w-[170px] sm:min-w-[210px] outline-none"
+            >
+              <option value="all">All Candidates</option>
+              <option value="institute">Enrolled Students (Institute)</option>
+              <option value="public">External / Public Candidates</option>
+            </select>
+          </div>
+
           {examId && (
             <button
               onClick={copyShareLink}
@@ -128,7 +149,13 @@ function ResultsPageInner() {
             {results.length}
           </p>
           <p className="text-xs text-slate-500 mt-1">
-            {examId ? "Selected exam" : "Across all active exams"}
+            {candidateTypeFilter === "public"
+              ? "External public attempts"
+              : candidateTypeFilter === "institute"
+              ? "Enrolled student attempts"
+              : examId
+              ? "Selected exam"
+              : "Across all active exams"}
           </p>
         </div>
 
@@ -192,7 +219,20 @@ function ResultsPageInner() {
                 <tr key={r._id} className="border-b border-gray-50 hover:bg-gray-50 last:border-0">
                   <td className="px-5 py-4">
                     <p className="text-sm font-medium text-foreground">{r.studentName}</p>
-                    <p className="text-xs text-gray-400">{r.rollNumber}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      <span className="text-xs text-gray-400">{r.rollNumber}</span>
+                      {r.candidateType === "public" ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-full">
+                          <Globe size={10} className="shrink-0" />
+                          Public Candidate
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                          <Users size={10} className="shrink-0" />
+                          Enrolled
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-4">
                     <p className="text-sm text-gray-700">{r.examTitle}</p>
