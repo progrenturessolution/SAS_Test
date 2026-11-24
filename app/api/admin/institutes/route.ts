@@ -128,8 +128,8 @@ export async function POST(req: Request) {
       )
     }
 
-    // Determine expanded exam types based on the access options (Competitive, Other Exams)
-    const rawIncomingTypes = Array.isArray(examTypes) ? examTypes : ["COMPETITIVE", "OTHER"]
+    // Determine expanded exam types based on the access options (Competitive, Other Exams, Aspirants)
+    const rawIncomingTypes = Array.isArray(examTypes) ? examTypes : ["COMPETITIVE", "OTHER", "ASPIRANTS"]
     const hasCompetitive = rawIncomingTypes.some((t: string) =>
       ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(t).toUpperCase())
     )
@@ -139,6 +139,9 @@ export async function POST(req: Request) {
     const hasOther = rawIncomingTypes.some((t: string) =>
       ["OTHER", "OTHER_EXAMS"].includes(String(t).toUpperCase())
     )
+    const hasAspirants = rawIncomingTypes.some((t: string) =>
+      ["ASPIRANTS", "STUDENTS"].includes(String(t).toUpperCase())
+    ) || (features?.aspirantsManagement !== undefined ? Boolean(features.aspirantsManagement) : true)
 
     const finalExamTypes: string[] = []
     if (hasCompetitive) {
@@ -149,6 +152,9 @@ export async function POST(req: Request) {
     }
     if (hasOther) {
       finalExamTypes.push("OTHER", "OTHER_EXAMS")
+    }
+    if (hasAspirants) {
+      finalExamTypes.push("ASPIRANTS")
     }
 
     // 1. Create Institute document
@@ -172,6 +178,7 @@ export async function POST(req: Request) {
           neetJeeGenerator: hasCompetitive,
           aiProctoring: features?.aiProctoring ?? true,
           pdfImport: features?.pdfImport ?? true,
+          aspirantsManagement: hasAspirants,
         },
       },
       validUntil: validUntil ? new Date(validUntil) : undefined,

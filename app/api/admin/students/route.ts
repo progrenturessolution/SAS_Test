@@ -52,6 +52,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Your institute account is not active." }, { status: 403 })
       }
       if (institute) {
+        if (session.role === "institute" && institute.limits?.features?.aspirantsManagement === false) {
+          return NextResponse.json({ error: "Access Restricted: Aspirants module is disabled for your organization." }, { status: 403 })
+        }
         const studentCount = await User.countDocuments({ instituteId, role: "student" })
         if (studentCount >= (institute.limits?.maxStudents ?? 200)) {
           return NextResponse.json({ error: "Aspirant limit reached. Please contact platform admin." }, { status: 403 })
@@ -146,6 +149,13 @@ export async function GET(req: Request) {
   }
   try {
     await connectDB()
+
+    if (session.instituteId && session.role !== "super_admin") {
+      const institute = await Institute.findById(session.instituteId).select("limits status").lean()
+      if (institute && institute.limits?.features?.aspirantsManagement === false) {
+        return NextResponse.json({ error: "Access Restricted: Aspirants module is disabled for your organization.", students: [] }, { status: 403 })
+      }
+    }
 
     const filter: any = { role: "student" }
     if (session.instituteId) {

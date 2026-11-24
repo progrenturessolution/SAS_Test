@@ -9,6 +9,7 @@ export interface IInstituteLimits {
     neetJeeGenerator: boolean
     aiProctoring: boolean
     pdfImport: boolean
+    aspirantsManagement?: boolean
   }
 }
 
@@ -59,6 +60,7 @@ const InstituteSchema = new Schema<IInstitute>(
         neetJeeGenerator: { type: Boolean, default: true },
         aiProctoring: { type: Boolean, default: true },
         pdfImport: { type: Boolean, default: true },
+        aspirantsManagement: { type: Boolean, default: true },
       },
     },
     validUntil: { type: Date },

@@ -49,6 +49,7 @@ export default function AdminSidebar({
   const [hasCompetitiveAccess, setHasCompetitiveAccess] = useState(true)
   const [hasExamAccess, setHasExamAccess] = useState(true)
   const [hasOtherExamsAccess, setHasOtherExamsAccess] = useState(true)
+  const [hasAspirantsAccess, setHasAspirantsAccess] = useState(true)
   const [isExamQuotaReached, setIsExamQuotaReached] = useState(false)
   const [maxExams, setMaxExams] = useState(20)
   const [examCount, setExamCount] = useState(0)
@@ -132,6 +133,7 @@ export default function AdminSidebar({
           setHasCompetitiveAccess(data.hasCompetitiveAccess !== false)
           setHasExamAccess(data.hasExamAccess !== false)
           setHasOtherExamsAccess(data.hasOtherExamsAccess !== false)
+          setHasAspirantsAccess(data.hasAspirantsAccess !== false)
           setIsExamQuotaReached(Boolean(data.isExamQuotaReached))
           if (data.maxExams !== undefined) setMaxExams(Number(data.maxExams))
           if (data.examCount !== undefined) setExamCount(Number(data.examCount))
@@ -146,6 +148,7 @@ export default function AdminSidebar({
           setHasCompetitiveAccess(true)
           setHasExamAccess(true)
           setHasOtherExamsAccess(true)
+          setHasAspirantsAccess(true)
           setIsExamQuotaReached(false)
         })
     }
@@ -334,13 +337,15 @@ export default function AdminSidebar({
                 const isCompetitiveItem = item.href === "/admin/ai-generator"
                 const isExamItem = item.href === "/admin/exams"
                 const isOtherExamsItem = item.href === "/admin/other-exams"
+                const isAspirantsItem = item.href === "/admin/students" || item.href === "/admin/aspirants"
                 const isWip = Boolean((item as any).isWip)
                 const isQuotaBlocked = (isExamQuotaReached || (maxExams > 0 && examCount >= maxExams)) && (isCompetitiveItem || isOtherExamsItem || isExamItem)
                 const isRestricted = !isSuperAdmin && (
                   isQuotaBlocked ||
                   (isCompetitiveItem && !hasCompetitiveAccess) ||
                   (isExamItem && !hasExamAccess) ||
-                  (isOtherExamsItem && !hasOtherExamsAccess)
+                  (isOtherExamsItem && !hasOtherExamsAccess) ||
+                  (isAspirantsItem && !hasAspirantsAccess)
                 )
                 const restrictedMessage = !isSuperAdmin && isQuotaBlocked
                   ? `Exam Limit Reached: Your organization has reached the limit of ${maxExams} exams (${examCount}/${maxExams} used). Contact administrator to increase your exam quota.`
@@ -348,6 +353,8 @@ export default function AdminSidebar({
                   ? "Access Restricted: You do not have permission to create Entrance Exams. Contact administrator."
                   : isOtherExamsItem
                   ? "Access Restricted: You do not have permission to create Other Exams. Contact administrator."
+                  : isAspirantsItem
+                  ? "Access Restricted: You do not have permission to access the Aspirants section. Contact administrator."
                   : "Access Restricted: You do not have permission to create Exams. Contact administrator."
 
                 return (
@@ -565,13 +572,15 @@ export default function AdminSidebar({
             const isCompetitiveItem = item.href === "/admin/ai-generator"
             const isExamItem = item.href === "/admin/exams"
             const isOtherExamsItem = item.href === "/admin/other-exams"
+            const isAspirantsItem = item.href === "/admin/students" || item.href === "/admin/aspirants"
             const isWip = Boolean((item as any).isWip)
             const isQuotaBlocked = (isExamQuotaReached || (maxExams > 0 && examCount >= maxExams)) && (isCompetitiveItem || isOtherExamsItem || isExamItem)
             const isRestricted = !isSuperAdmin && (
               isQuotaBlocked ||
               (isCompetitiveItem && !hasCompetitiveAccess) ||
               (isExamItem && !hasExamAccess) ||
-              (isOtherExamsItem && !hasOtherExamsAccess)
+              (isOtherExamsItem && !hasOtherExamsAccess) ||
+              (isAspirantsItem && !hasAspirantsAccess)
             )
             const restrictedMessage = !isSuperAdmin && isQuotaBlocked
               ? `Exam Limit Reached: Your organization has reached the limit of ${maxExams} exams (${examCount}/${maxExams} used). Contact administrator to increase your exam quota.`
@@ -579,6 +588,8 @@ export default function AdminSidebar({
               ? "Access Restricted: You do not have permission to create Entrance Exams. Contact administrator."
               : isOtherExamsItem
               ? "Access Restricted: You do not have permission to create Other Exams. Contact administrator."
+              : isAspirantsItem
+              ? "Access Restricted: You do not have permission to access the Aspirants section. Contact administrator."
               : "Access Restricted: You do not have permission to create Exams. Contact administrator."
 
             return (

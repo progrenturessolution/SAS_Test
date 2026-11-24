@@ -128,6 +128,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       let finalExamTypes = institute.limits.examTypes
       let hasComp = institute.limits.features?.neetJeeGenerator ?? true
 
+      let hasAspirants = institute.limits.features?.aspirantsManagement ?? true
+
       if (Array.isArray(body.limits.examTypes)) {
         const incomingTypes = body.limits.examTypes
         hasComp = incomingTypes.some((t: string) =>
@@ -138,6 +140,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         )
         const hasOther = incomingTypes.some((t: string) =>
           ["OTHER", "OTHER_EXAMS"].includes(String(t).toUpperCase())
+        )
+        hasAspirants = incomingTypes.some((t: string) =>
+          ["ASPIRANTS", "STUDENTS"].includes(String(t).toUpperCase())
         )
 
         finalExamTypes = []
@@ -150,6 +155,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         if (hasOther) {
           finalExamTypes.push("OTHER", "OTHER_EXAMS")
         }
+        if (hasAspirants) {
+          finalExamTypes.push("ASPIRANTS")
+        }
+      }
+
+      if (body.limits.features?.aspirantsManagement !== undefined) {
+        hasAspirants = Boolean(body.limits.features.aspirantsManagement)
       }
 
       institute.limits = {
@@ -163,6 +175,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           neetJeeGenerator: hasComp,
           aiProctoring: body.limits.features?.aiProctoring ?? institute.limits.features?.aiProctoring ?? true,
           pdfImport: true, // Always allowed
+          aspirantsManagement: hasAspirants,
         },
       }
     }

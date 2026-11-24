@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
+import Link from "next/link"
 import {
   Search,
   X,
@@ -23,6 +24,7 @@ import {
   UserX,
   UserCheck,
   ShieldAlert,
+  Lock,
 } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { Toaster } from "@/components/ui/toaster"
@@ -96,17 +98,27 @@ export default function StudentsPage() {
   const [editError, setEditError] = useState("")
   const [savingEdit, setSavingEdit] = useState(false)
 
+  // Access permission state
+  const [hasAspirantsAccess, setHasAspirantsAccess] = useState<boolean | null>(null)
+
   // Deleting state
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  // Load theme color
+  // Load theme color and access permissions
   useEffect(() => {
     fetch("/api/admin/institute-access", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         if (data.themeColor) setThemeColor(data.themeColor)
+        if (data.hasAspirantsAccess !== undefined) {
+          setHasAspirantsAccess(data.hasAspirantsAccess !== false)
+        } else {
+          setHasAspirantsAccess(true)
+        }
       })
-      .catch(() => {})
+      .catch(() => {
+        setHasAspirantsAccess(true)
+      })
 
     const handleThemeUpdate = (e: any) => {
       if (e.detail?.themeColor) setThemeColor(e.detail.themeColor)
@@ -493,6 +505,26 @@ export default function StudentsPage() {
   const totalFeesSum = students.reduce((sum, s) => sum + (s.totalFees || 0), 0)
   const totalCompletedSum = students.reduce((sum, s) => sum + (s.completedFees || 0), 0)
   const totalPendingSum = students.reduce((sum, s) => sum + (s.pendingFees || 0), 0)
+
+  if (hasAspirantsAccess === false) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 border border-amber-200 shadow-sm">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[#324158] mb-2">Access Restricted</h2>
+        <p className="text-gray-500 max-w-md text-sm mb-6 leading-relaxed">
+          Your organization does not have permission to access the Aspirants Section. Please contact your administrator to enable this module.
+        </p>
+        <Link
+          href="/admin"
+          className="px-5 py-2.5 rounded-xl bg-[#324158] text-white text-sm font-semibold hover:bg-[#324158]/90 transition-all shadow-xs"
+        >
+          Return to Dashboard
+        </Link>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">

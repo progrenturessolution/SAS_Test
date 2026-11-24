@@ -43,6 +43,7 @@ interface InstituteLimits {
     neetJeeGenerator: boolean
     aiProctoring: boolean
     pdfImport: boolean
+    aspirantsManagement?: boolean
   }
 }
 
@@ -57,16 +58,25 @@ const EXAM_ACCESS_OPTIONS = [
     label: "Other Exams",
     description: "Access to Other Competitive & Government Exams Studio",
   },
+  {
+    value: "ASPIRANTS",
+    label: "Aspirants",
+    description: "Access to Aspirants section, enrollment & profiles",
+  },
 ] as const
 
-function normalizeExamTypes(rawTypes: string[] = []): string[] {
+function normalizeExamTypes(rawTypes: string[] = [], features?: any): string[] {
   const result: string[] = []
   const hasComp = rawTypes.some((t) =>
     ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(t).toUpperCase())
   )
   const hasOther = rawTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(String(t).toUpperCase()))
+  const hasAspirants = features?.aspirantsManagement !== undefined
+    ? Boolean(features.aspirantsManagement)
+    : rawTypes.some((t) => ["ASPIRANTS", "STUDENTS"].includes(String(t).toUpperCase())) || true
   if (hasComp) result.push("COMPETITIVE")
   if (hasOther) result.push("OTHER")
+  if (hasAspirants) result.push("ASPIRANTS")
   return result
 }
 
@@ -144,7 +154,7 @@ export default function InstitutesManagementPage() {
   const [formContactPerson, setFormContactPerson] = useState("")
   const [formMaxStudents, setFormMaxStudents] = useState(100)
   const [formMaxExams, setFormMaxExams] = useState(20)
-  const [formExamTypes, setFormExamTypes] = useState<string[]>(["COMPETITIVE", "OTHER"])
+  const [formExamTypes, setFormExamTypes] = useState<string[]>(["COMPETITIVE", "OTHER", "ASPIRANTS"])
   const [formCustomQuestionTypes, setFormCustomQuestionTypes] = useState<string[]>(ALL_CUSTOM_QUESTION_TYPES)
   const [formPdfImport, setFormPdfImport] = useState(true)
   const [formValidUntil, setFormValidUntil] = useState("")
@@ -239,6 +249,7 @@ export default function InstitutesManagementPage() {
           customQuestionTypes: formCustomQuestionTypes,
           features: {
             pdfImport: true,
+            aspirantsManagement: formExamTypes.includes("ASPIRANTS"),
           },
           validUntil: formValidUntil || undefined,
         }),
@@ -259,7 +270,7 @@ export default function InstitutesManagementPage() {
       setFormContactPerson("")
       setFormMaxStudents(100)
       setFormMaxExams(20)
-      setFormExamTypes(["COMPETITIVE", "OTHER"])
+      setFormExamTypes(["COMPETITIVE", "OTHER", "ASPIRANTS"])
       setFormCustomQuestionTypes(ALL_CUSTOM_QUESTION_TYPES)
       setFormValidUntil("")
       await fetchInstitutes()
@@ -284,7 +295,7 @@ export default function InstitutesManagementPage() {
     setShowEditPassword(false)
     setEditMaxStudents(inst.limits?.maxStudents ?? 100)
     setEditMaxExams(inst.limits?.maxExams ?? 20)
-    setEditExamTypes(normalizeExamTypes(inst.limits?.examTypes ?? []))
+    setEditExamTypes(normalizeExamTypes(inst.limits?.examTypes ?? [], inst.limits?.features))
     setEditCustomQuestionTypes(inst.limits?.customQuestionTypes ?? ALL_CUSTOM_QUESTION_TYPES)
     setEditPdfImport(true)
     setEditStatus(inst.status === "suspended" ? "suspended" : "active")
@@ -337,6 +348,7 @@ export default function InstitutesManagementPage() {
             neetJeeGenerator: editExamTypes.includes("COMPETITIVE"),
             aiProctoring: true,
             pdfImport: true,
+            aspirantsManagement: editExamTypes.includes("ASPIRANTS"),
           },
         },
       }
@@ -383,6 +395,7 @@ export default function InstitutesManagementPage() {
                     ...prev.limits?.features,
                     neetJeeGenerator: editExamTypes.includes("COMPETITIVE"),
                     pdfImport: true,
+                    aspirantsManagement: editExamTypes.includes("ASPIRANTS"),
                   },
                 },
               }
@@ -679,7 +692,7 @@ export default function InstitutesManagementPage() {
           {filteredInstitutes.map((inst) => {
             const studentPct = Math.min(Math.round(((inst.usage?.studentsEnrolled || 0) / (inst.limits?.maxStudents || 100)) * 100), 100)
             const examPct = Math.min(Math.round(((inst.usage?.examsCreated || 0) / (inst.limits?.maxExams || 20)) * 100), 100)
-            const allowedTypes = normalizeExamTypes(inst.limits?.examTypes || [])
+            const allowedTypes = normalizeExamTypes(inst.limits?.examTypes || [], inst.limits?.features)
 
             return (
               <article
@@ -866,7 +879,7 @@ export default function InstitutesManagementPage() {
                             key={t}
                             className="px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-wide uppercase bg-white border border-slate-200 text-[#324158]"
                           >
-                            {t === "COMPETITIVE" ? "Competitive" : t === "OTHER" ? "Other Exams" : "Exam"}
+                            {t === "COMPETITIVE" ? "Competitive" : t === "OTHER" ? "Other Exams" : t === "ASPIRANTS" ? "Aspirants" : "Exam"}
                           </span>
                         ))}
                       </div>
@@ -1264,15 +1277,15 @@ export default function InstitutesManagementPage() {
                     </span>
                   ))}
                 </div>
-                <p className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Allowed Exam Creation</p>
+                <p className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Allowed Access</p>
                 <div className="flex flex-wrap gap-2">
-                  {normalizeExamTypes(selectedInstitute.limits?.examTypes || []).map((type) => (
+                  {normalizeExamTypes(selectedInstitute.limits?.examTypes || [], selectedInstitute.limits?.features).map((type) => (
                     <span key={type} className="rounded-full border border-[#324158]/20 bg-[#324158]/5 px-2.5 py-1 text-[11px] font-bold text-[#324158]">
-                      {type === "COMPETITIVE" ? "Competitive Test" : "Other Exams"}
+                      {type === "COMPETITIVE" ? "Competitive Test" : type === "OTHER" ? "Other Exams" : type === "ASPIRANTS" ? "Aspirants" : "Exam"}
                     </span>
                   ))}
-                  {normalizeExamTypes(selectedInstitute.limits?.examTypes || []).length === 0 && (
-                    <span className="text-xs text-slate-400">No exam creation access granted</span>
+                  {normalizeExamTypes(selectedInstitute.limits?.examTypes || [], selectedInstitute.limits?.features).length === 0 && (
+                    <span className="text-xs text-slate-400">No access granted</span>
                   )}
                 </div>
               </div>
@@ -1457,9 +1470,9 @@ export default function InstitutesManagementPage() {
 
                 <div>
                   <span className="font-semibold text-gray-700 block mb-1.5">
-                    Exam Creation Access
+                    Allowed Access
                   </span>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                     {EXAM_ACCESS_OPTIONS.map((option) => {
                       const isChecked = formExamTypes.includes(option.value)
                       return (
@@ -1492,7 +1505,7 @@ export default function InstitutesManagementPage() {
                     })}
                   </div>
                   <span className="mt-1.5 block text-[10px] text-gray-400">
-                    Select which test creation modules this institute can access. Unchecked options will remain visible but disabled.
+                    Select which modules and features this organization can access. Unchecked options will remain locked.
                   </span>
                 </div>
 
@@ -1758,12 +1771,12 @@ export default function InstitutesManagementPage() {
                   </div>
                 </div>
 
-                {/* Exam Creation Access */}
+                {/* Allowed Access */}
                 <div>
                   <label className="font-semibold text-gray-700 block mb-1.5">
-                    Exam Creation Access
+                    Allowed Access
                   </label>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                     {EXAM_ACCESS_OPTIONS.map((option) => {
                       const isChecked = editExamTypes.includes(option.value)
                       return (
@@ -1800,7 +1813,7 @@ export default function InstitutesManagementPage() {
                     })}
                   </div>
                   <span className="mt-1.5 block text-[10px] text-gray-400">
-                    Control which test creation modules this institute can access. Unchecked options will remain visible but disabled.
+                    Control which modules and features this organization can access. Unchecked options will remain locked.
                   </span>
                 </div>
 

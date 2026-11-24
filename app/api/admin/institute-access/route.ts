@@ -29,6 +29,7 @@ export async function GET(req: Request) {
         hasCompetitiveAccess: true,
         hasExamAccess: true,
         hasOtherExamsAccess: true,
+        hasAspirantsAccess: true,
         maxExams: 999999,
         examCount: 0,
         isExamQuotaReached: false,
@@ -61,6 +62,11 @@ export async function GET(req: Request) {
     const hasExamAccess = rawExamTypes.some((t) => ["EXAM", "CUSTOM"].includes(t))
 
     const hasOtherExamsAccess = rawExamTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(t))
+
+    const hasAspirantsAccess = (
+      institute.limits?.features?.aspirantsManagement !== false &&
+      (!Array.isArray(institute.limits?.examTypes) || institute.limits.examTypes.includes("ASPIRANTS") || institute.limits.features?.aspirantsManagement === true || !institute.limits.examTypes.length)
+    )
 
     const maxExams = Number(institute.limits?.maxExams ?? 20)
     const mongoose = (await import("mongoose")).default
@@ -101,6 +107,7 @@ export async function GET(req: Request) {
       hasCompetitiveAccess: isExpired ? false : hasCompetitiveAccess,
       hasExamAccess: isExpired ? false : hasExamAccess,
       hasOtherExamsAccess: isExpired ? false : hasOtherExamsAccess,
+      hasAspirantsAccess: isExpired ? false : Boolean(hasAspirantsAccess),
       maxExams,
       examCount,
       isExamQuotaReached,
