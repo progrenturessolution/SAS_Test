@@ -666,6 +666,35 @@ function OtherExamsContent() {
         if (loadedQuestions.length > 0) {
           setGeneratedQuestions(loadedQuestions)
           setSelectedQuestionIds(new Set(loadedQuestions.map((q) => q.id)))
+
+          // Extract topics from loaded questions
+          const existingTopics = Array.from(
+            new Set(loadedQuestions.map((q) => q.chapter).filter((c) => Boolean(c) && c !== "General"))
+          )
+          if (existingTopics.length > 0) {
+            setSelectedTopics(existingTopics)
+          }
+
+          // Pre-populate blueprint format counts from loaded questions
+          const formatCounts: Record<string, { count: number; marks: number }> = {}
+          loadedQuestions.forEach((q) => {
+            const fmt = q.questionFormat || q.type || "mcq"
+            if (!formatCounts[fmt]) formatCounts[fmt] = { count: 0, marks: 0 }
+            formatCounts[fmt].count += 1
+            formatCounts[fmt].marks = q.marks || 4
+          })
+          if (Object.keys(formatCounts).length > 0) {
+            setBlueprintFormats((prev) =>
+              prev.map((f) => {
+                const found = formatCounts[f.id]
+                if (found) {
+                  return { ...f, count: found.count, marks: found.marks }
+                }
+                return f
+              })
+            )
+          }
+
           setCurrentStep(4) // Directly land on Questions workspace!
         }
         setIsLoadingExistingExam(false)
@@ -1224,6 +1253,11 @@ function OtherExamsContent() {
     if (currentStep === 1 && !selectedCategory) return
     if (currentStep === 2 && !activeExamName.trim()) return
     if (currentStep === 3) {
+      if (generatedQuestions.length > 0) {
+        setCurrentStep(4)
+        window.scrollTo({ top: 0, behavior: "smooth" })
+        return
+      }
       handleGenerateQuestions()
       return
     }
@@ -1577,15 +1611,30 @@ function OtherExamsContent() {
                 Back
               </button>
 
-              <button
-                type="button"
-                onClick={handleNextStep}
-                disabled={!selectedCategory}
-                className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md"
-              >
-                <span>Next Step</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2.5">
+                {generatedQuestions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep(4)
+                      window.scrollTo({ top: 0, behavior: "smooth" })
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
+                  >
+                    <span>Skip to Questions ({generatedQuestions.length})</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={!selectedCategory}
+                  className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md"
+                >
+                  <span>Next Step</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1792,15 +1841,30 @@ function OtherExamsContent() {
                 Back
               </button>
 
-              <button
-                type="button"
-                onClick={handleNextStep}
-                disabled={!activeExamName.trim()}
-                className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md"
-              >
-                <span>Configure Blueprint</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2.5">
+                {generatedQuestions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep(4)
+                      window.scrollTo({ top: 0, behavior: "smooth" })
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
+                  >
+                    <span>Skip to Questions ({generatedQuestions.length})</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={!activeExamName.trim()}
+                  className="px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md"
+                >
+                  <span>Configure Blueprint</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -2200,7 +2264,11 @@ function OtherExamsContent() {
                 <div className="flex items-center gap-2.5">
                   <button
                     type="button"
-                    onClick={handleGenerateQuestions}
+                    onClick={() => {
+                      if (window.confirm("Are you sure you want to regenerate questions? This will replace your current questions.")) {
+                        handleGenerateQuestions()
+                      }
+                    }}
                     disabled={isGenerating || totalQuestions === 0}
                     className="px-4 sm:px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-medium shadow-2xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 hover:shadow-xs active:scale-[0.99]"
                     title="Re-run AI question generation with new blueprint"

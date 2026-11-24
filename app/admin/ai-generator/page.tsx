@@ -465,6 +465,72 @@ function AIGeneratorContent() {
         if (loadedQuestions.length > 0) {
           setGeneratedQuestions(loadedQuestions)
           setSelectedQuestionIds(new Set(loadedQuestions.map((q) => q.id)))
+
+          // Pre-populate chapters from loaded questions
+          const existingChapters = Array.from(
+            new Set(loadedQuestions.map((q) => q.chapter).filter((c) => Boolean(c) && c !== "General"))
+          )
+          if (existingChapters.length > 0) {
+            setSelectedChapters(existingChapters)
+          }
+
+          // Pre-populate subjects if sections contain distinct subjects
+          const sectionSubjects = (exam.sections || [])
+            .map((s: any) => s.name || s.subject)
+            .filter((s: string) => ["Physics", "Chemistry", "Mathematics", "Biology"].includes(s)) as CompetitiveSubject[]
+          if (sectionSubjects.length > 0) {
+            const uniqueSubs = Array.from(new Set(sectionSubjects))
+            setSelectedSubjects(uniqueSubs)
+          }
+
+          // Pre-populate format counts in blueprint
+          const formatCounts: Record<string, { count: number; marks: number }> = {}
+          loadedQuestions.forEach((q) => {
+            const fmt = q.questionFormat || q.type || "mcq"
+            if (!formatCounts[fmt]) formatCounts[fmt] = { count: 0, marks: 0 }
+            formatCounts[fmt].count += 1
+            formatCounts[fmt].marks = q.marks || 4
+          })
+          if (Object.keys(formatCounts).length > 0) {
+            setBlueprintFormats((prev) =>
+              prev.map((f) => {
+                const found = formatCounts[f.id]
+                if (found) {
+                  return { ...f, checked: true, count: found.count, marks: found.marks }
+                }
+                return f
+              })
+            )
+          }
+
+          // Pre-populate subject distribution
+          const subCounts: Record<string, { count: number; marks: number }> = {}
+          loadedQuestions.forEach((q) => {
+            const sec = (exam.sections || []).find((s: any) =>
+              (s.questions || []).some((sq: any) => sq.id === q.id || sq._id === q.id)
+            )
+            const sub = sec?.name || exam.subject || "Physics"
+            if (!subCounts[sub]) subCounts[sub] = { count: 0, marks: 0 }
+            subCounts[sub].count += 1
+            subCounts[sub].marks += q.marks || 4
+          })
+          if (Object.keys(subCounts).length > 0) {
+            setSubjectDist((prev) => {
+              const updated = { ...prev }
+              for (const [subName, info] of Object.entries(subCounts)) {
+                if (updated[subName]) {
+                  updated[subName] = {
+                    ...updated[subName],
+                    questions: info.count,
+                    marks: info.marks,
+                    marksPerQuestion: Math.round(info.marks / info.count) || updated[subName].marksPerQuestion,
+                  }
+                }
+              }
+              return updated
+            })
+          }
+
           setCurrentStep(3) // Jump directly to Questions step so user can edit right away!
         }
         setIsLoadingExistingExam(false)
@@ -1277,7 +1343,7 @@ function AIGeneratorContent() {
       return selectedSubjects.length > 0
     }
     if (step === 2) {
-      return isStep2Valid
+      return generatedQuestions.length > 0 || isStep2Valid
     }
     return true
   }
@@ -4728,15 +4794,30 @@ function AIGeneratorContent() {
                 </button>
 
                 {currentStep === 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(2)}
-                    disabled={selectedSubjects.length === 0}
-                    className="px-4 sm:px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <span>Next Step</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2.5">
+                    {generatedQuestions.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentStep(3)
+                          window.scrollTo({ top: 0, behavior: "smooth" })
+                        }}
+                        className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
+                      >
+                        <span>Skip to Questions ({generatedQuestions.length})</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(2)}
+                      disabled={selectedSubjects.length === 0}
+                      className="px-4 sm:px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <span>Next Step</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
 
                 {currentStep === 2 && (
@@ -4749,7 +4830,11 @@ function AIGeneratorContent() {
                     {generatedQuestions.length > 0 && (
                       <button
                         type="button"
-                        onClick={handleGenerate}
+                        onClick={() => {
+                          if (window.confirm("Are you sure you want to re-create questions? This will replace your current questions.")) {
+                            handleGenerate()
+                          }
+                        }}
                         disabled={isGenerating || !isStep2Valid}
                         className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       >
@@ -4767,9 +4852,9 @@ function AIGeneratorContent() {
                           handleGenerate()
                         }
                       }}
-                      disabled={isGenerating || !isStep2Valid}
+                      disabled={isGenerating || (generatedQuestions.length === 0 && !isStep2Valid)}
                       title={
-                        !isStep2Valid
+                        generatedQuestions.length === 0 && !isStep2Valid
                           ? validationErrors[0] || "Please resolve configuration alignment issues before proceeding"
                           : "Proceed to next step"
                       }
@@ -4788,7 +4873,7 @@ function AIGeneratorContent() {
                         </>
                       ) : (
                         <>
-                          <span>Next Step</span>
+                          <span>{generatedQuestions.length > 0 ? `Next: View Questions (${generatedQuestions.length})` : "Next Step"}</span>
                           <ArrowRight className="w-4 h-4" />
                         </>
                       )}
