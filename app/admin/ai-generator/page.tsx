@@ -884,8 +884,8 @@ function AIGeneratorContent() {
   const totalMarks = useMemo(() => {
     return blueprintFormats.reduce((acc, f) => {
       const c = f.checked || f.count > 0 ? Number(f.count) : 0
-      const m = Number(f.marks) || 1
-      return acc + ((isNaN(c) ? 0 : c) * (isNaN(m) ? 0 : m))
+      const m = isNaN(Number(f.marks)) ? 0 : Number(f.marks)
+      return acc + ((isNaN(c) ? 0 : c) * m)
     }, 0)
   }, [blueprintFormats])
 
@@ -932,13 +932,13 @@ function AIGeneratorContent() {
 
   const updateFormatMarks = (id: string, marks: any) => {
     const parsed = typeof marks === "number" ? marks : parseInt(String(marks), 10)
-    const safeMarks = isNaN(parsed) ? 1 : Math.max(1, Math.min(20, Math.round(parsed)))
+    const safeMarks = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, Math.round(parsed)))
     setBlueprintFormats((prev) => {
       const updated = prev.map((f) => (f.id === id ? { ...f, marks: safeMarks } : f))
       if (selectedSubjects.length === 1) {
         const sub = selectedSubjects[0]
         const totalQ = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? Number(f.count) || 0 : 0), 0)
-        const totalM = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
+        const totalM = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? (Number(f.count) || 0) * (Number(f.marks) || 0) : 0), 0)
         const mpq = totalQ > 0 ? Math.max(1, Math.round(totalM / totalQ)) : safeMarks
         setSubjectDist((sPrev) => ({
           ...sPrev,
@@ -2960,18 +2960,20 @@ function AIGeneratorContent() {
                           <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         </div>
 
-                        {/* Marks per Question Dropdown */}
-                        <div className="col-span-3 relative">
-                          <select
-                            value={f.marks}
-                            onChange={(e) => updateFormatMarks(f.id, Number(e.target.value))}
-                            className="w-full h-10 px-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 cursor-pointer text-center appearance-none"
-                          >
-                            {[1, 2, 3, 4, 5, 6, 8, 10].map((m) => (
-                              <option key={m} value={m}>{m}</option>
-                            ))}
-                          </select>
-                          <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        {/* Marks per Question Input */}
+                        <div className="col-span-3">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={f.marks === 0 ? "0" : f.marks}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => {
+                              const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
+                              updateFormatMarks(f.id, val)
+                            }}
+                            className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10"
+                          />
                         </div>
 
                         {/* Total Questions Input */}
