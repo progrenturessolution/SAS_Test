@@ -2990,19 +2990,15 @@ function AIGeneratorContent() {
                           />
                         </div>
 
-                        {/* Total Marks */}
+                        {/* Total Marks (Auto-calculated: Total Questions × Marks per Question) */}
                         <div className="col-span-2">
                           <input
-                            type="number"
-                            min={0}
-                            max={2000}
+                            type="text"
+                            readOnly
+                            disabled
                             value={(f.count || 0) * (f.marks || 0)}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => {
-                              const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
-                              updateFormatTotalMarks(f.id, val)
-                            }}
-                            className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10"
+                            title="Total Marks are auto-calculated (Total Questions × Marks per Question)"
+                            className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-slate-100/70 text-xs font-bold text-slate-800 shadow-2xs cursor-not-allowed select-none"
                           />
                         </div>
                       </div>
@@ -3106,22 +3102,12 @@ function AIGeneratorContent() {
                             </div>
                             <div className="col-span-3 flex justify-center">
                               <input
-                                type="number"
-                                min={0}
-                                max={1000}
-                                disabled={isZeroQ}
+                                type="text"
+                                readOnly
+                                disabled
                                 value={isZeroQ ? 0 : mVal}
-                                onFocus={(e) => e.target.select()}
-                                onChange={(e) => {
-                                  const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
-                                  updateSubjectDist(sub, "marks", val)
-                                }}
-                                title={isZeroQ ? "Subject has 0 questions (Marks must be 0)" : "Total marks for this subject"}
-                                className={`w-16 h-8 px-2 text-center rounded-lg border text-xs font-semibold shadow-2xs ${
-                                  isZeroQ
-                                    ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed select-none"
-                                    : "border-slate-200 bg-slate-50/70 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#324158]/10"
-                                }`}
+                                title="Marks are auto-calculated from questions and marks per question"
+                                className="w-16 h-8 px-2 text-center rounded-lg border border-slate-200 bg-slate-100/70 text-xs font-bold text-slate-800 shadow-2xs cursor-not-allowed select-none"
                               />
                             </div>
                           </div>
