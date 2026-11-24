@@ -71,9 +71,10 @@ function normalizeExamTypes(rawTypes: string[] = [], features?: any): string[] {
     ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(t).toUpperCase())
   )
   const hasOther = rawTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(String(t).toUpperCase()))
-  const hasAspirants = features?.aspirantsManagement !== undefined
-    ? Boolean(features.aspirantsManagement)
-    : rawTypes.some((t) => ["ASPIRANTS", "STUDENTS"].includes(String(t).toUpperCase())) || true
+  const hasAspirants = features?.aspirantsManagement === false
+    ? false
+    : rawTypes.some((t) => ["ASPIRANTS", "STUDENTS"].includes(String(t).toUpperCase())) ||
+      (features?.aspirantsManagement === undefined && !rawTypes.some((t) => ["COMPETITIVE", "OTHER"].includes(String(t).toUpperCase())))
   if (hasComp) result.push("COMPETITIVE")
   if (hasOther) result.push("OTHER")
   if (hasAspirants) result.push("ASPIRANTS")

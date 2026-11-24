@@ -4,8 +4,8 @@ import connectDB from "@/lib/mongodb"
 import Institute from "@/models/Institute"
 import Exam from "@/models/Exam"
 
-const ALL_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "CODING", "OTHER", "OTHER_EXAMS"]
-const LEGACY_INSTITUTE_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "OTHER", "OTHER_EXAMS"]
+const ALL_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "CODING", "OTHER", "OTHER_EXAMS", "ASPIRANTS"]
+const LEGACY_INSTITUTE_EXAM_TYPES = ["NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD", "CUSTOM", "OTHER", "OTHER_EXAMS", "ASPIRANTS"]
 const ALL_CUSTOM_QUESTION_TYPES = ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"]
 
 export async function GET(req: Request) {
@@ -63,9 +63,10 @@ export async function GET(req: Request) {
 
     const hasOtherExamsAccess = rawExamTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(t))
 
-    const hasAspirantsAccess = (
+    const hasAspirantsAccess = Boolean(
       institute.limits?.features?.aspirantsManagement !== false &&
-      (!Array.isArray(institute.limits?.examTypes) || institute.limits.examTypes.includes("ASPIRANTS") || institute.limits.features?.aspirantsManagement === true || !institute.limits.examTypes.length)
+      (rawExamTypes.some((t) => ["ASPIRANTS", "STUDENTS"].includes(t)) ||
+       (institute.limits?.features?.aspirantsManagement === undefined && !rawExamTypes.some((t) => ["COMPETITIVE", "OTHER"].includes(t))))
     )
 
     const maxExams = Number(institute.limits?.maxExams ?? 20)
