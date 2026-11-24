@@ -4811,12 +4811,11 @@ function AIGeneratorContent() {
                         setPrintModalOpen(true)
                       }}
                       disabled={isGenerating || generatedQuestions.length === 0}
-                      className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="hidden sm:inline-flex px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm items-center gap-1.5 sm:gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Print question paper for aspirants (Without Solutions)"
                     >
                       <Printer className="w-4 h-4 text-blue-600 shrink-0" />
-                      <span className="hidden sm:inline">Print Aspirant Copy</span>
-                      <span className="sm:hidden">Aspirant Copy</span>
+                      <span>Print Aspirant Copy</span>
                     </button>
 
                     <button
@@ -4826,12 +4825,11 @@ function AIGeneratorContent() {
                         setPrintModalOpen(true)
                       }}
                       disabled={isGenerating || generatedQuestions.length === 0}
-                      className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="hidden sm:inline-flex px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm items-center gap-1.5 sm:gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Print question paper with complete solutions and answer key"
                     >
                       <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span className="hidden sm:inline">Print Teacher Copy</span>
-                      <span className="sm:hidden">Teacher Copy</span>
+                      <span>Print Teacher Copy</span>
                     </button>
 
                     <button
