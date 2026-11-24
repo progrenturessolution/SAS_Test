@@ -2231,23 +2231,22 @@ function OtherExamsContent() {
                 </div>
               </div>
 
-              {/* Exam Duration */}
+              {/* Blueprint Summary */}
               <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
-                <span className="text-xs font-bold text-slate-800 block">Exam Duration</span>
+                <span className="text-xs font-bold text-slate-800 block">Paper Blueprint Summary</span>
                 <p className="text-[11px] text-slate-500">
-                  Total time allocated for this paper.
+                  Total questions and marks for this paper.
                 </p>
-                <div className="flex items-center gap-2 pt-1">
-                  <Clock className="w-3.5 h-3.5 text-slate-500" />
-                  <input
-                    type="number"
-                    min={10}
-                    max={360}
-                    value={examDuration}
-                    onChange={(e) => setExamDuration(parseInt(e.target.value) || 60)}
-                    className="w-16 py-1 px-2 rounded-lg border border-slate-200 bg-white font-semibold text-xs text-center"
-                  />
-                  <span className="text-xs text-slate-600 font-medium">Minutes</span>
+                <div className="flex items-center gap-4 pt-1">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Questions</span>
+                    <span className="text-sm font-bold text-slate-900">{totalQuestions}</span>
+                  </div>
+                  <div className="h-6 w-px bg-slate-200" />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Marks</span>
+                    <span className="text-sm font-bold text-slate-900">{totalCalculatedMarks}</span>
+                  </div>
                 </div>
               </div>
             </div>

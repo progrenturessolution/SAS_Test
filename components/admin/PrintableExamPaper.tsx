@@ -316,10 +316,10 @@ export function PrintableExamPaper({
               <span className="text-slate-500">Grade / Class:</span> <strong className="font-semibold">{grade === "both" ? "Class 11 & 12" : `Class ${grade}`}</strong>
             </div>
             <div>
-              <span className="text-slate-500">Time Allowed:</span> <strong className="font-semibold">{durationMinutes} Minutes</strong>
+              <span className="text-slate-500">Total Questions:</span> <strong className="font-semibold">{questions.length}</strong>
             </div>
             <div>
-              <span className="text-slate-500">Max Marks:</span> <strong className="font-semibold">{totalMarks} ({questions.length} Questions)</strong>
+              <span className="text-slate-500">Total Marks:</span> <strong className="font-semibold">{totalMarks}</strong>
             </div>
           </div>
 
