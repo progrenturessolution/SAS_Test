@@ -84,7 +84,7 @@ export const getSynchronizedConfigs = (exam: ExamTarget, subjects: CompetitiveSu
   const dist: Record<string, SubjectConfig> = {}
 
   let defaultFormats = [
-    { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: 50, marks: 1 },
+    { id: "mcq", label: "MCQ (Single Correct)", checked: false, count: 0, marks: 1 },
     { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
     { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
     { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
@@ -99,55 +99,30 @@ export const getSynchronizedConfigs = (exam: ExamTarget, subjects: CompetitiveSu
   if (exam === "MHT_CET") {
     c11Weight = 20
     c12Weight = 80
-    let totalQ = 0
-    let totalM = 0
     subjects.forEach((sub) => {
-      const q = 50
       const mpq = sub === "Mathematics" ? 2 : 1
-      const m = q * mpq
-      dist[sub] = { questions: q, marksPerQuestion: mpq, marks: m }
-      totalQ += q
-      totalM += m
+      dist[sub] = { questions: 0, marksPerQuestion: mpq, marks: 0 }
     })
 
     const hasMath = subjects.includes("Mathematics")
-    const nonMathCount = subjects.filter((s) => s !== "Mathematics").length * 50
-    const mathCount = hasMath ? 50 : 0
-
-    if (hasMath && nonMathCount > 0) {
-      defaultFormats = [
-        { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: nonMathCount, marks: 1 },
-        { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
-        { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
-        { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
-        { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
-        { id: "descriptive", label: "Description / Descriptive", checked: true, count: mathCount, marks: 2 },
-        { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
-      ]
-    } else {
-      const mpq = hasMath ? 2 : 1
-      defaultFormats = [
-        { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: totalQ, marks: mpq },
-        { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
-        { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
-        { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
-        { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
-        { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 2 },
-        { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
-      ]
-    }
+    const mpq = hasMath && subjects.length === 1 ? 2 : 1
+    defaultFormats = [
+      { id: "mcq", label: "MCQ (Single Correct)", checked: false, count: 0, marks: mpq },
+      { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
+      { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
+      { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
+      { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
+      { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 2 },
+      { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
+    ]
   } else if (exam === "NEET") {
     c11Weight = 50
     c12Weight = 50
-    let totalQ = 0
     subjects.forEach((sub) => {
-      const q = sub === "Biology" ? 90 : 45
-      const mpq = 4
-      dist[sub] = { questions: q, marksPerQuestion: mpq, marks: q * mpq }
-      totalQ += q
+      dist[sub] = { questions: 0, marksPerQuestion: 4, marks: 0 }
     })
     defaultFormats = [
-      { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: totalQ, marks: 4 },
+      { id: "mcq", label: "MCQ (Single Correct)", checked: false, count: 0, marks: 4 },
       { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 4 },
       { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 4 },
       { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
@@ -158,15 +133,11 @@ export const getSynchronizedConfigs = (exam: ExamTarget, subjects: CompetitiveSu
   } else if (exam === "JEE_MAIN") {
     c11Weight = 45
     c12Weight = 55
-    let totalQ = 0
     subjects.forEach((sub) => {
-      const q = 25
-      const mpq = 4
-      dist[sub] = { questions: q, marksPerQuestion: mpq, marks: q * mpq }
-      totalQ += q
+      dist[sub] = { questions: 0, marksPerQuestion: 4, marks: 0 }
     })
     defaultFormats = [
-      { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: totalQ, marks: 4 },
+      { id: "mcq", label: "MCQ (Single Correct)", checked: false, count: 0, marks: 4 },
       { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 4 },
       { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 4 },
       { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
@@ -177,15 +148,11 @@ export const getSynchronizedConfigs = (exam: ExamTarget, subjects: CompetitiveSu
   } else {
     c11Weight = 50
     c12Weight = 50
-    let totalQ = 0
     subjects.forEach((sub) => {
-      const q = 50
-      const mpq = 1
-      dist[sub] = { questions: q, marksPerQuestion: mpq, marks: q * mpq }
-      totalQ += q
+      dist[sub] = { questions: 0, marksPerQuestion: 1, marks: 0 }
     })
     defaultFormats = [
-      { id: "mcq", label: "MCQ (Single Correct)", checked: true, count: totalQ, marks: 1 },
+      { id: "mcq", label: "MCQ (Single Correct)", checked: false, count: 0, marks: 1 },
       { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
       { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
       { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
@@ -263,7 +230,7 @@ function AIGeneratorContent() {
   const pdfInputRef = useRef<HTMLInputElement>(null)
 
   // Blueprint Settings
-  const [questionCount, setQuestionCount] = useState<number>(45)
+  const [questionCount, setQuestionCount] = useState<number>(0)
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "balanced" | "hard">("easy")
   const [pattern, setPattern] = useState<"mcq_single" | "assertion_reason" | "mixed">("mixed")
   const [focusPYQ, setFocusPYQ] = useState(true)
@@ -909,14 +876,14 @@ function AIGeneratorContent() {
   // Step 2: Format calculations (guaranteed numeric arithmetic, never string concatenation)
   const totalQuestions = useMemo(() => {
     return blueprintFormats.reduce((acc, f) => {
-      const c = f.checked ? Number(f.count) : 0
+      const c = f.checked || f.count > 0 ? Number(f.count) : 0
       return acc + (isNaN(c) ? 0 : c)
     }, 0)
   }, [blueprintFormats])
 
   const totalMarks = useMemo(() => {
     return blueprintFormats.reduce((acc, f) => {
-      const c = f.checked ? Number(f.count) : 0
+      const c = f.checked || f.count > 0 ? Number(f.count) : 0
       const m = Number(f.marks) || 1
       return acc + ((isNaN(c) ? 0 : c) * (isNaN(m) ? 0 : m))
     }, 0)
@@ -930,7 +897,7 @@ function AIGeneratorContent() {
           return {
             ...f,
             checked: nextChecked,
-            count: nextChecked && (Number(f.count) || 0) === 0 ? 5 : Number(f.count) || 0,
+            count: nextChecked ? Number(f.count) || 0 : 0,
           }
         }
         return f
@@ -943,12 +910,12 @@ function AIGeneratorContent() {
     const safeCount = isNaN(parsed) ? 0 : Math.max(0, Math.min(200, Math.round(parsed)))
     setBlueprintFormats((prev) => {
       const updated = prev.map((f) =>
-        f.id === id ? { ...f, count: safeCount, checked: safeCount > 0 ? true : f.checked } : f
+        f.id === id ? { ...f, count: safeCount, checked: safeCount > 0 } : f
       )
       if (selectedSubjects.length === 1) {
         const sub = selectedSubjects[0]
-        const totalQ = updated.reduce((acc, f) => acc + (f.checked ? Number(f.count) || 0 : 0), 0)
-        const totalM = updated.reduce((acc, f) => acc + (f.checked ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
+        const totalQ = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? Number(f.count) || 0 : 0), 0)
+        const totalM = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
         const mpq = totalQ > 0 ? Math.max(1, Math.round(totalM / totalQ)) : 1
         setSubjectDist((sPrev) => ({
           ...sPrev,
@@ -970,8 +937,8 @@ function AIGeneratorContent() {
       const updated = prev.map((f) => (f.id === id ? { ...f, marks: safeMarks } : f))
       if (selectedSubjects.length === 1) {
         const sub = selectedSubjects[0]
-        const totalQ = updated.reduce((acc, f) => acc + (f.checked ? Number(f.count) || 0 : 0), 0)
-        const totalM = updated.reduce((acc, f) => acc + (f.checked ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
+        const totalQ = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? Number(f.count) || 0 : 0), 0)
+        const totalM = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
         const mpq = totalQ > 0 ? Math.max(1, Math.round(totalM / totalQ)) : safeMarks
         setSubjectDist((sPrev) => ({
           ...sPrev,
@@ -1010,8 +977,8 @@ function AIGeneratorContent() {
       })
       if (selectedSubjects.length === 1) {
         const sub = selectedSubjects[0]
-        const totalQ = updated.reduce((acc, f) => acc + (f.checked ? Number(f.count) || 0 : 0), 0)
-        const totalM = updated.reduce((acc, f) => acc + (f.checked ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
+        const totalQ = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? Number(f.count) || 0 : 0), 0)
+        const totalM = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
         const mpq = totalQ > 0 ? Math.max(1, Math.round(totalM / totalQ)) : 1
         setSubjectDist((sPrev) => ({
           ...sPrev,
@@ -1070,8 +1037,8 @@ function AIGeneratorContent() {
         setBlueprintFormats((bPrev) =>
           bPrev.map((f, i) =>
             i === 0
-              ? { ...f, checked: true, count: nextQ, marks: nextMarksPerQ }
-              : { ...f, count: 0 }
+              ? { ...f, checked: nextQ > 0, count: nextQ, marks: nextMarksPerQ }
+              : { ...f, count: 0, checked: false }
           )
         )
       }
@@ -1114,7 +1081,7 @@ function AIGeneratorContent() {
     const targetQ = totalSubjectQuestions
     const targetM = totalSubjectMarks
     if (targetQ === 0) {
-      setBlueprintFormats((prev) => prev.map((f) => ({ ...f, count: 0 })))
+      setBlueprintFormats((prev) => prev.map((f) => ({ ...f, count: 0, checked: false })))
       toast.success("Question types synchronized to 0.")
       return
     }
@@ -1125,7 +1092,7 @@ function AIGeneratorContent() {
         prev.map((f, i) =>
           i === 0
             ? { ...f, checked: true, count: targetQ, marks: avgMarks }
-            : { ...f, count: 0 }
+            : { ...f, count: 0, checked: false }
         )
       )
       toast.success("Question types synchronized with subject totals!")
@@ -1145,7 +1112,7 @@ function AIGeneratorContent() {
           if (f.id === "descriptive") {
             return { ...f, checked: twoMarkCount > 0, count: twoMarkCount, marks: 2 }
           }
-          return { ...f, count: 0 }
+          return { ...f, count: 0, checked: false }
         })
       )
       toast.success("Question types synchronized: 1-mark & 2-mark distribution matched!")
@@ -1157,7 +1124,7 @@ function AIGeneratorContent() {
       prev.map((f, i) =>
         i === 0
           ? { ...f, checked: true, count: targetQ, marks: roundMarks }
-          : { ...f, count: 0 }
+          : { ...f, count: 0, checked: false }
       )
     )
     toast.success("Question types count synchronized!")
@@ -1475,7 +1442,7 @@ function AIGeneratorContent() {
         negativeMark: number
       }
 
-      const activeFormats = blueprintFormats.filter((f) => f.checked && Number(f.count) > 0)
+      const activeFormats = blueprintFormats.filter((f) => (f.checked || f.count > 0) && Number(f.count) > 0)
       const batches: BatchItem[] = []
 
       // Helper to apportion a number N among active formats
@@ -1515,8 +1482,8 @@ function AIGeneratorContent() {
 
       if (selectedSubjects.length > 1) {
         for (const sub of selectedSubjects) {
-          const subCount = Math.max(0, subjectDist[sub]?.questions ?? 50)
-          const subMarks = Math.max(0, subjectDist[sub]?.marks ?? 50)
+          const subCount = Math.max(0, subjectDist[sub]?.questions ?? 0)
+          const subMarks = Math.max(0, subjectDist[sub]?.marks ?? 0)
           if (subCount <= 0) continue
 
           const subDefaultMarks = Math.max(1, Math.round(subMarks / subCount))
@@ -2864,20 +2831,58 @@ function AIGeneratorContent() {
 
                 {/* ─── Validation Alert Box (Requirements 1, 2, 3, 6, 8) ─── */}
                 {validationErrors.length > 0 && (
-                  <div className="mb-6 p-4 rounded-2xl bg-amber-50/90 border border-amber-200/90 shadow-2xs animate-in fade-in-50">
+                  <div
+                    className={`mb-6 p-4 rounded-2xl shadow-2xs animate-in fade-in-50 border ${
+                      totalQuestions === 0 && totalSubjectQuestions === 0
+                        ? "bg-slate-50 border-slate-200"
+                        : "bg-amber-50/90 border-amber-200/90"
+                    }`}
+                  >
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
-                          <AlertTriangle className="w-4 h-4" />
+                        <div
+                          className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${
+                            totalQuestions === 0 && totalSubjectQuestions === 0
+                              ? "bg-slate-100 border-slate-200 text-slate-600"
+                              : "bg-amber-100 border-amber-200 text-amber-700"
+                          }`}
+                        >
+                          {totalQuestions === 0 && totalSubjectQuestions === 0 ? (
+                            <Info className="w-4 h-4" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4" />
+                          )}
                         </div>
                         <div>
-                          <h4 className="text-xs sm:text-sm font-bold text-amber-950">
-                            Blueprint Configuration Alignment Needed ({validationErrors.length})
+                          <h4
+                            className={`text-xs sm:text-sm font-bold ${
+                              totalQuestions === 0 && totalSubjectQuestions === 0
+                                ? "text-slate-800"
+                                : "text-amber-950"
+                            }`}
+                          >
+                            {totalQuestions === 0 && totalSubjectQuestions === 0
+                              ? "Blueprint Setup: Enter Desired Question Numbers to Proceed"
+                              : `Blueprint Configuration Alignment Needed (${validationErrors.length})`}
                           </h4>
-                          <ul className="mt-1.5 space-y-1 text-xs text-amber-900">
+                          <ul
+                            className={`mt-1.5 space-y-1 text-xs ${
+                              totalQuestions === 0 && totalSubjectQuestions === 0
+                                ? "text-slate-600"
+                                : "text-amber-900"
+                            }`}
+                          >
                             {validationErrors.map((err, idx) => (
                               <li key={idx} className="flex items-start gap-1.5">
-                                <span className="text-amber-500 font-bold">•</span>
+                                <span
+                                  className={`font-bold ${
+                                    totalQuestions === 0 && totalSubjectQuestions === 0
+                                      ? "text-slate-400"
+                                      : "text-amber-500"
+                                  }`}
+                                >
+                                  •
+                                </span>
                                 <span>{err}</span>
                               </li>
                             ))}
@@ -2976,8 +2981,9 @@ function AIGeneratorContent() {
                             min={0}
                             max={200}
                             value={f.count === 0 ? "0" : f.count}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
-                              const val = Math.max(0, parseInt(e.target.value, 10) || 0)
+                              const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
                               updateFormatCount(f.id, val)
                             }}
                             className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10"
@@ -2991,6 +2997,7 @@ function AIGeneratorContent() {
                             min={0}
                             max={2000}
                             value={(f.count || 0) * (f.marks || 0)}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
                               updateFormatTotalMarks(f.id, val)
@@ -3089,6 +3096,7 @@ function AIGeneratorContent() {
                                 min={0}
                                 max={200}
                                 value={qVal}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => {
                                   const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
                                   updateSubjectDist(sub, "questions", val)
@@ -3103,6 +3111,7 @@ function AIGeneratorContent() {
                                 max={1000}
                                 disabled={isZeroQ}
                                 value={isZeroQ ? 0 : mVal}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => {
                                   const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
                                   updateSubjectDist(sub, "marks", val)
