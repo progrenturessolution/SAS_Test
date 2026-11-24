@@ -285,12 +285,7 @@ const DEFAULT_BLUEPRINT_FORMATS: BlueprintFormatRow[] = [
   { id: "diagram", name: "Image-based / Diagram / Visual", checked: false, count: 5, marks: 4 },
   { id: "true_false", name: "True / False", checked: false, count: 5, marks: 2 },
   { id: "fib", name: "Fill in the Blanks", checked: false, count: 5, marks: 2 },
-  { id: "match_following", name: "Match the Following", checked: false, count: 4, marks: 4 },
-  { id: "numerical", name: "Numerical Answer Type", checked: false, count: 5, marks: 4 },
-  { id: "short_answer", name: "Short Answer", checked: false, count: 4, marks: 3 },
   { id: "long_descriptive", name: "Long Answer / Descriptive", checked: false, count: 2, marks: 5 },
-  { id: "case_passage", name: "Case Study / Passage-based", checked: false, count: 4, marks: 4 },
-  { id: "coding_essay", name: "Coding / Essay (where applicable)", checked: false, count: 1, marks: 10 },
 ]
 
 export interface GeneratedQuestionItem {
@@ -376,7 +371,7 @@ function OtherExamsContent() {
   const pdfInputRef = useRef<HTMLInputElement>(null)
 
   const [blueprintFormats, setBlueprintFormats] = useState<BlueprintFormatRow[]>(DEFAULT_BLUEPRINT_FORMATS)
-  const [negativeMarkingEnabled, setNegativeMarkingEnabled] = useState(true)
+  const [negativeMarkingEnabled, setNegativeMarkingEnabled] = useState(false)
   const [negativeMarkPenalty, setNegativeMarkPenalty] = useState(1)
   const [difficultyRatio, setDifficultyRatio] = useState<"mixed" | "easy" | "medium" | "hard">("mixed")
   const [examDuration, setExamDuration] = useState<number>(60)
@@ -458,7 +453,7 @@ function OtherExamsContent() {
     randomizeQuestions: true,
     showResultsImmediately: true,
     allowReview: false,
-    enableNegativeMarking: true,
+    enableNegativeMarking: false,
     allowCalculator: false,
   })
 

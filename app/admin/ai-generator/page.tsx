@@ -237,10 +237,7 @@ function AIGeneratorContent() {
   const [focusPYQ, setFocusPYQ] = useState(true)
 
   // Step 2: Negative Marking States (Customizable in Blueprint Step)
-  const [negativeMarkingEnabled, setNegativeMarkingEnabled] = useState<boolean>(() => {
-    const meta = EXAM_TARGETS.find((e) => e.id === "MHT_CET")
-    return (meta?.defaultNegativeMarks || 0) > 0
-  })
+  const [negativeMarkingEnabled, setNegativeMarkingEnabled] = useState<boolean>(false)
   const [negativeMarkPenalty, setNegativeMarkPenalty] = useState<number>(() => {
     const meta = EXAM_TARGETS.find((e) => e.id === "MHT_CET")
     return meta?.defaultNegativeMarks && meta.defaultNegativeMarks > 0 ? meta.defaultNegativeMarks : 1
@@ -866,15 +863,10 @@ function AIGeneratorContent() {
       setBlueprintFormats(sync.formats)
       setClass11Weightage(sync.c11Weight)
       setClass12Weightage(sync.c12Weight)
-      if (targetMeta.defaultNegativeMarks > 0) {
-        setNegativeMarkingEnabled(true)
-        setNegativeMarkPenalty(targetMeta.defaultNegativeMarks)
-        setEvalSettings((prev) => ({ ...prev, enableNegativeMarking: true }))
-      } else {
-        setNegativeMarkingEnabled(false)
-        setNegativeMarkPenalty(1)
-        setEvalSettings((prev) => ({ ...prev, enableNegativeMarking: false }))
-      }
+      // Negative marking disabled by default
+      setNegativeMarkingEnabled(false)
+      setNegativeMarkPenalty(targetMeta.defaultNegativeMarks > 0 ? targetMeta.defaultNegativeMarks : 1)
+      setEvalSettings((prev) => ({ ...prev, enableNegativeMarking: false }))
     }
     // Reset selected chapters when exam changes
     setSelectedChapters([])

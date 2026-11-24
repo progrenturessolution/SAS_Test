@@ -92,6 +92,7 @@ export async function POST(req: Request) {
       status: "active",
       isActive: true,
       deactivationReason: "",
+      examPassword: String(password).trim(),
     })
 
     // Explicit update to guarantee all fields are persisted in MongoDB
@@ -107,6 +108,7 @@ export async function POST(req: Request) {
           status: "active",
           isActive: true,
           deactivationReason: "",
+          examPassword: String(password).trim(),
         },
       }
     )
@@ -127,6 +129,7 @@ export async function POST(req: Request) {
           status: "active",
           isActive: true,
           deactivationReason: "",
+          examPassword: String(password).trim(),
         },
       },
       { status: 201 }
@@ -206,6 +209,7 @@ export async function GET(req: Request) {
           status,
           isActive: !isDeactivated,
           deactivationReason: s.deactivationReason || "",
+          examPassword: s.examPassword || "",
           createdAt: s.createdAt,
           totalAttempts: attemptMap.get(s.email)?.totalAttempts || 0,
           lastAttempt: attemptMap.get(s.email)?.lastAttempt || "",
@@ -289,6 +293,7 @@ export async function PUT(req: Request) {
           status: (updated as any).status || "active",
           isActive: (updated as any).isActive !== false,
           deactivationReason: (updated as any).deactivationReason || "",
+          examPassword: (updated as any).examPassword || student.examPassword || "",
         },
       })
     }
@@ -346,6 +351,7 @@ export async function PUT(req: Request) {
 
     if (password && String(password).trim().length >= 6) {
       updateSet.password = await bcrypt.hash(String(password).trim(), 10)
+      updateSet.examPassword = String(password).trim()
     }
 
     const updated = await User.findByIdAndUpdate(student._id, { $set: updateSet }, { new: true, lean: true })
@@ -368,6 +374,7 @@ export async function PUT(req: Request) {
         status: (updated as any).status || "active",
         isActive: (updated as any).isActive !== false,
         deactivationReason: (updated as any).deactivationReason || "",
+        examPassword: (updated as any).examPassword || student.examPassword || "",
       },
     })
   } catch (error) {

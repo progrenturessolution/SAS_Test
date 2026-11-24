@@ -16,6 +16,7 @@ export interface IUser extends Document {
   status?: "active" | "deactivated"
   isActive?: boolean
   deactivationReason?: string
+  examPassword?: string
   createdAt: Date
   comparePassword(password: string): Promise<boolean>
 }
@@ -36,6 +37,7 @@ const UserSchema = new Schema<IUser>(
     status: { type: String, enum: ["active", "deactivated"], default: "active" },
     isActive: { type: Boolean, default: true },
     deactivationReason: { type: String, default: "", trim: true },
+    examPassword: { type: String, default: "", trim: true },
   },
   { timestamps: true, strict: false }
 )
@@ -55,7 +57,7 @@ UserSchema.methods.comparePassword = async function (password: string): Promise<
 // In Next.js dev mode, invalidate cached model if it lacks the latest schema fields
 if (mongoose.models.User) {
   const paths = (mongoose.models.User as any).schema?.paths || {}
-  if (!paths.totalFees || !paths.phone || !paths.batch || !paths.status || !paths.deactivationReason) {
+  if (!paths.totalFees || !paths.phone || !paths.batch || !paths.status || !paths.deactivationReason || !paths.examPassword) {
     delete (mongoose.models as any).User
   }
 }

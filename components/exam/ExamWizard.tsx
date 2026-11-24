@@ -3576,10 +3576,7 @@ function Step3({
     { id: "assertion", label: "Assertion & Reason", icon: <Layers size={14} /> },
     { id: "truefalse", label: "True / False", icon: <CheckCircle2 size={14} /> },
     { id: "fillblanks", label: "Fill in the Blanks", icon: <FileText size={14} /> },
-    { id: "short_answer", label: "Short Answer", icon: <AlignLeft size={14} /> },
     { id: "descriptive", label: "Long Answer / Descriptive", icon: <AlignLeft size={14} /> },
-    { id: "case_study", label: "Case Study / Passage-based", icon: <BookOpen size={14} /> },
-    { id: "coding", label: "Coding / Programming", icon: <Code2 size={14} /> },
   ]
 
   return (

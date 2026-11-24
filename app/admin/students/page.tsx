@@ -25,6 +25,9 @@ import {
   UserCheck,
   ShieldAlert,
   Lock,
+  Eye,
+  EyeOff,
+  Users,
 } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { Toaster } from "@/components/ui/toaster"
@@ -43,6 +46,7 @@ interface Student {
   status?: "active" | "deactivated"
   isActive?: boolean
   deactivationReason?: string
+  examPassword?: string
   createdAt?: string
   totalAttempts: number
   lastAttempt: string
@@ -59,6 +63,8 @@ export default function StudentsPage() {
 
   // Modals & Popups
   const [showAddStudent, setShowAddStudent] = useState(false)
+  const [showAddPassword, setShowAddPassword] = useState(false)
+  const [showEditPassword, setShowEditPassword] = useState(false)
   const [profileStudent, setProfileStudent] = useState<Student | null>(null)
   const [editStudent, setEditStudent] = useState<Student | null>(null)
   const [activeMenuStudentId, setActiveMenuStudentId] = useState<string | null>(null)
@@ -213,6 +219,7 @@ export default function StudentsPage() {
           totalFees: data.student.totalFees ?? parsedTotal,
           completedFees: data.student.completedFees ?? parsedCompleted,
           pendingFees: data.student.pendingFees ?? Math.max(0, parsedTotal - parsedCompleted),
+          examPassword: addForm.password,
           createdAt: new Date().toISOString(),
           totalAttempts: 0,
           lastAttempt: "",
@@ -306,6 +313,7 @@ export default function StudentsPage() {
                 totalFees: parsedTotal,
                 completedFees: parsedCompleted,
                 pendingFees: Math.max(0, parsedTotal - parsedCompleted),
+                examPassword: payload.password || s.examPassword,
               }
             : s
         )
@@ -324,6 +332,7 @@ export default function StudentsPage() {
                 totalFees: parsedTotal,
                 completedFees: parsedCompleted,
                 pendingFees: Math.max(0, parsedTotal - parsedCompleted),
+                examPassword: payload.password || prev.examPassword,
               }
             : null
         )
@@ -578,7 +587,7 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {/* ── Stat Cards (2x2 on Mobile, 4 Cols on Desktop - NO ORANGE) ── */}
+      {/* ── Stat Cards (2x2 on Mobile, 4 Cols on Desktop - Brand Styling) ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
         <button
           type="button"
@@ -586,61 +595,85 @@ export default function StudentsPage() {
             setStatusFilter("all")
             setFeesFilter("all")
           }}
-          className={`text-left bg-white rounded-2xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all cursor-pointer ${
+          className={`text-left bg-gradient-to-br from-white to-[#f8fafd] rounded-2xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all cursor-pointer ${
             statusFilter === "all" && feesFilter === "all"
-              ? "border-[#2D3A4A] ring-2 ring-[#2D3A4A]/10"
-              : "border-slate-200/80 hover:border-slate-300"
+              ? "border-[#324158] ring-2 ring-[#324158]/20 bg-[#f4f7fb]"
+              : "border-slate-200/80 hover:border-[#324158]/40"
           }`}
         >
-          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Aspirants</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Aspirants</p>
+            <div className="w-8 h-8 rounded-xl bg-[#eaf0f8] text-[#324158] flex items-center justify-center">
+              <Users size={16} />
+            </div>
+          </div>
           <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#324158] tracking-tight">{students.length}</p>
+          <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Enrolled students</p>
         </button>
 
         <button
           type="button"
           onClick={() => setFeesFilter(feesFilter === "completed" ? "all" : "completed")}
-          className={`text-left bg-white rounded-2xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all cursor-pointer ${
+          className={`text-left bg-gradient-to-br from-white to-[#f8fafd] rounded-2xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all cursor-pointer ${
             feesFilter === "completed"
-              ? "border-emerald-600 ring-2 ring-emerald-600/10"
-              : "border-slate-200/80 hover:border-slate-300"
+              ? "border-[#324158] ring-2 ring-[#324158]/20 bg-[#f4f7fb]"
+              : "border-slate-200/80 hover:border-[#324158]/40"
           }`}
         >
-          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Fees Collected</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">Fees Collected</p>
+            <div className="w-8 h-8 rounded-xl bg-[#eaf0f8] text-[#324158] flex items-center justify-center">
+              <CreditCard size={16} />
+            </div>
+          </div>
           <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-emerald-700 tracking-tight">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#324158] tracking-tight">
               ₹{totalCompletedSum.toLocaleString()}
             </p>
             <span className="text-[10px] sm:text-xs text-slate-400 truncate">/ ₹{totalFeesSum.toLocaleString()}</span>
           </div>
+          <p className="text-[10px] sm:text-xs text-emerald-600 font-semibold mt-1">Paid in full or partial</p>
         </button>
 
         <button
           type="button"
           onClick={() => setFeesFilter(feesFilter === "pending" ? "all" : "pending")}
-          className={`text-left bg-white rounded-2xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all cursor-pointer ${
+          className={`text-left bg-gradient-to-br from-white to-[#f8fafd] rounded-2xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all cursor-pointer ${
             feesFilter === "pending"
-              ? "border-amber-600 ring-2 ring-amber-600/10"
-              : "border-slate-200/80 hover:border-slate-300"
+              ? "border-[#324158] ring-2 ring-[#324158]/20 bg-[#f4f7fb]"
+              : "border-slate-200/80 hover:border-[#324158]/40"
           }`}
         >
-          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Pending Fees</p>
-          <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-800 tracking-tight">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">Pending Fees</p>
+            <div className="w-8 h-8 rounded-xl bg-[#eaf0f8] text-[#324158] flex items-center justify-center">
+              <AlertCircle size={16} />
+            </div>
+          </div>
+          <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#324158] tracking-tight">
             ₹{totalPendingSum.toLocaleString()}
           </p>
+          <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Due balance</p>
         </button>
 
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all">
-          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Exam Attempts</p>
+        <div className="bg-gradient-to-br from-white to-[#f8fafd] rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">Exam Attempts</p>
+            <div className="w-8 h-8 rounded-xl bg-[#eaf0f8] text-[#324158] flex items-center justify-center">
+              <Award size={16} />
+            </div>
+          </div>
           <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
             <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#324158] tracking-tight">
               {students.reduce((s, st) => s + st.totalAttempts, 0)}
             </p>
             {students.length > 0 && (
-              <span className="text-[10px] sm:text-xs text-slate-400">
+              <span className="text-[10px] sm:text-xs text-slate-500 font-semibold">
                 ({Math.round(students.reduce((s, st) => s + (st.avgPercentage || 0), 0) / students.length)}% avg)
               </span>
             )}
           </div>
+          <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Tests submitted</p>
         </div>
       </div>
 
@@ -1307,15 +1340,25 @@ export default function StudentsPage() {
                     <label className="block text-xs font-bold text-gray-700 mb-1">
                       Exam Password <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="password"
-                      required
-                      minLength={6}
-                      value={addForm.password}
-                      onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
-                      placeholder="Min 6 characters"
-                      className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-xs sm:text-sm font-normal outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-all"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showAddPassword ? "text" : "password"}
+                        required
+                        minLength={6}
+                        value={addForm.password}
+                        onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
+                        placeholder="Min 6 characters"
+                        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 pr-10 text-xs sm:text-sm font-normal outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAddPassword(!showAddPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                        tabIndex={-1}
+                      >
+                        {showAddPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1502,14 +1545,24 @@ export default function StudentsPage() {
                     <label className="block text-xs font-bold text-gray-700 mb-1">
                       Reset Password (Optional)
                     </label>
-                    <input
-                      type="password"
-                      minLength={6}
-                      value={editForm.password}
-                      onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
-                      placeholder="Leave blank to keep current"
-                      className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-xs sm:text-sm font-normal outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-all"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showEditPassword ? "text" : "password"}
+                        minLength={6}
+                        value={editForm.password}
+                        onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                        placeholder="Leave blank to keep current"
+                        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 pr-10 text-xs sm:text-sm font-normal outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowEditPassword(!showEditPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                        tabIndex={-1}
+                      >
+                        {showEditPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1886,6 +1939,32 @@ export default function StudentsPage() {
                           </p>
                         </div>
                       </div>
+
+                      <div className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50/70">
+                        <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500 shrink-0">
+                          <KeyRound size={14} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] uppercase font-bold text-gray-400">Exam Password</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono font-bold text-slate-800 select-all">
+                              {profileStudent.examPassword || "••••••••"}
+                            </span>
+                            {profileStudent.examPassword && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(profileStudent.examPassword || "")
+                                  toast.success("Password copied to clipboard!")
+                                }}
+                                className="text-[10px] font-semibold text-[#324158] hover:underline cursor-pointer"
+                              >
+                                Copy
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -2036,10 +2115,15 @@ export default function StudentsPage() {
 
                     {/* Portal Exam Credentials Notice */}
                     <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70 flex items-start gap-3 text-xs text-slate-600">
-                      <KeyRound size={15} className="text-slate-500 shrink-0 mt-0.5" />
-                      <p className="leading-relaxed">
-                        <strong className="text-slate-800 font-semibold">Aspirant Exam Login:</strong> Aspirant can log in to attend coaching tests with Roll Number (<strong>{profileStudent.rollNumber}</strong>) or registered email.
-                      </p>
+                      <KeyRound size={15} className="text-[#324158] shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="leading-relaxed">
+                          <strong className="text-slate-800 font-semibold">Aspirant Exam Login:</strong> Aspirant can log in to attend coaching tests with Roll Number (<strong>{profileStudent.rollNumber}</strong>) or registered email (<strong>{profileStudent.email}</strong>).
+                        </p>
+                        <p className="text-xs text-slate-700">
+                          Password: <strong className="font-mono text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 select-all">{profileStudent.examPassword || "••••••••"}</strong>
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
