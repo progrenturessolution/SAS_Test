@@ -2123,101 +2123,329 @@ function ModalFooter({ note, onCancel, onSave }: { note: React.ReactNode; onCanc
   )
 }
 
-// ─── Step 1 ───────────────────────────────────────────────────────────────────
+// ─── Step 1 (Wizard Step 2: Exam Details & Overview) ──────────────────────────
 
-function Step1({ form, setForm }: { form: Step1Form; setForm: React.Dispatch<React.SetStateAction<Step1Form>> }) {
+function Step1({
+  form,
+  setForm,
+  questions,
+}: {
+  form: Step1Form
+  setForm: React.Dispatch<React.SetStateAction<Step1Form>>
+  questions: Question[]
+}) {
+  const defaultInstructions = [
+    "Read all questions carefully before answering.",
+    "Ensure you have a stable internet connection throughout the exam.",
+    "Do not switch tabs or exit fullscreen mode during the examination.",
+  ]
+
+  const instructionsList = form.instructions && form.instructions.trim().length > 0
+    ? form.instructions.split("\n").filter((l) => l.trim().length > 0)
+    : defaultInstructions
+
+  // Initialize instructions if empty
+  useEffect(() => {
+    if (!form.instructions || form.instructions.trim() === "") {
+      setForm((f) => ({
+        ...f,
+        instructions: defaultInstructions.join("\n"),
+      }))
+    }
+  }, [])
+
+  // Auto-calculate total marks from questions
+  const calculatedTotalMarks = questions.length > 0
+    ? questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0)
+    : (Number(form.totalMarks) || 100)
+
+  useEffect(() => {
+    if (questions.length > 0) {
+      const sum = questions.reduce((s, q) => s + (Number(q.marks) || 0), 0)
+      if (sum > 0 && String(sum) !== form.totalMarks) {
+        setForm((f) => ({ ...f, totalMarks: String(sum) }))
+      }
+    }
+  }, [questions, form.totalMarks, setForm])
+
+  const updateInstruction = (idx: number, val: string) => {
+    const next = [...instructionsList]
+    next[idx] = val
+    setForm((f) => ({ ...f, instructions: next.join("\n") }))
+  }
+
+  const addInstruction = () => {
+    const next = [...instructionsList, "New guideline for aspirants."]
+    setForm((f) => ({ ...f, instructions: next.join("\n") }))
+  }
+
+  const removeInstruction = (idx: number) => {
+    const next = instructionsList.filter((_, i) => i !== idx)
+    setForm((f) => ({ ...f, instructions: next.join("\n") }))
+  }
+
+  // Question formats overview
+  const distinctTypes = Array.from(new Set(questions.map((q) => q.type)))
+  const questionFormatsOverview = distinctTypes.length > 0
+    ? distinctTypes.map((t) => TYPE_META[t]?.label || t.toUpperCase()).join(", ")
+    : "Standard MCQ"
+
+  // Difficulty overview
+  const easyCount = questions.filter((q) => q.difficulty === "easy").length
+  const mediumCount = questions.filter((q) => q.difficulty === "medium").length
+  const hardCount = questions.filter((q) => q.difficulty === "hard").length
+
+  let difficultyOverview = "Mixed"
+  if (questions.length === 0) {
+    difficultyOverview = "Mixed"
+  } else if (easyCount === questions.length) {
+    difficultyOverview = "Easy"
+  } else if (mediumCount === questions.length) {
+    difficultyOverview = "Medium"
+  } else if (hardCount === questions.length) {
+    difficultyOverview = "Hard"
+  } else {
+    const diffParts: string[] = []
+    if (easyCount > 0) diffParts.push(`Easy (${easyCount})`)
+    if (mediumCount > 0) diffParts.push(`Medium (${mediumCount})`)
+    if (hardCount > 0) diffParts.push(`Hard (${hardCount})`)
+    difficultyOverview = diffParts.join(", ")
+  }
+
+  // Pass percentage
+  const totalM = Number(form.totalMarks) || calculatedTotalMarks || 1
+  const passM = Number(form.passMarks) || 0
+  const passPercentage = totalM > 0 ? Math.round((passM / totalM) * 100) : 0
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs relative">
-      <div className="mb-6 sm:mb-8 pb-5 border-b border-slate-100">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-          STEP 2 · EXAM DETAILS
-        </p>
-        <h2 className="mt-1 text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
-          Basic Information
-        </h2>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      {/* Left Card: Exam Details */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-8 shadow-xs flex flex-col justify-between">
+        <div>
+          <div className="mb-5">
+            <h2 className="text-base sm:text-lg font-medium tracking-tight text-slate-900">
+              Exam Details
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Set the key details for your exam.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            {/* Exam Title */}
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 mb-1.5">
+                Exam Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="e.g. Physics Final Exam / Organic Chemistry Mock / General Aptitude"
+                className="w-full px-3.5 py-2 text-xs font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
+              />
+            </div>
+
+            {/* Row 1: Duration, Total Marks, Pass Marks */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1.5 truncate">
+                  Duration (minutes) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={form.duration}
+                  onChange={(e) => setForm((f) => ({ ...f, duration: e.target.value }))}
+                  className="w-full px-3.5 py-2 text-xs font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1.5 truncate flex items-center justify-between">
+                  <span>Total Marks</span>
+                  <span className="text-[10px] text-slate-400 font-normal flex items-center gap-1">
+                    <Lock size={10} className="text-slate-400" /> Auto-calculated
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  readOnly
+                  disabled
+                  value={form.totalMarks || calculatedTotalMarks}
+                  title="Total marks are calculated automatically from the question paper and cannot be changed manually."
+                  className="w-full px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-slate-100/80 text-slate-700 cursor-not-allowed select-none shadow-2xs focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1.5 truncate">
+                  Pass Marks <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.passMarks}
+                  onChange={(e) => setForm((f) => ({ ...f, passMarks: e.target.value }))}
+                  className="w-full px-3.5 py-2 text-xs font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Row 2: Questions Per Minute */}
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 mb-1.5">
+                Questions Per Minute <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                value={form.questionsPerMin}
+                onChange={(e) => setForm((f) => ({ ...f, questionsPerMin: e.target.value }))}
+                placeholder="e.g., 1.5"
+                className="w-full px-3.5 py-2 text-xs font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
+              />
+            </div>
+
+            {/* Instructions Section */}
+            <div className="pt-2">
+              <h3 className="text-sm font-semibold text-slate-800">
+                Instructions
+              </h3>
+              <p className="text-xs text-slate-500 mb-2.5">
+                Add important guidelines for aspirants.
+              </p>
+
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4 space-y-2">
+                {instructionsList.map((inst, idx) => (
+                  <div key={idx} className="flex items-start gap-2.5 group">
+                    <span className="text-xs sm:text-sm font-normal text-slate-500 shrink-0 mt-0.5">
+                      {idx + 1}.
+                    </span>
+                    <input
+                      type="text"
+                      value={inst}
+                      onChange={(e) => updateInstruction(idx, e.target.value)}
+                      className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-200 focus:border-slate-400 px-1 py-0.5 text-xs sm:text-sm font-normal text-slate-700 focus:outline-none transition-colors"
+                    />
+                    {instructionsList.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeInstruction(idx)}
+                        className="text-slate-300 hover:text-red-500 p-0.5 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                        title="Remove guideline"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={addInstruction}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 pt-1 cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>Add Instruction</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-5 sm:space-y-6">
+      {/* Right Card: Exam Overview */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-8 shadow-xs flex flex-col justify-between">
         <div>
-          <label className={labelCls}>
-            Exam Title <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={form.title}
-            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-            placeholder="e.g. Physics Final Exam / Organic Chemistry Mock / General Aptitude"
-            className={inputCls}
-          />
-        </div>
+          <div className="mb-5">
+            <h2 className="text-base sm:text-lg font-medium tracking-tight text-slate-900">
+              Exam Overview
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Review your exam configuration.
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          <div>
-            <label className={labelCls}>
-              Duration (minutes) <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              value={form.duration}
-              onChange={e => setForm(f => ({ ...f, duration: e.target.value }))}
-              placeholder="e.g. 60"
-              min="1"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>
-              Questions Per Minute <span className="text-slate-400 font-normal">(Optional)</span>
-            </label>
-            <input
-              type="number"
-              value={form.questionsPerMin}
-              onChange={e => setForm(f => ({ ...f, questionsPerMin: e.target.value }))}
-              placeholder="e.g. 1.5"
-              min="0.1"
-              step="0.1"
-              className={inputCls}
-            />
-          </div>
-        </div>
+          {/* Configuration Key-Value Rows */}
+          <div className="space-y-2.5 sm:space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4 py-1.5 border-b border-slate-100/80">
+              <span className="text-xs font-normal text-slate-500 w-auto sm:w-36 shrink-0">
+                Exam Title
+              </span>
+              <span className="text-xs font-medium text-slate-800 text-left sm:text-right break-words">
+                {form.title || "Untitled Exam"}
+              </span>
+            </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          <div>
-            <label className={labelCls}>
-              Pass Marks <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              value={form.passMarks}
-              onChange={e => setForm(f => ({ ...f, passMarks: e.target.value }))}
-              placeholder="e.g. 40"
-              min="0"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>
-              Total Marks <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              value={form.totalMarks}
-              onChange={e => setForm(f => ({ ...f, totalMarks: e.target.value }))}
-              placeholder="e.g. 100"
-              min="1"
-              className={inputCls}
-            />
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4 py-1.5 border-b border-slate-100/80">
+              <span className="text-xs font-normal text-slate-500 w-auto sm:w-36 shrink-0">
+                Exam Type
+              </span>
+              <span className="text-xs font-medium text-slate-800 text-left sm:text-right break-words">
+                {form.examType || "Custom Exam"}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4 py-1.5 border-b border-slate-100/80">
+              <span className="text-xs font-normal text-slate-500 w-auto sm:w-36 shrink-0">
+                Question Format
+              </span>
+              <span className="text-xs font-medium text-slate-800 text-left sm:text-right break-words">
+                {questionFormatsOverview}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4 py-1.5 border-b border-slate-100/80">
+              <span className="text-xs font-normal text-slate-500 w-auto sm:w-36 shrink-0">
+                Difficulty Level
+              </span>
+              <span className="text-xs font-medium text-slate-800 text-left sm:text-right break-words">
+                {difficultyOverview}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4 py-1.5 border-b border-slate-100/80">
+              <span className="text-xs font-normal text-slate-500 w-auto sm:w-36 shrink-0">
+                Passing Criteria
+              </span>
+              <span className="text-xs font-medium text-slate-800 text-left sm:text-right break-words">
+                {form.passMarks ? `${form.passMarks} Marks (${passPercentage}%)` : "—"}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4 py-1.5">
+              <span className="text-xs font-normal text-slate-500 w-auto sm:w-36 shrink-0">
+                Questions / Minute
+              </span>
+              <span className="text-xs font-medium text-slate-800 text-left sm:text-right break-words">
+                {form.questionsPerMin ? `${form.questionsPerMin} Q/min` : "Not specified"}
+              </span>
+            </div>
           </div>
         </div>
 
-        <div>
-          <label className={labelCls}>Instructions for Aspirants</label>
-          <textarea
-            value={form.instructions}
-            onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
-            rows={4}
-            placeholder="Enter instructions, e.g. 'Read each question carefully. Calculators are not allowed.'"
-            className={textareaCls}
-          />
+        {/* Bottom Summary Stats Strip */}
+        <div className="mt-8 rounded-2xl bg-slate-50 border border-slate-200/80 p-3.5 sm:p-5 grid grid-cols-3 divide-x divide-slate-200">
+          <div className="text-center px-1 sm:px-2">
+            <p className="text-[10px] sm:text-[11px] font-normal text-slate-500 mb-0.5">Duration</p>
+            <p className="text-sm sm:text-base font-medium text-slate-800">
+              {form.duration || 0} <span className="text-[10px] sm:text-xs font-normal text-slate-500">min</span>
+            </p>
+          </div>
+
+          <div className="text-center px-1 sm:px-2">
+            <p className="text-[10px] sm:text-[11px] font-normal text-slate-500 mb-0.5">Total Questions</p>
+            <p className="text-sm sm:text-base font-medium text-slate-800">
+              {questions.length}
+            </p>
+          </div>
+
+          <div className="text-center px-1 sm:px-2">
+            <p className="text-[10px] sm:text-[11px] font-normal text-slate-500 mb-0.5">Total Marks</p>
+            <p className="text-sm sm:text-base font-medium text-slate-800">
+              {form.totalMarks || calculatedTotalMarks}
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -4814,7 +5042,7 @@ export default function ExamWizard({ editId }: { editId?: string } = {}) {
               allowedCustomQuestionTypes={allowedCustomQuestionTypes}
             />
           )}
-          {step === 2 && <Step1 form={step1} setForm={setStep1} />}
+          {step === 2 && <Step1 form={step1} setForm={setStep1} questions={questions} />}
           {step === 3 && <Step2 form={step2} setForm={setStep2} canUseAiProctoring={instituteFeatures.aiProctoring} />}
 
           {/* ─── Bottom Navigation Bar ─── */}
