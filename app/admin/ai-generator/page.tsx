@@ -26,6 +26,7 @@ import {
   ChevronUp,
   ChevronDown,
   ArrowRight,
+  ArrowLeft,
   Search,
   Sparkles,
   Clock,
@@ -2243,7 +2244,7 @@ function AIGeneratorContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-16 pt-6 sm:pt-8">
+    <div className={`min-h-screen bg-[#F8FAFC] pt-6 sm:pt-8 ${currentStep === 3 ? "pb-28 sm:pb-32" : "pb-16"}`}>
       <div className="mx-auto max-w-[1400px] px-3 sm:px-8 lg:px-10">
         {/* ─── Breadcrumbs ─── */}
         <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-2">
@@ -4702,186 +4703,203 @@ function AIGeneratorContent() {
 
           {/* ─── Bottom Navigation Actions (Steps 1 to 5) ─── */}
           {currentStep < 6 && (
-          <div className="mt-8 flex items-center justify-between gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (currentStep > 1) {
-                  setCurrentStep((step) => step - 1)
-                  window.scrollTo({ top: 0, behavior: "smooth" })
-                } else {
-                  router.push("/admin/exams")
-                }
-              }}
-              className="px-4 sm:px-6 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium text-xs sm:text-sm hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
+            <div
+              className={
+                currentStep === 3
+                  ? "fixed bottom-0 left-0 lg:left-[272px] right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] py-3 px-4 sm:px-8 transition-all"
+                  : "mt-8 flex items-center justify-between gap-3 pt-2"
+              }
             >
-              Back
-            </button>
-
-            {currentStep === 1 && (
-              <button
-                type="button"
-                onClick={() => setCurrentStep(2)}
-                disabled={selectedSubjects.length === 0}
-                className="px-4 sm:px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <span>Next Step</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-
-            {currentStep === 2 && (
-              <div className="flex items-center gap-2 flex-wrap justify-end">
-                {errorMsg && (
-                  <span className="text-xs text-red-600 font-medium bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg max-w-xs truncate">
-                    {errorMsg}
-                  </span>
-                )}
-                {generatedQuestions.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleGenerate}
-                    disabled={isGenerating || !isStep2Valid}
-                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? "animate-spin" : ""}`} />
-                    <span>Re-create Questions</span>
-                  </button>
-                )}
+              <div className="mx-auto max-w-[1400px] flex items-center justify-between gap-2 sm:gap-3 w-full">
                 <button
                   type="button"
                   onClick={() => {
-                    if (generatedQuestions.length > 0) {
-                      setCurrentStep(3)
+                    if (currentStep > 1) {
+                      setCurrentStep((step) => step - 1)
                       window.scrollTo({ top: 0, behavior: "smooth" })
                     } else {
-                      handleGenerate()
+                      router.push("/admin/exams")
                     }
                   }}
-                  disabled={isGenerating || !isStep2Valid}
-                  title={
-                    !isStep2Valid
-                      ? validationErrors[0] || "Please resolve configuration alignment issues before proceeding"
-                      : "Proceed to next step"
-                  }
-                  className="px-6 py-2.5 rounded-xl bg-[#324158] hover:bg-[#253244] text-white font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
+                  className="px-4 sm:px-6 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium text-xs sm:text-sm hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0 flex items-center gap-1.5"
                 >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>
-                        {generationStep === 1
-                          ? "Analyzing PYQs..."
-                          : generationStep === 2
-                          ? "Generating Questions..."
-                          : "Validating Questions..."}
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+
+                {currentStep === 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    disabled={selectedSubjects.length === 0}
+                    className="px-4 sm:px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span>Next Step</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+
+                {currentStep === 2 && (
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {errorMsg && (
+                      <span className="text-xs text-red-600 font-medium bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg max-w-xs truncate">
+                        {errorMsg}
                       </span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Next Step</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
+                    )}
+                    {generatedQuestions.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleGenerate}
+                        disabled={isGenerating || !isStep2Valid}
+                        className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? "animate-spin" : ""}`} />
+                        <span>Re-create Questions</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (generatedQuestions.length > 0) {
+                          setCurrentStep(3)
+                          window.scrollTo({ top: 0, behavior: "smooth" })
+                        } else {
+                          handleGenerate()
+                        }
+                      }}
+                      disabled={isGenerating || !isStep2Valid}
+                      title={
+                        !isStep2Valid
+                          ? validationErrors[0] || "Please resolve configuration alignment issues before proceeding"
+                          : "Proceed to next step"
+                      }
+                      className="px-6 py-2.5 rounded-xl bg-[#324158] hover:bg-[#253244] text-white font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                          <span>
+                            {generationStep === 1
+                              ? "Analyzing PYQs..."
+                              : generationStep === 2
+                              ? "Generating Questions..."
+                              : "Validating Questions..."}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Next Step</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {currentStep === 3 && (
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+                    {generatedQuestions.length > 0 && (
+                      <span className="hidden xl:inline-flex text-xs font-semibold text-slate-500 bg-slate-100/90 px-3 py-1.5 rounded-full border border-slate-200/80 mr-1">
+                        {selectedQuestionIds.size} of {generatedQuestions.length} Selected
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrintMode("student")
+                        setPrintModalOpen(true)
+                      }}
+                      disabled={isGenerating || generatedQuestions.length === 0}
+                      className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Print question paper for aspirants (Without Solutions)"
+                    >
+                      <Printer className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span className="hidden sm:inline">Print Aspirant Copy</span>
+                      <span className="sm:hidden">Aspirant Copy</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrintMode("teacher")
+                        setPrintModalOpen(true)
+                      }}
+                      disabled={isGenerating || generatedQuestions.length === 0}
+                      className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Print question paper with complete solutions and answer key"
+                    >
+                      <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="hidden sm:inline">Print Teacher Copy</span>
+                      <span className="sm:hidden">Teacher Copy</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isGenerating) return
+                        setInstructions((prev) => {
+                          const negText = negativeMarkingEnabled
+                            ? `Negative marking: -${negativeMarkPenalty} marks will be deducted for each incorrect response.`
+                            : "No negative marking applicable."
+                          const filtered = prev.filter((i) => !i.toLowerCase().includes("negative marking"))
+                          return [
+                            filtered[0] || "Read each question carefully before submitting your answer.",
+                            filtered[1] || `Each question carries ${currentExamMeta.defaultMarksPerQuestion} marks.`,
+                            negText,
+                            ...filtered.slice(2),
+                          ]
+                        })
+                        setCurrentStep(4)
+                        window.scrollTo({ top: 0, behavior: "smooth" })
+                      }}
+                      disabled={isGenerating || selectedQuestionIds.size === 0}
+                      className="px-4 sm:px-7 py-2 sm:py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                          <span>Generating ({generatedQuestions.length}/{totalQuestions})...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Next: Exam Details</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {currentStep === 4 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep(5)
+                      window.scrollTo({ top: 0, behavior: "smooth" })
+                    }}
+                    className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
+                  >
+                    <span>Next: Settings</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+
+                {currentStep === 5 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep(6)
+                      window.scrollTo({ top: 0, behavior: "smooth" })
+                    }}
+                    className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
+                  >
+                    <span>Next: Publish</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-            )}
-
-            {currentStep === 3 && (
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPrintMode("student")
-                    setPrintModalOpen(true)
-                  }}
-                  disabled={isGenerating || generatedQuestions.length === 0}
-                  className="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Print question paper for aspirants (Without Solutions)"
-                >
-                  <Printer className="w-4 h-4 text-blue-600" />
-                  <span>Print Aspirant Copy</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPrintMode("teacher")
-                    setPrintModalOpen(true)
-                  }}
-                  disabled={isGenerating || generatedQuestions.length === 0}
-                  className="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Print question paper with complete solutions and answer key"
-                >
-                  <FileText className="w-4 h-4 text-emerald-600" />
-                  <span>Print Teacher Copy</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isGenerating) return
-                    setInstructions((prev) => {
-                      const negText = negativeMarkingEnabled
-                        ? `Negative marking: -${negativeMarkPenalty} marks will be deducted for each incorrect response.`
-                        : "No negative marking applicable."
-                      const filtered = prev.filter((i) => !i.toLowerCase().includes("negative marking"))
-                      return [
-                        filtered[0] || "Read each question carefully before submitting your answer.",
-                        filtered[1] || `Each question carries ${currentExamMeta.defaultMarksPerQuestion} marks.`,
-                        negText,
-                        ...filtered.slice(2),
-                      ]
-                    })
-                    setCurrentStep(4)
-                    window.scrollTo({ top: 0, behavior: "smooth" })
-                  }}
-                  disabled={isGenerating || selectedQuestionIds.size === 0}
-                  className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
-                      <span>Generating ({generatedQuestions.length}/{totalQuestions})...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Next: Exam Details</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-
-            {currentStep === 4 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentStep(5)
-                  window.scrollTo({ top: 0, behavior: "smooth" })
-                }}
-                className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
-              >
-                <span>Next: Settings</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-
-            {currentStep === 5 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentStep(6)
-                  window.scrollTo({ top: 0, behavior: "smooth" })
-                }}
-                className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
-              >
-                <span>Next: Publish</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+            </div>
           )}
       </div>
     </div>
