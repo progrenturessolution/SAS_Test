@@ -247,14 +247,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
     
     const examData = attempt.examId as Record<string, unknown> | null
-    const showResults = (examData as any)?.settings?.showResults ?? true
+    const showResults = (examData as any)?.settings?.showResults !== false
     
-    // If attempt is graded, always show results regardless of showResults setting
-    const isGraded = attempt.status === "graded" || attempt.isGraded === true
-    
-    // Sanitize attempt data if results are hidden and not manually graded yet
+    // Sanitize attempt data if results are hidden
     const sanitizedAttempt = { ...attempt }
-    if (!showResults && !isGraded) {
+    if (!showResults) {
       delete (sanitizedAttempt as any).score
       delete (sanitizedAttempt as any).percentage
       delete (sanitizedAttempt as any).passed
@@ -268,7 +265,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       }
     }
 
-    return NextResponse.json({ attempt: sanitizedAttempt, showResults: isGraded || showResults })
+    return NextResponse.json({ attempt: sanitizedAttempt, showResults })
   } catch (error) {
     console.error("[GET /api/attempts/[id]] Error:", error)
     return NextResponse.json({ error: "Failed to fetch attempt" }, { status: 500 })
@@ -311,7 +308,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // return existing calculated result immediately without re-grading or extra DB writes.
     if (attempt.status === "graded" || (attempt.status === "submitted" && attempt.submittedAt)) {
       const existingExam = (await Exam.findById(attempt.examId).select("settings").lean()) as any
-      const showResults = existingExam?.settings?.showResults ?? true
+      const showResults = existingExam?.settings?.showResults !== false
       const sanitizedAttempt = { ...attempt.toObject() }
       if (!showResults) {
         delete (sanitizedAttempt as any).score
@@ -524,7 +521,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     attempt.passed = exam ? attempt.score >= exam.passMarks : false
 
     await attempt.save()
-    const showResults = exam?.settings?.showResults ?? true
+    const showResults = exam?.settings?.showResults !== false
     
     // Sanitize attempt data if results are hidden
     const sanitizedAttempt = { ...attempt.toObject() }

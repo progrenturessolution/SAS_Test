@@ -239,14 +239,15 @@ export function ProctoringCamera({ onFaceEvent, onCameraStatusChange }: Proctori
   const cameraReadyTimeRef = useRef<number>(0)
   const lastPhoneCheckRef = useRef<number>(0)
   const inFlightRef = useRef<boolean>(false)
+  const consecutiveNoFaceRef = useRef<number>(0)
   const onFaceEventRef = useRef<ProctoringCameraProps["onFaceEvent"]>(onFaceEvent)
 
   const [camStatus, setCamStatus] = useState<"loading" | "active" | "denied" | "error">("loading")
   const [faceStatus, setFaceStatus] = useState<"detecting" | "ok" | "none" | "multiple">("detecting")
 
-  const REPORT_INTERVAL = 3000
-  const GRACE_PERIOD = 2000
-  const PHONE_CHECK_INTERVAL = 1500
+  const REPORT_INTERVAL = 8000
+  const GRACE_PERIOD = 10000
+  const PHONE_CHECK_INTERVAL = 2500
 
   useEffect(() => {
     onFaceEventRef.current = onFaceEvent
@@ -311,10 +312,22 @@ export function ProctoringCamera({ onFaceEvent, onCameraStatusChange }: Proctori
           }
 
           if (now - cameraReadyTimeRef.current >= GRACE_PERIOD && now - lastReportTimeRef.current >= REPORT_INTERVAL) {
-            if (faces === 0) onFaceEventRef.current?.("no-face")
-            else if (faces > 1) onFaceEventRef.current?.("multiple-faces")
-            else onFaceEventRef.current?.("face-ok")
-            lastReportTimeRef.current = now
+            if (faces === 0) {
+              consecutiveNoFaceRef.current += 1
+              // Require at least 3 consecutive failures (~15-20s continuous absence) before emitting warning
+              if (consecutiveNoFaceRef.current >= 3) {
+                onFaceEventRef.current?.("no-face")
+                lastReportTimeRef.current = now
+              }
+            } else if (faces > 1) {
+              consecutiveNoFaceRef.current = 0
+              onFaceEventRef.current?.("multiple-faces")
+              lastReportTimeRef.current = now
+            } else {
+              consecutiveNoFaceRef.current = 0
+              onFaceEventRef.current?.("face-ok")
+              lastReportTimeRef.current = now
+            }
           }
         })
 

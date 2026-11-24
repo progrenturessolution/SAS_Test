@@ -441,13 +441,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         }
         // 1. Check if already submitted
         const attempt = attemptRes.attempt || attemptRes
-        if (attempt && (attempt.status === "submitted" || attempt.status === "auto-submitted")) {
-          const showResults = examRes.exam?.settings?.showResults ?? true
-          if (showResults) {
-            router.push(`/exam/${id}/result?attemptId=${attemptId}`)
-          } else {
-            router.push(`/exam/${id}/result/analytics?attemptId=${attemptId}`)
-          }
+        if (attempt && (attempt.status === "submitted" || attempt.status === "auto-submitted" || attempt.status === "graded")) {
+          router.push(`/exam/${id}/result?attemptId=${attemptId}`)
           return
         }
 
@@ -645,11 +640,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         document.exitFullscreen().catch(() => {})
       }
       
-      if (data.showResults ?? true) {
-        router.push(`/exam/${id}/result?attemptId=${attemptId}`)
-      } else {
-        router.push(`/exam/${id}/result/analytics?attemptId=${attemptId}`)
-      }
+      router.push(`/exam/${id}/result?attemptId=${attemptId}`)
     } catch (error) {
       addToast("Network issue during submission. Your responses are safely backed up locally. Retrying...", "danger")
       setSubmitting(false)
@@ -901,11 +892,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       // Stop camera and exit fullscreen
       setExamSubmitted(true)
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
-      if (data.showResults ?? true) {
-        router.push(`/exam/${id}/result?attemptId=${attemptId}`)
-      } else {
-        router.push(`/exam/${id}/result/analytics?attemptId=${attemptId}`)
-      }
+      router.push(`/exam/${id}/result?attemptId=${attemptId}`)
     } catch {
       addToast("Submission failed. Your answers are saved locally. Please click Submit again.", "danger")
       setSubmitting(false)
@@ -2226,29 +2213,19 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               >
                 Previous
               </button>
+            </div>
+
+            <div className="hidden sm:flex items-center gap-3">
               <button
                 onClick={handleSkip}
                 className="px-4 sm:px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 Skip
               </button>
-            </div>
-
-            <div className="hidden sm:flex items-center gap-3">
               <button
                 onClick={handleSaveAndNext}
-                className={`px-5 py-2.5 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2 cursor-pointer ${
-                  isLastQuestionOverall
-                    ? "bg-emerald-600 hover:bg-emerald-700"
-                    : isLastQuestionInSection && nextSectionTab
-                      ? "bg-purple-700 hover:bg-purple-800"
-                      : "hover:opacity-90"
-                }`}
-                style={
-                  !isLastQuestionOverall && !(isLastQuestionInSection && nextSectionTab)
-                    ? { backgroundColor: instituteThemeColor }
-                    : undefined
-                }
+                className="px-5 py-2.5 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2 cursor-pointer hover:opacity-90"
+                style={{ backgroundColor: instituteThemeColor || "#324158" }}
               >
                 <span>
                   {isLastQuestionOverall
@@ -2274,19 +2251,19 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               <span>Prev</span>
             </button>
 
+            {/* Skip Button */}
+            <button
+              onClick={handleSkip}
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl active:bg-gray-100 transition-colors cursor-pointer"
+            >
+              <span>Skip</span>
+            </button>
+
             {/* Next / Save & Next Button */}
             <button
               onClick={handleSaveAndNext}
-              className={`flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors truncate cursor-pointer ${
-                isLastQuestionInSection && nextSectionTab
-                  ? "bg-purple-700 active:bg-purple-800"
-                  : "active:opacity-80"
-              }`}
-              style={
-                !(isLastQuestionInSection && nextSectionTab)
-                  ? { backgroundColor: instituteThemeColor }
-                  : undefined
-              }
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors truncate cursor-pointer active:opacity-80"
+              style={{ backgroundColor: instituteThemeColor || "#324158" }}
             >
               <span className="truncate">
                 {isLastQuestionOverall
@@ -2301,7 +2278,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             {/* Submit Button */}
             <button
               onClick={handleSubmitExam}
-              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800"
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer bg-[#324158] hover:bg-[#253245] active:bg-[#1a2432]"
               title="Submit Examination"
             >
               <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -2424,7 +2401,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             <button
               onClick={handleSubmitExam}
               disabled={submitting}
-              className="w-full py-2.5 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-60 cursor-pointer shadow-sm flex items-center justify-center gap-1.5 bg-[#10B981] hover:bg-[#059669]"
+              className="w-full py-2.5 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-60 cursor-pointer shadow-sm flex items-center justify-center gap-1.5 bg-[#324158] hover:bg-[#253245] active:bg-[#1a2432]"
             >
               <span>{submitting ? "Submitting..." : "Submit Exam"}</span>
             </button>

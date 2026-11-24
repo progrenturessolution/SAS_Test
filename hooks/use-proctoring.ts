@@ -46,11 +46,28 @@ export function useProctoring({
   const stateRef = useRef(state)
   stateRef.current = state
   const autoSubmittedRef = useRef(false)
+  const lastWarningTimeRef = useRef<number>(0)
+  const gracePeriodEndRef = useRef<number>(Date.now() + 15000)
+
+  // Reset 15s grace period whenever proctoring becomes active
+  useEffect(() => {
+    if (isActive) {
+      gracePeriodEndRef.current = Date.now() + 15000
+    }
+  }, [isActive])
 
   // Log event to DB and update local state
   const logEvent = useCallback(
     async (type: ProctoringEvent["type"], details?: string) => {
       if (autoSubmittedRef.current) return
+
+      const now = Date.now()
+      // Ignore violations during the 15s initial startup grace period (settling in, permissions, fullscreen)
+      if (now < gracePeriodEndRef.current) return
+
+      // Enforce at least an 8-second cooldown between consecutive warnings to prevent instant multi-warning jumps
+      if (now - lastWarningTimeRef.current < 8000) return
+      lastWarningTimeRef.current = now
 
       const event: ProctoringEvent = { type, timestamp: new Date(), details }
 
@@ -94,10 +111,10 @@ export function useProctoring({
       // Small delay to check if it's actually hidden or just clicking a UI element/os dialog
       // This reduces false positives from some browser extensions or system popups
       setTimeout(() => {
-        if (!document.hasFocus()) {
+        if (!document.hidden && !document.hasFocus()) {
           logEvent("tab-switch", "Window lost focus (clicked outside or Alt+Tab)")
         }
-      }, 100)
+      }, 150)
     }
 
     document.addEventListener("visibilitychange", handleVisibility)
