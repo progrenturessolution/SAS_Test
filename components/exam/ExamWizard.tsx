@@ -4375,20 +4375,20 @@ function Step3({
                     {(q as MCQQuestion).options.map((opt, oi) => {
                       const letter = ["A", "B", "C", "D", "E", "F"][oi]
                       const isCorrect = Array.isArray(q.correctAnswer)
-                        ? q.correctAnswer.includes(letter)
+                        ? (q.correctAnswer.includes(letter) || q.correctAnswer.some((a: any) => String(a).trim().toLowerCase() === opt.trim().toLowerCase()))
                         : (q.correctAnswer === letter || opt.trim().toLowerCase() === String(q.correctAnswer).trim().toLowerCase())
                       return (
                         <div
                           key={oi}
                           className="flex items-center gap-2 text-xs sm:text-sm text-slate-700"
                         >
-                          <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                          <span className={`w-3.5 h-3.5 ${Array.isArray(q.correctAnswer) ? "rounded-md" : "rounded-full"} border flex items-center justify-center shrink-0 ${
                             isCorrect ? "border-blue-600 bg-blue-600" : "border-slate-300"
                           }`}>
                             {isCorrect && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                           </span>
                           <span className="font-medium text-slate-900 shrink-0">{letter}.</span>
-                          <span className="flex-1 min-w-0 truncate font-normal text-slate-800">
+                          <span className="flex-1 min-w-0 break-words font-normal text-slate-800">
                             <MathRenderer content={opt} />
                           </span>
                         </div>

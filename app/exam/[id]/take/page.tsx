@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, use, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Editor from "@monaco-editor/react"
 import { ExamHeader, ProctoringCamera, QuestionStatus, statusColorMap, ProcrentureLogo } from "@/components/exam/ExamShared"
-import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft, ChevronRight, Sparkles, LayoutGrid, Layers, ArrowRight, HelpCircle, BookOpen, Calculator } from "lucide-react"
+import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft, ChevronRight, Sparkles, LayoutGrid, Layers, ArrowRight, HelpCircle, BookOpen, Calculator, CheckSquare, Check } from "lucide-react"
 import { ScientificCalculator } from "@/components/exam/ScientificCalculator"
 import { ProctoringWarning } from "@/components/exam/ProctoringWarning"
 import { useProctoring } from "@/hooks/use-proctoring"
@@ -36,7 +36,7 @@ export function parseAssertionReason(text: string) {
   }
 }
 
-export function getQuestionCategory(q: any): "mcq" | "diagram" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding" {
+export function getQuestionCategory(q: any): "mcq" | "diagram" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding" | "mcq_multi" {
   if (!q) return "mcq"
   if (
     q.questionFormat === "assertion" ||
@@ -78,12 +78,28 @@ export function getQuestionCategory(q: any): "mcq" | "diagram" | "assertion" | "
     return "diagram"
   }
   if (q.type === "descriptive") return "descriptive"
+  if (
+    q.type === "mcq_multi" ||
+    q.questionFormat === "mcq_multi" ||
+    q.questionFormat === "mcq_multiple" ||
+    (Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1)
+  ) {
+    return "mcq_multi"
+  }
   return "mcq"
 }
 
 export function getCategoryMeta(category: string) {
   const activeTabColor = "bg-[#2D3A4A] text-white"
   switch (category) {
+    case "mcq_multi":
+      return {
+        label: "MCQ (Multiple Correct)",
+        shortLabel: "Multi Correct",
+        badgeBg: "bg-violet-50 text-violet-700 border-violet-200",
+        activeTabBg: activeTabColor,
+        dotColor: "bg-violet-500",
+      }
     case "diagram":
       return {
         label: "Diagram Based Questions",
@@ -460,7 +476,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             questions: [...sec.questions]
               .map(q => {
                 // Also shuffle options for multiple choice questions if randomization is on
-                if (q.type === "mcq" && q.options && q.options.length > 0) {
+                if ((q.type === "mcq" || (q as any).type === "mcq_multi") && q.options && q.options.length > 0) {
                   const indices = q.options.map((_, i) => i)
                   const shuffledOptionIndices = [...indices].sort(() => rng() - 0.5)
                   return {
@@ -965,7 +981,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       globalIndex: number
       sectionIndex: number
       sectionName: string
-      category: "mcq" | "diagram" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding"
+      category: "mcq" | "diagram" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding" | "mcq_multi"
     }[] = []
 
     exam.sections.forEach((sec, sIdx) => {
@@ -1651,6 +1667,11 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             const isAssertion = activeQuestionCategory === "assertion";
             const isFillBlanks = activeQuestionCategory === "fillblanks";
             const isTrueFalse = activeQuestionCategory === "truefalse";
+            const isMulti = (activeQuestionCategory as any) === "mcq_multi" ||
+              (question as any)?.type === "mcq_multi" ||
+              (question as any)?.questionFormat === "mcq_multi" ||
+              (question as any)?.questionFormat === "mcq_multiple" ||
+              (Array.isArray((question as any)?.correctAnswer) && (question as any)?.correctAnswer.length > 1);
             const parsedAR = isAssertion && question ? parseAssertionReason(question.questionText) : null;
 
             return (
@@ -1696,7 +1717,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                       <span className="hidden sm:inline"> for Review</span>
                     </button>
                     <button
-                      onClick={() => setAnswer(question._id, "", question.type, true)}
+                      onClick={() => setAnswer(question._id, isMulti ? [] : "", question.type, true)}
                       className="flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors whitespace-nowrap text-center cursor-pointer"
                     >
                       Clear<span className="hidden sm:inline"> Option</span>
@@ -1746,39 +1767,69 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                   </div>
                 )}
 
-                {/* MCQ or Assertion or FIB with choices */}
-                {(question.type === "mcq" || isAssertion || (isFillBlanks && question.options && question.options.length > 0)) && question.options && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
-                    {(question.shuffledOptionIndices || question.options!.map((_, i) => i)).map((shuffledIndex, oi) => {
-                      const opt = question.options![shuffledIndex];
-                      const optImg = question.optionImages?.[shuffledIndex];
-                      const key = optionKeys[oi] || String(oi);
-                      const originalKey = optionKeys[shuffledIndex] || String(shuffledIndex);
-                      const selected = getAnswer(question._id)?.answer === originalKey;
-                      return (
-                        <button
-                          key={oi}
-                          onClick={() => setAnswer(question._id, originalKey, question.type, true)}
-                          className={`flex flex-col border-2 rounded-xl sm:rounded-2xl text-left transition-all min-h-16 sm:min-h-auto cursor-pointer ${
-                            selected ? "border-primary bg-blue-50/20" : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          {optImg && (
-                            <div className="w-full aspect-video bg-gray-50 border-b border-gray-100 flex items-center justify-center overflow-hidden">
-                               <img src={optImg} alt={`Option ${key}`} className="w-full h-full object-contain" />
+                {/* MCQ or Multi-Correct or Assertion or FIB with choices */}
+                {(question.type === "mcq" || (question as any).type === "mcq_multi" || isAssertion || (isFillBlanks && question.options && question.options.length > 0)) && question.options && (
+                  <div className="space-y-3">
+                    {isMulti && (
+                      <div className="px-3.5 py-2 rounded-xl bg-violet-50 border border-violet-200/90 text-violet-800 text-xs font-medium flex items-center gap-2">
+                        <CheckSquare size={14} className="shrink-0 text-violet-600" />
+                        <span><strong>Multiple Correct:</strong> One or more options may be correct. Select all options that apply.</span>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
+                      {(question.shuffledOptionIndices || question.options!.map((_, i) => i)).map((shuffledIndex, oi) => {
+                        const opt = question.options![shuffledIndex];
+                        const optImg = question.optionImages?.[shuffledIndex];
+                        const key = optionKeys[oi] || String(oi);
+                        const originalKey = optionKeys[shuffledIndex] || String(shuffledIndex);
+                        const currentAnswer = getAnswer(question._id)?.answer;
+                        const selectedList: string[] = Array.isArray(currentAnswer)
+                          ? currentAnswer
+                          : currentAnswer
+                          ? String(currentAnswer).split(",").map(s => s.trim()).filter(Boolean)
+                          : [];
+                        const selected = isMulti
+                          ? (selectedList.includes(originalKey) || selectedList.includes(opt.trim()))
+                          : currentAnswer === originalKey;
+
+                        return (
+                          <button
+                            key={oi}
+                            type="button"
+                            onClick={() => {
+                              if (isMulti) {
+                                const exists = selectedList.includes(originalKey) || selectedList.includes(opt.trim());
+                                const next = exists
+                                  ? selectedList.filter(k => k !== originalKey && k !== opt.trim())
+                                  : [...selectedList, originalKey];
+                                setAnswer(question._id, next, question.type || "mcq", true);
+                              } else {
+                                setAnswer(question._id, originalKey, question.type, true);
+                              }
+                            }}
+                            className={`flex flex-col border-2 rounded-xl sm:rounded-2xl text-left transition-all min-h-16 sm:min-h-auto cursor-pointer ${
+                              selected ? "border-primary bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            {optImg && (
+                              <div className="w-full aspect-video bg-gray-50 border-b border-gray-100 flex items-center justify-center overflow-hidden">
+                                 <img src={optImg} alt={`Option ${key}`} className="w-full h-full object-contain" />
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2.5 sm:gap-3.5 px-3.5 sm:px-4 py-2.5 sm:py-3">
+                               <div className={`w-8 h-8 sm:w-7 sm:h-7 ${isMulti ? "rounded-lg" : "rounded-full"} border flex items-center justify-center shrink-0 font-medium text-xs transition-colors ${
+                                 selected ? "border-primary bg-primary text-white" : "border-gray-300 text-gray-500"
+                               }`}>
+                                 {isMulti && selected ? <Check size={13} strokeWidth={3} /> : key}
+                               </div>
+                               <div className={`font-normal text-xs sm:text-sm flex-1 break-words overflow-x-auto ${selected ? "text-foreground" : "text-gray-600"}`}>
+                                 <MathRenderer content={opt} />
+                               </div>
                             </div>
-                          )}
-                          <div className="flex items-center gap-2.5 sm:gap-3.5 px-3.5 sm:px-4 py-2.5 sm:py-3">
-                             <div className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center shrink-0 font-medium text-xs ${
-                               selected ? "border-primary bg-primary text-white" : "border-gray-300 text-gray-500"
-                             }`}>{key}</div>
-                             <div className={`font-normal text-xs sm:text-sm flex-1 ${selected ? "text-foreground" : "text-gray-600"}`}>
-                               <MathRenderer content={opt} />
-                             </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 

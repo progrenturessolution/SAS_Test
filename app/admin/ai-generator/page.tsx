@@ -58,14 +58,14 @@ import { toast } from "sonner"
 export interface GeneratedCompetitiveQuestion {
   id: string
   type: "mcq" | "descriptive"
-  questionFormat?: "mcq" | "diagram" | "assertion" | "fib" | "true_false" | "descriptive" | string
+  questionFormat?: "mcq" | "diagram" | "assertion" | "fib" | "true_false" | "descriptive" | "mcq_multi" | string
   questionText: string
   questionImage?: string
   difficulty: "easy" | "medium" | "hard"
   marks: number
   negativeMark: number
   options: string[]
-  correctAnswer: string
+  correctAnswer: string | string[]
   explanation: string
   chapter: string
   subject?: string
@@ -662,6 +662,14 @@ function AIGeneratorContent() {
       q.questionText?.includes("______")
     ) {
       return "fib"
+    }
+    if (
+      q.questionFormat === "mcq_multi" ||
+      q.questionFormat === "mcq_multiple" ||
+      q.type === ("mcq_multi" as any) ||
+      (Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1)
+    ) {
+      return "mcq_multi"
     }
     return "mcq"
   }
@@ -2062,6 +2070,7 @@ function AIGeneratorContent() {
         const isAR = fmt === "assertion"
         const isFIB = fmt === "fib"
         const isDiagram = fmt === "diagram"
+        const isMulti = fmt === "mcq_multi"
 
         let determinedType: "mcq" | "assertion" | "truefalse" | "fillblanks" | "descriptive" = "mcq"
         if (isDescriptive) determinedType = "descriptive"
@@ -2078,7 +2087,7 @@ function AIGeneratorContent() {
 
         return {
           type: determinedType,
-          questionFormat: isDescriptive ? "descriptive" : isTF ? "true_false" : isAR ? "assertion" : isFIB ? "fib" : isDiagram ? "diagram" : "mcq",
+          questionFormat: isDescriptive ? "descriptive" : isTF ? "true_false" : isAR ? "assertion" : isFIB ? "fib" : isDiagram ? "diagram" : isMulti ? "mcq_multi" : "mcq",
           assertionText: parsedAR?.assertion,
           reasonText: parsedAR?.reason,
           questionText: q.questionText,
@@ -3661,12 +3670,15 @@ function AIGeneratorContent() {
                         ? (String(q.correctAnswer).toLowerCase().includes("false") || q.correctAnswer === "Option B" ? "False" : "True")
                         : q.correctAnswer
 
+                      const isMulti = qFormat === "mcq_multi"
+
                       const formatLabel =
                         isDescriptive ? "Descriptive" :
                         isTF ? "True / False" :
                         isAR ? "Assertion & Reason" :
                         qFormat === "diagram" ? "Diagram Based" :
-                        qFormat === "fib" ? "Fill in the Blanks" : "MCQ"
+                        qFormat === "fib" ? "Fill in the Blanks" :
+                        isMulti ? "MCQ (Multiple Correct)" : "MCQ"
 
                       return (
                         <div
@@ -3813,7 +3825,7 @@ function AIGeneratorContent() {
                                   )}
                                 </div>
                                 <div className="text-xs sm:text-sm font-normal text-slate-800 leading-relaxed overflow-x-auto">
-                                  <MathRenderer content={q.correctAnswer || "Model answer / key concepts to be evaluated by AI."} />
+                                  <MathRenderer content={Array.isArray(q.correctAnswer) ? q.correctAnswer.join(", ") : (q.correctAnswer || "Model answer / key concepts to be evaluated by AI.")} />
                                 </div>
                               </div>
                               {q.explanation && (
@@ -3830,8 +3842,12 @@ function AIGeneratorContent() {
                           ) : (
                             <div className={`grid gap-2.5 sm:gap-3 pl-0 sm:pl-8 mb-4 ${isTF ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
                               {displayOptions.map((opt, oi) => {
-                                const isCorrect = opt === displayCorrectAnswer
                                 const label = isTF ? (opt === "True" ? "T" : "F") : ["A", "B", "C", "D"][oi]
+                                const isCorrect = isTF
+                                  ? opt === displayCorrectAnswer
+                                  : Array.isArray(q.correctAnswer)
+                                  ? (q.correctAnswer.includes(label) || q.correctAnswer.some(a => String(a).trim().toLowerCase() === opt.trim().toLowerCase()))
+                                  : (opt === displayCorrectAnswer || q.correctAnswer === label || String(q.correctAnswer).trim().toLowerCase() === opt.trim().toLowerCase())
 
                                 return (
                                   <div
@@ -4951,45 +4967,58 @@ function AIGeneratorContent() {
                 <label className="text-xs font-medium text-gray-700 block">
                   Options &amp; Correct Answer:
                 </label>
-                {(editingQuestion.options || []).map((opt, i) => (
-                  <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="w-6 text-xs font-medium text-gray-500 shrink-0">
-                        {["A", "B", "C", "D"][i]}:
-                      </span>
-                      <input
-                        type="text"
-                        value={opt}
-                        onChange={(e) => {
-                          const newOpts = [...(editingQuestion.options || [])]
-                          newOpts[i] = e.target.value
-                          setEditingQuestion({
-                            ...editingQuestion,
-                            options: newOpts,
-                            correctAnswer:
-                              editingQuestion.correctAnswer === opt
-                                ? e.target.value
-                                : editingQuestion.correctAnswer,
-                          })
+                {(editingQuestion.options || []).map((opt, i) => {
+                  const letter = ["A", "B", "C", "D"][i]
+                  const isMulti = editingQuestion.questionFormat === "mcq_multi" || editingQuestion.questionFormat === "mcq_multiple" || (Array.isArray(editingQuestion.correctAnswer) && editingQuestion.correctAnswer.length > 1)
+                  const isOptSelected = Array.isArray(editingQuestion.correctAnswer)
+                    ? (editingQuestion.correctAnswer.includes(letter) || editingQuestion.correctAnswer.includes(opt))
+                    : (editingQuestion.correctAnswer === opt || editingQuestion.correctAnswer === letter)
+
+                  return (
+                    <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="w-6 text-xs font-medium text-gray-500 shrink-0">
+                          {letter}:
+                        </span>
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => {
+                            const newOpts = [...(editingQuestion.options || [])]
+                            newOpts[i] = e.target.value
+                            setEditingQuestion({
+                              ...editingQuestion,
+                              options: newOpts,
+                            })
+                          }}
+                          className="flex-1 p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#324158] font-mono focus:outline-none focus:border-[#2D3A4A]"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isMulti) {
+                            const cur = Array.isArray(editingQuestion.correctAnswer)
+                              ? [...editingQuestion.correctAnswer]
+                              : [String(editingQuestion.correctAnswer || "A")]
+                            const exists = cur.includes(letter) || cur.includes(opt)
+                            const next = exists ? cur.filter(x => x !== letter && x !== opt) : [...cur, letter]
+                            setEditingQuestion({ ...editingQuestion, correctAnswer: next.length > 0 ? next : [letter] })
+                          } else {
+                            setEditingQuestion({ ...editingQuestion, correctAnswer: letter })
+                          }
                         }}
-                        className="flex-1 p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#324158] font-mono focus:outline-none focus:border-[#2D3A4A]"
-                      />
+                        className={`self-end sm:self-auto px-3 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer shrink-0 ${
+                          isOptSelected
+                            ? "bg-emerald-600 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {isOptSelected ? "Correct Answer" : "Set Correct"}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEditingQuestion({ ...editingQuestion, correctAnswer: opt })
-                      }
-                      className={`self-end sm:self-auto px-3 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer shrink-0 ${
-                        editingQuestion.correctAnswer === opt
-                          ? "bg-emerald-600 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                    >
-                      {editingQuestion.correctAnswer === opt ? "Correct Answer" : "Set Correct"}
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 

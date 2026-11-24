@@ -148,18 +148,30 @@ ${blueprintSummary ? `QUESTION FORMAT SPECIFICATION:\nFollow this blueprint form
 MATHEMATICAL & SCIENTIFIC FORMATTING RULES:
 - Put every mathematical, physics, chemistry, and biology formula inside LaTeX delimiters: use $...$ for inline formulas and $$...$$ for displayed formulas.
 - MATRICES & DETERMINANTS (CRITICAL):
-  - Always write matrices with standard LaTeX matrix environments: $\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}$, $\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$, or $\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}$.
+  - Always write matrices with standard LaTeX matrix environments: $\begin{bmatrix} a & b \\ c & d \end{bmatrix}$, $\begin{pmatrix} a & b \\ c & d \end{pmatrix}$, or $\begin{vmatrix} a & b \\ c & d \end{vmatrix}$.
   - Use double backslashes for row breaks in the matrix (e.g. \\\\).
   - In the JSON output, escape all backslashes properly so row separation is written as double backslashes in JSON strings.
   - Never collapse matrix rows into a single row.
-- Physics formulas must preserve vectors, cross/dot products, units, tensors, angles, constants, signs, powers, subscripts, and scientific notation: $\\vec{v}$, $\\vec{\\tau} = \\vec{r} \\times \\vec{F}$, $\\Delta x$, $\\theta$, $\\omega$, $9.8\\,\\mathrm{m\\,s^{-2}}$, $6.02\\times10^{23}$.
-- Chemistry formulas must preserve subscripts, superscript charges, oxidation states, equilibrium arrows, states, and conditions: $2\\mathrm{H_2}+\\mathrm{O_2}\\rightarrow2\\mathrm{H_2O}$, $\\mathrm{SO_4^{2-}}$, $\\mathrm{NH_4^+}$, $\\rightleftharpoons$, $\\xrightarrow{\\Delta}$.
-- Biology formulas and genetics notation must use LaTeX too: $p^2+2pq+q^2=1$, $\\mathrm{Aa}\\times\\mathrm{Aa}$, $\\mathrm{ATP}\\rightarrow\\mathrm{ADP}+\\mathrm{P_i}$.
-- Never write raw Unicode replacement characters or programming escape sequences for formulas. Never remove backslashes from LaTeX commands.
+- PHYSICS QUESTION & ANSWER FORMAT (CRITICAL):
+  - Always state given numerical values clearly with appropriate SI or CGS units inside LaTeX: e.g. $m = 2.5\,\mathrm{kg}$, $v = 12\,\mathrm{m/s}$, $B = 0.4\,\mathrm{T}$, $\lambda = 589\,\mathrm{nm}$, $T = 300\,\mathrm{K}$.
+  - State any fundamental constants or assumptions (e.g. $g = 9.8\,\mathrm{m/s^2}$, $c = 3\times10^8\,\mathrm{m/s}$, $\varepsilon_0 = 8.85\times10^{-12}\,\mathrm{F/m}$, frictionless surface, ideal gas).
+  - Preserve all vector arrows ($\vec{v}$, $\vec{F}$, $\vec{E}$, $\vec{B}$), unit vectors ($\hat{i}, \hat{j}, \hat{k}$), dot/cross products ($\vec{\tau} = \vec{r}\times\vec{F}$), tensors, angles ($\theta = 30^\circ$, $\phi$), powers, and scientific notation ($6.626\times10^{-34}\,\mathrm{J\cdot s}$).
+  - All options for numerical/physics questions MUST include explicit physical units ($...$).
+  - The "explanation" MUST provide:
+    1. Given parameters & target variable
+    2. Formula / principle applied (e.g. Bernoulli equation, Gauss's law, Faraday's law)
+    3. Step-by-step mathematical substitution & derivation
+    4. Concluding answer with units matching the correct option.
+- CHEMISTRY QUESTION & ANSWER FORMAT (CRITICAL):
+  - Use standard chemical notation or \ce{...} for all chemical species and balanced chemical equations: e.g. $\ce{2H2 + O2 -> 2H2O}$, $\ce{CaCO3 ->[\Delta] CaO + CO2}$, $\ce{N2(g) + 3H2(g) <=> 2NH3(g)}$.
+  - Explicitly preserve all chemical subscripts, superscripts, ionic charges, oxidation states, and coordination complexes: e.g. $\ce{H2SO4}$, $\ce{SO4^{2-}}$, $\ce{Fe^{3+}}$, $\ce{KMnO4}$, $\ce{[Fe(CN)6]^{4-}}$, $\ce{[Co(NH3)6]^{3+}}$, $\ce{Cr2O7^{2-}}$.
+  - In organic chemistry, state complete IUPAC nomenclature, reaction reagents (e.g. $\ce{LiAlH4}$, $\ce{PCC}$, $\ce{NaBH4}$, $\ce{HBr/ROOR}$), and clear intermediate / major product names.
+  - In physical chemistry (thermodynamics, electrochemistry, kinetics), state temperature ($T = 298\,\mathrm{K}$), pressure, cell notation (e.g. $\ce{Zn|Zn^{2+}(1M)||Cu^{2+}(1M)|Cu}$), standard reduction potentials ($E^\circ$), rate constants ($k$), and half-life ($t_{1/2}$).
+  - The "explanation" MUST explain the chemical principle, reaction mechanism, stoichiometric coefficients, or electronic configuration step-by-step.
 - Options must be distinct, plausible choices (labeled without "A)" prefixes, just the clear option text).
-- "correctAnswer" must match one of the options EXACTLY.
+- "correctAnswer" must match one of the options EXACTLY (or an array of correct letters like ["A", "C"] for multi-correct).
 - "explanation" must provide a thorough step-by-step solution, the formula used, and derivation with full LaTeX formatting.
-- CRITICAL JSON ESCAPING: In the JSON output, escape all LaTeX backslashes properly (e.g. write "\\alpha", "\\frac{a}{b}", "\\vec{v}", "\\theta", "\\Delta", "\\begin{bmatrix}..." with escaped backslashes in JSON strings).
+- CRITICAL JSON ESCAPING: In the JSON output, escape all LaTeX backslashes properly (e.g. write "\\alpha", "\\frac{a}{b}", "\\vec{v}", "\\theta", "\\Delta", "\\ce{...}", "\\begin{bmatrix}..." with escaped backslashes in JSON strings).
 
 OUTPUT FORMAT:
 Return ONLY a valid JSON array of question objects (no markdown code blocks, no intro, no extra text).
@@ -257,10 +269,19 @@ The "questionText" must start with "True or False: " followed by a clear concept
 The "options" array MUST be exactly ["True", "False"].
 "correctAnswer" MUST be either "True" or "False".`,
 
+      mcq_multi: `CRITICAL FORMAT REQUIREMENT (MULTIPLE CORRECT OPTIONS):
+All questions in this batch MUST be Multiple Choice with One or More than One Correct Options ("questionFormat": "mcq_multi").
+Provide exactly 4 distinct, plausible answer choices in the "options" array (index 0 = Option A, index 1 = Option B, index 2 = Option C, index 3 = Option D).
+Between 1 and 4 options can be correct (typically 2 or 3 correct options).
+"correctAnswer" MUST be an array of letters corresponding to all correct options, e.g. ["A", "C"] or ["A", "B", "D"] or ["B", "C"].
+"explanation" MUST explicitly verify and discuss EACH of the four options (A, B, C, D) one by one, explaining why each is correct or incorrect.`,
+
       mcq_multiple: `CRITICAL FORMAT REQUIREMENT (MULTIPLE CORRECT OPTIONS):
-All questions in this batch MUST be Multiple Choice with One or More than One Correct Options ("questionFormat": "mcq_multiple").
-Provide 4 distinct answer choices in the "options" array (A, B, C, D).
-"correctAnswer" MUST list the correct option combinations (e.g. "(A) and (C) only" or the exact matching text).`,
+All questions in this batch MUST be Multiple Choice with One or More than One Correct Options ("questionFormat": "mcq_multi").
+Provide exactly 4 distinct, plausible answer choices in the "options" array (index 0 = Option A, index 1 = Option B, index 2 = Option C, index 3 = Option D).
+Between 1 and 4 options can be correct (typically 2 or 3 correct options).
+"correctAnswer" MUST be an array of letters corresponding to all correct options, e.g. ["A", "C"] or ["A", "B", "D"].
+"explanation" MUST explicitly verify and discuss EACH of the four options (A, B, C, D) one by one.`,
 
       match_following: `CRITICAL FORMAT REQUIREMENT:
 All questions in this batch MUST be Match the Following questions ("questionFormat": "match_following").
@@ -511,6 +532,15 @@ Return raw JSON array ONLY.`
           questionText.includes("______")
         )
 
+      const isMulti =
+        !isDescriptive && !isTF && !isAR && !isDiagram && !isFIB && (
+          forcedFormat === "mcq_multi" ||
+          forcedFormat === "mcq_multiple" ||
+          rawFormat === "mcq_multi" ||
+          rawFormat === "mcq_multiple" ||
+          (Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1)
+        )
+
       const formatType = isDescriptive
         ? "descriptive"
         : isTF
@@ -521,10 +551,12 @@ Return raw JSON array ONLY.`
         ? "diagram"
         : isFIB
         ? "fib"
+        : isMulti
+        ? "mcq_multi"
         : "mcq"
 
       let options: string[] = []
-      let correctAnswer = ""
+      let correctAnswer: any = ""
 
       if (formatType === "descriptive") {
         options = []
@@ -537,6 +569,54 @@ Return raw JSON array ONLY.`
         } else {
           correctAnswer = "True"
         }
+      } else if (formatType === "mcq_multi") {
+        options = Array.isArray(q.options) && q.options.length >= 4
+          ? q.options.slice(0, 4).map(normalizeGeneratedText)
+          : Array.isArray(q.options) && q.options.length > 0
+          ? q.options.map(normalizeGeneratedText)
+          : ["Option A", "Option B", "Option C", "Option D"]
+
+        while (options.length < 4) {
+          options.push(`Option ${String.fromCharCode(65 + options.length)}`)
+        }
+
+        // Parse multiple correct choices
+        let multiCorrect: string[] = []
+        if (Array.isArray(q.correctAnswer)) {
+          multiCorrect = q.correctAnswer.map((a: any) => String(a).trim()).filter(Boolean)
+        } else if (typeof q.correctAnswer === "string") {
+          const raw = q.correctAnswer.trim()
+          if (raw.startsWith("[") && raw.endsWith("]")) {
+            try {
+              const p = JSON.parse(raw)
+              if (Array.isArray(p)) multiCorrect = p.map((a: any) => String(a).trim()).filter(Boolean)
+            } catch {}
+          }
+          if (multiCorrect.length === 0) {
+            const letterMatches = raw.match(/\b([A-D])\b/g)
+            if (letterMatches && letterMatches.length > 0) {
+              multiCorrect = Array.from(new Set(letterMatches))
+            } else {
+              multiCorrect = raw.split(/,|\band\b|&/i).map((s: string) => s.trim()).filter(Boolean)
+            }
+          }
+        }
+
+        const normalizedLetters: string[] = []
+        for (const item of multiCorrect) {
+          const clean = item.replace(/[\(\)\[\]]/g, "").replace(/^option\s*/i, "").trim().toUpperCase()
+          if (["A", "B", "C", "D"].includes(clean)) {
+            if (!normalizedLetters.includes(clean)) normalizedLetters.push(clean)
+          } else {
+            const optIdx = options.findIndex(o => o.toLowerCase() === item.toLowerCase())
+            if (optIdx >= 0) {
+              const letCode = String.fromCharCode(65 + optIdx)
+              if (!normalizedLetters.includes(letCode)) normalizedLetters.push(letCode)
+            }
+          }
+        }
+
+        correctAnswer = normalizedLetters.length > 0 ? normalizedLetters : ["A", "C"]
       } else {
         options = Array.isArray(q.options) && q.options.length >= 4
           ? q.options.slice(0, 4).map(normalizeGeneratedText)

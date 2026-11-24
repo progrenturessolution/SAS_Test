@@ -47,7 +47,7 @@ export interface GeneratedCompetitiveQuestion {
   marks: number
   negativeMark: number
   options: string[]
-  correctAnswer: string
+  correctAnswer: string | string[]
   explanation: string
   chapter: string
   pyqReference?: string
@@ -95,7 +95,7 @@ export function CompetitiveExamAIGenerator({
   // Blueprint settings
   const [questionCount, setQuestionCount] = useState<number>(5)
   const [difficulty, setDifficulty] = useState<"balanced" | "easy" | "medium" | "hard">("balanced")
-  const [pattern, setPattern] = useState<"mcq_single" | "diagram_based" | "assertion_reason" | "mixed">("mixed")
+  const [pattern, setPattern] = useState<"mcq_single" | "mcq_multi" | "diagram_based" | "assertion_reason" | "mixed">("mixed")
 
   // ─── Generation & Review States ───
   const [isGenerating, setIsGenerating] = useState(false)
@@ -968,6 +968,7 @@ export function CompetitiveExamAIGenerator({
                     <option value="mixed">Mixed Comprehensive Pattern (with Diagrams)</option>
                     <option value="diagram_based">Diagram / Visual Based (Circuits, Optics, Graphs, Anatomy)</option>
                     <option value="mcq_single">Single Choice MCQ (4 Options)</option>
+                    <option value="mcq_multi">Multiple Correct MCQ (One or More Correct)</option>
                     <option value="assertion_reason">Assertion & Reason Pattern</option>
                   </select>
                 </div>
@@ -1144,8 +1145,10 @@ export function CompetitiveExamAIGenerator({
                       {/* 4 Options Grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pl-6 mb-3">
                         {q.options.map((opt, optIdx) => {
-                          const isCorrect = opt === q.correctAnswer
                           const optLabel = ["A", "B", "C", "D"][optIdx] || `${optIdx + 1}`
+                          const isCorrect = Array.isArray(q.correctAnswer)
+                            ? (q.correctAnswer.includes(optLabel) || q.correctAnswer.some(a => String(a).trim().toLowerCase() === opt.trim().toLowerCase()))
+                            : (opt === q.correctAnswer || q.correctAnswer === optLabel || String(q.correctAnswer).trim().toLowerCase() === opt.trim().toLowerCase())
 
                           return (
                             <div
@@ -1281,43 +1284,56 @@ export function CompetitiveExamAIGenerator({
               <label className="text-xs font-semibold text-[#324158] block">
                 Options & Correct Answer
               </label>
-              {editingQuestion.options.map((opt, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="w-6 text-xs font-bold text-gray-500">
-                    {["A", "B", "C", "D"][i]}:
-                  </span>
-                  <input
-                    type="text"
-                    value={opt}
-                    onChange={(e) => {
-                      const newOpts = [...editingQuestion.options]
-                      newOpts[i] = e.target.value
-                      setEditingQuestion({
-                        ...editingQuestion,
-                        options: newOpts,
-                        correctAnswer:
-                          editingQuestion.correctAnswer === opt
-                            ? e.target.value
-                            : editingQuestion.correctAnswer,
-                      })
-                    }}
-                    className="flex-1 p-2 text-xs rounded-lg border border-gray-200 bg-white text-gray-800 font-mono focus:outline-none focus:border-[#2D3A4A]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditingQuestion({ ...editingQuestion, correctAnswer: opt })
-                    }
-                    className={`px-2.5 py-1 text-xs rounded-md font-semibold cursor-pointer ${
-                      editingQuestion.correctAnswer === opt
-                        ? "bg-emerald-600 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    {editingQuestion.correctAnswer === opt ? "Correct" : "Set Correct"}
-                  </button>
-                </div>
-              ))}
+              {(editingQuestion.options || []).map((opt, i) => {
+                const optLabel = ["A", "B", "C", "D"][i] || `${i + 1}`
+                const isMulti = editingQuestion.questionFormat === "mcq_multi" || (Array.isArray(editingQuestion.correctAnswer) && editingQuestion.correctAnswer.length > 1)
+                const isOptSelected = Array.isArray(editingQuestion.correctAnswer)
+                  ? (editingQuestion.correctAnswer.includes(optLabel) || editingQuestion.correctAnswer.includes(opt))
+                  : (editingQuestion.correctAnswer === opt || editingQuestion.correctAnswer === optLabel)
+
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-6 text-xs font-bold text-gray-500">
+                      {optLabel}:
+                    </span>
+                    <input
+                      type="text"
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...editingQuestion.options]
+                        newOpts[i] = e.target.value
+                        setEditingQuestion({
+                          ...editingQuestion,
+                          options: newOpts,
+                        })
+                      }}
+                      className="flex-1 p-2 text-xs rounded-lg border border-gray-200 bg-white text-gray-800 font-mono focus:outline-none focus:border-[#2D3A4A]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isMulti) {
+                          const cur = Array.isArray(editingQuestion.correctAnswer)
+                            ? [...editingQuestion.correctAnswer]
+                            : [String(editingQuestion.correctAnswer || "A")]
+                          const exists = cur.includes(optLabel) || cur.includes(opt)
+                          const next = exists ? cur.filter(x => x !== optLabel && x !== opt) : [...cur, optLabel]
+                          setEditingQuestion({ ...editingQuestion, correctAnswer: next.length > 0 ? next : [optLabel] })
+                        } else {
+                          setEditingQuestion({ ...editingQuestion, correctAnswer: optLabel })
+                        }
+                      }}
+                      className={`px-2.5 py-1 text-xs rounded-md font-semibold cursor-pointer ${
+                        isOptSelected
+                          ? "bg-emerald-600 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      {isOptSelected ? "Correct" : "Set Correct"}
+                    </button>
+                  </div>
+                )
+              })}
             </div>
 
             <div>

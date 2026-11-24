@@ -3,6 +3,7 @@
 import React, { memo } from "react"
 import katex from "katex"
 import "katex/dist/katex.min.css"
+import "katex/dist/contrib/mhchem.min.js"
 
 interface MathRendererProps {
   content: string
@@ -19,10 +20,10 @@ function normalizeFormulaText(value: string): string {
     .replace(/\\\[|\\\]/g, "$$")
 }
 
-const MATH_REGEX = /(\$\$[\s\S]*?\$\$|\$(?!\$)[\s\S]+?\$|\\begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|array)\}[\s\S]*?\\end\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|array)\})/g
+const MATH_REGEX = /(\$\$[\s\S]*?\$\$|\$(?!\$)[\s\S]+?\$|\\ce\{[\s\S]*?\}|\\begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|array)\}[\s\S]*?\\end\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|array)\})/g
 
 function isStandaloneFormula(value: string): boolean {
-  return /^[-+]?\\(?:frac|sqrt|dfrac|tfrac|binom|text|mathrm|mathbf|vec|hat|bar|sin|cos|tan|log|ln|lim|sum|int|prod|left|right|times|cdot|pm|leq?|geq?|neq|approx|infty|alpha|beta|gamma|delta|Delta|theta|lambda|mu|pi|rho|sigma|phi|omega|rightarrow|leftarrow|begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|cases))\b/.test(
+  return /^[-+]?\\(?:ce|frac|sqrt|dfrac|tfrac|binom|text|mathrm|mathbf|vec|hat|bar|sin|cos|tan|log|ln|lim|sum|int|prod|left|right|times|cdot|pm|leq?|geq?|neq|approx|infty|alpha|beta|gamma|delta|Delta|theta|lambda|mu|pi|rho|sigma|phi|omega|rightarrow|leftarrow|rightleftharpoons|xrightarrow|xleftarrow|begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|cases))\b/.test(
     value.trim()
   )
 }
@@ -41,7 +42,7 @@ function renderFormula(formula: string, displayMode: boolean): string {
       displayMode,
       throwOnError: false,
       strict: "ignore",
-      trust: false,
+      trust: true,
     })
   } catch {
     html = trimmed
@@ -76,6 +77,19 @@ export const MathRenderer = memo(function MathRenderer({ content, className = ""
               className="my-3 overflow-x-auto rounded-xl bg-slate-50/80 border border-slate-200/60 px-4 py-2 text-center shadow-2xs dark:bg-white/5"
               dangerouslySetInnerHTML={{
                 __html: renderFormula(part.slice(2, -2), true),
+              }}
+            />
+          )
+        }
+
+        // Inline chemistry: \ce{ ... }
+        if (part.startsWith("\\ce{") && part.endsWith("}")) {
+          return (
+            <span
+              key={index}
+              className="inline text-slate-900 dark:text-slate-100 align-baseline"
+              dangerouslySetInnerHTML={{
+                __html: renderFormula(part, false),
               }}
             />
           )

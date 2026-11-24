@@ -15,7 +15,7 @@ export interface GeneratedCompetitiveQuestion {
   marks: number
   negativeMark: number
   options: string[]
-  correctAnswer: string
+  correctAnswer: string | string[]
   explanation: string
   chapter: string
   pyqReference?: string
@@ -124,10 +124,14 @@ export function PrintableExamPaper({
   const checkIsCorrect = (
     opt: string,
     index: number,
-    correctAnswer: string,
+    correctAnswer: string | string[],
     isTF: boolean
   ): boolean => {
     if (!correctAnswer) return false
+    if (Array.isArray(correctAnswer)) {
+      const letter = ["A", "B", "C", "D"][index]
+      return correctAnswer.includes(letter) || correctAnswer.some(c => c.trim().toLowerCase() === opt.trim().toLowerCase())
+    }
     if (isTF) {
       const isFalse =
         String(correctAnswer).toLowerCase().includes("false") || correctAnswer === "Option B"
@@ -143,6 +147,9 @@ export function PrintableExamPaper({
 
   const getCorrectAnswerLabel = (q: GeneratedCompetitiveQuestion): string => {
     const qFormat = getQuestionFormat(q)
+    if (Array.isArray(q.correctAnswer)) {
+      return q.correctAnswer.map(c => `(${c.trim().toUpperCase()})`).join(", ")
+    }
     const isTF = qFormat === "true_false"
     if (isTF) {
       const isFalse =

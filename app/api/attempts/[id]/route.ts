@@ -110,43 +110,105 @@ Return ONLY a valid JSON object matching this schema:
   }
 }
 
+function normalizeOptionToken(val: string): string {
+  return val
+    .trim()
+    .replace(/^[\(\[\{]/, "")
+    .replace(/[\)\]\}]$/, "")
+    .replace(/^option\s*/i, "")
+    .replace(/^[a-d]\s*[\)\.\-:]\s*/i, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+}
+
+function resolveOptionIndex(val: string, options?: string[]): number {
+  const trimmed = val.trim()
+  const clean = trimmed
+    .replace(/^[\(\[\{]/, "")
+    .replace(/[\)\]\}]$/, "")
+    .replace(/^option\s*/i, "")
+    .trim()
+
+  if (/^[a-d]$/i.test(clean)) {
+    return clean.toUpperCase().charCodeAt(0) - 65
+  }
+
+  const num = Number(clean)
+  if (Number.isInteger(num)) {
+    if (num >= 0 && (!options || num < options.length)) return num
+    if (num >= 1 && options && num <= options.length) return num - 1
+  }
+
+  if (options && options.length > 0) {
+    const norm = normalizeOptionToken(trimmed)
+    const idx = options.findIndex(o => normalizeOptionToken(o) === norm)
+    if (idx >= 0) return idx
+  }
+
+  return -1
+}
+
+function parseTokens(val: unknown, options?: string[]): number[] {
+  if (val === undefined || val === null) return []
+  let rawItems: string[] = []
+  if (Array.isArray(val)) {
+    rawItems = val.map(v => String(v).trim()).filter(Boolean)
+  } else if (typeof val === "string") {
+    const s = val.trim()
+    if (s.startsWith("[") && s.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(s)
+        if (Array.isArray(parsed)) rawItems = parsed.map(v => String(v).trim()).filter(Boolean)
+      } catch {}
+    }
+    if (rawItems.length === 0) {
+      rawItems = s.split(/,|\band\b|&/i).map(x => x.trim()).filter(Boolean)
+    }
+  }
+
+  const indices = new Set<number>()
+  for (const item of rawItems) {
+    const idx = resolveOptionIndex(item, options)
+    if (idx >= 0) indices.add(idx)
+  }
+  return Array.from(indices).sort((a, b) => a - b)
+}
+
 function answersMatch(
   studentAnswer: string | string[],
   correctAnswer: string | string[] | undefined,
   options?: string[]
-) {
+): boolean {
+  if (studentAnswer === undefined || correctAnswer === undefined) return false
+
+  const isMulti =
+    Array.isArray(correctAnswer) ||
+    (typeof correctAnswer === "string" && (correctAnswer.includes(",") || /\band\b/i.test(correctAnswer))) ||
+    Array.isArray(studentAnswer) ||
+    (typeof studentAnswer === "string" && (studentAnswer.includes(",") || /\band\b/i.test(studentAnswer)))
+
+  if (isMulti) {
+    const studentIndices = parseTokens(studentAnswer, options)
+    const correctIndices = parseTokens(correctAnswer, options)
+
+    if (studentIndices.length > 0 && correctIndices.length > 0) {
+      if (studentIndices.length !== correctIndices.length) return false
+      return studentIndices.every((val, i) => val === correctIndices[i])
+    }
+  }
+
+  // Single answer comparison
   const student = Array.isArray(studentAnswer) ? studentAnswer[0] : studentAnswer
   const correct = Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer
   if (student === undefined || correct === undefined) return false
 
-  const normalize = (value: string) => value
-    .trim()
-    .replace(/^[a-z]\s*[\)\.\-:]\s*/i, "")
-    .replace(/\s+/g, " ")
-    .toLowerCase()
-  if (normalize(student) === normalize(correct)) return true
+  const sNorm = normalizeOptionToken(student)
+  const cNorm = normalizeOptionToken(correct)
+  if (sNorm && cNorm && sNorm === cNorm) return true
 
-  if (options?.length) {
-    const optionIndex = (value: string) => {
-      const normalized = value.trim()
-      if (/^[a-z]$/i.test(normalized)) {
-        const index = normalized.toUpperCase().charCodeAt(0) - 65
-        return index >= 0 && index < options.length ? index : -1
-      }
-      const numericIndex = Number(normalized)
-      if (Number.isInteger(numericIndex)) {
-        if (numericIndex >= 0 && numericIndex < options.length) return numericIndex
-        if (numericIndex >= 1 && numericIndex <= options.length) return numericIndex - 1
-      }
-      return options.findIndex(option => normalize(option) === normalize(value))
-    }
-
-    const studentIndex = optionIndex(student)
-    const correctIndex = optionIndex(correct)
-    return studentIndex >= 0 && studentIndex === correctIndex
-  }
-
-  return false
+  const sIdx = resolveOptionIndex(student, options)
+  const cIdx = resolveOptionIndex(correct, options)
+  return sIdx >= 0 && sIdx === cIdx
 }
 
 // GET /api/attempts/[id]
@@ -309,13 +371,41 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           let isCorrect = false;
           let earnedMarks = 0;
 
-          if (q.type === "mcq" || q.type === "truefalse" || q.type === "assertion") {
-            const correct = Array.isArray(q.correctAnswer)
-              ? q.correctAnswer[0]
-              : q.correctAnswer
-            if (answersMatch(studentAnswer.answer, correct, (q.type === "mcq" || q.type === "assertion") ? q.options : undefined)) {
-              isCorrect = true;
-              earnedMarks = q.marks;
+          if (q.type === "mcq" || (q as any).type === "mcq_multi" || q.type === "truefalse" || q.type === "assertion") {
+            const isMulti =
+              (q as any).type === "mcq_multi" ||
+              (q as any).questionFormat === "mcq_multi" ||
+              (q as any).questionFormat === "mcq_multiple" ||
+              (Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1)
+
+            if (isMulti) {
+              const studentIndices = parseTokens(studentAnswer.answer, q.options)
+              const correctIndices = parseTokens(q.correctAnswer, q.options)
+
+              const hasWrong = studentIndices.some(idx => !correctIndices.includes(idx))
+              const isExact = studentIndices.length > 0 &&
+                studentIndices.length === correctIndices.length &&
+                studentIndices.every((idx, i) => idx === correctIndices[i])
+
+              if (isExact) {
+                isCorrect = true
+                earnedMarks = q.marks
+              } else if (!hasWrong && studentIndices.length > 0 && correctIndices.length > 0) {
+                // Partial credit for selecting subset of correct options with zero wrong options
+                isCorrect = false
+                earnedMarks = Math.round((studentIndices.length / correctIndices.length) * q.marks * 10) / 10
+              } else {
+                isCorrect = false
+                earnedMarks = 0
+              }
+            } else {
+              const correct = Array.isArray(q.correctAnswer)
+                ? q.correctAnswer[0]
+                : q.correctAnswer
+              if (answersMatch(studentAnswer.answer, correct, (q.type === "mcq" || q.type === "assertion") ? q.options : undefined)) {
+                isCorrect = true;
+                earnedMarks = q.marks;
+              }
             }
           } else if (q.type === "fillblanks" && q.blanks) {
             const studentAnswers = Array.isArray(studentAnswer.answer)
