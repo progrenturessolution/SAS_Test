@@ -205,10 +205,9 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
   const instructions = exam.instructions?.length
     ? exam.instructions
     : [
-        "Read each question carefully before answering. All questions are compulsory.",
-        "Do not refresh or close the browser during the exam. Your progress is auto-saved.",
-        "You can navigate between questions using the question palette on the right.",
-        'Click "Submit Exam" only when you have completed all questions.',
+        "Read all questions carefully before answering.",
+        "Do not switch tabs or exit the exam screen during the test.",
+        "Ensure you have completed all required questions before finishing the exam.",
       ]
 
   return (

@@ -2136,8 +2136,8 @@ function Step1({
 }) {
   const defaultInstructions = [
     "Read all questions carefully before answering.",
-    "Ensure you have a stable internet connection throughout the exam.",
-    "Do not switch tabs or exit fullscreen mode during the examination.",
+    "Do not switch tabs or exit the exam screen during the test.",
+    "Ensure you have completed all required questions before finishing the exam.",
   ]
 
   const instructionsList = form.instructions && form.instructions.trim().length > 0
@@ -4469,7 +4469,9 @@ export default function ExamWizard({ editId }: { editId?: string } = {}) {
 
   const [step1, setStep1] = useState<Step1Form>({
     title: "", examType: "CUSTOM", duration: "60",
-    passMarks: "40", totalMarks: "100", instructions: "", questionsPerMin: ""
+    passMarks: "40", totalMarks: "100",
+    instructions: "Read all questions carefully before answering.\nDo not switch tabs or exit the exam screen during the test.\nEnsure you have completed all required questions before finishing the exam.",
+    questionsPerMin: ""
   })
   const [step2, setStep2] = useState<Step2Form>({
     startDate: "", startTime: "", endDate: "", endTime: "",

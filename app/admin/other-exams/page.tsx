@@ -402,9 +402,9 @@ function OtherExamsContent() {
   const [examTotalMarks, setExamTotalMarks] = useState<number>(0)
   const [questionsPerMinute, setQuestionsPerMinute] = useState("")
   const [instructionsList, setInstructionsList] = useState<string[]>([
-    "Each question has only one correct option unless specified.",
-    "Negative marking applies for incorrect attempts.",
-    "Do not switch tabs or exit fullscreen mode during the examination.",
+    "Read all questions carefully before answering.",
+    "Do not switch tabs or exit the exam screen during the test.",
+    "Ensure you have completed all required questions before finishing the exam.",
   ])
 
   // Step 6: Settings & Proctoring
@@ -1192,8 +1192,16 @@ function OtherExamsContent() {
           questionsPerMin: questionsPerMinute ? Number(questionsPerMinute) : undefined,
           totalMarks: examTotalMarks || totalCalculatedMarks,
           passMarks: passMarks || Math.round((examTotalMarks || totalCalculatedMarks) * 0.4),
-          description: instructionsList.join("\n"),
-          instructions: instructionsList,
+          description: (instructionsList && instructionsList.length > 0 ? instructionsList : [
+            "Read all questions carefully before answering.",
+            "Do not switch tabs or exit the exam screen during the test.",
+            "Ensure you have completed all required questions before finishing the exam.",
+          ]).join("\n"),
+          instructions: instructionsList && instructionsList.length > 0 ? instructionsList : [
+            "Read all questions carefully before answering.",
+            "Do not switch tabs or exit the exam screen during the test.",
+            "Ensure you have completed all required questions before finishing the exam.",
+          ],
           sections,
           proctoring: {
             enabled: proctoringSettings.faceDetection || proctoringSettings.tabSwitchPrevention || proctoringSettings.enforceFullscreen || proctoringSettings.aiStatusAnalysis,

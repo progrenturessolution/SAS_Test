@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, use, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Editor from "@monaco-editor/react"
 import { ExamHeader, ProctoringCamera, QuestionStatus, statusColorMap, ProcrentureLogo } from "@/components/exam/ExamShared"
-import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft, ChevronRight, Sparkles, LayoutGrid, Layers, ArrowRight, HelpCircle, BookOpen, Calculator, CheckSquare, Check } from "lucide-react"
+import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft, ChevronRight, Sparkles, LayoutGrid, Layers, ArrowRight, HelpCircle, BookOpen, Calculator, CheckSquare, Check, X } from "lucide-react"
 import { ScientificCalculator } from "@/components/exam/ScientificCalculator"
 import { ProctoringWarning } from "@/components/exam/ProctoringWarning"
 import { useProctoring } from "@/hooks/use-proctoring"
@@ -300,6 +300,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false) // Mobile sidebar toggle
   const [showCalculator, setShowCalculator] = useState(false)
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false)
   const instituteThemeColor = exam?.institute?.themeColor || "#2D3A4A"
 
   // Sync theme color with CSS variable
@@ -1205,12 +1206,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     if (!isStarted) {
     const isFaceDetectionEnabled = exam?.settings?.proctoring?.faceDetection ?? exam?.proctoring?.faceDetection;
     const rules = exam.instructions?.length ? exam.instructions : [
-      "The exam consists of multiple-choice questions. Each question carries equal marks unless otherwise specified.",
-      "You can navigate between questions using the Previous and Next buttons. Questions can be answered in any order.",
-      'Use the "Mark for Review" feature to flag questions you want to revisit before final submission.',
-      "The timer will be displayed on the screen. Once time expires, your answers will be automatically submitted.",
-      "A virtual calculator is available at the top of the screen during the examination.",
-      "Review your answers carefully before clicking the Submit button. Once submitted, you cannot change your answers."
+      "Read all questions carefully before answering.",
+      "Do not switch tabs or exit the exam screen during the test.",
+      "Ensure you have completed all required questions before finishing the exam.",
     ];
 
     return (
@@ -1586,6 +1584,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             studentName={studentName}
             rollNo={studentRoll}
             onToggleCalculator={isCalculatorAllowed ? () => setShowCalculator(p => !p) : undefined}
+            onToggleInstructions={() => setShowInstructionsModal(p => !p)}
             warningCount={procState.warnings}
             maxWarnings={exam.settings?.proctoring?.maxWarnings ?? exam.proctoring?.maxWarnings ?? 3}
             endTimeLabel={endTimeLabel}
@@ -2452,6 +2451,54 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           isOpen={showCalculator}
           onClose={() => setShowCalculator(false)}
         />
+      )}
+      {/* Exam Instructions Modal */}
+      {showInstructionsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 border border-slate-200 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">Exam Instructions</h3>
+                  <p className="text-xs text-slate-400">Rules &amp; guidelines for this examination</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInstructionsModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+              {(exam.instructions?.length ? exam.instructions : [
+                "Read all questions carefully before answering.",
+                "Do not switch tabs or exit the exam screen during the test.",
+                "Ensure you have completed all required questions before finishing the exam.",
+              ]).map((inst, idx) => (
+                <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="w-6 h-6 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs">
+                    {idx + 1}
+                  </span>
+                  <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed pt-0.5">{inst}</p>
+                </div>
+              ))}
+            </div>
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowInstructionsModal(false)}
+                className="px-5 py-2 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-semibold transition-colors cursor-pointer shadow-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {/* Micro-notification toasts */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none text-right">

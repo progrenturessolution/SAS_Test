@@ -200,6 +200,17 @@ export async function POST(req: Request) {
       }
     }
     
+    if (!examData.instructions || !Array.isArray(examData.instructions) || examData.instructions.length === 0) {
+      examData.instructions = [
+        "Read all questions carefully before answering.",
+        "Do not switch tabs or exit the exam screen during the test.",
+        "Ensure you have completed all required questions before finishing the exam.",
+      ]
+      if (!examData.description) {
+        examData.description = examData.instructions.join("\n")
+      }
+    }
+
     const exam = await Exam.create({
       ...examData,
       createdBy: session.id,

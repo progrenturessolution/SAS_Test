@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Clock, Camera, CheckCircle2, Calculator } from "lucide-react"
+import { Clock, Camera, CheckCircle2, Calculator, FileText } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import * as faceDetection from "@mediapipe/face_detection"
 import * as cocoSsd from "@tensorflow-models/coco-ssd"
@@ -64,6 +64,7 @@ interface ExamHeaderProps {
   rollNo: string
   onSubmit?: () => void
   onToggleCalculator?: () => void
+  onToggleInstructions?: () => void
   warningCount?: number
   maxWarnings?: number
   endTimeLabel?: string
@@ -81,6 +82,7 @@ export function ExamHeader({
   rollNo,
   onSubmit,
   onToggleCalculator,
+  onToggleInstructions,
   warningCount = 0,
   maxWarnings = 3,
   endTimeLabel,
@@ -159,6 +161,17 @@ export function ExamHeader({
 
       {/* Right section: Profile and Stats */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        {onToggleInstructions && (
+          <button
+            type="button"
+            onClick={onToggleInstructions}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#324158] text-xs font-bold shadow-2xs transition-colors cursor-pointer shrink-0"
+            title="View Exam Instructions"
+          >
+            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#324158]" />
+            <span className="hidden sm:inline">Instructions</span>
+          </button>
+        )}
         {onToggleCalculator && (
           <button
             type="button"

@@ -549,10 +549,9 @@ function AIGeneratorContent() {
   const [passMarks, setPassMarks] = useState<number>(80)
   const [questionsPerMinute, setQuestionsPerMinute] = useState<string>("")
   const [instructions, setInstructions] = useState<string[]>([
-    "Read each question carefully before submitting your answer.",
-    "Each question carries 2 marks.",
-    "No negative marking applicable.",
-    "Formulas and chemical reactions are formatted with scientific standard LaTeX notation.",
+    "Read all questions carefully before answering.",
+    "Do not switch tabs or exit the exam screen during the test.",
+    "Ensure you have completed all required questions before finishing the exam.",
   ])
 
   // Step 5: Schedule & Settings States
@@ -2077,12 +2076,9 @@ function AIGeneratorContent() {
       const endDateTime = new Date(ey, em - 1, ed, eh ?? 23, emin ?? 59, 59, 999)
 
       const finalInstructions = instructions && instructions.length > 0 ? instructions : [
-        "Read each question carefully before submitting your answer.",
-        `Each question carries ${currentExamMeta.defaultMarksPerQuestion} marks.`,
-        negativeMarkingEnabled
-          ? `Negative marking: -${negativeMarkPenalty} marks will be deducted for each incorrect response.`
-          : "No negative marking applicable.",
-        "Formulas and chemical reactions are formatted with scientific standard LaTeX notation.",
+        "Read all questions carefully before answering.",
+        "Do not switch tabs or exit the exam screen during the test.",
+        "Ensure you have completed all required questions before finishing the exam.",
       ]
 
       const isNegativeEnabled = negativeMarkingEnabled
@@ -4922,16 +4918,19 @@ function AIGeneratorContent() {
                       onClick={() => {
                         if (isGenerating) return
                         setInstructions((prev) => {
-                          const negText = negativeMarkingEnabled
-                            ? `Negative marking: -${negativeMarkPenalty} marks will be deducted for each incorrect response.`
-                            : "No negative marking applicable."
-                          const filtered = prev.filter((i) => !i.toLowerCase().includes("negative marking"))
-                          return [
-                            filtered[0] || "Read each question carefully before submitting your answer.",
-                            filtered[1] || `Each question carries ${currentExamMeta.defaultMarksPerQuestion} marks.`,
-                            negText,
-                            ...filtered.slice(2),
+                          const base = prev && prev.length > 0 ? prev : [
+                            "Read all questions carefully before answering.",
+                            "Do not switch tabs or exit the exam screen during the test.",
+                            "Ensure you have completed all required questions before finishing the exam.",
                           ]
+                          if (negativeMarkingEnabled) {
+                            const negText = `Negative marking: -${negativeMarkPenalty} marks will be deducted for each incorrect response.`
+                            const hasNeg = base.some((i) => i.toLowerCase().includes("negative marking"))
+                            if (!hasNeg) return [...base, negText]
+                            return base.map((i) => (i.toLowerCase().includes("negative marking") ? negText : i))
+                          } else {
+                            return base.filter((i) => !i.toLowerCase().includes("negative marking"))
+                          }
                         })
                         setCurrentStep(4)
                         window.scrollTo({ top: 0, behavior: "smooth" })
