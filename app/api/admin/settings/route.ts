@@ -29,9 +29,16 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Institute not found" }, { status: 404 })
       }
 
+      const canEditLogo = institute.limits?.features?.customLogo !== false
+      const canEditThemeColor = institute.limits?.features?.customThemeColor !== false
+
       return NextResponse.json({
         success: true,
         isInstitute: true,
+        permissions: {
+          canEditLogo,
+          canEditThemeColor,
+        },
         institute: {
           id: institute._id.toString(),
           name: institute.name || "",
@@ -90,13 +97,34 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Institute not found" }, { status: 404 })
       }
 
+      const canEditLogo = institute.limits?.features?.customLogo !== false
+      const canEditThemeColor = institute.limits?.features?.customThemeColor !== false
+
       if (body.name !== undefined) institute.name = body.name.trim()
       if (body.phone !== undefined) institute.phone = body.phone.trim()
       if (body.address !== undefined) institute.address = body.address.trim()
       if (body.city !== undefined) institute.city = body.city.trim()
       if (body.contactPerson !== undefined) institute.contactPerson = body.contactPerson.trim()
-      if (body.logo !== undefined) institute.logo = body.logo
-      if (body.themeColor !== undefined) institute.themeColor = body.themeColor
+
+      if (body.logo !== undefined && body.logo !== (institute.logo || "")) {
+        if (!canEditLogo) {
+          return NextResponse.json(
+            { error: "Custom Logo editing is disabled for your organization. Contact administrator." },
+            { status: 403 }
+          )
+        }
+        institute.logo = body.logo
+      }
+
+      if (body.themeColor !== undefined && body.themeColor !== (institute.themeColor || "#2D3A4A")) {
+        if (!canEditThemeColor) {
+          return NextResponse.json(
+            { error: "Theme Color customization is disabled for your organization. Contact administrator." },
+            { status: 403 }
+          )
+        }
+        institute.themeColor = body.themeColor
+      }
 
       // Handle password update if provided
       if (body.newPassword && typeof body.newPassword === "string") {
@@ -121,6 +149,10 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: true,
         isInstitute: true,
+        permissions: {
+          canEditLogo,
+          canEditThemeColor,
+        },
         message: body.newPassword ? "Settings and password updated successfully!" : "Settings saved successfully!",
         institute: {
           id: institute._id.toString(),
@@ -134,6 +166,7 @@ export async function POST(req: Request) {
           logo: institute.logo || "",
           themeColor: institute.themeColor || "#2D3A4A",
           adminPassword: institute.adminPassword || "",
+          limits: institute.limits || null,
         },
       })
     }

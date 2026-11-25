@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
+import { validateAndSanitizeSvg } from "@/lib/ai/diagramValidator"
 
 interface QuestionDiagramProps {
   src?: string | null
@@ -32,15 +33,22 @@ export function QuestionDiagram({ src, alt = "Question Diagram", className = "",
 
   let cleanSvg = ""
   if (isSvg) {
-    const match = trimmed.match(/<svg[\s\S]*?<\/svg>/i)
-    cleanSvg = match ? match[0] : trimmed
-
-    // Ensure viewBox exists for responsive scaling if width and height are present
-    if (!cleanSvg.includes("viewBox") && !cleanSvg.includes("viewbox")) {
-      const wMatch = cleanSvg.match(/width=["']?(\d+)["']?/i)
-      const hMatch = cleanSvg.match(/height=["']?(\d+)["']?/i)
-      if (wMatch && hMatch) {
-        cleanSvg = cleanSvg.replace(/<svg\b/i, `<svg viewBox="0 0 ${wMatch[1]} ${hMatch[1]}"`)
+    const svgCheck = validateAndSanitizeSvg(trimmed)
+    if (svgCheck.valid && svgCheck.sanitizedSvg) {
+      cleanSvg = svgCheck.sanitizedSvg
+    } else {
+      // Fall back to safe static strip of active elements so even legacy malformed SVGs remain safe
+      cleanSvg = trimmed
+        .replace(/<\s*(script|foreignObject|iframe|object|embed)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
+        .replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+      const match = cleanSvg.match(/<svg[\s\S]*?<\/svg>/i)
+      cleanSvg = match ? match[0] : ""
+      if (cleanSvg && !cleanSvg.includes("viewBox") && !cleanSvg.includes("viewbox")) {
+        const wMatch = cleanSvg.match(/width=["']?(\d+)["']?/i)
+        const hMatch = cleanSvg.match(/height=["']?(\d+)["']?/i)
+        if (wMatch && hMatch) {
+          cleanSvg = cleanSvg.replace(/<svg\b/i, `<svg viewBox="0 0 ${wMatch[1]} ${hMatch[1]}"`)
+        }
       }
     }
   }

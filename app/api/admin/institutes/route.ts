@@ -128,13 +128,10 @@ export async function POST(req: Request) {
       )
     }
 
-    // Determine expanded exam types based on the access options (Competitive, Other Exams, Aspirants)
+    // Determine expanded exam types; standard Exams ("EXAM", "CUSTOM") are always allowed for all organizations
     const rawIncomingTypes = Array.isArray(examTypes) ? examTypes : ["COMPETITIVE", "OTHER", "ASPIRANTS"]
     const hasCompetitive = rawIncomingTypes.some((t: string) =>
       ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(String(t).toUpperCase())
-    )
-    const hasExam = rawIncomingTypes.some((t: string) =>
-      ["EXAM", "CUSTOM"].includes(String(t).toUpperCase())
     )
     const hasOther = rawIncomingTypes.some((t: string) =>
       ["OTHER", "OTHER_EXAMS"].includes(String(t).toUpperCase())
@@ -143,12 +140,9 @@ export async function POST(req: Request) {
       ["ASPIRANTS", "STUDENTS"].includes(String(t).toUpperCase())
     ) || (features?.aspirantsManagement !== undefined ? Boolean(features.aspirantsManagement) : true)
 
-    const finalExamTypes: string[] = []
+    const finalExamTypes: string[] = ["EXAM", "CUSTOM"]
     if (hasCompetitive) {
       finalExamTypes.push("COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD")
-    }
-    if (hasExam) {
-      finalExamTypes.push("EXAM", "CUSTOM")
     }
     if (hasOther) {
       finalExamTypes.push("OTHER", "OTHER_EXAMS")
@@ -179,6 +173,8 @@ export async function POST(req: Request) {
           aiProctoring: features?.aiProctoring ?? true,
           pdfImport: features?.pdfImport ?? true,
           aspirantsManagement: hasAspirants,
+          customLogo: features?.customLogo !== undefined ? Boolean(features.customLogo) : true,
+          customThemeColor: features?.customThemeColor !== undefined ? Boolean(features.customThemeColor) : true,
         },
       },
       validUntil: validUntil ? new Date(validUntil) : undefined,

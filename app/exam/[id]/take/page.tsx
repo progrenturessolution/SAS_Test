@@ -1028,8 +1028,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         }
       }).filter(t => t.questions.length > 0)
     } else {
-      const categoriesOrder: ("mcq" | "diagram" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding")[] = [
+      const categoriesOrder: ("mcq" | "mcq_multi" | "diagram" | "assertion" | "fillblanks" | "truefalse" | "descriptive" | "coding")[] = [
         "mcq",
+        "mcq_multi",
         "diagram",
         "assertion",
         "fillblanks",
@@ -1753,13 +1754,17 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                   </div>
                 )}
 
-                {/* MCQ or Multi-Correct or Assertion or FIB with choices */}
-                {(question.type === "mcq" || (question as any).type === "mcq_multi" || isAssertion || (isFillBlanks && question.options && question.options.length > 0)) && question.options && (
+                {/* MCQ or Multi-Correct or Diagram or Assertion or FIB with choices */}
+                {(question.type === "mcq" || (question as any).type === "mcq_multi" || (question as any).type === "diagram" || isAssertion || (isFillBlanks && question.options && question.options.length > 0)) && question.options && question.options.length > 0 && (
                   <div className="space-y-3">
-                    {isMulti && (
+                    {isMulti ? (
                       <div className="px-3.5 py-2 rounded-xl bg-violet-50 border border-violet-200/90 text-violet-800 text-xs font-medium flex items-center gap-2">
                         <CheckSquare size={14} className="shrink-0 text-violet-600" />
-                        <span><strong>Multiple Correct:</strong> One or more options may be correct. Select all options that apply.</span>
+                        <span><strong>Multiple Correct:</strong> Select ALL correct options that apply.</span>
+                      </div>
+                    ) : (
+                      <div className="text-[11px] font-medium text-slate-500 flex items-center gap-1.5">
+                        <span>Select one best option.</span>
                       </div>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">

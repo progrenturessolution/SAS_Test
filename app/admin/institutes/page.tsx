@@ -44,8 +44,23 @@ interface InstituteLimits {
     aiProctoring: boolean
     pdfImport: boolean
     aspirantsManagement?: boolean
+    customLogo?: boolean
+    customThemeColor?: boolean
   }
 }
+
+const SETTINGS_ACCESS_OPTIONS = [
+  {
+    key: "customLogo",
+    label: "Settings: Custom Logo",
+    description: "Allow uploading or changing Coaching Logo in Settings",
+  },
+  {
+    key: "customThemeColor",
+    label: "Settings: Theme Color",
+    description: "Allow customizing Brand Theme Color in Settings",
+  },
+] as const
 
 const EXAM_ACCESS_OPTIONS = [
   {
@@ -158,6 +173,8 @@ export default function InstitutesManagementPage() {
   const [formExamTypes, setFormExamTypes] = useState<string[]>(["COMPETITIVE", "OTHER", "ASPIRANTS"])
   const [formCustomQuestionTypes, setFormCustomQuestionTypes] = useState<string[]>(ALL_CUSTOM_QUESTION_TYPES)
   const [formPdfImport, setFormPdfImport] = useState(true)
+  const [formCustomLogo, setFormCustomLogo] = useState(true)
+  const [formCustomThemeColor, setFormCustomThemeColor] = useState(true)
   const [formValidUntil, setFormValidUntil] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState("")
@@ -175,6 +192,8 @@ export default function InstitutesManagementPage() {
   const [editExamTypes, setEditExamTypes] = useState<string[]>([])
   const [editCustomQuestionTypes, setEditCustomQuestionTypes] = useState<string[]>(ALL_CUSTOM_QUESTION_TYPES)
   const [editPdfImport, setEditPdfImport] = useState(true)
+  const [editCustomLogo, setEditCustomLogo] = useState(true)
+  const [editCustomThemeColor, setEditCustomThemeColor] = useState(true)
   const [editValidUntil, setEditValidUntil] = useState("")
   const [editStatus, setEditStatus] = useState<"active" | "suspended">("active")
   const [editPassword, setEditPassword] = useState("")
@@ -251,6 +270,8 @@ export default function InstitutesManagementPage() {
           features: {
             pdfImport: true,
             aspirantsManagement: formExamTypes.includes("ASPIRANTS"),
+            customLogo: formCustomLogo,
+            customThemeColor: formCustomThemeColor,
           },
           validUntil: formValidUntil || undefined,
         }),
@@ -273,6 +294,8 @@ export default function InstitutesManagementPage() {
       setFormMaxExams(20)
       setFormExamTypes(["COMPETITIVE", "OTHER", "ASPIRANTS"])
       setFormCustomQuestionTypes(ALL_CUSTOM_QUESTION_TYPES)
+      setFormCustomLogo(true)
+      setFormCustomThemeColor(true)
       setFormValidUntil("")
       await fetchInstitutes()
     } catch (err: any) {
@@ -299,6 +322,8 @@ export default function InstitutesManagementPage() {
     setEditExamTypes(normalizeExamTypes(inst.limits?.examTypes ?? [], inst.limits?.features))
     setEditCustomQuestionTypes(inst.limits?.customQuestionTypes ?? ALL_CUSTOM_QUESTION_TYPES)
     setEditPdfImport(true)
+    setEditCustomLogo(inst.limits?.features?.customLogo !== false)
+    setEditCustomThemeColor(inst.limits?.features?.customThemeColor !== false)
     setEditStatus(inst.status === "suspended" ? "suspended" : "active")
     setEditValidUntil(
       inst.validUntil ? new Date(inst.validUntil).toISOString().split("T")[0] : ""
@@ -350,6 +375,8 @@ export default function InstitutesManagementPage() {
             aiProctoring: true,
             pdfImport: true,
             aspirantsManagement: editExamTypes.includes("ASPIRANTS"),
+            customLogo: editCustomLogo,
+            customThemeColor: editCustomThemeColor,
           },
         },
       }
@@ -397,6 +424,8 @@ export default function InstitutesManagementPage() {
                     neetJeeGenerator: editExamTypes.includes("COMPETITIVE"),
                     pdfImport: true,
                     aspirantsManagement: editExamTypes.includes("ASPIRANTS"),
+                    customLogo: editCustomLogo,
+                    customThemeColor: editCustomThemeColor,
                   },
                 },
               }
@@ -1052,6 +1081,24 @@ export default function InstitutesManagementPage() {
                               PDF
                             </span>
                           )}
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                              inst.limits?.features?.customLogo !== false
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-gray-100 text-gray-400 border-gray-200 line-through"
+                            }`}
+                          >
+                            Logo
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                              inst.limits?.features?.customThemeColor !== false
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-gray-100 text-gray-400 border-gray-200 line-through"
+                            }`}
+                          >
+                            Theme
+                          </span>
                         </div>
                       </td>
 
@@ -1272,6 +1319,8 @@ export default function InstitutesManagementPage() {
                 <div className="flex flex-wrap gap-2">
                   {[
                     ["PDF Import", selectedInstitute.limits?.features?.pdfImport],
+                    ["Custom Logo", selectedInstitute.limits?.features?.customLogo !== false],
+                    ["Theme Color", selectedInstitute.limits?.features?.customThemeColor !== false],
                   ].map(([label, enabled]) => (
                     <span key={String(label)} className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${enabled ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-100 text-slate-400"}`}>
                       {enabled ? "Enabled" : "Disabled"} · {String(label)}
@@ -1471,7 +1520,7 @@ export default function InstitutesManagementPage() {
 
                 <div>
                   <span className="font-semibold text-gray-700 block mb-1.5">
-                    Allowed Access
+                    Allowed Access &amp; Features
                   </span>
                   <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                     {EXAM_ACCESS_OPTIONS.map((option) => {
@@ -1505,8 +1554,40 @@ export default function InstitutesManagementPage() {
                       )
                     })}
                   </div>
+
+                  {/* Settings Customization Permissions (Logo & Theme Color) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2.5">
+                    {SETTINGS_ACCESS_OPTIONS.map((opt) => {
+                      const isChecked = opt.key === "customLogo" ? formCustomLogo : formCustomThemeColor
+                      return (
+                        <label
+                          key={opt.key}
+                          className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-all ${
+                            isChecked
+                              ? "border-[#2D3A4A] bg-[#2D3A4A]/5 shadow-xs"
+                              : "border-gray-200 bg-white hover:bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (opt.key === "customLogo") setFormCustomLogo(e.target.checked)
+                              else setFormCustomThemeColor(e.target.checked)
+                            }}
+                            className="mt-0.5 rounded text-[#324158]"
+                          />
+                          <div className="flex-1">
+                            <span className="text-xs font-semibold text-gray-800 block">{opt.label}</span>
+                            <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">{opt.description}</span>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+
                   <span className="mt-1.5 block text-[10px] text-gray-400">
-                    Select which modules and features this organization can access. Unchecked options will remain locked.
+                    Select which modules and Settings branding options this organization can change. Standard Exams are enabled for all organizations.
                   </span>
                 </div>
 
@@ -1772,10 +1853,10 @@ export default function InstitutesManagementPage() {
                   </div>
                 </div>
 
-                {/* Allowed Access */}
+                {/* Allowed Access & Features */}
                 <div>
                   <label className="font-semibold text-gray-700 block mb-1.5">
-                    Allowed Access
+                    Allowed Access &amp; Features
                   </label>
                   <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                     {EXAM_ACCESS_OPTIONS.map((option) => {
@@ -1813,45 +1894,41 @@ export default function InstitutesManagementPage() {
                       )
                     })}
                   </div>
-                  <span className="mt-1.5 block text-[10px] text-gray-400">
-                    Control which modules and features this organization can access. Unchecked options will remain locked.
-                  </span>
-                </div>
 
-                {/* Question Types Access */}
-                <div>
-                  <label className="font-semibold text-gray-700 block mb-1.5">
-                    Permitted Question Types
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {CUSTOM_QUESTION_TYPE_OPTIONS.map((qType) => {
-                      const isChecked = editCustomQuestionTypes.includes(qType.value)
+                  {/* Settings Customization Permissions (Logo & Theme Color) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2.5">
+                    {SETTINGS_ACCESS_OPTIONS.map((opt) => {
+                      const isChecked = opt.key === "customLogo" ? editCustomLogo : editCustomThemeColor
                       return (
                         <label
-                          key={qType.value}
-                          className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-all ${
+                          key={opt.key}
+                          className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-all ${
                             isChecked
-                              ? "border-[#324158] bg-[#324158]/5 font-semibold text-slate-900"
-                              : "border-gray-200 bg-white text-slate-600 hover:bg-gray-50"
+                              ? "border-[#324158] bg-[#324158]/5 shadow-xs"
+                              : "border-gray-200 bg-white hover:bg-gray-50"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={isChecked}
-                            onChange={(e) =>
-                              setEditCustomQuestionTypes((current) =>
-                                e.target.checked
-                                  ? [...current, qType.value]
-                                  : current.filter((v) => v !== qType.value)
-                              )
-                            }
-                            className="rounded text-[#324158]"
+                            onChange={(e) => {
+                              if (opt.key === "customLogo") setEditCustomLogo(e.target.checked)
+                              else setEditCustomThemeColor(e.target.checked)
+                            }}
+                            className="mt-0.5 rounded text-[#324158]"
                           />
-                          <span className="text-xs">{qType.label}</span>
+                          <div className="flex-1">
+                            <span className="text-xs font-semibold text-gray-800 block">{opt.label}</span>
+                            <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">{opt.description}</span>
+                          </div>
                         </label>
                       )
                     })}
                   </div>
+
+                  <span className="mt-1.5 block text-[10px] text-gray-400">
+                    Control which modules and Settings branding options this organization can modify. Standard Exams are enabled for all organizations.
+                  </span>
                 </div>
               </div>
             </div>

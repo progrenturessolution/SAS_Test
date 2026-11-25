@@ -17,22 +17,27 @@ import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
 import { ResultAnalyticsSkeleton } from "@/components/SkeletonLoaders"
 import katex from "katex"
 import "katex/dist/katex.min.css"
+import "katex/contrib/mhchem"
+import { evaluateObjectiveAnswer, formatOptionDisplay } from "@/lib/ai/questionEvaluation"
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface QuestionData {
   _id: string
-  type: "mcq" | "truefalse" | "descriptive" | "fillblanks" | "coding"
+  type: "mcq" | "mcq_multi" | "diagram" | "assertion" | "truefalse" | "descriptive" | "fillblanks" | "coding"
+  questionFormat?: string
   questionText: string
   questionImage?: string
   codeSnippet?: string
   options?: string[]
   optionImages?: string[]
   correctAnswer?: string | string[]
+  modelAnswer?: string
+  rubric?: string[]
   marks: number
   negativeMark?: number
   difficulty?: string
-  blanks?: { id: number; label: string; answer: string }[]
+  blanks?: { id: number; label: string; answer: string; alsoAccept?: string[] }[]
   explanation?: string
 }
 
@@ -390,33 +395,22 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         if (isEmpty) {
           sSkipped++
         } else {
-          if (q.type === "mcq" || q.type === "truefalse") {
-            const correct = Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer
-            const studentAnswer = Array.isArray(answerValue) ? answerValue[0] : answerValue
-            if (answersMatch(studentAnswer, correct, q.type === "mcq" ? q.options : undefined)) {
-              isCorrect = true
-              marksEarned = q.marks
-              sCorrect++
-            } else {
-              sIncorrect++
-            }
-          } else if (q.type === "fillblanks" && q.blanks) {
-            const studentAnswers = Array.isArray(answerValue) ? answerValue : [answerValue]
-            let blankCorrect = 0
-            q.blanks.forEach((blank, i) => {
-              if (studentAnswers[i] && studentAnswers[i].toLowerCase().trim() === blank.answer.toLowerCase().trim()) {
-                blankCorrect++
-              }
+          if (
+            q.type === "mcq" ||
+            q.type === "mcq_multi" ||
+            q.type === "diagram" ||
+            q.type === "assertion" ||
+            q.type === "truefalse" ||
+            q.type === "fillblanks"
+          ) {
+            const evalRes = evaluateObjectiveAnswer(q as any, answerValue as any, {
+              negativeMarking: Boolean(section.negativeMarking),
+              negativeValue: section.sectionNegativeMark ?? 0,
             })
-            marksEarned = (blankCorrect / q.blanks.length) * q.marks
-            if (blankCorrect === q.blanks.length) {
-              isCorrect = true
-              sCorrect++
-            } else if (blankCorrect > 0) {
-              sCorrect++ // partially correct
-            } else {
-              sIncorrect++
-            }
+            isCorrect = evalRes.isCorrect
+            marksEarned = evalRes.earnedMarks
+            if (evalRes.isCorrect || evalRes.isPartiallyCorrect) sCorrect++
+            else sIncorrect++
           } else if (q.type === "descriptive") {
             const earned = studentAns?.earnedMarks ?? studentAns?.manualScore ?? studentAns?.marks ?? 0
             const aiEval = studentAns?.aiEvaluation
@@ -552,11 +546,8 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
 
   const formatAnswer = (answer: string | string[] | null, q: QuestionData) => {
     if (!answer) return null
-    if (q.type === "mcq" && q.options) {
-      const value = typeof answer === "string" ? answer : answer[0]
-      const idx = getOptionIndex(value, q.options)
-      if (idx >= 0) return `${String.fromCharCode(65 + idx)}) ${q.options[idx]}`
-      return String(answer)
+    if ((q.type === "mcq" || q.type === "mcq_multi" || q.type === "diagram" || q.type === "assertion" || (q.type === "fillblanks" && q.options && q.options.length > 0)) && q.options) {
+      return formatOptionDisplay(answer, q.options)
     }
 
     if (Array.isArray(answer)) return answer.join(", ")
@@ -586,14 +577,15 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
   }
 
   const formatCorrectAnswer = (q: QuestionData) => {
-    if (q.type === "mcq" && q.options && q.correctAnswer) {
-      const ca = Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer
-      const idx = getOptionIndex(ca, q.options)
-      if (idx >= 0) return `${String.fromCharCode(65 + idx)}) ${q.options[idx]}`
-      return String(ca)
+    if (q.type === "descriptive") return q.modelAnswer || (Array.isArray(q.correctAnswer) ? q.correctAnswer.join(", ") : q.correctAnswer) || "Refer Rubric"
+    if (q.type === "mcq_multi" || q.type === "mcq" || q.type === "diagram" || q.type === "assertion") {
+      return formatOptionDisplay(q.correctAnswer, q.options)
     }
     if (q.type === "truefalse") return String(q.correctAnswer)
-    if (q.type === "fillblanks" && q.blanks) return q.blanks.map(b => b.answer).join(", ")
+    if (q.type === "fillblanks") {
+      if (q.blanks && q.blanks.length > 0) return q.blanks.map(b => b.answer).join(", ")
+      if (q.options && q.options.length > 0) return formatOptionDisplay(q.correctAnswer, q.options)
+    }
     if (q.correctAnswer) return Array.isArray(q.correctAnswer) ? q.correctAnswer.join(", ") : String(q.correctAnswer)
     return "—"
   }
@@ -606,21 +598,50 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
     .replace(/'/g, "&#039;")
 
   const renderPrintableMath = (value: string) => {
-    const normalized = value
-      .replace(/\\\\/g, "\\")
-      .replace(/\u000c/g, "\\frac")
+    const preFixed = String(value || "")
+      .replace(/\u000c/g, "\\f")
       .replace(/\u0008/g, "\\b")
+      .replace(/\u0009(?=(?:theta|tau|text|times|tan\b|to\b|tilde|triangle))/gi, "\\t")
       .replace(/\u0009/g, " ")
       .replace(/\\\(/g, "$")
       .replace(/\\\)/g, "$")
       .replace(/\\\[/g, "$$")
       .replace(/\\\]/g, "$$")
+      .replace(/\\ce\s+([A-Z(][A-Za-z0-9()_^{}+=-]*)/g, "\\ce{$1}")
+      .replace(/\\ce(?=[A-Z(][A-Za-z0-9]*(?:\d|[()]))([A-Za-z0-9()_^{}+=-]+)/g, "\\ce{$1}")
+
+    // Wrap any bare \ce{...} (even with nested braces) cleanly inside $...$ before splitting
+    let normalized = ""
+    let inDisp = false
+    let inInl = false
+    for (let i = 0; i < preFixed.length; i++) {
+      if (!inInl && preFixed.startsWith("$$", i)) {
+        inDisp = !inDisp; normalized += "$$"; i++; continue
+      }
+      if (!inDisp && preFixed[i] === "$" && (i === 0 || preFixed[i - 1] !== "\\")) {
+        inInl = !inInl; normalized += "$"; continue
+      }
+      if (!inDisp && !inInl && preFixed.startsWith("\\ce{", i)) {
+        let d = 0, j = i + 3
+        for (; j < preFixed.length; j++) {
+          if (preFixed[j] === "\\") { j++; continue }
+          if (preFixed[j] === "{") d++
+          else if (preFixed[j] === "}" && --d === 0) break
+        }
+        if (d === 0 && j < preFixed.length) {
+          normalized += `$${preFixed.slice(i, j + 1)}$`
+          i = j
+          continue
+        }
+      }
+      normalized += preFixed[i]
+    }
     return normalized.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g).map(part => {
       if (part.startsWith("$$") && part.endsWith("$$")) {
-        return `<div class="formula display-formula">${katex.renderToString(part.slice(2, -2).trim(), { displayMode: true, throwOnError: false, strict: "ignore" })}</div>`
+        return `<div class="formula display-formula">${katex.renderToString(part.slice(2, -2).trim(), { displayMode: true, throwOnError: false, strict: "ignore", trust: true })}</div>`
       }
       if (part.startsWith("$") && part.endsWith("$")) {
-        return `<span class="formula">${katex.renderToString(part.slice(1, -1).trim(), { displayMode: false, throwOnError: false, strict: "ignore" })}</span>`
+        return `<span class="formula">${katex.renderToString(part.slice(1, -1).trim(), { displayMode: false, throwOnError: false, strict: "ignore", trust: true })}</span>`
       }
       return `<span class="text-content">${escapeHtml(part)}</span>`
     }).join("")
@@ -646,28 +667,29 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
       const status = q.isSkipped ? "Skipped" : q.isCorrect ? "Correct" : "Incorrect"
       const statusColor = q.isSkipped ? "#2D3A4A" : q.isCorrect ? "#45505F" : "#94A7C5"
       const yourAns = q.isSkipped ? "—" : formatAnswer(q.studentAnswer, q.question) || "—"
-      const correctAns = showResults ? ((q.question.type === "mcq" || q.question.type === "truefalse" || q.question.type === "fillblanks")
-        ? formatCorrectAnswer(q.question) : "—") : "—"
-      const selectedIndex = q.question.options
-        ? getOptionIndex(Array.isArray(q.studentAnswer) ? q.studentAnswer[0] : q.studentAnswer, q.question.options)
-        : -1
-      const correctIndex = q.question.options
-        ? getOptionIndex(Array.isArray(q.question.correctAnswer) ? q.question.correctAnswer[0] : q.question.correctAnswer, q.question.options)
-        : -1
-      const optionsHtml = q.question.type === "mcq" && q.question.options
-        ? `<div class="options-grid">${q.question.options.map((option: string, optionIndex: number) => {
-            const optionKey = String.fromCharCode(65 + optionIndex)
-            const isSelected = selectedIndex === optionIndex
-            const isCorrect = showResults && correctIndex === optionIndex
-            const optionImage = q.question.optionImages?.[optionIndex]
-            const label = isCorrect ? "Correct" : isSelected ? "Selected" : ""
-            return `<div class="option ${isCorrect ? "option-correct" : isSelected ? "option-selected" : ""}">
-              <span class="option-key">${optionKey}</span>
-              <div class="option-content">${renderPrintableMath(option)}${optionImage ? `<img src="${escapeHtml(optionImage)}" alt="Option ${optionKey}" />` : ""}</div>
-              ${label ? `<span class="option-label">${label}</span>` : ""}
-            </div>`
-          }).join("")}</div>`
-        : ""
+      const correctAns = showResults ? ((["mcq", "mcq_multi", "diagram", "assertion", "truefalse", "fillblanks"].includes(q.question.type))
+        ? formatCorrectAnswer(q.question) : (q.question.modelAnswer || "—")) : "—"
+      const evalPrint = evaluateObjectiveAnswer(q.question, q.studentAnswer)
+      const selectedSet = new Set(evalPrint.resolvedStudentOptions.map((s) => s.trim().toLowerCase()))
+      const correctSet = new Set(evalPrint.resolvedCorrectOptions.map((s) => s.trim().toLowerCase()))
+      const optionsHtml =
+        ["mcq", "mcq_multi", "diagram", "assertion"].includes(q.question.type) &&
+        q.question.options &&
+        q.question.options.length > 0
+          ? `<div class="options-grid">${q.question.options.map((option: string, optionIndex: number) => {
+              const optionKey = String.fromCharCode(65 + optionIndex)
+              const optNorm = option.trim().toLowerCase()
+              const isSelected = selectedSet.has(optNorm)
+              const isCorrect = showResults && correctSet.has(optNorm)
+              const optionImage = q.question.optionImages?.[optionIndex]
+              const label = isCorrect ? "Correct" : isSelected ? "Selected" : ""
+              return `<div class="option ${isCorrect ? "option-correct" : isSelected ? "option-selected" : ""}">
+                <span class="option-key">${optionKey}</span>
+                <div class="option-content">${renderPrintableMath(option)}${optionImage ? `<img src="${escapeHtml(optionImage)}" alt="Option ${optionKey}" />` : ""}</div>
+                ${label ? `<span class="option-label">${label}</span>` : ""}
+              </div>`
+            }).join("")}</div>`
+          : ""
       let questionImage = ""
       if (q.question.questionImage) {
         let trimmed = String(q.question.questionImage).trim()
@@ -1169,19 +1191,15 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
                     </pre>
                   )}
 
-                  {/* Options (for MCQ / TrueFalse) */}
-                  {qa.question.type === "mcq" && qa.question.options && (
+                  {/* Options (for MCQ / Multiple Correct / Diagram / Assertion) */}
+                  {(qa.question.type === "mcq" || qa.question.type === "mcq_multi" || qa.question.type === "diagram" || qa.question.type === "assertion") && qa.question.options && qa.question.options.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
                       {qa.question.options.map((option, optionIndex) => {
                         const optionKey = String.fromCharCode(65 + optionIndex)
-                        const studentAnswer = Array.isArray(qa.studentAnswer)
-                          ? qa.studentAnswer[0]
-                          : qa.studentAnswer
-                        const correctAnswer = Array.isArray(qa.question.correctAnswer)
-                          ? qa.question.correctAnswer[0]
-                          : qa.question.correctAnswer
-                        const isSelected = getOptionIndex(studentAnswer, qa.question.options!) === optionIndex
-                        const isCorrect = showResults && getOptionIndex(correctAnswer, qa.question.options!) === optionIndex
+                        const evalInfo = evaluateObjectiveAnswer(qa.question as any, qa.studentAnswer as any)
+                        const optNorm = option.trim().toLowerCase()
+                        const isSelected = evalInfo.resolvedStudentOptions.some(s => s.trim().toLowerCase() === optNorm)
+                        const isCorrect = showResults && evalInfo.resolvedCorrectOptions.some(c => c.trim().toLowerCase() === optNorm)
                         const optionImage = qa.question.optionImages?.[optionIndex]
 
                         return (

@@ -145,12 +145,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           ["ASPIRANTS", "STUDENTS"].includes(String(t).toUpperCase())
         )
 
-        finalExamTypes = []
+        finalExamTypes = ["EXAM", "CUSTOM"]
         if (hasComp) {
           finalExamTypes.push("COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD")
-        }
-        if (hasExam) {
-          finalExamTypes.push("EXAM", "CUSTOM")
         }
         if (hasOther) {
           finalExamTypes.push("OTHER", "OTHER_EXAMS")
@@ -158,11 +155,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         if (hasAspirants) {
           finalExamTypes.push("ASPIRANTS")
         }
+      } else if (!finalExamTypes.some((t) => ["EXAM", "CUSTOM"].includes(String(t).toUpperCase()))) {
+        finalExamTypes = [...finalExamTypes, "EXAM", "CUSTOM"]
       }
 
       if (body.limits.features?.aspirantsManagement !== undefined) {
         hasAspirants = Boolean(body.limits.features.aspirantsManagement)
       }
+
+      const customLogoAllowed =
+        body.limits.features?.customLogo !== undefined
+          ? Boolean(body.limits.features.customLogo)
+          : institute.limits.features?.customLogo ?? true
+      const customThemeColorAllowed =
+        body.limits.features?.customThemeColor !== undefined
+          ? Boolean(body.limits.features.customThemeColor)
+          : institute.limits.features?.customThemeColor ?? true
 
       institute.limits = {
         maxStudents: Number(body.limits.maxStudents ?? institute.limits.maxStudents),
@@ -176,6 +184,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           aiProctoring: body.limits.features?.aiProctoring ?? institute.limits.features?.aiProctoring ?? true,
           pdfImport: true, // Always allowed
           aspirantsManagement: hasAspirants,
+          customLogo: customLogoAllowed,
+          customThemeColor: customThemeColorAllowed,
         },
       }
     }

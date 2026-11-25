@@ -220,13 +220,16 @@ export default function AdminQueriesPage() {
       .catch(() => {})
   }, [])
 
-  // Group queries into WhatsApp-like Institute Threads (for Super Admin)
-  // Or list tickets for organization
+  // Group queries into WhatsApp-like Institute Threads (normalize populated instituteId object -> string key!)
   const instituteThreads = useMemo(() => {
     const threadMap: Record<string, InstituteThread> = {}
 
     queries.forEach((q) => {
-      const key = q.instituteId || q.instituteCode || q.instituteName || "unknown"
+      const rawInstId =
+        typeof q.instituteId === "object" && q.instituteId !== null
+          ? (q.instituteId as any)._id || (q.instituteId as any).id
+          : q.instituteId
+      const key = String(rawInstId || q.instituteCode || q.instituteName || "unknown")
       if (!threadMap[key]) {
         threadMap[key] = {
           instituteId: key,
@@ -317,19 +320,21 @@ export default function AdminQueriesPage() {
     return allMsgs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
   }, [activeThread])
 
-  // Auto-scroll chat to bottom when active thread or messages change
+  // Auto-scroll chat to bottom and ensure targetQueryId belongs to the open thread
   useEffect(() => {
     if (activeThread) {
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
-      // Auto-select latest query to reply to
-      const latestPending = [...activeThread.queries].reverse().find((q) => q.status === "pending")
-      if (latestPending) {
-        setTargetQueryId(latestPending._id)
-      } else if (activeThread.queries.length > 0) {
-        setTargetQueryId(activeThread.queries[activeThread.queries.length - 1]._id)
+      const currentBelongsToThread = activeThread.queries.some((q) => q._id === targetQueryId)
+      if (!currentBelongsToThread) {
+        const latestPending = [...activeThread.queries].reverse().find((q) => q.status === "pending")
+        if (latestPending) {
+          setTargetQueryId(latestPending._id)
+        } else if (activeThread.queries.length > 0) {
+          setTargetQueryId(activeThread.queries[activeThread.queries.length - 1]._id)
+        }
       }
     }
-  }, [activeThread?.instituteId, activeThreadMessages.length])
+  }, [activeThread?.instituteId, activeThreadMessages.length, targetQueryId])
 
   // Handle selecting a thread
   const handleSelectThread = async (thread: InstituteThread) => {
@@ -364,9 +369,10 @@ export default function AdminQueriesPage() {
     }
   }
 
-  // Handle sending a reply (Appends to replies without overwriting!)
+  // Handle sending a reply (Appends to replies without overwriting or losing selected chat!)
   const handleSendReply = async (status: "replied" | "resolved" = "replied") => {
-    if (!targetQueryId || !replyText.trim()) {
+    const trimmedReply = replyText.trim()
+    if (!targetQueryId || !trimmedReply) {
       toast.error("Please enter a reply message before sending.")
       return
     }
@@ -376,7 +382,7 @@ export default function AdminQueriesPage() {
       const res = await fetch(`/api/admin/queries/${targetQueryId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reply: replyText.trim(), status }),
+        body: JSON.stringify({ reply: trimmedReply, status }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to send message")
@@ -384,12 +390,11 @@ export default function AdminQueriesPage() {
       toast.success(status === "resolved" ? "Query resolved and reply saved!" : "Message sent successfully!")
       setReplyText("")
 
-      // Update queries state by appending new reply
       const updatedTimestamp = new Date().toISOString()
       const newReplyObj: QueryReply = {
         senderRole: isSuperAdmin ? "admin" : "institute",
         senderName: isSuperAdmin ? "Progrentures Support Desk" : (currentInstitute?.name || "Institute Admin"),
-        message: replyText.trim(),
+        message: trimmedReply,
         createdAt: updatedTimestamp,
         isRead: false,
       }
@@ -397,6 +402,7 @@ export default function AdminQueriesPage() {
       setQueries((prev) =>
         prev.map((q) => {
           if (q._id !== targetQueryId) return q
+          const serverReplies = Array.isArray(data.query?.replies) ? data.query.replies : null
           const existingReplies: QueryReply[] = q.replies
             ? [...q.replies]
             : (q.adminReply
@@ -404,12 +410,12 @@ export default function AdminQueriesPage() {
             : [])
           return {
             ...q,
-            adminReply: isSuperAdmin ? replyText.trim() : q.adminReply,
+            adminReply: isSuperAdmin ? trimmedReply : q.adminReply,
             status: isSuperAdmin ? status : "pending",
             isReadByAdmin: isSuperAdmin,
             isReadByInstitute: !isSuperAdmin,
             adminRepliedAt: isSuperAdmin ? updatedTimestamp : q.adminRepliedAt,
-            replies: [...existingReplies, newReplyObj],
+            replies: serverReplies || [...existingReplies, newReplyObj],
           }
         })
       )

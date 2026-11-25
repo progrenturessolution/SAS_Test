@@ -10,6 +10,8 @@ export interface IInstituteLimits {
     aiProctoring: boolean
     pdfImport: boolean
     aspirantsManagement?: boolean
+    customLogo?: boolean
+    customThemeColor?: boolean
   }
 }
 
@@ -61,6 +63,8 @@ const InstituteSchema = new Schema<IInstitute>(
         aiProctoring: { type: Boolean, default: true },
         pdfImport: { type: Boolean, default: true },
         aspirantsManagement: { type: Boolean, default: true },
+        customLogo: { type: Boolean, default: true },
+        customThemeColor: { type: Boolean, default: true },
       },
     },
     validUntil: { type: Date },

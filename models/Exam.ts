@@ -2,17 +2,28 @@ import mongoose, { Schema, Document } from "mongoose"
 
 export interface IQuestion {
   _id?: string
-  type: "mcq" | "assertion" | "truefalse" | "descriptive" | "fillblanks" | "coding"
+  type: "mcq" | "mcq_multi" | "assertion" | "truefalse" | "descriptive" | "fillblanks" | "diagram" | "coding"
   questionFormat?: string
   assertionText?: string
   reasonText?: string
   questionText: string
+  explanation?: string
+  chapter?: string
+  topic?: string
+  subject?: string
+  grade?: string
+  classLevel?: string
   options?: string[]
   correctAnswer?: string | string[]
+  modelAnswer?: string
+  rubric?: string[]
+  caseInsensitive?: boolean
+  pyqReference?: string
+  learningObjective?: string
   marks: number
   difficulty?: "easy" | "medium" | "hard"
   wordLimit?: number
-  blanks?: { id: number; label: string; answer: string }[]
+  blanks?: { id: number; label: string; answer: string; alsoAccept?: string[] }[]
   codeTemplate?: string
   codeTemplates?: Record<string, string>
   testCases?: { input: string; expectedOutput: string; hidden?: boolean }[]
@@ -72,6 +83,25 @@ export interface IExam extends Document {
       fullscreen: boolean
       aiProctoring: boolean
     }
+    competitiveGenerator?: {
+      selectedExam: string
+      selectedGrade: string
+      selectedSubjects: string[]
+      selectedSubject: string
+      activeSubjectTab: string
+      selectedChapters: string[]
+      selectedTopics: string[]
+      uploadedSyllabusText: string
+      uploadedPdf: { name: string; size: number; wordCount: number } | null
+      blueprintFormats: { id: string; label: string; checked: boolean; count: number; marks: number }[]
+      subjectDist: Record<string, { questions: number; marksPerQuestion: number; marks: number }>
+      class11Weightage: number
+      class12Weightage: number
+      questionCount: number
+      difficulty: string
+      pattern: string
+      focusPYQ: boolean
+    }
   }
   createdBy: string
   instituteId?: mongoose.Types.ObjectId | string
@@ -83,17 +113,28 @@ export interface IExam extends Document {
 }
 
 const QuestionSchema = new Schema<IQuestion>({
-  type: { type: String, enum: ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"], required: true },
+  type: { type: String, enum: ["mcq", "mcq_multi", "assertion", "truefalse", "descriptive", "fillblanks", "diagram", "coding"], required: true },
+  topic: String,
+  classLevel: String,
+  modelAnswer: String,
+  rubric: [String],
+  caseInsensitive: { type: Boolean, default: true },
+  pyqReference: String,
+  learningObjective: String,
   questionFormat: String,
   assertionText: String,
   reasonText: String,
   questionText: { type: String, required: true },
+  explanation: String,
+  chapter: String,
+  subject: String,
+  grade: String,
   options: [String],
   correctAnswer: Schema.Types.Mixed,
   marks: { type: Number, required: true, default: 1 },
   difficulty: { type: String, enum: ["easy", "medium", "hard"], default: "medium" },
   wordLimit: Number,
-  blanks: [{ id: Number, label: String, answer: String }],
+  blanks: [{ id: Number, label: String, answer: String, alsoAccept: [String] }],
   codeTemplate: String,
   codeTemplates: { type: Map, of: String },
   testCases: [{ input: String, expectedOutput: String, hidden: Boolean }],
@@ -126,7 +167,7 @@ const ExamSchema = new Schema<IExam>(
     sections: [
       {
         name: String,
-        type: { type: String, enum: ["mcq", "assertion", "truefalse", "descriptive", "fillblanks", "coding"] },
+        type: { type: String, enum: ["mcq", "mcq_multi", "assertion", "truefalse", "descriptive", "fillblanks", "diagram", "coding"] },
         questionRange: String,
         negativeMarking: { type: Boolean, default: false },
         sectionNegativeMark: { type: Number, default: 0 },
@@ -158,6 +199,7 @@ const ExamSchema = new Schema<IExam>(
         fullscreen: { type: Boolean, default: true },
         aiProctoring: { type: Boolean, default: false },
       },
+      competitiveGenerator: { type: Schema.Types.Mixed },
     },
     createdBy: { type: String, required: true },
     instituteId: { type: Schema.Types.ObjectId, ref: "Institute", index: true },

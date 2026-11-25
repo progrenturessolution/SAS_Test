@@ -101,7 +101,8 @@ export async function POST(req: Request) {
       const hasCompAccess = allowedExamTypes.some((t) =>
         ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(t)
       ) && institute.limits?.features?.neetJeeGenerator !== false
-      const hasExamAccess = allowedExamTypes.some((t) => ["EXAM", "CUSTOM"].includes(t))
+      // Standard Exams section is always enabled for all active organizations
+      const hasExamAccess = true
       const hasOtherAccess = allowedExamTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(t))
 
       if (isCompetitive && !hasCompAccess) {
@@ -124,23 +125,29 @@ export async function POST(req: Request) {
       }
       body.examType = examType
       if (examType === "CUSTOM") {
-          const allowedCustomQuestionTypes = Array.isArray(institute.limits?.customQuestionTypes)
-            ? institute.limits.customQuestionTypes.map((type: string) => String(type).trim().toLowerCase())
-            : []
-          const questionTypes = Array.isArray(body.sections)
-            ? body.sections.flatMap((section: { questions?: { type?: string }[] }) =>
-                Array.isArray(section.questions) ? section.questions.map((question) => question.type) : []
-              )
-            : []
-          const disallowedType = questionTypes.find(
-            (type: unknown) => type && !allowedCustomQuestionTypes.includes(String(type).trim().toLowerCase())
+        const allowedCustomQuestionTypes = Array.isArray(institute.limits?.customQuestionTypes)
+          ? institute.limits.customQuestionTypes.map((type: string) => String(type).trim().toLowerCase())
+          : []
+        const questionTypes = Array.isArray(body.sections)
+          ? body.sections.flatMap((section: { questions?: { type?: string }[] }) =>
+            Array.isArray(section.questions) ? section.questions.map((question) => question.type) : []
           )
-          if (disallowedType) {
-            return NextResponse.json(
-              { error: `${String(disallowedType)} questions are not enabled for Custom Tests in this institute.` },
-              { status: 403 }
-            )
-          }
+          : []
+        const normalizedAllowedTypes = new Set(allowedCustomQuestionTypes)
+        if (normalizedAllowedTypes.has("mcq")) {
+          normalizedAllowedTypes.add("mcq_multi")
+          normalizedAllowedTypes.add("diagram")
+        }
+
+        const disallowedType = questionTypes.find(
+          (type: unknown) => type && !normalizedAllowedTypes.has(String(type).trim().toLowerCase())
+        )
+        if (disallowedType) {
+          return NextResponse.json(
+            { error: `${String(disallowedType)} questions are not enabled for Custom Tests in this institute.` },
+            { status: 403 }
+          )
+        }
       }
       const mongoose = (await import("mongoose")).default
       const instObjId = targetInstituteId && mongoose.Types.ObjectId.isValid(targetInstituteId)
@@ -187,7 +194,7 @@ export async function POST(req: Request) {
         )
       }
     }
-    
+
     // Properly handle nested settings with Date conversion
     const examData = { ...body }
     if (examData.settings) {
@@ -199,7 +206,7 @@ export async function POST(req: Request) {
         examData.settings.endDate = getExamEndDateTime(examData.settings) || new Date(examData.settings.endDate)
       }
     }
-    
+
     if (!examData.instructions || !Array.isArray(examData.instructions) || examData.instructions.length === 0) {
       examData.instructions = [
         "Read all questions carefully before answering.",
@@ -209,6 +216,20 @@ export async function POST(req: Request) {
       if (!examData.description) {
         examData.description = examData.instructions.join("\n")
       }
+    }
+
+    // Normalize sections & questions canonically for storage while preserving all fields safely
+    if (Array.isArray(examData.sections)) {
+      const { normalizeStoredQuestion, toExamQuestionPayload } = await import("@/lib/ai/canonicalSchema")
+      examData.sections = examData.sections.map((sec: any) => ({
+        ...sec,
+        questions: Array.isArray(sec.questions)
+          ? sec.questions.map((q: any, qIdx: number) => ({
+            ...q,
+            ...toExamQuestionPayload(normalizeStoredQuestion(q, qIdx)),
+          }))
+          : [],
+      }))
     }
 
     const exam = await Exam.create({

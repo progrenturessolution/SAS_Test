@@ -4,27 +4,23 @@ import Attempt from "@/models/Attempt"
 import Exam from "@/models/Exam"
 import { IQuestion } from "@/models/Exam"
 import { generateContentWithKeyRotation } from "@/lib/gemini"
+import { evaluateObjectiveAnswer } from "@/lib/ai/questionEvaluation"
 
 async function evaluateDescriptiveAnswerWithAI({
   questionText,
   modelAnswer,
+  rubric,
   explanation,
   marks,
   studentAnswerText,
 }: {
   questionText: string
   modelAnswer?: string
+  rubric?: string[]
   explanation?: string
   marks: number
   studentAnswerText: string
-}): Promise<{
-  score: number
-  maxScore: number
-  verdict: "Correct" | "Partially Correct" | "Incorrect" | "Unattempted"
-  whyRight: string
-  whyWrong: string
-  feedback: string
-}> {
+}) {
   if (!studentAnswerText || studentAnswerText.trim().length === 0) {
     return {
       score: 0,
@@ -42,7 +38,7 @@ Question:
 ${questionText}
 
 ${modelAnswer ? `Model / Reference Answer:\n${modelAnswer}\n` : ""}
-${explanation ? `Scoring Rubric & Expected Key Points:\n${explanation}\n` : ""}
+${rubric && rubric.length > 0 ? `Marking Rubric Breakdown:\n${rubric.map((r, i) => `${i + 1}. ${r}`).join("\n")}\n` : ""}${explanation ? `Expected Key Points:\n${explanation}\n` : ""}
 Maximum Marks: ${marks}
 
 Student's Written Answer:
@@ -367,60 +363,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
           let isCorrect = false;
           let earnedMarks = 0;
+          let negativeApplied = 0;
 
-          if (q.type === "mcq" || (q as any).type === "mcq_multi" || q.type === "truefalse" || q.type === "assertion") {
-            const isMulti =
-              (q as any).type === "mcq_multi" ||
-              (q as any).questionFormat === "mcq_multi" ||
-              (q as any).questionFormat === "mcq_multiple" ||
-              (Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1)
-
-            if (isMulti) {
-              const studentIndices = parseTokens(studentAnswer.answer, q.options)
-              const correctIndices = parseTokens(q.correctAnswer, q.options)
-
-              const hasWrong = studentIndices.some(idx => !correctIndices.includes(idx))
-              const isExact = studentIndices.length > 0 &&
-                studentIndices.length === correctIndices.length &&
-                studentIndices.every((idx, i) => idx === correctIndices[i])
-
-              if (isExact) {
-                isCorrect = true
-                earnedMarks = q.marks
-              } else if (!hasWrong && studentIndices.length > 0 && correctIndices.length > 0) {
-                // Partial credit for selecting subset of correct options with zero wrong options
-                isCorrect = false
-                earnedMarks = Math.round((studentIndices.length / correctIndices.length) * q.marks * 10) / 10
-              } else {
-                isCorrect = false
-                earnedMarks = 0
-              }
-            } else {
-              const correct = Array.isArray(q.correctAnswer)
-                ? q.correctAnswer[0]
-                : q.correctAnswer
-              if (answersMatch(studentAnswer.answer, correct, (q.type === "mcq" || q.type === "assertion") ? q.options : undefined)) {
-                isCorrect = true;
-                earnedMarks = q.marks;
-              }
-            }
-          } else if (q.type === "fillblanks" && q.blanks) {
-            const studentAnswers = Array.isArray(studentAnswer.answer)
-              ? studentAnswer.answer
-              : [studentAnswer.answer]
-            let blankScore = 0
-            let correctBlanks = 0;
-            q.blanks.forEach((blank: { answer: string }, i: number) => {
-              if (
-                studentAnswers[i] &&
-                studentAnswers[i].trim().toLowerCase() === blank.answer.trim().toLowerCase()
-              ) {
-                correctBlanks++;
-                blankScore += q.marks / q.blanks!.length
-              }
+          if (
+            q.type === "mcq" ||
+            (q as any).type === "mcq_multi" ||
+            (q as any).type === "diagram" ||
+            q.type === "truefalse" ||
+            q.type === "assertion" ||
+            q.type === "fillblanks"
+          ) {
+            const evalRes = evaluateObjectiveAnswer(q as any, studentAnswer.answer, {
+              negativeMarking: sectionNegativeMarking,
+              negativeValue: sectionNegativeValue,
             })
-            earnedMarks = blankScore;
-            isCorrect = correctBlanks === q.blanks.length;
+            isCorrect = evalRes.isCorrect
+            earnedMarks = evalRes.earnedMarks > 0 ? evalRes.earnedMarks : 0
+            negativeApplied = evalRes.negativeApplied
           } else if (q.type === "coding") {
             const testResults = (studentAnswer as any).testResults as { passed: boolean }[] | undefined
             const totalPassed = (studentAnswer as any).totalPassed ?? testResults?.filter(r => r.passed).length ?? 0
@@ -448,7 +407,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             if (ansText.length > 0) {
               const aiResult = await evaluateDescriptiveAnswerWithAI({
                 questionText: q.questionText,
-                modelAnswer: Array.isArray(q.correctAnswer) ? q.correctAnswer.join(", ") : (q.correctAnswer as string | undefined),
+                modelAnswer:
+                  (q as any).modelAnswer ||
+                  (Array.isArray(q.correctAnswer) ? q.correctAnswer.join(", ") : (q.correctAnswer as string | undefined)),
+                rubric: Array.isArray((q as any).rubric) ? (q as any).rubric : undefined,
                 explanation: (q as any).explanation,
                 marks: q.marks,
                 studentAnswerText: ansText,
@@ -479,11 +441,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             secCorrectOrMarked++
             score += earnedMarks;
             secScore += earnedMarks;
-          } else if (sectionNegativeMarking && (q.type === "mcq" || q.type === "truefalse" || q.type === "assertion")) {
-            // Apply negative marks only if explicitly wrong (not just empty)
-            const negativeValue = q.negativeMark ?? sectionNegativeValue;
-            score -= Math.abs(negativeValue);
-            secScore -= Math.abs(negativeValue);
+          } else if (negativeApplied > 0) {
+            score -= negativeApplied;
+            secScore -= negativeApplied;
           }
         }
 

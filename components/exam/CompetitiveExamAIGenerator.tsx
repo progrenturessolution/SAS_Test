@@ -36,6 +36,8 @@ import {
 } from "@/lib/curriculumData"
 import { MathRenderer } from "./MathRenderer"
 import { QuestionDiagram } from "./QuestionDiagram"
+import { computeDifficultyCounts } from "@/lib/ai/promptBuilder"
+import { partitionDifficultyAcrossBatches } from "@/lib/ai/examBlueprint"
 
 export interface GeneratedCompetitiveQuestion {
   id: string
@@ -68,12 +70,12 @@ export function CompetitiveExamAIGenerator({
   const [selectedExam, setSelectedExam] = useState<ExamTarget>("NEET")
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel | "both">("12")
   const [selectedSubject, setSelectedSubject] = useState<CompetitiveSubject>("Physics")
-  
+
   // Custom Chapters & Topics
   const [selectedChapters, setSelectedChapters] = useState<string[]>([])
   const [manualChapterInput, setManualChapterInput] = useState("")
   const [chapterSearch, setChapterSearch] = useState("")
-  
+
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [manualTopicInput, setManualTopicInput] = useState("")
 
@@ -309,7 +311,11 @@ export function CompetitiveExamAIGenerator({
         rem -= take
       }
 
-      const queue = [...batches]
+      const batchDiffTargets = partitionDifficultyAcrossBatches(
+        computeDifficultyCounts(questionCount, difficulty),
+        batches
+      )
+      const queue = batches.map((count, idx) => ({ count, difficultyCounts: batchDiffTargets[idx] }))
       let allGenerated: GeneratedCompetitiveQuestion[] = []
       const seenTexts = new Set<string>()
       const batchErrors: string[] = []
@@ -319,8 +325,9 @@ export function CompetitiveExamAIGenerator({
 
       const runWorker = async () => {
         while (queue.length > 0) {
-          const batchCount = queue.shift()
-          if (!batchCount) break
+          const batchJob = queue.shift()
+          if (!batchJob) break
+          const batchCount = batchJob.count
 
           let retries = 1
           let batchSuccess = false
@@ -341,6 +348,7 @@ export function CompetitiveExamAIGenerator({
                   topics: selectedTopics,
                   syllabusText: uploadedSyllabusText,
                   difficulty,
+                  difficultyCounts: batchJob.difficultyCounts,
                   questionCount: batchCount,
                   questionPattern: pattern,
                   marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
@@ -524,16 +532,14 @@ export function CompetitiveExamAIGenerator({
                         key={exam.id}
                         type="button"
                         onClick={() => handleExamChange(exam.id)}
-                        className={`text-left p-3.5 rounded-xl border transition-all relative overflow-hidden cursor-pointer ${
-                          isSelected
-                            ? "border-2 border-[#2D3A4A] bg-[#2D3A4A]/5 text-[#324158] shadow-xs"
-                            : "border border-gray-200 hover:border-gray-300 bg-white"
-                        }`}
+                        className={`text-left p-3.5 rounded-xl border transition-all relative overflow-hidden cursor-pointer ${isSelected
+                          ? "border-2 border-[#2D3A4A] bg-[#2D3A4A]/5 text-[#324158] shadow-xs"
+                          : "border border-gray-200 hover:border-gray-300 bg-white"
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                            isSelected ? "bg-[#2D3A4A] text-white" : "bg-gray-100 text-gray-700"
-                          }`}>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${isSelected ? "bg-[#2D3A4A] text-white" : "bg-gray-100 text-gray-700"
+                            }`}>
                             {exam.badge}
                           </span>
                           {isSelected && (
@@ -569,11 +575,10 @@ export function CompetitiveExamAIGenerator({
                         key={g.id}
                         type="button"
                         onClick={() => handleGradeChange(g.id as GradeLevel | "both")}
-                        className={`py-2 px-3 rounded-lg text-xs font-semibold text-center transition-all cursor-pointer ${
-                          selectedGrade === g.id
-                            ? "bg-[#2D3A4A] text-white shadow-xs"
-                            : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                        }`}
+                        className={`py-2 px-3 rounded-lg text-xs font-semibold text-center transition-all cursor-pointer ${selectedGrade === g.id
+                          ? "bg-[#2D3A4A] text-white shadow-xs"
+                          : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                          }`}
                       >
                         {g.label}
                       </button>
@@ -592,11 +597,10 @@ export function CompetitiveExamAIGenerator({
                         key={sub}
                         type="button"
                         onClick={() => handleSubjectChange(sub)}
-                        className={`py-2 px-4 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                          selectedSubject === sub
-                            ? "bg-[#2D3A4A] text-white shadow-xs"
-                            : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                        }`}
+                        className={`py-2 px-4 rounded-lg text-xs font-semibold transition-all cursor-pointer ${selectedSubject === sub
+                          ? "bg-[#2D3A4A] text-white shadow-xs"
+                          : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                          }`}
                       >
                         {sub}
                       </button>
@@ -635,8 +639,8 @@ export function CompetitiveExamAIGenerator({
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-xs font-bold uppercase tracking-wider text-[#324158] flex items-center gap-1.5">
-                        <Tag className="w-3.5 h-3.5 text-[#324158]" />
-                        <span>Curriculum Chapters</span>
+                          <Tag className="w-3.5 h-3.5 text-[#324158]" />
+                          <span>Curriculum Chapters</span>
                         </span>
                         <span className="mt-1 block text-[10px] font-semibold text-emerald-700">
                           {currentExamMeta.title} {currentExamMeta.syllabusYear} · {selectedSubject} · Class {selectedGrade === "both" ? "11 & 12" : selectedGrade}
@@ -694,11 +698,10 @@ export function CompetitiveExamAIGenerator({
                             key={ch.id}
                             type="button"
                             onClick={() => toggleChapter(ch.name)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-medium text-left transition-all flex items-center gap-1.5 cursor-pointer ${
-                              isSelected
-                                ? "bg-[#2D3A4A] text-white shadow-xs"
-                                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                            }`}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-medium text-left transition-all flex items-center gap-1.5 cursor-pointer ${isSelected
+                              ? "bg-[#2D3A4A] text-white shadow-xs"
+                              : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                              }`}
                           >
                             <span>{isSelected ? "✓" : "+"}</span>
                             <span>{String(filteredChapters.indexOf(ch) + 1).padStart(2, "0")}. {ch.name}</span>
@@ -921,11 +924,10 @@ export function CompetitiveExamAIGenerator({
                         key={cnt}
                         type="button"
                         onClick={() => setQuestionCount(cnt)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                          questionCount === cnt
-                            ? "bg-[#2D3A4A] text-white"
-                            : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                        }`}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${questionCount === cnt
+                          ? "bg-[#2D3A4A] text-white"
+                          : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                          }`}
                       >
                         {cnt}
                       </button>
@@ -994,8 +996,8 @@ export function CompetitiveExamAIGenerator({
                         {generationStep === 1
                           ? "Analyzing PYQ Papers & Syllabus Material..."
                           : generationStep === 2
-                          ? "Parallel Generation across API Keys..."
-                          : "Validating non-repetition & building LaTeX solutions..."}
+                            ? "Parallel Generation across API Keys..."
+                            : "Validating non-repetition & building LaTeX solutions..."}
                       </span>
                     </>
                   ) : (
@@ -1075,11 +1077,10 @@ export function CompetitiveExamAIGenerator({
                   return (
                     <div
                       key={q.id}
-                      className={`p-5 rounded-xl border transition-all ${
-                        isSelected
-                          ? "bg-white border-2 border-[#2D3A4A]/40 shadow-xs"
-                          : "bg-gray-50/60 border border-gray-200 opacity-60"
-                      }`}
+                      className={`p-5 rounded-xl border transition-all ${isSelected
+                        ? "bg-white border-2 border-[#2D3A4A]/40 shadow-xs"
+                        : "bg-gray-50/60 border border-gray-200 opacity-60"
+                        }`}
                     >
                       {/* Question Header */}
                       <div className="flex items-start justify-between gap-3 mb-3">
@@ -1153,18 +1154,16 @@ export function CompetitiveExamAIGenerator({
                           return (
                             <div
                               key={optIdx}
-                              className={`p-3 rounded-lg border flex items-start gap-2.5 transition-all ${
-                                isCorrect
-                                  ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-medium"
-                                  : "bg-white border-gray-200 text-gray-700"
-                              }`}
+                              className={`p-3 rounded-lg border flex items-start gap-2.5 transition-all ${isCorrect
+                                ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-medium"
+                                : "bg-white border-gray-200 text-gray-700"
+                                }`}
                             >
                               <span
-                                className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
-                                  isCorrect
-                                    ? "bg-emerald-600 text-white"
-                                    : "bg-gray-100 text-gray-600"
-                                }`}
+                                className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${isCorrect
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-gray-100 text-gray-600"
+                                  }`}
                               >
                                 {isCorrect ? "✓" : optLabel}
                               </span>
@@ -1323,11 +1322,10 @@ export function CompetitiveExamAIGenerator({
                           setEditingQuestion({ ...editingQuestion, correctAnswer: optLabel })
                         }
                       }}
-                      className={`px-2.5 py-1 text-xs rounded-md font-semibold cursor-pointer ${
-                        isOptSelected
-                          ? "bg-emerald-600 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                      className={`px-2.5 py-1 text-xs rounded-md font-semibold cursor-pointer ${isOptSelected
+                        ? "bg-emerald-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
                     >
                       {isOptSelected ? "Correct" : "Set Correct"}
                     </button>

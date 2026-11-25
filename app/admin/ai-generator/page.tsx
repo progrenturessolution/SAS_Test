@@ -43,6 +43,9 @@ import {
   AlertTriangle,
   Calculator,
 } from "lucide-react"
+import { computeDifficultyCounts } from "@/lib/ai/promptBuilder"
+import { partitionDifficultyAcrossBatches, resolveClassDistribution } from "@/lib/ai/examBlueprint"
+import { normalizeFormatInput, normalizeStoredQuestion, toExamQuestionPayload, formatToDbType } from "@/lib/ai/canonicalSchema"
 import {
   EXAM_TARGETS,
   ExamTarget,
@@ -81,17 +84,69 @@ export interface SubjectConfig {
   marks: number
 }
 
+export interface SubjectTypeRow {
+  rowId: string
+  formatId: string
+  count: number
+  marks: number
+}
+
+const QUESTION_FORMAT_LABELS: Record<string, string> = {
+  mcq: "MCQ – Single Correct",
+  mcq_multi: "MCQ – Multiple Correct",
+  assertion: "Assertion & Reason",
+  true_false: "True / False",
+  fib: "Fill in the Blanks",
+  descriptive: "Descriptive / Long Answer",
+  diagram: "Diagram / Visual",
+}
+
+const QUESTION_FORMAT_ALIASES: Record<string, string> = {
+  mcq_single: "mcq",
+  mcq_multiple: "mcq_multi",
+  assertion_reason: "assertion",
+  truefalse: "true_false",
+  fill_in_the_blanks: "fib",
+  fillblanks: "fib",
+  diagram_based: "diagram",
+  short_answer: "descriptive",
+  long_descriptive: "descriptive",
+}
+
+export function buildAutoSubjectTypes(
+  sub: string,
+  targetQ: number,
+  targetM: number,
+  defaultMpq: number
+): SubjectTypeRow[] {
+  const q = Math.max(0, Math.round(targetQ))
+  if (q === 0) return []
+  const mpq = q > 0 && targetM > 0 ? Math.max(1, Math.round(targetM / q)) : Math.max(1, defaultMpq)
+
+  if (q * mpq === targetM && q >= 5) {
+    const diagramCount = Math.min(q - 1, Math.max(1, Math.round(q * 0.16)))
+    const mcqCount = q - diagramCount
+    return [
+      { rowId: `${sub}_auto_mcq`, formatId: "mcq", count: mcqCount, marks: mpq },
+      { rowId: `${sub}_auto_diagram`, formatId: "diagram", count: diagramCount, marks: mpq },
+    ]
+  }
+
+  return [{ rowId: `${sub}_auto_mcq`, formatId: "mcq", count: q, marks: mpq }]
+}
+
 export const getSynchronizedConfigs = (exam: ExamTarget, subjects: CompetitiveSubject[]) => {
   const dist: Record<string, SubjectConfig> = {}
+  const typeDist: Record<string, SubjectTypeRow[]> = {}
 
-  let defaultFormats = [
-    { id: "mcq", label: "MCQ (Single Correct)", checked: false, count: 0, marks: 1 },
-    { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
-    { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
+  const defaultFormats = [
+    { id: "mcq", label: "MCQ – Single Correct", checked: true, count: 0, marks: exam === "NEET" || exam === "JEE_MAIN" || exam === "JEE_ADVANCED" ? 4 : 1 },
+    { id: "mcq_multi", label: "MCQ – Multiple Correct", checked: false, count: 0, marks: exam === "JEE_ADVANCED" ? 4 : 1 },
+    { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: exam === "NEET" || exam === "JEE_MAIN" || exam === "JEE_ADVANCED" ? 4 : 1 },
+    { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: exam === "NEET" || exam === "JEE_MAIN" || exam === "JEE_ADVANCED" ? 4 : 1 },
     { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
     { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
-    { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 2 },
-    { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
+    { id: "descriptive", label: "Descriptive / Long Answer", checked: false, count: 0, marks: 2 },
   ]
 
   let c11Weight = 20
@@ -101,69 +156,50 @@ export const getSynchronizedConfigs = (exam: ExamTarget, subjects: CompetitiveSu
     c11Weight = 20
     c12Weight = 80
     subjects.forEach((sub) => {
+      const qCount = sub === "Biology" && !subjects.includes("Mathematics") ? 100 : 50
       const mpq = sub === "Mathematics" ? 2 : 1
-      dist[sub] = { questions: 0, marksPerQuestion: mpq, marks: 0 }
+      dist[sub] = { questions: qCount, marksPerQuestion: mpq, marks: qCount * mpq }
+      typeDist[sub] = [{ rowId: `${sub}_mcq`, formatId: "mcq", count: qCount, marks: mpq }]
     })
-
-    const hasMath = subjects.includes("Mathematics")
-    const mpq = hasMath && subjects.length === 1 ? 2 : 1
-    defaultFormats = [
-      { id: "mcq", label: "MCQ (Single Correct)", checked: false, count: 0, marks: mpq },
-      { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
-      { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
-      { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
-      { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
-      { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 2 },
-      { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
-    ]
   } else if (exam === "NEET") {
     c11Weight = 50
     c12Weight = 50
     subjects.forEach((sub) => {
-      dist[sub] = { questions: 0, marksPerQuestion: 4, marks: 0 }
+      const qCount = sub === "Biology" ? 90 : 45
+      const mpq = 4
+      dist[sub] = { questions: qCount, marksPerQuestion: mpq, marks: qCount * mpq }
+      typeDist[sub] = [{ rowId: `${sub}_mcq`, formatId: "mcq", count: qCount, marks: mpq }]
     })
-    defaultFormats = [
-      { id: "mcq", label: "MCQ (Single Correct)", checked: false, count: 0, marks: 4 },
-      { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 4 },
-      { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 4 },
-      { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
-      { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
-      { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 4 },
-      { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 4 },
-    ]
   } else if (exam === "JEE_MAIN") {
     c11Weight = 45
     c12Weight = 55
     subjects.forEach((sub) => {
-      dist[sub] = { questions: 0, marksPerQuestion: 4, marks: 0 }
+      const qCount = 25
+      const mpq = 4
+      dist[sub] = { questions: qCount, marksPerQuestion: mpq, marks: qCount * mpq }
+      typeDist[sub] = [{ rowId: `${sub}_mcq`, formatId: "mcq", count: qCount, marks: mpq }]
     })
-    defaultFormats = [
-      { id: "mcq", label: "MCQ (Single Correct)", checked: false, count: 0, marks: 4 },
-      { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 4 },
-      { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 4 },
-      { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
-      { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
-      { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 4 },
-      { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 4 },
-    ]
+  } else if (exam === "JEE_ADVANCED") {
+    c11Weight = 50
+    c12Weight = 50
+    subjects.forEach((sub) => {
+      const qCount = 18
+      const mpq = 4
+      dist[sub] = { questions: qCount, marksPerQuestion: mpq, marks: qCount * mpq }
+      typeDist[sub] = [{ rowId: `${sub}_mcq`, formatId: "mcq", count: qCount, marks: mpq }]
+    })
   } else {
     c11Weight = 50
     c12Weight = 50
     subjects.forEach((sub) => {
-      dist[sub] = { questions: 0, marksPerQuestion: 1, marks: 0 }
+      const qCount = 20
+      const mpq = 2
+      dist[sub] = { questions: qCount, marksPerQuestion: mpq, marks: qCount * mpq }
+      typeDist[sub] = [{ rowId: `${sub}_mcq`, formatId: "mcq", count: qCount, marks: mpq }]
     })
-    defaultFormats = [
-      { id: "mcq", label: "MCQ (Single Correct)", checked: false, count: 0, marks: 1 },
-      { id: "mcq_multi", label: "MCQ (Multiple Correct)", checked: false, count: 0, marks: 1 },
-      { id: "assertion", label: "Assertion & Reason", checked: false, count: 0, marks: 1 },
-      { id: "true_false", label: "True / False", checked: false, count: 0, marks: 1 },
-      { id: "fib", label: "Fill in the Blanks", checked: false, count: 0, marks: 1 },
-      { id: "descriptive", label: "Description / Descriptive", checked: false, count: 0, marks: 2 },
-      { id: "diagram", label: "Diagram / Visual", checked: false, count: 0, marks: 1 },
-    ]
   }
 
-  return { dist, formats: defaultFormats, c11Weight, c12Weight }
+  return { dist, formats: defaultFormats, typeDist, c11Weight, c12Weight }
 }
 
 const initialSynchronizedSetup = getSynchronizedConfigs("MHT_CET", ["Physics", "Chemistry", "Mathematics"])
@@ -201,11 +237,13 @@ function AIGeneratorContent() {
     "12": false,
   })
 
-  // Blueprint Format Matrix - Match Screenshot (No Coding)
+  // Blueprint Format Matrix & Per-Subject Distribution
+  const [generationMode, setGenerationMode] = useState<"manual" | "auto">("manual")
   const [blueprintFormats, setBlueprintFormats] = useState(initialSynchronizedSetup.formats)
 
-  // Subject-wise Marks & Syllabus Weightage States (Screenshot Match)
+  // Subject-wise Marks & Syllabus Weightage States
   const [subjectDist, setSubjectDist] = useState<Record<string, SubjectConfig>>(initialSynchronizedSetup.dist)
+  const [subjectTypeDist, setSubjectTypeDist] = useState<Record<string, SubjectTypeRow[]>>(initialSynchronizedSetup.typeDist)
   const [class11Weightage, setClass11Weightage] = useState<number>(initialSynchronizedSetup.c11Weight)
   const [class12Weightage, setClass12Weightage] = useState<number>(initialSynchronizedSetup.c12Weight)
 
@@ -232,7 +270,7 @@ function AIGeneratorContent() {
 
   // Blueprint Settings
   const [questionCount, setQuestionCount] = useState<number>(0)
-  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "balanced" | "hard">("easy")
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "balanced" | "hard">("balanced")
   const [pattern, setPattern] = useState<"mcq_single" | "assertion_reason" | "mixed">("mixed")
   const [focusPYQ, setFocusPYQ] = useState(true)
 
@@ -454,6 +492,8 @@ function AIGeneratorContent() {
             correctAnswer: q.correctAnswer || "",
             explanation: q.explanation || "",
             chapter: q.chapter || exam.subject || "General",
+            subject: q.subject || exam.subject || "",
+            grade: q.grade || "",
             pyqReference: q.pyqReference,
             wordLimit: q.wordLimit,
           }))
@@ -500,8 +540,9 @@ function AIGeneratorContent() {
             )
           }
 
-          // Pre-populate subject distribution
+          // Pre-populate subject & per-subject question-type distribution
           const subCounts: Record<string, { count: number; marks: number }> = {}
+          const subTypeCounts: Record<string, Record<string, { count: number; marks: number }>> = {}
           loadedQuestions.forEach((q) => {
             const sec = (exam.sections || []).find((s: any) =>
               (s.questions || []).some((sq: any) => sq.id === q.id || sq._id === q.id)
@@ -509,20 +550,37 @@ function AIGeneratorContent() {
             const sub = sec?.name || exam.subject || "Physics"
             if (!subCounts[sub]) subCounts[sub] = { count: 0, marks: 0 }
             subCounts[sub].count += 1
-            subCounts[sub].marks += q.marks || 4
+            const qMarks = q.marks || 4
+            subCounts[sub].marks += qMarks
+
+            const rawFmt = String(q.questionFormat || q.type || "mcq")
+            const canonicalFmt = QUESTION_FORMAT_ALIASES[rawFmt] || (QUESTION_FORMAT_LABELS[rawFmt] ? rawFmt : "mcq")
+            if (!subTypeCounts[sub]) subTypeCounts[sub] = {}
+            if (!subTypeCounts[sub][canonicalFmt]) subTypeCounts[sub][canonicalFmt] = { count: 0, marks: qMarks }
+            subTypeCounts[sub][canonicalFmt].count += 1
+            subTypeCounts[sub][canonicalFmt].marks = qMarks
           })
           if (Object.keys(subCounts).length > 0) {
             setSubjectDist((prev) => {
               const updated = { ...prev }
               for (const [subName, info] of Object.entries(subCounts)) {
-                if (updated[subName]) {
-                  updated[subName] = {
-                    ...updated[subName],
-                    questions: info.count,
-                    marks: info.marks,
-                    marksPerQuestion: Math.round(info.marks / info.count) || updated[subName].marksPerQuestion,
-                  }
+                updated[subName] = {
+                  questions: info.count,
+                  marks: info.marks,
+                  marksPerQuestion: Math.max(1, Math.round(info.marks / Math.max(1, info.count))),
                 }
+              }
+              return updated
+            })
+            setSubjectTypeDist((prev) => {
+              const updated = { ...prev }
+              for (const [subName, fmtMap] of Object.entries(subTypeCounts)) {
+                updated[subName] = Object.entries(fmtMap).map(([fmtId, info], idx) => ({
+                  rowId: `${subName}_${fmtId}_loaded_${idx}`,
+                  formatId: fmtId,
+                  count: info.count,
+                  marks: Math.max(1, info.marks),
+                }))
               }
               return updated
             })
@@ -530,6 +588,71 @@ function AIGeneratorContent() {
 
           setCurrentStep(3) // Jump directly to Questions step so user can edit right away!
         }
+
+        const savedGeneratorSetup = exam.settings?.competitiveGenerator
+        if (savedGeneratorSetup && typeof savedGeneratorSetup === "object") {
+          if (Array.isArray(savedGeneratorSetup.selectedSubjects)) {
+            setSelectedSubjects(savedGeneratorSetup.selectedSubjects)
+          }
+          if (savedGeneratorSetup.selectedExam) setSelectedExam(savedGeneratorSetup.selectedExam)
+          if (savedGeneratorSetup.selectedGrade) setSelectedGrade(savedGeneratorSetup.selectedGrade)
+          if (savedGeneratorSetup.selectedSubject) setSelectedSubject(savedGeneratorSetup.selectedSubject)
+          if (savedGeneratorSetup.activeSubjectTab) setActiveSubjectTab(savedGeneratorSetup.activeSubjectTab)
+          if (Array.isArray(savedGeneratorSetup.selectedChapters)) {
+            setSelectedChapters(savedGeneratorSetup.selectedChapters)
+          }
+          if (Array.isArray(savedGeneratorSetup.selectedTopics)) {
+            setSelectedTopics(savedGeneratorSetup.selectedTopics)
+          }
+          if (typeof savedGeneratorSetup.uploadedSyllabusText === "string") {
+            setUploadedSyllabusText(savedGeneratorSetup.uploadedSyllabusText)
+          }
+          if (savedGeneratorSetup.uploadedPdf) setUploadedPdf(savedGeneratorSetup.uploadedPdf)
+          if (Array.isArray(savedGeneratorSetup.blueprintFormats)) {
+            setBlueprintFormats(savedGeneratorSetup.blueprintFormats.map((format: any) => {
+              const rawId = String(format.id || "mcq")
+              const id = QUESTION_FORMAT_ALIASES[rawId] || rawId
+              return {
+                ...format,
+                id,
+                label: QUESTION_FORMAT_LABELS[id] || format.label || id,
+                count: Math.max(0, Math.min(200, Number(format.count) || 0)),
+                marks: Math.max(1, Math.min(100, Number(format.marks) || 1)),
+              }
+            }))
+          }
+          if (savedGeneratorSetup.subjectDist && typeof savedGeneratorSetup.subjectDist === "object") {
+            setSubjectDist(savedGeneratorSetup.subjectDist)
+          }
+          if (savedGeneratorSetup.subjectTypeDist && typeof savedGeneratorSetup.subjectTypeDist === "object") {
+            setSubjectTypeDist(savedGeneratorSetup.subjectTypeDist)
+          }
+          if (savedGeneratorSetup.generationMode === "auto" || savedGeneratorSetup.generationMode === "manual") {
+            setGenerationMode(savedGeneratorSetup.generationMode)
+          }
+          if (typeof savedGeneratorSetup.class11Weightage === "number") {
+            const class11 = Math.max(0, Math.min(100, savedGeneratorSetup.class11Weightage))
+            setClass11Weightage(class11)
+            setClass12Weightage(100 - class11)
+          } else if (typeof savedGeneratorSetup.class12Weightage === "number") {
+            const class12 = Math.max(0, Math.min(100, savedGeneratorSetup.class12Weightage))
+            setClass12Weightage(class12)
+            setClass11Weightage(100 - class12)
+          }
+          if (typeof savedGeneratorSetup.questionCount === "number") {
+            setQuestionCount(savedGeneratorSetup.questionCount)
+          }
+          if (["easy", "medium", "balanced", "hard"].includes(savedGeneratorSetup.difficulty)) {
+            setDifficulty(savedGeneratorSetup.difficulty)
+          }
+          if (["mcq_single", "assertion_reason", "mixed"].includes(savedGeneratorSetup.pattern)) {
+            setPattern(savedGeneratorSetup.pattern)
+          }
+          if (typeof savedGeneratorSetup.focusPYQ === "boolean") {
+            setFocusPYQ(savedGeneratorSetup.focusPYQ)
+          }
+        }
+
         setIsLoadingExistingExam(false)
         toast.success(`Loaded "${exam.title}" for editing`)
       })
@@ -658,48 +781,49 @@ function AIGeneratorContent() {
   }
 
   const getQuestionFormat = (q: GeneratedCompetitiveQuestion): string => {
-    if (
-      q.type === "descriptive" ||
-      q.questionFormat === "descriptive" ||
-      (!q.options || q.options.length === 0)
-    ) {
-      return "descriptive"
-    }
-    if (
-      q.questionFormat === "true_false" ||
-      q.questionText?.toLowerCase().startsWith("true or false") ||
-      q.questionText?.toLowerCase().startsWith("true/false") ||
-      (Array.isArray(q.options) && q.options.length === 2 && q.options.includes("True"))
-    ) {
+    const rawFmt = String(q.questionFormat || q.type || "").toLowerCase().trim()
+    const rawType = String(q.type || "").toLowerCase().trim()
+    if (rawFmt === "true_false" || rawFmt === "truefalse" || rawType === "truefalse") {
       return "true_false"
     }
     if (
-      q.questionFormat === "assertion" ||
-      q.questionFormat === "assertion_reason" ||
+      rawFmt === "fib" ||
+      rawFmt === "fillblanks" ||
+      rawType === "fillblanks" ||
+      (Array.isArray((q as any).blanks) && (q as any).blanks.length > 0)
+    ) {
+      return "fib"
+    }
+    if (
+      rawFmt === "assertion" ||
+      rawFmt === "assertion_reason" ||
+      rawType === "assertion" ||
       Boolean(parseAssertionReason(q.questionText || ""))
     ) {
       return "assertion"
     }
     if (
-      q.questionFormat === "diagram" ||
+      rawFmt === "mcq_multi" ||
+      rawFmt === "mcq_multiple" ||
+      rawType === "mcq_multi" ||
+      (Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1)
+    ) {
+      return "mcq_multi"
+    }
+    if (
+      rawFmt === "diagram" ||
+      rawType === "diagram" ||
       Boolean(q.questionImage && String(q.questionImage).includes("<svg"))
     ) {
       return "diagram"
     }
-    if (
-      q.questionFormat === "fib" ||
-      q.questionFormat === "fill_in_the_blanks" ||
-      q.questionText?.includes("______")
-    ) {
-      return "fib"
+    if (rawType === "descriptive" || rawFmt === "descriptive") {
+      return "descriptive"
     }
-    if (
-      q.questionFormat === "mcq_multi" ||
-      q.questionFormat === "mcq_multiple" ||
-      q.type === ("mcq_multi" as any) ||
-      (Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1)
-    ) {
-      return "mcq_multi"
+    if (!q.options || q.options.length === 0) {
+      if (["true", "false"].includes(String(q.correctAnswer || "").trim().toLowerCase())) return "true_false"
+      if (q.questionText?.includes("___")) return "fib"
+      return "descriptive"
     }
     return "mcq"
   }
@@ -711,7 +835,7 @@ function AIGeneratorContent() {
 
 
   const formatCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: generatedQuestions.length, mcq: 0, diagram: 0, assertion: 0, fib: 0, true_false: 0, descriptive: 0 }
+    const counts: Record<string, number> = { all: generatedQuestions.length, mcq: 0, mcq_multi: 0, diagram: 0, assertion: 0, fib: 0, true_false: 0, descriptive: 0 }
     generatedQuestions.forEach((q) => {
       const fmt = getQuestionFormat(q)
       if (counts[fmt] !== undefined) counts[fmt]++
@@ -762,24 +886,6 @@ function AIGeneratorContent() {
     }
     return `${selectedChapters.length} Chapters`
   }, [selectedChapters, class11SelectedCount, class12SelectedCount, generatedQuestions.length, selectedGrade])
-
-  const questionFormatOverview = useMemo(() => {
-    const parts: string[] = []
-    if (formatCounts.mcq > 0) parts.push(`MCQ: ${formatCounts.mcq}`)
-    if (formatCounts.assertion > 0) parts.push(`Assertion: ${formatCounts.assertion}`)
-    if (formatCounts.fib > 0) parts.push(`Fill in the Blanks: ${formatCounts.fib}`)
-    if (formatCounts.true_false > 0) parts.push(`True / False: ${formatCounts.true_false}`)
-    if (formatCounts.descriptive > 0) parts.push(`Descriptive: ${formatCounts.descriptive}`)
-
-    if (parts.length > 0) return parts.join(" | ")
-
-    const blueprintParts = blueprintFormats
-      .filter((f) => f.checked && f.count > 0)
-      .map((f) => `${f.label}: ${f.count}`)
-
-    if (blueprintParts.length > 0) return blueprintParts.join(" | ")
-    return "MCQ: 30 | Assertion: 10 | Fill in the Blanks: 5"
-  }, [formatCounts, blueprintFormats])
 
   const difficultyOverview = useMemo(() => {
     switch (difficulty) {
@@ -861,6 +967,7 @@ function AIGeneratorContent() {
       const sync = getSynchronizedConfigs(exam, targetMeta.subjects)
       setSubjectDist(sync.dist)
       setBlueprintFormats(sync.formats)
+      setSubjectTypeDist(sync.typeDist)
       setClass11Weightage(sync.c11Weight)
       setClass12Weightage(sync.c12Weight)
       // Negative marking disabled by default
@@ -892,8 +999,22 @@ function AIGeneratorContent() {
       if (!selectedSubject) setSelectedSubject(sub)
     }
     const sync = getSynchronizedConfigs(selectedExam, next)
-    setSubjectDist(sync.dist)
     setBlueprintFormats(sync.formats)
+    setSubjectDist((prev) => {
+      const merged: Record<string, SubjectConfig> = {}
+      next.forEach((s) => {
+        merged[s] = prev[s] || sync.dist[s] || { questions: 20, marksPerQuestion: 1, marks: 20 }
+      })
+      return merged
+    })
+    setSubjectTypeDist((prev) => {
+      const merged: Record<string, SubjectTypeRow[]> = {}
+      next.forEach((s) => {
+        const existing = prev[s]
+        merged[s] = existing && existing.length > 0 ? existing : (sync.typeDist[s] || [])
+      })
+      return merged
+    })
   }
 
   const handleRemoveSubject = (e: React.MouseEvent, sub: CompetitiveSubject) => {
@@ -904,8 +1025,22 @@ function AIGeneratorContent() {
       if (selectedSubject === sub) setSelectedSubject(next[0])
       if (activeSubjectTab === sub) setActiveSubjectTab(next[0])
       const sync = getSynchronizedConfigs(selectedExam, next)
-      setSubjectDist(sync.dist)
       setBlueprintFormats(sync.formats)
+      setSubjectDist((prev) => {
+        const merged: Record<string, SubjectConfig> = {}
+        next.forEach((s) => {
+          merged[s] = prev[s] || sync.dist[s] || { questions: 20, marksPerQuestion: 1, marks: 20 }
+        })
+        return merged
+      })
+      setSubjectTypeDist((prev) => {
+        const merged: Record<string, SubjectTypeRow[]> = {}
+        next.forEach((s) => {
+          const existing = prev[s]
+          merged[s] = existing && existing.length > 0 ? existing : (sync.typeDist[s] || [])
+        })
+        return merged
+      })
     }
   }
 
@@ -926,200 +1061,405 @@ function AIGeneratorContent() {
       const sync = getSynchronizedConfigs(selectedExam, next)
       setSubjectDist(sync.dist)
       setBlueprintFormats(sync.formats)
+      setSubjectTypeDist(sync.typeDist)
     }
     setSelectedChapters([])
     setChapterSearch("")
   }
 
-  // Step 2: Format calculations (guaranteed numeric arithmetic, never string concatenation)
+  // Step 2: Subject-wise & Question Type Distribution calculations
   const totalQuestions = useMemo(() => {
-    return blueprintFormats.reduce((acc, f) => {
-      const c = f.checked || f.count > 0 ? Number(f.count) : 0
-      return acc + (isNaN(c) ? 0 : c)
+    return selectedSubjects.reduce((acc, sub) => {
+      const q = Number(subjectDist[sub]?.questions) || 0
+      return acc + Math.max(0, q)
     }, 0)
-  }, [blueprintFormats])
+  }, [selectedSubjects, subjectDist])
 
   const totalMarks = useMemo(() => {
-    return blueprintFormats.reduce((acc, f) => {
-      const c = f.checked || f.count > 0 ? Number(f.count) : 0
-      const m = isNaN(Number(f.marks)) ? 0 : Number(f.marks)
-      return acc + ((isNaN(c) ? 0 : c) * m)
+    return selectedSubjects.reduce((acc, sub) => {
+      const m = Number(subjectDist[sub]?.marks) || 0
+      return acc + Math.max(0, m)
     }, 0)
-  }, [blueprintFormats])
+  }, [selectedSubjects, subjectDist])
 
-  const toggleFormatCheck = (id: string) => {
-    setBlueprintFormats((prev) =>
-      prev.map((f) => {
-        if (f.id === id) {
-          const nextChecked = !f.checked
-          return {
-            ...f,
-            checked: nextChecked,
-            count: nextChecked ? Number(f.count) || 0 : 0,
-          }
-        }
-        return f
-      })
-    )
+  const getSubjectTypeRows = (sub: string): SubjectTypeRow[] => {
+    const subCfg = subjectDist[sub] || { questions: 0, marksPerQuestion: 1, marks: 0 }
+    if (generationMode === "auto") {
+      return buildAutoSubjectTypes(sub, subCfg.questions, subCfg.marks, subCfg.marksPerQuestion)
+    }
+    const existing = subjectTypeDist[sub]
+    if (existing && existing.length > 0) return existing
+    return [
+      {
+        rowId: `${sub}_mcq`,
+        formatId: "mcq",
+        count: Math.max(0, subCfg.questions),
+        marks: Math.max(1, subCfg.marksPerQuestion || 1),
+      },
+    ]
   }
 
-  const updateFormatCount = (id: string, count: any) => {
-    const parsed = typeof count === "number" ? count : parseInt(String(count), 10)
-    const safeCount = isNaN(parsed) ? 0 : Math.max(0, Math.min(200, Math.round(parsed)))
-    setBlueprintFormats((prev) => {
-      const updated = prev.map((f) =>
-        f.id === id ? { ...f, count: safeCount, checked: safeCount > 0 } : f
-      )
-      if (selectedSubjects.length === 1) {
-        const sub = selectedSubjects[0]
-        const totalQ = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? Number(f.count) || 0 : 0), 0)
-        const totalM = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
-        const mpq = totalQ > 0 ? Math.max(1, Math.round(totalM / totalQ)) : 1
-        setSubjectDist((sPrev) => ({
-          ...sPrev,
-          [sub]: {
-            questions: totalQ,
-            marksPerQuestion: mpq,
-            marks: totalQ === 0 ? 0 : totalM,
-          },
-        }))
+  const getSubjectProgress = (sub: string) => {
+    const subCfg = subjectDist[sub] || { questions: 0, marksPerQuestion: 1, marks: 0 }
+    const targetQ = Math.max(0, Number(subCfg.questions) || 0)
+    const targetM = Math.max(0, Number(subCfg.marks) || 0)
+    const rows = getSubjectTypeRows(sub)
+    const allocatedQ = rows.reduce((sum, r) => sum + (Number(r.count) || 0), 0)
+    const allocatedM = rows.reduce((sum, r) => sum + (Number(r.count) || 0) * (Number(r.marks) || 0), 0)
+    const isQuestionsMatched = allocatedQ === targetQ
+    const isMarksMatched = allocatedM === targetM
+    return {
+      targetQ,
+      targetM,
+      allocatedQ,
+      allocatedM,
+      isQuestionsMatched,
+      isMarksMatched,
+      isMatched: isQuestionsMatched && isMarksMatched,
+    }
+  }
+
+  const effectiveBlueprintFormats = useMemo(() => {
+    const order = ["mcq", "mcq_multi", "assertion", "diagram", "true_false", "fib", "descriptive"]
+    const map: Record<string, { count: number; marks: number }> = {}
+    order.forEach((id) => {
+      map[id] = { count: 0, marks: id === "descriptive" ? 2 : currentExamMeta.defaultMarksPerQuestion }
+    })
+
+    for (const sub of selectedSubjects) {
+      const subCfg = subjectDist[sub] || { questions: 0, marksPerQuestion: 1, marks: 0 }
+      const rows =
+        generationMode === "auto"
+          ? buildAutoSubjectTypes(sub, subCfg.questions, subCfg.marks, subCfg.marksPerQuestion)
+          : subjectTypeDist[sub] || []
+      for (const r of rows) {
+        if (r.count > 0) {
+          if (!map[r.formatId]) map[r.formatId] = { count: 0, marks: r.marks }
+          map[r.formatId].count += r.count
+          map[r.formatId].marks = r.marks
+        }
       }
-      return updated
+    }
+
+    return order.map((id) => ({
+      id,
+      label: QUESTION_FORMAT_LABELS[id] || id,
+      checked: (map[id]?.count || 0) > 0,
+      count: map[id]?.count || 0,
+      marks: map[id]?.marks || 1,
+    }))
+  }, [selectedSubjects, subjectDist, subjectTypeDist, generationMode, currentExamMeta.defaultMarksPerQuestion])
+
+  const questionFormatOverview = useMemo(() => {
+    const parts: string[] = []
+    if (formatCounts.mcq > 0) parts.push(`MCQ: ${formatCounts.mcq}`)
+    if (formatCounts.mcq_multi > 0) parts.push(`Multi-Correct: ${formatCounts.mcq_multi}`)
+    if (formatCounts.diagram > 0) parts.push(`Diagram: ${formatCounts.diagram}`)
+    if (formatCounts.assertion > 0) parts.push(`Assertion: ${formatCounts.assertion}`)
+    if (formatCounts.fib > 0) parts.push(`Fill in the Blanks: ${formatCounts.fib}`)
+    if (formatCounts.true_false > 0) parts.push(`True / False: ${formatCounts.true_false}`)
+    if (formatCounts.descriptive > 0) parts.push(`Descriptive: ${formatCounts.descriptive}`)
+
+    if (parts.length > 0) return parts.join(" | ")
+
+    const blueprintParts = effectiveBlueprintFormats
+      .filter((f) => f.checked && f.count > 0)
+      .map((f) => `${f.label}: ${f.count}`)
+
+    if (blueprintParts.length > 0) return blueprintParts.join(" | ")
+    return "MCQ – Single Correct"
+  }, [formatCounts, effectiveBlueprintFormats])
+
+  const handleModeSwitch = (mode: "manual" | "auto") => {
+    setGenerationMode(mode)
+  }
+
+  const updateSubjectTotalQuestions = (sub: string, rawVal: any) => {
+    const parsed = typeof rawVal === "number" ? rawVal : parseInt(String(rawVal), 10)
+    const safeQ = isNaN(parsed) ? 0 : Math.max(0, Math.min(200, Math.round(parsed)))
+    const prevCfg = subjectDist[sub] || { questions: 0, marksPerQuestion: 1, marks: 0 }
+    const mpq =
+      prevCfg.marksPerQuestion > 0
+        ? prevCfg.marksPerQuestion
+        : prevCfg.questions > 0 && prevCfg.marks > 0
+        ? Math.max(1, Math.round(prevCfg.marks / prevCfg.questions))
+        : 1
+    const nextM = safeQ * mpq
+
+    setSubjectDist((prev) => ({
+      ...prev,
+      [sub]: {
+        questions: safeQ,
+        marksPerQuestion: mpq,
+        marks: nextM,
+      },
+    }))
+
+    // By default, keep single-row MCQ distribution automatically synchronized with subject limits
+    setSubjectTypeDist((prev) => {
+      const existing = prev[sub] || []
+      if (existing.length <= 1) {
+        const firstFormat = existing[0]?.formatId || "mcq"
+        return {
+          ...prev,
+          [sub]: [
+            {
+              rowId: existing[0]?.rowId || `${sub}_mcq`,
+              formatId: firstFormat,
+              count: safeQ,
+              marks: mpq,
+            },
+          ],
+        }
+      }
+      return prev
     })
   }
 
-  const updateFormatMarks = (id: string, marks: any) => {
-    const parsed = typeof marks === "number" ? marks : parseInt(String(marks), 10)
-    const safeMarks = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, Math.round(parsed)))
-    setBlueprintFormats((prev) => {
-      const updated = prev.map((f) => (f.id === id ? { ...f, marks: safeMarks } : f))
-      if (selectedSubjects.length === 1) {
-        const sub = selectedSubjects[0]
-        const totalQ = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? Number(f.count) || 0 : 0), 0)
-        const totalM = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? (Number(f.count) || 0) * (Number(f.marks) || 0) : 0), 0)
-        const mpq = totalQ > 0 ? Math.max(1, Math.round(totalM / totalQ)) : safeMarks
-        setSubjectDist((sPrev) => ({
-          ...sPrev,
-          [sub]: {
-            questions: totalQ,
-            marksPerQuestion: mpq,
-            marks: totalQ === 0 ? 0 : totalM,
-          },
-        }))
+  const updateSubjectTotalMarks = (sub: string, rawVal: any) => {
+    const parsed = typeof rawVal === "number" ? rawVal : parseInt(String(rawVal), 10)
+    const safeM = isNaN(parsed) ? 0 : Math.max(0, Math.min(2000, Math.round(parsed)))
+    const prevCfg = subjectDist[sub] || { questions: 0, marksPerQuestion: 1, marks: 0 }
+    const q = Math.max(0, prevCfg.questions)
+    const derivedMpq = q > 0 && safeM >= q ? Math.max(1, Math.round(safeM / q)) : Math.max(1, prevCfg.marksPerQuestion || 1)
+
+    setSubjectDist((prev) => ({
+      ...prev,
+      [sub]: {
+        questions: q,
+        marksPerQuestion: derivedMpq,
+        marks: safeM,
+      },
+    }))
+
+    // When only one question type exists and marks divide cleanly by question count, sync row marks automatically
+    setSubjectTypeDist((prev) => {
+      const existing = prev[sub] || []
+      if (existing.length === 1 && q > 0 && safeM > 0 && safeM % q === 0) {
+        return {
+          ...prev,
+          [sub]: [
+            {
+              ...existing[0],
+              count: q,
+              marks: Math.max(1, safeM / q),
+            },
+          ],
+        }
       }
-      return updated
+      return prev
     })
   }
 
-  const updateFormatType = (id: string, newLabel: string) => {
-    setBlueprintFormats((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, label: newLabel } : f))
-    )
-  }
+  const addSubjectTypeRow = (sub: string) => {
+    const currentRows = getSubjectTypeRows(sub)
+    const usedFormats = new Set(currentRows.map((r) => r.formatId))
+    const preferredOrder = ["diagram", "assertion", "mcq_multi", "true_false", "fib", "descriptive", "mcq"]
+    const nextFormat = preferredOrder.find((fmt) => !usedFormats.has(fmt))
+    if (!nextFormat) return
 
-  const updateFormatTotalMarks = (id: string, totalMarksVal: any) => {
-    const parsed = typeof totalMarksVal === "number" ? totalMarksVal : parseInt(String(totalMarksVal), 10)
-    const safeMarks = isNaN(parsed) ? 0 : Math.max(0, Math.min(2000, Math.round(parsed)))
-    setBlueprintFormats((prev) => {
-      const updated = prev.map((f) => {
-        if (f.id === id) {
-          const mpq = Number(f.marks) || 1
-          const newCount = mpq > 0 ? Math.round(safeMarks / mpq) : 0
-          return {
-            ...f,
-            count: newCount,
-            checked: newCount > 0,
-          }
-        }
-        return f
-      })
-      if (selectedSubjects.length === 1) {
-        const sub = selectedSubjects[0]
-        const totalQ = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? Number(f.count) || 0 : 0), 0)
-        const totalM = updated.reduce((acc, f) => acc + (f.checked || f.count > 0 ? (Number(f.count) || 0) * (Number(f.marks) || 1) : 0), 0)
-        const mpq = totalQ > 0 ? Math.max(1, Math.round(totalM / totalQ)) : 1
-        setSubjectDist((sPrev) => ({
-          ...sPrev,
-          [sub]: {
-            questions: totalQ,
-            marksPerQuestion: mpq,
-            marks: totalQ === 0 ? 0 : totalM,
-          },
-        }))
-      }
-      return updated
-    })
-  }
+    const subCfg = subjectDist[sub] || { questions: 0, marksPerQuestion: 1, marks: 0 }
+    const allocQ = currentRows.reduce((sum, r) => sum + (Number(r.count) || 0), 0)
+    const allocM = currentRows.reduce((sum, r) => sum + (Number(r.count) || 0) * (Number(r.marks) || 0), 0)
+    const remQ = Math.max(0, subCfg.questions - allocQ)
+    const remM = Math.max(0, subCfg.marks - allocM)
+    const suggestedMarks =
+      remQ > 0 && remM >= remQ
+        ? Math.max(1, Math.min(100, Math.round(remM / remQ)))
+        : Math.max(1, subCfg.marksPerQuestion || currentExamMeta.defaultMarksPerQuestion || 1)
 
-  const updateSubjectDist = (sub: string, field: "questions" | "marks", val: number) => {
-    setSubjectDist((prev) => {
-      const cur = prev[sub] || {
-        questions: 0,
-        marksPerQuestion: sub === "Mathematics" && selectedExam === "MHT_CET" ? 2 : 1,
-        marks: 0,
-      }
-      let nextQ = cur.questions
-      let nextMarks = cur.marks
-      let nextMarksPerQ = cur.marksPerQuestion || 1
-
-      if (field === "questions") {
-        nextQ = Math.max(0, val)
-        if (nextQ === 0) {
-          // Requirement 3: A subject with 0 questions must not have non-zero marks.
-          nextMarks = 0
-        } else {
-          // Requirement 4: Calculate total marks dynamically using the number of questions multiplied by marks per question.
-          nextMarks = nextQ * nextMarksPerQ
-        }
-      } else if (field === "marks") {
-        if (nextQ === 0) {
-          // Requirement 3: A subject with 0 questions must not have non-zero marks.
-          nextMarks = 0
-        } else {
-          nextMarks = Math.max(0, val)
-          nextMarksPerQ = nextQ > 0 ? Math.max(1, Math.round(nextMarks / nextQ)) : 1
-        }
-      }
-
-      const nextDist = {
-        ...prev,
-        [sub]: {
-          questions: nextQ,
-          marksPerQuestion: nextMarksPerQ,
-          marks: nextMarks,
+    setSubjectTypeDist((prev) => ({
+      ...prev,
+      [sub]: [
+        ...(prev[sub] && prev[sub].length > 0 ? prev[sub] : currentRows),
+        {
+          rowId: `${sub}_${nextFormat}_${Date.now()}`,
+          formatId: nextFormat,
+          count: remQ,
+          marks: suggestedMarks,
         },
-      }
+      ],
+    }))
+  }
 
-      // If single subject, auto-sync blueprintFormats immediately
-      if (selectedSubjects.length === 1 && selectedSubjects[0] === sub) {
-        setBlueprintFormats((bPrev) =>
-          bPrev.map((f, i) =>
-            i === 0
-              ? { ...f, checked: nextQ > 0, count: nextQ, marks: nextMarksPerQ }
-              : { ...f, count: 0, checked: false }
-          )
-        )
-      }
-
-      return nextDist
+  const updateSubjectTypeRow = (
+    sub: string,
+    rowId: string,
+    patch: Partial<{ formatId: string; count: number; marks: number }>
+  ) => {
+    setSubjectTypeDist((prev) => {
+      const currentRows = prev[sub] && prev[sub].length > 0 ? prev[sub] : getSubjectTypeRows(sub)
+      const nextRows = currentRows.map((r) => {
+        if (r.rowId !== rowId) return r
+        const nextCount =
+          patch.count !== undefined
+            ? Math.max(0, Math.min(200, Math.round(Number(patch.count) || 0)))
+            : r.count
+        const nextMarks =
+          patch.marks !== undefined
+            ? Math.max(1, Math.min(100, Math.round(Number(patch.marks) || 1)))
+            : r.marks
+        return {
+          ...r,
+          formatId: patch.formatId ?? r.formatId,
+          count: nextCount,
+          marks: nextMarks,
+        }
+      })
+      return { ...prev, [sub]: nextRows }
     })
   }
 
-  const totalSubjectQuestions = useMemo(() => {
-    return selectedSubjects.reduce((acc, sub) => acc + (subjectDist[sub]?.questions ?? 0), 0)
-  }, [selectedSubjects, subjectDist])
+  const removeSubjectTypeRow = (sub: string, rowId: string) => {
+    setSubjectTypeDist((prev) => {
+      const currentRows = prev[sub] && prev[sub].length > 0 ? prev[sub] : getSubjectTypeRows(sub)
+      if (currentRows.length <= 1) return prev
+      return {
+        ...prev,
+        [sub]: currentRows.filter((r) => r.rowId !== rowId),
+      }
+    })
+  }
 
-  const totalSubjectMarks = useMemo(() => {
-    return selectedSubjects.reduce((acc, sub) => acc + (subjectDist[sub]?.marks ?? 0), 0)
-  }, [selectedSubjects, subjectDist])
+  const balanceSubjectTypeRows = (sub: string) => {
+    const subCfg = subjectDist[sub] || { questions: 0, marksPerQuestion: 1, marks: 0 }
+    const targetQ = Math.max(0, subCfg.questions)
+    const targetM = Math.max(0, subCfg.marks)
+    const mpq = targetQ > 0 && targetM >= targetQ ? Math.max(1, Math.round(targetM / targetQ)) : Math.max(1, subCfg.marksPerQuestion || 1)
+    setSubjectTypeDist((prev) => {
+      const rows = prev[sub] && prev[sub].length > 0 ? [...prev[sub]] : [{ rowId: `${sub}_mcq`, formatId: "mcq", count: targetQ, marks: mpq }]
+      if (rows.length === 1) {
+        if (targetQ > 0 && targetM % targetQ !== 0 && targetQ >= 2) {
+          // Split cleanly across 2 rows if target marks aren't divisible evenly
+          const lowM = Math.max(1, Math.floor(targetM / targetQ))
+          const rem = targetM - lowM * targetQ
+          return {
+            ...prev,
+            [sub]: [
+              { ...rows[0], count: targetQ - rem, marks: lowM },
+              { rowId: `${sub}_diagram_bal`, formatId: rows[0].formatId === "diagram" ? "mcq" : "diagram", count: rem, marks: lowM + 1 },
+            ],
+          }
+        }
+        return {
+          ...prev,
+          [sub]: [{ ...rows[0], count: targetQ, marks: mpq }],
+        }
+      }
+      const otherCount = rows.slice(1).reduce((s, r) => s + (Number(r.count) || 0), 0)
+      const firstCount = Math.max(0, targetQ - otherCount)
+      const otherMarks = rows.slice(1).reduce((s, r) => s + (Number(r.count) || 0) * (Number(r.marks) || 0), 0)
+      const remMarks = Math.max(0, targetM - otherMarks)
+      const firstMarks = firstCount > 0 && remMarks >= firstCount && remMarks % firstCount === 0
+        ? remMarks / firstCount
+        : rows[0].marks
+      rows[0] = { ...rows[0], count: firstCount, marks: Math.max(1, firstMarks) }
+      return { ...prev, [sub]: rows }
+    })
+  }
 
-  const targetTotalQuestions = useMemo(() => {
-    return selectedSubjects.length > 1 ? totalSubjectQuestions : totalQuestions
-  }, [selectedSubjects.length, totalSubjectQuestions, totalQuestions])
+  const apportionFormats = (count: number, defaultMarks: number) => {
+    if (count <= 0) return []
+    const activeFormats = effectiveBlueprintFormats.filter((format) => format.count > 0)
+    if (activeFormats.length === 0) {
+      return [{ formatId: "mcq", formatLabel: "MCQ – Single Correct", count, marks: defaultMarks }]
+    }
 
-  const targetTotalMarks = useMemo(() => {
-    return selectedSubjects.length > 1 ? totalSubjectMarks : totalMarks
-  }, [selectedSubjects.length, totalSubjectMarks, totalMarks])
+    const sumFormatCounts = activeFormats.reduce((sum, format) => sum + (Number(format.count) || 0), 0) || 1
+    const allocations = activeFormats.map((format, index) => {
+      const exactCount = count * ((Number(format.count) || 0) / sumFormatCounts)
+      return { format, index, count: Math.floor(exactCount), fraction: exactCount % 1 }
+    })
+    const remaining = count - allocations.reduce((sum, allocation) => sum + allocation.count, 0)
+    const remainderOrder = [...allocations].sort((a, b) => b.fraction - a.fraction || a.index - b.index)
+    for (let index = 0; index < remaining; index++) {
+      remainderOrder[index % remainderOrder.length].count += 1
+    }
+
+    return allocations
+      .filter((allocation) => allocation.count > 0)
+      .map(({ format, count: formatCount }) => ({
+        formatId: format.id,
+        formatLabel: QUESTION_FORMAT_LABELS[format.id] || format.label || format.id,
+        count: formatCount,
+        marks: Number(format.marks) || defaultMarks,
+      }))
+  }
+
+  const applyExamRecommendedPreset = () => {
+    const ratioMap: Record<ExamTarget, { id: string; weight: number }[]> = {
+      MHT_CET: [
+        { id: "mcq", weight: 0.84 },
+        { id: "diagram", weight: 0.16 },
+      ],
+      JEE_MAIN: [
+        { id: "mcq", weight: 0.68 },
+        { id: "assertion", weight: 0.16 },
+        { id: "diagram", weight: 0.16 },
+      ],
+      JEE_ADVANCED: [
+        { id: "mcq", weight: 0.44 },
+        { id: "mcq_multi", weight: 0.24 },
+        { id: "assertion", weight: 0.16 },
+        { id: "diagram", weight: 0.16 },
+      ],
+      NEET: [
+        { id: "mcq", weight: 0.64 },
+        { id: "assertion", weight: 0.22 },
+        { id: "diagram", weight: 0.14 },
+      ],
+      CBSE_BOARD: [
+        { id: "mcq", weight: 0.45 },
+        { id: "assertion", weight: 0.15 },
+        { id: "fib", weight: 0.15 },
+        { id: "true_false", weight: 0.1 },
+        { id: "descriptive", weight: 0.15 },
+      ],
+    }
+
+    const template = ratioMap[selectedExam] || ratioMap.JEE_MAIN
+    setGenerationMode("manual")
+    setSubjectTypeDist((prev) => {
+      const next = { ...prev }
+      for (const sub of selectedSubjects) {
+        const subCfg = subjectDist[sub] || { questions: 20, marksPerQuestion: 1, marks: 20 }
+        const q = Math.max(0, subCfg.questions)
+        if (q === 0) continue
+        const mpq =
+          q > 0 && subCfg.marks >= q && subCfg.marks % q === 0
+            ? subCfg.marks / q
+            : Math.max(1, subCfg.marksPerQuestion || 1)
+
+        const raw = template.map((t, idx) => ({
+          id: t.id,
+          idx,
+          count: Math.floor(q * t.weight),
+          frac: (q * t.weight) % 1,
+        }))
+        let rem = q - raw.reduce((s, r) => s + r.count, 0)
+        const order = [...raw].sort((a, b) => b.frac - a.frac || a.idx - b.idx)
+        for (let i = 0; i < rem; i++) order[i % order.length].count += 1
+
+        next[sub] = raw
+          .filter((r) => r.count > 0)
+          .map((r) => ({
+            rowId: `${sub}_${r.id}_preset`,
+            formatId: r.id,
+            count: r.count,
+            marks: mpq,
+          }))
+      }
+      return next
+    })
+    setDifficulty("balanced")
+    if (selectedExam === "MHT_CET") {
+      setNegativeMarkingEnabled(false)
+    }
+    toast.success(`Applied recommended ${currentExamMeta.title} practice pattern`)
+  }
+
+  const targetTotalQuestions = totalQuestions
+  const targetTotalMarks = totalMarks
 
   // Keep examTotalMarks in Step 4 automatically synchronized with selected questions / blueprint
   useEffect(() => {
@@ -1134,104 +1474,14 @@ function AIGeneratorContent() {
     }
   }, [generatedQuestions, selectedQuestionIds, targetTotalMarks, examTotalMarks])
 
-  // One-click Auto-Sync Helpers
-  const syncTypesToSubjects = () => {
-    const targetQ = totalSubjectQuestions
-    const targetM = totalSubjectMarks
-    if (targetQ === 0) {
-      setBlueprintFormats((prev) => prev.map((f) => ({ ...f, count: 0, checked: false })))
-      toast.success("Question types synchronized to 0.")
-      return
-    }
-
-    const avgMarks = targetM / targetQ
-    if (Number.isInteger(avgMarks) && avgMarks >= 1) {
-      setBlueprintFormats((prev) =>
-        prev.map((f, i) =>
-          i === 0
-            ? { ...f, checked: true, count: targetQ, marks: avgMarks }
-            : { ...f, count: 0, checked: false }
-        )
-      )
-      toast.success("Question types synchronized with subject totals!")
-      return
-    }
-
-    // Solve: x + y = targetQ and 1*x + 2*y = targetM => y = targetM - targetQ, x = targetQ - y
-    const twoMarkCount = targetM - targetQ
-    const oneMarkCount = targetQ - twoMarkCount
-
-    if (twoMarkCount >= 0 && oneMarkCount >= 0) {
-      setBlueprintFormats((prev) =>
-        prev.map((f) => {
-          if (f.id === "mcq") {
-            return { ...f, checked: oneMarkCount > 0, count: oneMarkCount, marks: 1 }
-          }
-          if (f.id === "descriptive") {
-            return { ...f, checked: twoMarkCount > 0, count: twoMarkCount, marks: 2 }
-          }
-          return { ...f, count: 0, checked: false }
-        })
-      )
-      toast.success("Question types synchronized: 1-mark & 2-mark distribution matched!")
-      return
-    }
-
-    const roundMarks = Math.max(1, Math.round(avgMarks))
-    setBlueprintFormats((prev) =>
-      prev.map((f, i) =>
-        i === 0
-          ? { ...f, checked: true, count: targetQ, marks: roundMarks }
-          : { ...f, count: 0, checked: false }
-      )
-    )
-    toast.success("Question types count synchronized!")
-  }
-
-  const syncSubjectsToTypes = () => {
-    const targetQ = totalQuestions
-    const targetM = totalMarks
-    if (selectedSubjects.length === 0) return
-
-    if (targetQ === 0) {
-      setSubjectDist((prev) => {
-        const next: Record<string, SubjectConfig> = {}
-        selectedSubjects.forEach((sub) => {
-          next[sub] = { questions: 0, marksPerQuestion: prev[sub]?.marksPerQuestion || 1, marks: 0 }
-        })
-        return next
-      })
-      toast.success("Subject questions set to 0.")
-      return
-    }
-
-    const perSubQ = Math.floor(targetQ / selectedSubjects.length)
-    let remainderQ = targetQ % selectedSubjects.length
-
-    setSubjectDist((prev) => {
-      const next: Record<string, SubjectConfig> = {}
-      selectedSubjects.forEach((sub, idx) => {
-        const q = perSubQ + (idx < remainderQ ? 1 : 0)
-        const curMpq = prev[sub]?.marksPerQuestion || (sub === "Mathematics" && selectedExam === "MHT_CET" ? 2 : 1)
-        next[sub] = {
-          questions: q,
-          marksPerQuestion: curMpq,
-          marks: q * curMpq,
-        }
-      })
-      return next
-    })
-    toast.success("Subjects synchronized with question type counts!")
-  }
-
   const handleClass11WeightageChange = (val: number) => {
-    const clamped = Math.max(0, Math.min(100, val))
+    const clamped = isNaN(val) ? 0 : Math.max(0, Math.min(100, Math.round(val)))
     setClass11Weightage(clamped)
     setClass12Weightage(100 - clamped)
   }
 
   const handleClass12WeightageChange = (val: number) => {
-    const clamped = Math.max(0, Math.min(100, val))
+    const clamped = isNaN(val) ? 0 : Math.max(0, Math.min(100, Math.round(val)))
     setClass12Weightage(clamped)
     setClass11Weightage(100 - clamped)
   }
@@ -1240,64 +1490,59 @@ function AIGeneratorContent() {
   const validationErrors = useMemo(() => {
     const errors: string[] = []
 
-    // 1. Chapter selection
-    const hasContent = selectedChapters.length > 0 || selectedTopics.length > 0 || Boolean(uploadedSyllabusText)
-    if (!hasContent) {
-      errors.push("Please select at least one chapter, topic, or upload a syllabus PDF.")
+    if (selectedSubjects.length === 0) {
+      errors.push("Select at least one subject in Step 1.")
     }
 
-    // 2. Question counts > 0
     if (totalQuestions <= 0) {
-      errors.push("Total Questions in Question Type & Marks must be greater than 0.")
+      errors.push("Enter at least 1 question in Subject-wise Configuration.")
     }
-    if (totalSubjectQuestions <= 0) {
-      errors.push("Total Questions across subjects must be greater than 0.")
-    }
-
-    // 3. Question Count Synchronization (Requirement 1)
-    if (totalQuestions !== totalSubjectQuestions) {
-      errors.push(
-        `Question count mismatch: Question Types total is ${totalQuestions}, but Subject-wise total is ${totalSubjectQuestions}. Both totals must match.`
-      )
+    if (totalQuestions > 200) {
+      errors.push("This generator supports up to 200 questions per paper.")
     }
 
-    // 4. Total Marks Synchronization (Requirement 2)
-    if (totalMarks !== totalSubjectMarks) {
-      errors.push(
-        `Total marks mismatch: Question Types total is ${totalMarks} marks, but Subject-wise total is ${totalSubjectMarks} marks. Both totals must match.`
-      )
-    }
-
-    // 5. Zero Questions Subject Marks Invariant (Requirement 3)
-    for (const sub of selectedSubjects) {
-      const sConf = subjectDist[sub]
-      if (sConf && sConf.questions === 0 && sConf.marks > 0) {
-        errors.push(`${sub} has 0 questions but has ${sConf.marks} marks. A subject with 0 questions must have 0 marks.`)
+    if (generationMode === "manual") {
+      for (const sub of selectedSubjects) {
+        const subCfg = subjectDist[sub] || { questions: 0, marksPerQuestion: 1, marks: 0 }
+        const rows = subjectTypeDist[sub] || []
+        const allocQ = rows.reduce((sum, r) => sum + (Number(r.count) || 0), 0)
+        const allocM = rows.reduce((sum, r) => sum + (Number(r.count) || 0) * (Number(r.marks) || 0), 0)
+        if (allocQ !== subCfg.questions || allocM !== subCfg.marks) {
+          errors.push(
+            `${sub}: Question Type totals (${allocQ} Q / ${allocM} Marks) must match Subject Configuration (${subCfg.questions} Q / ${subCfg.marks} Marks).`
+          )
+        }
+        if (rows.some((r) => r.count > 0 && r.marks < 1)) {
+          errors.push(`${sub}: Each active question type must have at least 1 mark per question.`)
+        }
       }
     }
 
-    // 6. Syllabus Weightage Invariant (Only applies when Class 11 + 12 is selected)
     if (selectedGrade === "both") {
       const totalWeightage = (Number(class11Weightage) || 0) + (Number(class12Weightage) || 0)
       if (totalWeightage !== 100) {
-        errors.push(`Syllabus weightage must total exactly 100% (currently ${totalWeightage}%).`)
+        errors.push("Class 11 and Class 12 weightage must add up to 100%.")
       }
+    }
+
+    const hasContent = selectedChapters.length > 0 || selectedTopics.length > 0 || Boolean(uploadedSyllabusText)
+    if (!hasContent) {
+      errors.push("Please select at least one chapter, add custom topics, or upload a syllabus PDF.")
     }
 
     return errors
   }, [
+    selectedSubjects,
+    totalQuestions,
+    generationMode,
+    subjectDist,
+    subjectTypeDist,
+    selectedGrade,
+    class11Weightage,
+    class12Weightage,
     selectedChapters.length,
     selectedTopics.length,
     uploadedSyllabusText,
-    totalQuestions,
-    totalSubjectQuestions,
-    totalMarks,
-    totalSubjectMarks,
-    selectedSubjects,
-    subjectDist,
-    class11Weightage,
-    class12Weightage,
-    selectedGrade,
   ])
 
   const isStep2Valid = validationErrors.length === 0
@@ -1314,6 +1559,34 @@ function AIGeneratorContent() {
   const class12Chapters = useMemo(() => {
     return currentSubjectChapters.filter((c) => c.grade === "12")
   }, [currentSubjectChapters])
+
+  const filteredClass11Chapters = useMemo(() => {
+    if (!chapterSearch.trim()) return class11Chapters
+    const q = chapterSearch.toLowerCase().trim()
+    return class11Chapters.filter(
+      (ch) => ch.name.toLowerCase().includes(q) || ch.subtopics?.some((s) => s.toLowerCase().includes(q))
+    )
+  }, [class11Chapters, chapterSearch])
+
+  const filteredClass12Chapters = useMemo(() => {
+    if (!chapterSearch.trim()) return class12Chapters
+    const q = chapterSearch.toLowerCase().trim()
+    return class12Chapters.filter(
+      (ch) => ch.name.toLowerCase().includes(q) || ch.subtopics?.some((s) => s.toLowerCase().includes(q))
+    )
+  }, [class12Chapters, chapterSearch])
+
+  const subjectChapterCounts = useMemo(() => {
+    const selectedSet = new Set(selectedChapters)
+    return selectedSubjects.reduce<Record<string, { selected: number; total: number }>>((acc, sub) => {
+      const chs = getChapters(selectedExam, selectedGrade, sub)
+      acc[sub] = {
+        selected: chs.filter((c) => selectedSet.has(c.name)).length,
+        total: chs.length,
+      }
+      return acc
+    }, {})
+  }, [selectedSubjects, selectedExam, selectedGrade, selectedChapters])
 
   const toggleAllClass = (grade: "11" | "12") => {
     const targetChapters = grade === "11" ? class11Chapters : class12Chapters
@@ -1350,13 +1623,30 @@ function AIGeneratorContent() {
     })
   }
 
-  // Select all visible chapters
+  // Select all visible chapters in active subject tab (respecting classFilter & search)
   const handleSelectAllChapters = () => {
-    const allNames = filteredChapters.map((ch) => ch.name)
+    const pool =
+      classFilter === "11"
+        ? filteredClass11Chapters
+        : classFilter === "12"
+        ? filteredClass12Chapters
+        : [...filteredClass11Chapters, ...filteredClass12Chapters]
+    const allNames = pool.map((ch) => ch.name)
     setSelectedChapters((prev) => Array.from(new Set([...prev, ...allNames])))
   }
 
-  // Deselect all chapters
+  // Clear chapters in active subject tab (or all if requested)
+  const handleDeselectSubjectChapters = () => {
+    const pool =
+      classFilter === "11"
+        ? class11Chapters
+        : classFilter === "12"
+        ? class12Chapters
+        : currentSubjectChapters
+    const removeSet = new Set(pool.map((ch) => ch.name))
+    setSelectedChapters((prev) => prev.filter((name) => !removeSet.has(name)))
+  }
+
   const handleDeselectAllChapters = () => {
     setSelectedChapters([])
   }
@@ -1442,6 +1732,11 @@ function AIGeneratorContent() {
 
   // Generate Questions via API (Fast Parallel Concurrent Chunking - Zero Vercel Timeout)
   const handleGenerate = async () => {
+    if (validationErrors.length > 0) {
+      setErrorMsg(validationErrors.join(" "))
+      return
+    }
+
     if (selectedChapters.length === 0 && selectedTopics.length === 0 && !uploadedSyllabusText) {
       setErrorMsg("Please select at least one chapter from the list below to begin.")
       return
@@ -1468,7 +1763,7 @@ function AIGeneratorContent() {
         : selectedChapters.length > 1
         ? `${selectedChapters[0]} & ${selectedChapters.length - 1} more`
         : ""
-    const targetSubject = activeSubjectTab || selectedSubject
+      const targetSubject = activeSubjectTab || selectedSubject
     const examCode = selectedExam.replace("-", "_")
     const nextTitle = `${examCode} ${selectedSubjects.length > 1 ? selectedSubjects.join(" + ") : targetSubject}${chapterTitle ? ` - ${chapterTitle}` : ""}`
 
@@ -1498,223 +1793,87 @@ function AIGeneratorContent() {
         count: number
         marks: number
         negativeMark: number
+        difficultyCounts?: { easy: number; medium: number; hard: number }
       }
 
-      const activeFormats = blueprintFormats.filter((f) => (f.checked || f.count > 0) && Number(f.count) > 0)
       const batches: BatchItem[] = []
 
-      // Helper to apportion a number N among active formats
-      const apportionFormats = (n: number, defaultMarks: number) => {
-        if (n <= 0) return []
-        if (activeFormats.length === 0) {
-          return [{
-            formatId: "mcq",
-            formatLabel: "MCQ (Single Correct)",
-            count: n,
-            marks: defaultMarks,
-          }]
-        }
-        const sumFmtCounts = activeFormats.reduce((s, f) => s + (Number(f.count) || 0), 0) || 1
-        let allocated = 0
-        const items: { formatId: string; formatLabel: string; count: number; marks: number }[] = []
-        for (let i = 0; i < activeFormats.length; i++) {
-          const fmt = activeFormats[i]
-          const isLast = i === activeFormats.length - 1
-          const share = isLast ? (n - allocated) : Math.round(n * ((Number(fmt.count) || 0) / sumFmtCounts))
-          const safeShare = Math.max(0, Math.min(n - allocated, share))
-          if (safeShare > 0) {
-            items.push({
-              formatId: fmt.id,
-              formatLabel: fmt.label || fmt.id,
-              count: safeShare,
-              marks: Number(fmt.marks) || defaultMarks,
-            })
-            allocated += safeShare
-          }
-        }
-        if (allocated < n && items.length > 0) {
-          items[0].count += (n - allocated)
-        }
-        return items
-      }
+      for (const sub of selectedSubjects) {
+        const subCfg = subjectDist[sub] || { questions: 0, marksPerQuestion: 1, marks: 0 }
+        if (subCfg.questions <= 0) continue
 
-      if (selectedSubjects.length > 1) {
-        for (const sub of selectedSubjects) {
-          const subCount = Math.max(0, subjectDist[sub]?.questions ?? 0)
-          const subMarks = Math.max(0, subjectDist[sub]?.marks ?? 0)
-          if (subCount <= 0) continue
+        const typeRows = (
+          generationMode === "auto"
+            ? buildAutoSubjectTypes(sub, subCfg.questions, subCfg.marks, subCfg.marksPerQuestion)
+            : subjectTypeDist[sub] || []
+        ).filter((r) => r.count > 0)
 
-          const subDefaultMarks = Math.max(1, Math.round(subMarks / subCount))
-          const allSubChapters = getChapters(selectedExam, selectedGrade, sub)
-          const subSelected = selectedChapters.filter((name) => allSubChapters.some((c) => c.name === name))
-          const usableChapters = subSelected.length > 0 ? subSelected : allSubChapters.map((c) => c.name)
-
-          const all11Chapters = getChapters(selectedExam, "11", sub).map((c) => c.name)
-          const all12Chapters = getChapters(selectedExam, "12", sub).map((c) => c.name)
-
-          const ch11 = usableChapters.filter((name) => all11Chapters.includes(name))
-          const ch12 = usableChapters.filter((name) => all12Chapters.includes(name))
-
-          let q11 = 0
-          let q12 = 0
-
-          if (selectedGrade === "11") {
-            q11 = subCount
-            q12 = 0
-          } else if (selectedGrade === "12") {
-            q11 = 0
-            q12 = subCount
-          } else {
-            if (ch11.length > 0 && ch12.length > 0) {
-              q11 = Math.round(subCount * (class11Weightage / 100))
-              q12 = subCount - q11
-            } else if (ch11.length > 0) {
-              q11 = subCount
-              q12 = 0
-            } else if (ch12.length > 0) {
-              q11 = 0
-              q12 = subCount
-            } else {
-              q11 = Math.round(subCount * (class11Weightage / 100))
-              q12 = subCount - q11
-            }
-          }
-
-          // Class 11 batches for this subject
-          if (q11 > 0) {
-            const sliceFormats = apportionFormats(q11, subDefaultMarks)
-            for (const sf of sliceFormats) {
-              let rem = sf.count
-              const chunkSize = sf.formatId === "diagram" ? 2 : 3
-              while (rem > 0) {
-                const take = Math.min(rem, chunkSize)
-                batches.push({
-                  id: `${sub}_11_${sf.formatId}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
-                  subject: sub,
-                  grade: "11",
-                  chapters: ch11.length > 0 ? ch11 : all11Chapters,
-                  formatId: sf.formatId,
-                  formatLabel: sf.formatLabel,
-                  count: take,
-                  marks: sf.marks,
-                  negativeMark: negativeMarkingEnabled ? negativeMarkPenalty : 0,
-                })
-                rem -= take
-              }
-            }
-          }
-
-          // Class 12 batches for this subject
-          if (q12 > 0) {
-            const sliceFormats = apportionFormats(q12, subDefaultMarks)
-            for (const sf of sliceFormats) {
-              let rem = sf.count
-              const chunkSize = sf.formatId === "diagram" ? 2 : 3
-              while (rem > 0) {
-                const take = Math.min(rem, chunkSize)
-                batches.push({
-                  id: `${sub}_12_${sf.formatId}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
-                  subject: sub,
-                  grade: "12",
-                  chapters: ch12.length > 0 ? ch12 : all12Chapters,
-                  formatId: sf.formatId,
-                  formatLabel: sf.formatLabel,
-                  count: take,
-                  marks: sf.marks,
-                  negativeMark: negativeMarkingEnabled ? negativeMarkPenalty : 0,
-                })
-                rem -= take
-              }
-            }
-          }
-        }
-      } else {
-        // Single subject
-        const targetSub = selectedSubjects[0] || activeSubjectTab || "Physics"
-        const subTargetCount = countToGenerate
-        const subMarksPerQ = currentExamMeta.defaultMarksPerQuestion
-
-        const allSubChapters = getChapters(selectedExam, selectedGrade, targetSub)
+        const allSubChapters = getChapters(selectedExam, selectedGrade, sub)
         const subSelected = selectedChapters.filter((name) => allSubChapters.some((c) => c.name === name))
-        const usableChapters = subSelected.length > 0 ? subSelected : allSubChapters.map((c) => c.name)
+        const hasTopicsOrPdf = selectedTopics.length > 0 || Boolean(uploadedSyllabusText.trim())
+        const usableChapters =
+          subSelected.length > 0
+            ? subSelected
+            : hasTopicsOrPdf
+            ? []
+            : allSubChapters.map((c) => c.name)
 
-        const all11Chapters = getChapters(selectedExam, "11", targetSub).map((c) => c.name)
-        const all12Chapters = getChapters(selectedExam, "12", targetSub).map((c) => c.name)
-
+        const all11Chapters = getChapters(selectedExam, "11", sub).map((c) => c.name)
+        const all12Chapters = getChapters(selectedExam, "12", sub).map((c) => c.name)
         const ch11 = usableChapters.filter((name) => all11Chapters.includes(name))
         const ch12 = usableChapters.filter((name) => all12Chapters.includes(name))
 
-        let q11 = 0
-        let q12 = 0
+        for (const row of typeRows) {
+          const classDist = resolveClassDistribution({
+            totalQuestions: row.count,
+            hasClass11Chapters: ch11.length > 0,
+            hasClass12Chapters: ch12.length > 0,
+            gradeFilter: selectedGrade,
+            class11WeightPercent: class11Weightage,
+          })
 
-        if (selectedGrade === "11") {
-          q11 = subTargetCount
-          q12 = 0
-        } else if (selectedGrade === "12") {
-          q11 = 0
-          q12 = subTargetCount
-        } else {
-          if (ch11.length > 0 && ch12.length > 0) {
-            q11 = Math.round(subTargetCount * (class11Weightage / 100))
-            q12 = subTargetCount - q11
-          } else if (ch11.length > 0) {
-            q11 = subTargetCount
-            q12 = 0
-          } else if (ch12.length > 0) {
-            q11 = 0
-            q12 = subTargetCount
+          const pushGradeBatches = (gradeLabel: string, count: number, targetChapters: string[]) => {
+            let rem = count
+            const chunkSize = row.formatId === "diagram" ? 2 : 5
+            while (rem > 0) {
+              const take = Math.min(rem, chunkSize)
+              batches.push({
+                id: `${sub}_${gradeLabel}_${row.formatId}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
+                subject: sub,
+                grade: gradeLabel,
+                chapters: targetChapters.length > 0 ? targetChapters : usableChapters,
+                formatId: row.formatId,
+                formatLabel: QUESTION_FORMAT_LABELS[row.formatId] || row.formatId,
+                count: take,
+                marks: row.marks,
+                negativeMark: row.formatId === "descriptive" ? 0 : (negativeMarkingEnabled ? negativeMarkPenalty : 0),
+              })
+              rem -= take
+            }
+          }
+
+          if (classDist.class11Count > 0 || classDist.class12Count > 0) {
+            if (classDist.class11Count > 0) pushGradeBatches("11", classDist.class11Count, ch11)
+            if (classDist.class12Count > 0) pushGradeBatches("12", classDist.class12Count, ch12)
           } else {
-            q11 = Math.round(subTargetCount * (class11Weightage / 100))
-            q12 = subTargetCount - q11
-          }
-        }
-
-        if (q11 > 0) {
-          const sliceFormats = apportionFormats(q11, subMarksPerQ)
-          for (const sf of sliceFormats) {
-            let rem = sf.count
-            const chunkSize = sf.formatId === "diagram" ? 2 : 3
-            while (rem > 0) {
-              const take = Math.min(rem, chunkSize)
-              batches.push({
-                id: `${targetSub}_11_${sf.formatId}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
-                subject: targetSub,
-                grade: "11",
-                chapters: ch11.length > 0 ? ch11 : all11Chapters,
-                formatId: sf.formatId,
-                formatLabel: sf.formatLabel,
-                count: take,
-                marks: sf.marks,
-                negativeMark: negativeMarkingEnabled ? negativeMarkPenalty : 0,
-              })
-              rem -= take
-            }
-          }
-        }
-
-        if (q12 > 0) {
-          const sliceFormats = apportionFormats(q12, subMarksPerQ)
-          for (const sf of sliceFormats) {
-            let rem = sf.count
-            const chunkSize = sf.formatId === "diagram" ? 2 : 3
-            while (rem > 0) {
-              const take = Math.min(rem, chunkSize)
-              batches.push({
-                id: `${targetSub}_12_${sf.formatId}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
-                subject: targetSub,
-                grade: "12",
-                chapters: ch12.length > 0 ? ch12 : all12Chapters,
-                formatId: sf.formatId,
-                formatLabel: sf.formatLabel,
-                count: take,
-                marks: sf.marks,
-                negativeMark: negativeMarkingEnabled ? negativeMarkPenalty : 0,
-              })
-              rem -= take
-            }
+            // Custom PDF / uncategorized topics without grade split
+            pushGradeBatches(
+              selectedGrade === "both" ? "12" : selectedGrade,
+              row.count,
+              usableChapters
+            )
           }
         }
       }
+
+      const totalBatchQuestions = batches.reduce((sum, b) => sum + b.count, 0)
+      const batchDiffTargets = partitionDifficultyAcrossBatches(
+        computeDifficultyCounts(totalBatchQuestions, difficulty),
+        batches.map((b) => b.count)
+      )
+      batches.forEach((b, idx) => {
+        b.difficultyCounts = batchDiffTargets[idx]
+      })
 
       const queue = [...batches]
       let allGenerated: GeneratedCompetitiveQuestion[] = []
@@ -1747,20 +1906,21 @@ function AIGeneratorContent() {
             try {
               const existingTexts = allGenerated.map((q) => q.questionText).slice(-25)
 
-              const res = await fetch("/api/admin/generate-competitive-questions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                  exam: selectedExam,
+      const res = await fetch("/api/admin/generate-competitive-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          exam: selectedExam,
                   grade: batch.grade,
                   subject: batch.subject,
                   chapters: batch.chapters,
-                  topics: selectedTopics,
-                  syllabusText: uploadedSyllabusText,
-                  difficulty,
-                  questionCount: batch.count,
-                  questionPattern: pattern,
+          topics: selectedTopics,
+          syllabusText: uploadedSyllabusText,
+          difficulty,
+          difficultyCounts: batch.difficultyCounts,
+          questionCount: batch.count,
+          questionPattern: pattern,
                   blueprintFormats: [
                     {
                       id: batch.formatId,
@@ -1772,18 +1932,18 @@ function AIGeneratorContent() {
                   ],
                   marksPerQuestion: batch.marks,
                   negativeMarks: batch.negativeMark,
-                  focusPYQ,
+          focusPYQ,
                   existingQuestions: existingTexts,
                   stream: false,
-                }),
-              })
+        }),
+      })
 
               if (!res.ok) {
                 const errData = await res.json().catch(() => ({}))
                 throw new Error(errData.error || `Server error ${res.status}`)
               }
 
-              const data = await res.json()
+      const data = await res.json()
               if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
                 const uniqueNew: GeneratedCompetitiveQuestion[] = []
                 for (const q of data.questions) {
@@ -1850,55 +2010,98 @@ function AIGeneratorContent() {
         )
       }
 
-      // Quick 1-batch top-up if deficit exists
+      // Subject & format-aware top-up if any planned slot has a deficit
       if (allGenerated.length < countToGenerate) {
-        const gap = countToGenerate - allGenerated.length
-        try {
-          const topUpRes = await fetch("/api/admin/generate-competitive-questions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              exam: selectedExam,
-              grade: selectedGrade === "both" ? "12" : selectedGrade,
-              subject: targetSubject,
-              chapters: selectedChapters.length > 0 ? selectedChapters : undefined,
-              topics: selectedTopics,
-              syllabusText: uploadedSyllabusText,
-              difficulty,
-              questionCount: Math.min(gap, 3),
-              questionPattern: pattern,
-              blueprintFormats: blueprintFormats.map((f) => ({
-                ...f,
-                count: Math.min(Number(f.count) || 0, gap),
-              })),
-              marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
-              negativeMarks: negativeMarkingEnabled ? negativeMarkPenalty : 0,
-              focusPYQ,
-              existingQuestions: allGenerated.map((q) => q.questionText).slice(-30),
-              stream: false,
-            }),
-          })
-          const topUpData = await topUpRes.json()
-          if (topUpData.success && Array.isArray(topUpData.questions) && topUpData.questions.length > 0) {
-            for (const q of topUpData.questions) {
-              if (allGenerated.length >= countToGenerate) break
-              const norm = (q.questionText || "").toLowerCase().replace(/[^a-z0-9]/g, "")
-              if (norm && !seenTexts.has(norm)) {
-                seenTexts.add(norm)
-                allGenerated.push({
-                  ...q,
-                  subject: targetSubject,
-                  marks: q.marks || currentExamMeta.defaultMarksPerQuestion,
-                  negativeMark: q.negativeMark ?? (negativeMarkingEnabled ? negativeMarkPenalty : 0),
-                })
-              }
-            }
-            allGenerated = allGenerated.slice(0, countToGenerate)
-            showQuestions(allGenerated)
+        const slotTargets = new Map<
+          string,
+          { subject: string; grade: string; formatId: string; formatLabel: string; marks: number; negativeMark: number; chapters: string[]; target: number; actual: number }
+        >()
+        for (const b of batches) {
+          const key = `${b.subject}::${b.grade}::${b.formatId}`
+          const existingSlot = slotTargets.get(key)
+          if (existingSlot) {
+            existingSlot.target += b.count
+          } else {
+            slotTargets.set(key, {
+              subject: b.subject,
+              grade: b.grade,
+              formatId: b.formatId,
+              formatLabel: b.formatLabel,
+              marks: b.marks,
+              negativeMark: b.negativeMark,
+              chapters: b.chapters,
+              target: b.count,
+              actual: 0,
+            })
           }
-        } catch (gapErr) {
-          console.warn("[CompetitiveAI] Final gap top-up non-blocking warning:", gapErr)
+        }
+        for (const q of allGenerated) {
+          const key = `${q.subject || targetSubject}::${q.grade || (selectedGrade === "both" ? "12" : selectedGrade)}::${getQuestionFormat(q)}`
+          const slot = slotTargets.get(key)
+          if (slot) slot.actual += 1
+        }
+        const deficitSlots = Array.from(slotTargets.values())
+          .filter((s) => s.actual < s.target)
+          .slice(0, 3)
+
+        for (const slot of deficitSlots) {
+          if (allGenerated.length >= countToGenerate) break
+          const slotGap = Math.min(3, slot.target - slot.actual, countToGenerate - allGenerated.length)
+          if (slotGap <= 0) continue
+          try {
+            const topUpRes = await fetch("/api/admin/generate-competitive-questions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                exam: selectedExam,
+                grade: slot.grade,
+                subject: slot.subject,
+                chapters: slot.chapters,
+                topics: selectedTopics,
+                syllabusText: uploadedSyllabusText,
+                difficulty,
+                questionCount: slotGap,
+                questionPattern: pattern,
+                blueprintFormats: [
+                  {
+                    id: slot.formatId,
+                    label: slot.formatLabel,
+                    count: slotGap,
+                    marks: slot.marks,
+                    checked: true,
+                  },
+                ],
+                marksPerQuestion: slot.marks,
+                negativeMarks: slot.negativeMark,
+                focusPYQ,
+                existingQuestions: allGenerated.map((q) => q.questionText).slice(-30),
+                stream: false,
+              }),
+            })
+            const topUpData = await topUpRes.json()
+            if (topUpData.success && Array.isArray(topUpData.questions) && topUpData.questions.length > 0) {
+              for (const q of topUpData.questions) {
+                if (allGenerated.length >= countToGenerate) break
+                const norm = (q.questionText || "").toLowerCase().replace(/[^a-z0-9]/g, "")
+                if (norm && !seenTexts.has(norm)) {
+                  seenTexts.add(norm)
+                  allGenerated.push({
+                    ...q,
+                    subject: slot.subject,
+                    grade: slot.grade,
+                    marks: slot.marks,
+                    negativeMark: slot.negativeMark,
+                    chapter: q.chapter && q.chapter !== "General" ? q.chapter : (slot.chapters[0] || slot.subject),
+                  })
+                }
+              }
+              allGenerated = allGenerated.slice(0, countToGenerate)
+              showQuestions(allGenerated)
+            }
+          } catch (gapErr) {
+            console.warn("[CompetitiveAI] Final gap top-up non-blocking warning:", gapErr)
+          }
         }
       }
 
@@ -1916,45 +2119,110 @@ function AIGeneratorContent() {
     }
   }
 
-  // Generate missing questions to reach blueprint target
+  // Generate missing questions to reach Step 2 subject/format blueprint target
   const handleGenerateMissing = async () => {
     const missingCount = Math.max(0, targetTotalQuestions - generatedQuestions.length)
     if (missingCount <= 0 || isGeneratingMissing) return
 
     setIsGeneratingMissing(true)
     setErrorMsg(null)
+
+    // Pick the specific subject & question format that still has fewer generated questions than planned in Step 2
+    const deficitSubject =
+      selectedSubjects.find((sub) => {
+        const targetSubCount = Number(subjectDist[sub]?.questions) || 0
+        const currentSubCount = generatedQuestions.filter((q) => (q.subject || selectedSubject) === sub).length
+        return currentSubCount < targetSubCount
+      }) ||
+      activeSubjectTab ||
+      selectedSubject
+
+    const subExisting = generatedQuestions.filter((q) => (q.subject || deficitSubject) === deficitSubject)
+    const plannedRows = getSubjectTypeRows(deficitSubject)
+    const missingRow =
+      plannedRows.find((r) => {
+        const haveFmtCount = subExisting.filter((q) => getQuestionFormat(q) === r.formatId).length
+        return haveFmtCount < r.count
+      }) || plannedRows[0] || { rowId: "fallback", formatId: "mcq", count: missingCount, marks: currentExamMeta.defaultMarksPerQuestion }
+
+    const allSubChapters = getChapters(selectedExam, selectedGrade, deficitSubject)
+    const subSelected = selectedChapters.filter((name) => allSubChapters.some((c) => c.name === name))
+    const hasTopicsOrPdf = selectedTopics.length > 0 || Boolean(uploadedSyllabusText.trim())
+    const usableChapters =
+      subSelected.length > 0
+        ? subSelected
+        : hasTopicsOrPdf
+        ? []
+        : allSubChapters.map((c) => c.name)
+
+    const all11Chapters = getChapters(selectedExam, "11", deficitSubject).map((c) => c.name)
+    const all12Chapters = getChapters(selectedExam, "12", deficitSubject).map((c) => c.name)
+    const ch11 = usableChapters.filter((name) => all11Chapters.includes(name))
+    const ch12 = usableChapters.filter((name) => all12Chapters.includes(name))
+    const have11 = subExisting.filter((q) => q.grade === "11").length
+    const totalSubTarget = Math.max(1, Number(subjectDist[deficitSubject]?.questions) || missingCount)
+    const targetClassDist = resolveClassDistribution({
+      totalQuestions: totalSubTarget,
+      hasClass11Chapters: ch11.length > 0,
+      hasClass12Chapters: ch12.length > 0,
+      gradeFilter: selectedGrade,
+      class11WeightPercent: class11Weightage,
+    })
+    const need11 = have11 < targetClassDist.class11Count && ch11.length > 0
+    const chosenGrade =
+      need11
+        ? "11"
+        : ch12.length > 0
+        ? "12"
+        : ch11.length > 0
+        ? "11"
+        : selectedGrade === "both"
+        ? "12"
+        : selectedGrade
+    const chosenChapters = chosenGrade === "11" ? (ch11.length > 0 ? ch11 : usableChapters) : (ch12.length > 0 ? ch12 : usableChapters)
+    const missingNegative =
+      missingRow.formatId === "descriptive" ? 0 : negativeMarkingEnabled ? negativeMarkPenalty : 0
+
     const chapterTitle =
       selectedChapters.length === 1
         ? selectedChapters[0]
         : selectedChapters.length > 1
         ? `${selectedChapters[0]} & ${selectedChapters.length - 1} more`
         : ""
-    const targetSubject = activeSubjectTab || selectedSubject
-    const nextTitle = `${selectedExam.replace("-", "_")} ${targetSubject}${chapterTitle ? ` - ${chapterTitle}` : ""}`
+    const nextTitle = `${selectedExam.replace("-", "_")} ${selectedSubjects.length > 1 ? selectedSubjects.join(" + ") : deficitSubject}${chapterTitle ? ` - ${chapterTitle}` : ""}`
     const existingTexts = generatedQuestions.map((q) => q.questionText)
 
     try {
-      const requestCount = Math.min(missingCount, 3)
+      const formatRemaining = Math.max(
+        1,
+        missingRow.count - subExisting.filter((q) => getQuestionFormat(q) === missingRow.formatId).length
+      )
+      const requestCount = Math.min(missingCount, formatRemaining, 3)
       const res = await fetch("/api/admin/generate-competitive-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           exam: selectedExam,
-          grade: selectedGrade,
-          subject: targetSubject,
-          chapters: selectedChapters,
+          grade: chosenGrade,
+          subject: deficitSubject,
+          chapters: chosenChapters,
           topics: selectedTopics,
           syllabusText: uploadedSyllabusText,
           difficulty,
           questionCount: requestCount,
           questionPattern: pattern,
-          blueprintFormats: blueprintFormats.map((f) => ({
-            ...f,
-            count: Math.min(Number(f.count) || 0, requestCount),
-          })),
-          marksPerQuestion: currentExamMeta.defaultMarksPerQuestion,
-          negativeMarks: negativeMarkingEnabled ? negativeMarkPenalty : 0,
+          blueprintFormats: [
+            {
+              id: missingRow.formatId,
+              label: QUESTION_FORMAT_LABELS[missingRow.formatId] || missingRow.formatId,
+              count: requestCount,
+              marks: missingRow.marks,
+              checked: true,
+            },
+          ],
+          marksPerQuestion: missingRow.marks,
+          negativeMarks: missingNegative,
           focusPYQ,
           existingQuestions: existingTexts.slice(-30),
           stream: false,
@@ -1965,7 +2233,11 @@ function AIGeneratorContent() {
       if (res.ok && data.success && Array.isArray(data.questions) && data.questions.length > 0) {
         const toAdd = data.questions.slice(0, missingCount).map((q: any) => ({
           ...q,
-          negativeMark: q.negativeMark !== undefined ? q.negativeMark : (negativeMarkingEnabled ? negativeMarkPenalty : 0),
+          subject: deficitSubject,
+          grade: chosenGrade,
+          marks: missingRow.marks,
+          negativeMark: missingNegative,
+          chapter: q.chapter && q.chapter !== "General" ? q.chapter : (chosenChapters[0] || deficitSubject),
         }))
         const updated = [...generatedQuestions, ...toAdd].slice(0, targetTotalQuestions)
         setGeneratedQuestions(updated)
@@ -1974,7 +2246,7 @@ function AIGeneratorContent() {
         const calculatedTotal = updated.reduce((sum, q) => sum + (q.marks || 1), 0)
         setExamTotalMarks(calculatedTotal)
         setPassMarks(Math.round(calculatedTotal * 0.4))
-        toast.success(`Generated ${toAdd.length} more question(s)! Total: ${updated.length}/${targetTotalQuestions}`)
+        toast.success(`Generated ${toAdd.length} more ${deficitSubject} question(s)! Total: ${updated.length}/${targetTotalQuestions}`)
       } else {
         toast.error("Could not generate remaining questions. Please try again.")
       }
@@ -2078,6 +2350,7 @@ function AIGeneratorContent() {
 
       const typeTitles: Record<string, string> = {
         mcq: "Multiple Choice Questions",
+        mcq_multi: "Multiple-Correct Questions",
         diagram: "Diagram & Visual Questions",
         assertion: "Assertion & Reason",
         truefalse: "True / False Questions",
@@ -2085,49 +2358,28 @@ function AIGeneratorContent() {
         descriptive: "Descriptive Questions",
       }
 
-      const mappedQuestions = toSave.map((q) => {
-        const fmt = getQuestionFormat(q)
-        const isDescriptive = fmt === "descriptive" || q.type === "descriptive"
-        const isTF = fmt === "true_false"
-        const isAR = fmt === "assertion"
-        const isFIB = fmt === "fib"
-        const isDiagram = fmt === "diagram"
-        const isMulti = fmt === "mcq_multi"
-
-        let determinedType: "mcq" | "assertion" | "truefalse" | "fillblanks" | "descriptive" = "mcq"
-        if (isDescriptive) determinedType = "descriptive"
-        else if (isTF) determinedType = "truefalse"
-        else if (isAR) determinedType = "assertion"
-        else if (isFIB) determinedType = "fillblanks"
-
-        const options = isDescriptive ? [] : isTF ? ["True", "False"] : q.options || []
-        const correctAnswer = isTF
-          ? (String(q.correctAnswer).toLowerCase().includes("false") || q.correctAnswer === "Option B" ? "False" : "True")
-          : q.correctAnswer
-
-        const parsedAR = isAR ? parseAssertionReason(q.questionText || "") : null
+      const mappedQuestions = toSave.map((q, qIdx) => {
+        const canonical = normalizeStoredQuestion(q, qIdx)
+        const canonicalFormat = canonical.questionFormat
+        const dbType = formatToDbType(canonicalFormat)
+        const payload = toExamQuestionPayload({
+          ...canonical,
+          marks: q.marks || (canonicalFormat === "descriptive" ? 5 : currentExamMeta.defaultMarksPerQuestion),
+          negativeMark:
+            canonicalFormat === "descriptive"
+              ? 0
+              : negativeMarkingEnabled
+                ? q.negativeMark !== undefined && q.negativeMark > 0
+                  ? q.negativeMark
+                  : defaultNegMark
+                : 0,
+        })
 
         return {
-          type: determinedType,
-          questionFormat: isDescriptive ? "descriptive" : isTF ? "true_false" : isAR ? "assertion" : isFIB ? "fib" : isDiagram ? "diagram" : isMulti ? "mcq_multi" : "mcq",
-          assertionText: parsedAR?.assertion,
-          reasonText: parsedAR?.reason,
-          questionText: q.questionText,
-          questionImage: q.questionImage,
-          difficulty: q.difficulty,
-          marks: q.marks || (isDescriptive ? 5 : currentExamMeta.defaultMarksPerQuestion),
-          negativeMark: isDescriptive
-            ? 0
-            : (negativeMarkingEnabled
-              ? (q.negativeMark !== undefined && q.negativeMark > 0 ? q.negativeMark : defaultNegMark)
-              : 0),
-          options,
-          correctAnswer,
-          explanation: q.explanation,
-          wordLimit: q.wordLimit || 150,
-          chapter: q.chapter,
-          subject: (q as any).subject,
-        }
+          ...payload,
+          type: dbType,
+          grade: q.grade,
+        } as any
       })
 
       let sections: any[] = []
@@ -2151,7 +2403,7 @@ function AIGeneratorContent() {
           }
         })
       } else {
-        const typeOrder: ("mcq" | "assertion" | "truefalse" | "fillblanks" | "descriptive")[] = ["mcq", "assertion", "truefalse", "fillblanks", "descriptive"]
+        const typeOrder = ["mcq", "mcq_multi", "diagram", "assertion", "truefalse", "fillblanks", "descriptive"]
         const groupedTypes = typeOrder.filter(t => mappedQuestions.some(q => q.type === t))
 
         if (groupedTypes.length <= 1) {
@@ -2239,6 +2491,27 @@ function AIGeneratorContent() {
               aiProctoring: proctoringSettings.aiStatusAnalysis,
               aiStatusAnalysis: proctoringSettings.aiStatusAnalysis,
             },
+            competitiveGenerator: {
+              selectedExam,
+              selectedGrade,
+              selectedSubjects,
+              selectedSubject,
+              activeSubjectTab,
+              selectedChapters,
+              selectedTopics,
+              uploadedSyllabusText: uploadedSyllabusText.slice(0, 4000),
+              uploadedPdf,
+              blueprintFormats: effectiveBlueprintFormats,
+              subjectDist,
+              subjectTypeDist,
+              generationMode,
+              class11Weightage,
+              class12Weightage,
+              questionCount,
+              difficulty,
+              pattern,
+              focusPYQ,
+            },
           },
           status: "active",
         }),
@@ -2258,7 +2531,7 @@ function AIGeneratorContent() {
   }
 
   if (isExamQuotaReached && !editExamId) {
-    return (
+  return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center bg-[#F8FAFC]">
         <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 border border-amber-200 shadow-sm">
           <Lock className="w-8 h-8" />
@@ -2633,65 +2906,324 @@ function AIGeneratorContent() {
             </div>
           )}
 
-          {/* ─── STEP 2: CONTENT & BLUEPRINT (MATCHING SCREENSHOT) ─── */}
+          {/* ─── STEP 2: CONTENT & BLUEPRINT (MATCHING SCREENSHOT + CHAPTERS) ─── */}
           {currentStep === 2 && (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-7 shadow-xs">
-              {/* Top Header inside card */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-100">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 text-[#324158]">
-                    <Layers size={18} />
-                  </div>
-                  <div>
-                    <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900">
-                      Content &amp; Blueprint
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Select chapters and set question format, marks and difficulty level.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Selected Summary Badges & Edit Icon */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-[11px] sm:text-xs font-normal text-slate-600">
-                    Class:{" "}
-                    <span className="font-semibold text-slate-800">
-                      {selectedGrade === "both"
-                        ? "11th + 12th"
-                        : selectedGrade === "11"
-                        ? "Class 11th"
-                        : "Class 12th"}
-                    </span>
+            <div className="space-y-5">
+              {/* Top Context Bar + Recommended Pattern Action */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white rounded-2xl border border-slate-200/80 px-4 py-3.5 sm:px-5 shadow-2xs">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                  <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200/80 font-semibold text-slate-800">
+                    {currentExamMeta.title}
                   </span>
-                  <span className="px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-[11px] sm:text-xs font-normal text-slate-600">
-                    Subjects:{" "}
-                    <span className="font-semibold text-slate-800">
-                      {selectedSubjects.join(", ")}
-                    </span>
+                  <span className="px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/80">
+                    Class:{" "}
+                    <b className="text-slate-800">
+                      {selectedGrade === "both" ? "11th + 12th" : selectedGrade === "11" ? "Class 11th" : "Class 12th"}
+                    </b>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/80">
+                    Subjects: <b className="text-slate-800">{selectedSubjects.join(", ")}</b>
                   </span>
                   <button
                     type="button"
                     onClick={() => setCurrentStep(1)}
                     title="Edit Exam, Class or Subjects"
-                    className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                    className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 inline-flex items-center justify-center transition-colors cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                   </button>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={applyExamRecommendedPreset}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors cursor-pointer shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Use Recommended {currentExamMeta.title} Pattern</span>
+                </button>
               </div>
 
-              {/* ─── Chapter Selection (Full Width) ─── */}
-              <div className="pt-6">
-                <div className="flex items-center gap-2 mb-3.5">
-                  <span className="w-1.5 h-4 bg-[#324158] rounded-full inline-block" />
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900">Chapter Selection</h3>
+              {/* ─── Top Mode Toggle Cards ─── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch("manual")}
+                  className={`w-full text-left px-4 py-3.5 rounded-2xl border transition-all flex items-center gap-3.5 cursor-pointer ${
+                    generationMode === "manual"
+                      ? "bg-[#26354B] border-[#26354B] text-white shadow-sm"
+                      : "bg-white border-slate-200/90 text-slate-800 hover:border-slate-300 shadow-2xs"
+                  }`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                      generationMode === "manual"
+                        ? "bg-white text-[#26354B]"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    <Check className="w-4 h-4 stroke-[2.75]" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold leading-snug">Create with Questions</div>
+                    <div
+                      className={`text-xs mt-0.5 leading-snug ${
+                        generationMode === "manual" ? "text-slate-200" : "text-slate-500"
+                      }`}
+                    >
+                      Configure subjects, question types and marks manually.
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch("auto")}
+                  className={`w-full text-left px-4 py-3.5 rounded-2xl border transition-all flex items-center gap-3.5 cursor-pointer ${
+                    generationMode === "auto"
+                      ? "bg-[#26354B] border-[#26354B] text-white shadow-sm"
+                      : "bg-white border-slate-200/90 text-slate-800 hover:border-slate-300 shadow-2xs"
+                  }`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                      generationMode === "auto"
+                        ? "bg-white text-[#26354B]"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold leading-snug">Auto Generate Test</div>
+                    <div
+                      className={`text-xs mt-0.5 leading-snug ${
+                        generationMode === "auto" ? "text-slate-200" : "text-slate-500"
+                      }`}
+                    >
+                      Create test automatically using MCQ (Single Correct) and Diagram/Visual.
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* ─── CARD 1: SUBJECT-WISE CONFIGURATION + CLASS-WISE WEIGHTAGE ─── */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs">
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
+                  <div className="flex items-start gap-3">
+                    <span className="w-7 h-7 rounded-full bg-[#26354B] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      1
+                    </span>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                        Subject-wise Configuration
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Set total questions and total marks for each subject.
+                      </p>
+                    </div>
+                  </div>
+
+                  {totalQuestions > 0 &&
+                  totalQuestions <= 200 &&
+                  (selectedGrade !== "both" || (Number(class11Weightage) || 0) + (Number(class12Weightage) || 0) === 100) ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-700 text-xs font-bold">
+                      Configured <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                      Check Limits
+                    </span>
+                  )}
                 </div>
 
-                {/* Subject Selection Pills */}
-                <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                  {/* Left: Subject-wise Totals Table */}
+                  <div className="lg:col-span-7 xl:col-span-8 rounded-xl border border-slate-200/80 bg-slate-50/50 overflow-hidden flex flex-col justify-between">
+                    <div>
+                      <div className="grid grid-cols-12 gap-3 px-4 py-3 text-xs font-bold text-slate-700 border-b border-slate-200/70 bg-slate-50/90">
+                        <span className="col-span-4">Subject</span>
+                        <span className="col-span-4 text-center">
+                          Total Questions <span className="text-red-500">*</span>
+                        </span>
+                        <span className="col-span-4 text-center">
+                          Total Marks <span className="text-red-500">*</span>
+                        </span>
+                      </div>
+
+                      <div className="divide-y divide-slate-100 bg-white/80">
+                        {selectedSubjects.map((sub) => {
+                          const subCfg = subjectDist[sub] || { questions: 0, marksPerQuestion: 1, marks: 0 }
+                          return (
+                            <div key={sub} className="grid grid-cols-12 gap-3 px-4 py-2.5 items-center">
+                              <span className="col-span-4 text-xs sm:text-sm font-medium text-slate-800">
+                                {sub}
+                              </span>
+                              <div className="col-span-4 flex justify-center">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={200}
+                                  value={subCfg.questions}
+                                  onFocus={(e) => e.target.select()}
+                                  onChange={(e) => updateSubjectTotalQuestions(sub, e.target.value)}
+                                  aria-label={`${sub} total questions`}
+                                  className="w-24 sm:w-28 h-9 px-2 text-center rounded-lg border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#26354B]/15"
+                                />
+                              </div>
+                              <div className="col-span-4 flex justify-center">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={2000}
+                                  value={subCfg.marks}
+                                  onFocus={(e) => e.target.select()}
+                                  onChange={(e) => updateSubjectTotalMarks(sub, e.target.value)}
+                                  aria-label={`${sub} total marks`}
+                                  className="w-24 sm:w-28 h-9 px-2 text-center rounded-lg border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#26354B]/15"
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Table Footer Row */}
+                    <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-slate-50/90 border-t border-slate-200/70 items-center">
+                      <span className="col-span-4 text-xs sm:text-sm font-bold text-slate-900">Total</span>
+                      <span className="col-span-4 text-center text-sm font-bold text-slate-900">
+                        {totalQuestions}
+                      </span>
+                      <span className="col-span-4 text-center text-sm font-bold text-slate-900">
+                        {totalMarks}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right: Class-wise Weightage Card */}
+                  <div className="lg:col-span-5 xl:col-span-4 rounded-xl border border-slate-200/90 bg-slate-50/40 p-4 flex flex-col justify-between">
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-800">
+                        Class-wise Weightage <span className="text-red-500">*</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {selectedGrade === "both"
+                          ? "Set syllabus weightage for each class."
+                          : `Fixed to 100% for Class ${selectedGrade}th selection.`}
+                      </p>
+
+                      <div className="space-y-3 mt-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs sm:text-sm font-medium text-slate-800">Class 11</span>
+                          {selectedGrade === "both" ? (
+                            <div className="relative w-28">
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={class11Weightage}
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => handleClass11WeightageChange(Number(e.target.value))}
+                                aria-label="Class 11 weightage percentage"
+                                className="w-full h-9 pl-3 pr-7 text-center rounded-lg border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#26354B]/15"
+                              />
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none">
+                                %
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="w-28 h-9 px-3 rounded-lg border border-slate-200 bg-slate-100/80 flex items-center justify-center text-xs sm:text-sm font-semibold text-slate-700">
+                              {selectedGrade === "11" ? "100%" : "0%"}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs sm:text-sm font-medium text-slate-800">Class 12</span>
+                          {selectedGrade === "both" ? (
+                            <div className="relative w-28">
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={class12Weightage}
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => handleClass12WeightageChange(Number(e.target.value))}
+                                aria-label="Class 12 weightage percentage"
+                                className="w-full h-9 pl-3 pr-7 text-center rounded-lg border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#26354B]/15"
+                              />
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none">
+                                %
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="w-28 h-9 px-3 rounded-lg border border-slate-200 bg-slate-100/80 flex items-center justify-center text-xs sm:text-sm font-semibold text-slate-700">
+                              {selectedGrade === "12" ? "100%" : "0%"}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-200/70 flex items-center justify-between gap-2">
+                      <span className="text-xs sm:text-sm font-bold text-slate-900">Total Weightage</span>
+                      {selectedGrade !== "both" ||
+                      (Number(class11Weightage) || 0) + (Number(class12Weightage) || 0) === 100 ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-700 text-xs font-bold">
+                          100% <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-3 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                          {(Number(class11Weightage) || 0) + (Number(class12Weightage) || 0)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ─── CARD 2: QUESTION TYPE DISTRIBUTION ─── */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs">
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                  <div className="flex items-start gap-3">
+                    <span className="w-7 h-7 rounded-full bg-[#26354B] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      2
+                    </span>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                        Question Type Distribution
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {generationMode === "auto"
+                          ? "Auto Generate Test distributes questions automatically between MCQ (Single Correct) and Diagram/Visual."
+                          : "Configure question types for each subject. Questions and marks are limited to the values set above."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const activeSub = selectedSubjects.includes(activeSubjectTab)
+                      ? activeSubjectTab
+                      : selectedSubjects[0] || "Physics"
+                    const activeProg = getSubjectProgress(activeSub)
+                    return !activeProg.isMatched && generationMode === "manual" ? (
+                      <button
+                        type="button"
+                        onClick={() => balanceSubjectTypeRows(activeSub)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-xs font-semibold text-amber-900 transition-colors cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Auto-balance {activeSub}</span>
+                      </button>
+                    ) : null
+                  })()}
+                </div>
+
+                {/* Subject Segmented Tabs */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {selectedSubjects.map((sub) => {
-                    const count = getChapters(selectedExam, selectedGrade, sub).length
+                    const prog = getSubjectProgress(sub)
                     const isActive = activeSubjectTab === sub
                     return (
                       <button
@@ -2701,57 +3233,449 @@ function AIGeneratorContent() {
                           setActiveSubjectTab(sub)
                           setSelectedSubject(sub)
                         }}
-                        className={`px-4 py-1.5 rounded-full text-xs transition-all shrink-0 sm:shrink cursor-pointer whitespace-nowrap ${
+                        className={`flex-1 min-w-[175px] h-10 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
                           isActive
-                            ? "bg-[#324158] text-white font-bold shadow-xs"
-                            : "bg-slate-50 border border-slate-200 text-slate-700 hover:border-slate-300 font-semibold"
+                            ? "bg-[#26354B] text-white shadow-xs"
+                            : "bg-white border border-slate-200 text-slate-700 hover:border-slate-300"
                         }`}
                       >
-                        {sub} ({count})
+                        <span>
+                          {sub} ({prog.targetQ} Q / {prog.targetM} Marks)
+                        </span>
+                        {!prog.isMatched && (
+                          <span
+                            className={`w-2 h-2 rounded-full ${isActive ? "bg-amber-300" : "bg-amber-500"}`}
+                            title="Question type total does not match subject target"
+                          />
+                        )}
                       </button>
                     )
                   })}
                 </div>
 
-                {/* Class Filter Chips */}
-                <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
-                  {[
-                    { id: "all", label: `All (${currentSubjectChapters.length})` },
-                    { id: "11", label: `Class 11 (${class11Chapters.length})` },
-                    { id: "12", label: `Class 12 (${class12Chapters.length})` },
-                  ].map((cf) => (
-                    <button
-                      key={cf.id}
-                      type="button"
-                      onClick={() => setClassFilter(cf.id as any)}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors shrink-0 sm:shrink cursor-pointer whitespace-nowrap ${
-                        classFilter === cf.id
-                          ? "bg-blue-50 text-blue-900 border border-blue-200/80 font-bold"
-                          : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 font-medium"
-                      }`}
-                    >
-                      {cf.label}
-                    </button>
-                  ))}
+                {/* Split Row: Question Type Table (Left) + Subject Progress (Right) */}
+                {(() => {
+                  const activeSub = selectedSubjects.includes(activeSubjectTab)
+                    ? activeSubjectTab
+                    : selectedSubjects[0] || "Physics"
+                  const currentRows = getSubjectTypeRows(activeSub)
+                  const activeProg = getSubjectProgress(activeSub)
+                  const usedFormats = new Set(currentRows.map((r) => r.formatId))
+
+                  return (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start mt-4">
+                      {/* Left: Question Types Table */}
+                      <div className="lg:col-span-8 rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 sm:p-4 space-y-3">
+                        <div className="hidden sm:grid grid-cols-12 gap-2.5 px-1 text-xs font-bold text-slate-700">
+                          <span className="col-span-5">Question Type</span>
+                          <span className="col-span-2 text-center">Questions</span>
+                          <span className="col-span-3 text-center">Marks per Question</span>
+                          <span className="col-span-2 text-center">Total Marks</span>
+                        </div>
+
+                        <div className="space-y-2.5">
+                          {currentRows.map((row) => (
+                            <div
+                              key={row.rowId}
+                              className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center bg-white/70 sm:bg-transparent p-2.5 sm:p-0 rounded-xl border sm:border-0 border-slate-200/70"
+                            >
+                              {/* Question Type Select */}
+                              <div className="sm:col-span-5">
+                                <label className="block sm:hidden text-[11px] font-semibold text-slate-500 mb-1">
+                                  Question Type
+                                </label>
+                                {generationMode === "auto" ? (
+                                  <div className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-slate-100/80 flex items-center text-xs font-medium text-slate-700">
+                                    {QUESTION_FORMAT_LABELS[row.formatId] || row.formatId}
+                                  </div>
+                                ) : (
+                                  <div className="relative">
+                                    <select
+                                      value={row.formatId}
+                                      onChange={(e) =>
+                                        updateSubjectTypeRow(activeSub, row.rowId, { formatId: e.target.value })
+                                      }
+                                      className="w-full h-10 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 shadow-2xs appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#26354B]/15"
+                                    >
+                                      {Object.entries(QUESTION_FORMAT_LABELS).map(([fmtKey, fmtLabel]) => {
+                                        const isUsedElsewhere = usedFormats.has(fmtKey) && fmtKey !== row.formatId
+                                        return (
+                                          <option key={fmtKey} value={fmtKey} disabled={isUsedElsewhere}>
+                                            {fmtLabel}
+                                          </option>
+                                        )
+                                      })}
+                                    </select>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Questions Input */}
+                              <div className="sm:col-span-2">
+                                <label className="block sm:hidden text-[11px] font-semibold text-slate-500 mb-1">
+                                  Questions
+                                </label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={200}
+                                  disabled={generationMode === "auto"}
+                                  value={row.count}
+                                  onFocus={(e) => e.target.select()}
+                                  onChange={(e) =>
+                                    updateSubjectTypeRow(activeSub, row.rowId, {
+                                      count: e.target.value === "" ? 0 : Number(e.target.value),
+                                    })
+                                  }
+                                  className="w-full h-10 px-2 text-center rounded-lg border border-slate-200 bg-slate-100/75 focus:bg-white text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#26354B]/15 disabled:opacity-75 disabled:cursor-not-allowed"
+                                />
+                              </div>
+
+                              {/* Marks per Question Input */}
+                              <div className="sm:col-span-3">
+                                <label className="block sm:hidden text-[11px] font-semibold text-slate-500 mb-1">
+                                  Marks per Question
+                                </label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={100}
+                                  disabled={generationMode === "auto"}
+                                  value={row.marks}
+                                  onFocus={(e) => e.target.select()}
+                                  onChange={(e) =>
+                                    updateSubjectTypeRow(activeSub, row.rowId, {
+                                      marks: e.target.value === "" ? 1 : Number(e.target.value),
+                                    })
+                                  }
+                                  className="w-full h-10 px-2 text-center rounded-lg border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#26354B]/15 disabled:bg-slate-100/80 disabled:opacity-75 disabled:cursor-not-allowed"
+                                />
+                              </div>
+
+                              {/* Total Marks Read-only + Optional Remove */}
+                              <div className="sm:col-span-2 flex items-center gap-1.5">
+                                <div
+                                  className="flex-1 h-10 px-2 rounded-lg border border-slate-200 bg-slate-100/85 flex items-center justify-center text-xs sm:text-sm font-bold text-slate-800 select-none"
+                                  title="Questions × Marks per Question"
+                                >
+                                  {(Number(row.count) || 0) * (Number(row.marks) || 0)}
+                                </div>
+                                {generationMode === "manual" && currentRows.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSubjectTypeRow(activeSub, row.rowId)}
+                                    title="Remove question type"
+                                    className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer shrink-0"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {generationMode === "manual" && (
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={() => addSubjectTypeRow(activeSub)}
+                              disabled={currentRows.length >= Object.keys(QUESTION_FORMAT_LABELS).length}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add Question Type</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right: {Subject} Progress Card */}
+                      <div className="lg:col-span-4 rounded-xl border border-slate-200/90 bg-slate-50/40 p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-200/70">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                            {activeSub} Progress
+                          </h4>
+                          {activeProg.isMatched ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-700 text-xs font-bold">
+                              <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Matched
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                              Mismatch
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs sm:text-sm">
+                          <span className="text-slate-600 font-medium">Questions</span>
+                          <span
+                            className={`font-bold ${
+                              activeProg.isQuestionsMatched ? "text-emerald-600" : "text-amber-600"
+                            }`}
+                          >
+                            {activeProg.allocatedQ} / {activeProg.targetQ}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs sm:text-sm">
+                          <span className="text-slate-600 font-medium">Marks</span>
+                          <span
+                            className={`font-bold ${
+                              activeProg.isMarksMatched ? "text-emerald-600" : "text-amber-600"
+                            }`}
+                          >
+                            {activeProg.allocatedM} / {activeProg.targetM}
+                          </span>
+                        </div>
+
+                        {!activeProg.isMatched && generationMode === "manual" && (
+                          <button
+                            type="button"
+                            onClick={() => balanceSubjectTypeRows(activeSub)}
+                            className="w-full mt-1 py-1.5 px-3 rounded-lg bg-amber-100/70 hover:bg-amber-100 text-amber-900 text-[11px] font-semibold transition-colors cursor-pointer"
+                          >
+                            Match Subject Limits Automatically
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Blue Note Callout Banner */}
+                <div className="mt-4 rounded-xl border border-blue-200/80 bg-blue-50/70 px-4 py-3 flex items-start gap-2.5 text-xs text-slate-700">
+                  <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    <b className="text-slate-900">Note:</b> By default, all questions are added as &ldquo;MCQ – Single Correct&rdquo;. You can add more question types if required, but the total questions and total marks must match the subject-wise limits.
+                  </p>
                 </div>
 
-                {/* Accordions for Class 11 and Class 12 */}
-                <div className="space-y-3 mb-4">
-                  {/* Class 11 */}
-                  {(classFilter === "all" || classFilter === "11") && class11Chapters.length > 0 && (
+                {/* Compact Difficulty, PYQ Focus & Negative Marking Bar */}
+                <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                  <div className="md:col-span-5 flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span className="text-xs font-bold text-slate-700 shrink-0 flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-slate-500" /> Difficulty:
+                    </span>
+                    <div className="relative flex-1">
+                      <select
+                        value={difficulty}
+                        onChange={(e) => setDifficulty(e.target.value as any)}
+                        className="w-full h-9 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#26354B]/15"
+                      >
+                        <option value="balanced">Balanced (Standard Exam Mix)</option>
+                        <option value="easy">Easy (Concept Foundations)</option>
+                        <option value="medium">Medium (Application & Numerical)</option>
+                        <option value="hard">Hard (Advanced Multi-Concept)</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-3 flex items-center gap-2">
+                    <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={focusPYQ}
+                        onChange={(e) => setFocusPYQ(e.target.checked)}
+                        className="w-4 h-4 rounded text-[#26354B] focus:ring-[#26354B] cursor-pointer"
+                      />
+                      <span>PYQ-Style Rigor</span>
+                    </label>
+                  </div>
+
+                  <div className="md:col-span-4 flex flex-wrap items-center justify-start md:justify-end gap-2.5">
+                    <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={negativeMarkingEnabled}
+                        onChange={(e) => handleToggleNegativeMarking(e.target.checked)}
+                        className="w-4 h-4 rounded text-[#26354B] focus:ring-[#26354B] cursor-pointer"
+                      />
+                      <span>Negative Marking</span>
+                    </label>
+                    {negativeMarkingEnabled && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="relative">
+                          <select
+                            value={[0.25, 0.33, 0.5, 1, 2].includes(negativeMarkPenalty) ? negativeMarkPenalty : "custom"}
+                            onChange={(e) => {
+                              if (e.target.value === "custom") {
+                                handleNegativePenaltyChange(1.5)
+                              } else {
+                                handleNegativePenaltyChange(parseFloat(e.target.value))
+                              }
+                            }}
+                            className="h-8 pl-2.5 pr-7 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 cursor-pointer appearance-none focus:outline-none focus:border-slate-800"
+                          >
+                            <option value={0.25}>-0.25</option>
+                            <option value={0.33}>-0.33</option>
+                            <option value={0.5}>-0.50</option>
+                            <option value={1}>-1.00</option>
+                            <option value={2}>-2.00</option>
+                            <option value="custom">Custom</option>
+                          </select>
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
+                        </div>
+                        {![0.25, 0.33, 0.5, 1, 2].includes(negativeMarkPenalty) && (
+                          <input
+                            type="number"
+                            step="0.05"
+                            min="0.05"
+                            max="10"
+                            value={negativeMarkPenalty}
+                            onChange={(e) => handleNegativePenaltyChange(Math.max(0, parseFloat(e.target.value) || 0))}
+                            className="w-14 h-8 px-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ─── CARD 3: CHAPTER & SYLLABUS SELECTION ─── */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs">
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                  <div className="flex items-start gap-3">
+                    <span className="w-7 h-7 rounded-full bg-[#26354B] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      3
+                    </span>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                        Chapter &amp; Syllabus Selection
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Select chapters for each subject, or add custom topics / upload a syllabus PDF.
+                      </p>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border ${
+                      selectedChapters.length > 0 || selectedTopics.length > 0 || Boolean(uploadedSyllabusText)
+                        ? "bg-emerald-50 border-emerald-200/80 text-emerald-700"
+                        : "bg-amber-50 border-amber-200 text-amber-800"
+                    }`}
+                  >
+                    {selectedChapters.length > 0 && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
+                    <span>
+                      Selected: {selectedChapters.length} {selectedChapters.length === 1 ? "Chapter" : "Chapters"}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Subject Filter Tabs for Chapters */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {selectedSubjects.map((sub) => {
+                    const counts = subjectChapterCounts[sub] || { selected: 0, total: 0 }
+                    const isActive = activeSubjectTab === sub
+                    return (
+                      <button
+                        key={sub}
+                        type="button"
+                        onClick={() => {
+                          setActiveSubjectTab(sub)
+                          setSelectedSubject(sub)
+                        }}
+                        className={`px-4 py-1.5 rounded-full text-xs transition-all shrink-0 cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                          isActive
+                            ? "bg-[#26354B] text-white font-bold shadow-xs"
+                            : "bg-slate-50 border border-slate-200 text-slate-700 hover:border-slate-300 font-semibold"
+                        }`}
+                      >
+                        <span>{sub}</span>
+                        <span
+                          className={`text-[11px] px-1.5 py-0.5 rounded-full ${
+                            isActive
+                              ? "bg-white/15 text-white"
+                              : counts.selected > 0
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-slate-200/70 text-slate-600"
+                          }`}
+                        >
+                          {counts.selected}/{counts.total}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Class Filter Chips + Chapter Search & Bulk Actions */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {[
+                      { id: "all", label: `All (${currentSubjectChapters.length})` },
+                      { id: "11", label: `Class 11 (${class11Chapters.length})` },
+                      { id: "12", label: `Class 12 (${class12Chapters.length})` },
+                    ].map((cf) => (
+                      <button
+                        key={cf.id}
+                        type="button"
+                        onClick={() => setClassFilter(cf.id as any)}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors shrink-0 cursor-pointer whitespace-nowrap ${
+                          classFilter === cf.id
+                            ? "bg-blue-50 text-blue-900 border border-blue-200/80 font-bold"
+                            : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 font-medium"
+                        }`}
+                      >
+                        {cf.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1 sm:w-52">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={chapterSearch}
+                        onChange={(e) => setChapterSearch(e.target.value)}
+                        placeholder={`Search ${activeSubjectTab} chapters...`}
+                        className="w-full h-8 pl-8 pr-7 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#26354B]/15"
+                      />
+                      {chapterSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setChapterSearch("")}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSelectAllChapters}
+                      className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 cursor-pointer shrink-0"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeselectSubjectChapters}
+                      className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-500 hover:text-slate-700 cursor-pointer shrink-0"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                {/* Accordions for Class 11 & Class 12 */}
+                <div className="space-y-3">
+                  {(classFilter === "all" || classFilter === "11") && filteredClass11Chapters.length > 0 && (
                     <div className="rounded-xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
                       <div className="p-3.5 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
-                            onClick={() =>
-                              setExpandedClasses((prev) => ({ ...prev, "11": !prev["11"] }))
-                            }
+                            onClick={() => setExpandedClasses((prev) => ({ ...prev, "11": !prev["11"] }))}
                             className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5"
                           >
                             <ChevronDown
                               className={`w-4 h-4 transition-transform duration-200 ${
-                                expandedClasses["11"] ? "rotate-180" : ""
+                                expandedClasses["11"] || chapterSearch.trim() ? "rotate-180" : ""
                               }`}
                             />
                           </button>
@@ -2763,40 +3687,39 @@ function AIGeneratorContent() {
                                 class11Chapters.every((c) => selectedChapters.includes(c.name))
                               }
                               onChange={() => toggleAllClass("11")}
-                              className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                              className="w-4 h-4 rounded text-[#26354B] focus:ring-slate-900 border-slate-300 cursor-pointer"
                             />
                             <span className="font-bold text-slate-800 text-xs sm:text-sm">
-                              Class 11 ({class11Chapters.length} chapters)
+                              Class 11 ({filteredClass11Chapters.length}
+                              {chapterSearch.trim() ? ` of ${class11Chapters.length}` : ""} chapters)
                             </span>
                           </label>
                         </div>
                         <ChevronRight
-                          onClick={() =>
-                            setExpandedClasses((prev) => ({ ...prev, "11": !prev["11"] }))
-                          }
+                          onClick={() => setExpandedClasses((prev) => ({ ...prev, "11": !prev["11"] }))}
                           className={`w-4 h-4 text-slate-400 cursor-pointer transition-transform ${
-                            expandedClasses["11"] ? "rotate-90" : ""
+                            expandedClasses["11"] || chapterSearch.trim() ? "rotate-90" : ""
                           }`}
                         />
                       </div>
 
-                      {expandedClasses["11"] && (
-                        <div className="px-4 py-3 bg-slate-50/40 border-t border-slate-100 max-h-72 overflow-y-auto space-y-1.5 custom-scrollbar">
-                          {class11Chapters.map((ch, idx) => {
+                      {(expandedClasses["11"] || Boolean(chapterSearch.trim())) && (
+                        <div className="px-4 py-3 bg-slate-50/40 border-t border-slate-100 max-h-64 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-1.5 custom-scrollbar">
+                          {filteredClass11Chapters.map((ch, idx) => {
                             const isChecked = selectedChapters.includes(ch.name)
                             return (
                               <label
                                 key={ch.id || ch.name}
-                                className="flex items-center gap-3 text-xs text-slate-700 cursor-pointer hover:bg-white p-2 rounded-lg transition-colors"
+                                className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer hover:bg-white p-2 rounded-lg transition-colors"
                               >
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={() => toggleChapter(ch.name)}
-                                  className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer shrink-0"
+                                  className="w-4 h-4 rounded text-[#26354B] focus:ring-slate-900 border-slate-300 cursor-pointer shrink-0"
                                 />
                                 <span className="font-medium text-slate-800">
-                                  <span className="text-slate-400 mr-2">{idx + 1}.</span>
+                                  <span className="text-slate-400 mr-1.5">{idx + 1}.</span>
                                   {ch.name}
                                 </span>
                               </label>
@@ -2807,21 +3730,18 @@ function AIGeneratorContent() {
                     </div>
                   )}
 
-                  {/* Class 12 */}
-                  {(classFilter === "all" || classFilter === "12") && class12Chapters.length > 0 && (
+                  {(classFilter === "all" || classFilter === "12") && filteredClass12Chapters.length > 0 && (
                     <div className="rounded-xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
                       <div className="p-3.5 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
-                            onClick={() =>
-                              setExpandedClasses((prev) => ({ ...prev, "12": !prev["12"] }))
-                            }
+                            onClick={() => setExpandedClasses((prev) => ({ ...prev, "12": !prev["12"] }))}
                             className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5"
                           >
                             <ChevronDown
                               className={`w-4 h-4 transition-transform duration-200 ${
-                                expandedClasses["12"] ? "rotate-180" : ""
+                                expandedClasses["12"] || chapterSearch.trim() ? "rotate-180" : ""
                               }`}
                             />
                           </button>
@@ -2833,40 +3753,39 @@ function AIGeneratorContent() {
                                 class12Chapters.every((c) => selectedChapters.includes(c.name))
                               }
                               onChange={() => toggleAllClass("12")}
-                              className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer"
+                              className="w-4 h-4 rounded text-[#26354B] focus:ring-slate-900 border-slate-300 cursor-pointer"
                             />
                             <span className="font-bold text-slate-800 text-xs sm:text-sm">
-                              Class 12 ({class12Chapters.length} chapters)
+                              Class 12 ({filteredClass12Chapters.length}
+                              {chapterSearch.trim() ? ` of ${class12Chapters.length}` : ""} chapters)
                             </span>
                           </label>
                         </div>
                         <ChevronRight
-                          onClick={() =>
-                            setExpandedClasses((prev) => ({ ...prev, "12": !prev["12"] }))
-                          }
+                          onClick={() => setExpandedClasses((prev) => ({ ...prev, "12": !prev["12"] }))}
                           className={`w-4 h-4 text-slate-400 cursor-pointer transition-transform ${
-                            expandedClasses["12"] ? "rotate-90" : ""
+                            expandedClasses["12"] || chapterSearch.trim() ? "rotate-90" : ""
                           }`}
                         />
                       </div>
 
-                      {expandedClasses["12"] && (
-                        <div className="px-4 py-3 bg-slate-50/40 border-t border-slate-100 max-h-72 overflow-y-auto space-y-1.5 custom-scrollbar">
-                          {class12Chapters.map((ch, idx) => {
+                      {(expandedClasses["12"] || Boolean(chapterSearch.trim())) && (
+                        <div className="px-4 py-3 bg-slate-50/40 border-t border-slate-100 max-h-64 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-1.5 custom-scrollbar">
+                          {filteredClass12Chapters.map((ch, idx) => {
                             const isChecked = selectedChapters.includes(ch.name)
                             return (
                               <label
                                 key={ch.id || ch.name}
-                                className="flex items-center gap-3 text-xs text-slate-700 cursor-pointer hover:bg-white p-2 rounded-lg transition-colors"
+                                className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer hover:bg-white p-2 rounded-lg transition-colors"
                               >
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={() => toggleChapter(ch.name)}
-                                  className="w-4 h-4 rounded text-[#324158] focus:ring-slate-900 border-slate-300 cursor-pointer shrink-0"
+                                  className="w-4 h-4 rounded text-[#26354B] focus:ring-slate-900 border-slate-300 cursor-pointer shrink-0"
                                 />
                                 <span className="font-medium text-slate-800">
-                                  <span className="text-slate-400 mr-2">{idx + 1}.</span>
+                                  <span className="text-slate-400 mr-1.5">{idx + 1}.</span>
                                   {ch.name}
                                 </span>
                               </label>
@@ -2876,464 +3795,147 @@ function AIGeneratorContent() {
                       )}
                     </div>
                   )}
+
+                  {filteredClass11Chapters.length === 0 && filteredClass12Chapters.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-500">
+                      No chapters matched &ldquo;{chapterSearch}&rdquo; for {activeSubjectTab}.
+                    </div>
+                  )}
                 </div>
 
-                {/* Selected Status Bar */}
-                <div className="px-4 py-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center gap-2 text-xs font-bold text-blue-900 mb-6">
-                  <Check className="w-4 h-4 text-blue-600 stroke-[2.5]" />
-                  <span>Selected: {selectedChapters.length} Chapters</span>
-                </div>
-
-                {/* ─── Validation Alert Box (Requirements 1, 2, 3, 6, 8) ─── */}
-                {validationErrors.length > 0 && (
-                  <div
-                    className={`mb-6 p-4 rounded-2xl shadow-2xs animate-in fade-in-50 border ${
-                      totalQuestions === 0 && totalSubjectQuestions === 0
-                        ? "bg-slate-50 border-slate-200"
-                        : "bg-amber-50/90 border-amber-200/90"
-                    }`}
+                {/* Collapsible Custom Topics & Syllabus PDF Drawer */}
+                <div className="mt-4 rounded-xl border border-slate-200/80 bg-slate-50/40 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedInputs((v) => !v)}
+                    className="w-full px-4 py-3 flex items-center justify-between text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                   >
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${
-                            totalQuestions === 0 && totalSubjectQuestions === 0
-                              ? "bg-slate-100 border-slate-200 text-slate-600"
-                              : "bg-amber-100 border-amber-200 text-amber-700"
-                          }`}
-                        >
-                          {totalQuestions === 0 && totalSubjectQuestions === 0 ? (
-                            <Info className="w-4 h-4" />
-                          ) : (
-                            <AlertTriangle className="w-4 h-4" />
-                          )}
-                        </div>
-                        <div>
-                          <h4
-                            className={`text-xs sm:text-sm font-bold ${
-                              totalQuestions === 0 && totalSubjectQuestions === 0
-                                ? "text-slate-800"
-                                : "text-amber-950"
-                            }`}
-                          >
-                            {totalQuestions === 0 && totalSubjectQuestions === 0
-                              ? "Blueprint Setup: Enter Desired Question Numbers to Proceed"
-                              : `Blueprint Configuration Alignment Needed (${validationErrors.length})`}
-                          </h4>
-                          <ul
-                            className={`mt-1.5 space-y-1 text-xs ${
-                              totalQuestions === 0 && totalSubjectQuestions === 0
-                                ? "text-slate-600"
-                                : "text-amber-900"
-                            }`}
-                          >
-                            {validationErrors.map((err, idx) => (
-                              <li key={idx} className="flex items-start gap-1.5">
-                                <span
-                                  className={`font-bold ${
-                                    totalQuestions === 0 && totalSubjectQuestions === 0
-                                      ? "text-slate-400"
-                                      : "text-amber-500"
-                                  }`}
-                                >
-                                  •
-                                </span>
-                                <span>{err}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-
-                      {(totalQuestions !== totalSubjectQuestions || totalMarks !== totalSubjectMarks) && (
-                        <div className="flex items-center gap-2 shrink-0 self-start md:self-center pt-1 md:pt-0">
-                          <button
-                            type="button"
-                            onClick={syncTypesToSubjects}
-                            className="px-3 py-1.5 rounded-lg bg-amber-700 hover:bg-amber-800 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-                            title="Auto-adjust Question Types to match Subject-wise total questions & marks"
-                          >
-                            Auto-Sync Question Types
-                          </button>
-                          <button
-                            type="button"
-                            onClick={syncSubjectsToTypes}
-                            className="px-3 py-1.5 rounded-lg bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-                            title="Auto-adjust Subject-wise distribution to match Question Types totals"
-                          >
-                            Auto-Sync Subjects
-                          </button>
-                        </div>
+                    <span className="flex items-center gap-2">
+                      <Tag className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Custom Topics &amp; Syllabus PDF (Optional)</span>
+                      {(selectedTopics.length > 0 || uploadedPdf) && (
+                        <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                          {selectedTopics.length + (uploadedPdf ? 1 : 0)} added
+                        </span>
                       )}
-                    </div>
-                  </div>
-                )}
-              </div>
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-slate-400 transition-transform ${showAdvancedInputs ? "rotate-180" : ""}`}
+                    />
+                  </button>
 
-              {/* ─── Bottom Section: Question Type & Marks (Left) + Subject Breakdown & Syllabus Weightage (Right) ─── */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pt-2">
-                {/* Left Column: Question Type & Marks */}
-                <div className="lg:col-span-7 xl:col-span-7">
-                  <div className="flex items-center gap-2 mb-3.5">
-                    <span className="w-1.5 h-4 bg-[#324158] rounded-full inline-block" />
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-1.5">
-                      Question Type &amp; Marks <Info size={13} className="text-slate-400" />
-                    </h3>
-                  </div>
-
-                  {/* Table of Question Types */}
-                  <div className="space-y-2.5">
-                    {/* Header Row */}
-                    <div className="grid grid-cols-12 gap-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                      <span className="col-span-5">Question Type</span>
-                      <span className="col-span-3 text-center">Marks per Question</span>
-                      <span className="col-span-2 text-center">Total Questions</span>
-                      <span className="col-span-2 text-center">Total Marks</span>
-                    </div>
-
-                    {blueprintFormats.map((f) => (
-                      <div key={f.id} className="grid grid-cols-12 gap-2.5 items-center">
-                        {/* Question Type Dropdown */}
-                        <div className="col-span-5 relative">
-                          <select
-                            value={f.label}
-                            onChange={(e) => updateFormatType(f.id, e.target.value)}
-                            className="w-full h-10 pl-3 pr-8 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 cursor-pointer appearance-none truncate"
-                          >
-                            {[
-                              "MCQ (Single Correct)",
-                              "MCQ (Multiple Correct)",
-                              "Assertion & Reason",
-                              "True / False",
-                              "Fill in the Blanks",
-                              "Description / Descriptive",
-                              "Diagram / Visual",
-                            ].map((t) => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
-                          </select>
-                          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        </div>
-
-                        {/* Marks per Question Input */}
-                        <div className="col-span-3">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={f.marks === 0 ? "0" : f.marks}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => {
-                              const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
-                              updateFormatMarks(f.id, val)
-                            }}
-                            className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10"
-                          />
-                        </div>
-
-                        {/* Total Questions Input */}
-                        <div className="col-span-2">
-                          <input
-                            type="number"
-                            min={0}
-                            max={200}
-                            value={f.count === 0 ? "0" : f.count}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => {
-                              const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
-                              updateFormatCount(f.id, val)
-                            }}
-                            className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10"
-                          />
-                        </div>
-
-                        {/* Total Marks (Auto-calculated: Total Questions × Marks per Question) */}
-                        <div className="col-span-2">
+                  {showAdvancedInputs && (
+                    <div className="px-4 pb-4 pt-2 border-t border-slate-200/70 grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/70">
+                      {/* Manual Custom Topics */}
+                      <div className="space-y-2">
+                        <label className="block text-[11px] font-bold text-slate-700">
+                          Focus Topics / Concepts (comma separated)
+                        </label>
+                        <div className="flex gap-2">
                           <input
                             type="text"
-                            readOnly
-                            disabled
-                            value={(f.count || 0) * (f.marks || 0)}
-                            title="Total Marks are auto-calculated (Total Questions × Marks per Question)"
-                            className="w-full h-10 px-2 text-center rounded-xl border border-slate-200 bg-slate-100/70 text-xs font-bold text-slate-800 shadow-2xs cursor-not-allowed select-none"
+                            value={manualTopicInput}
+                            onChange={(e) => setManualTopicInput(e.target.value)}
+                            onKeyDown={handleManualTopicKeyDown}
+                            placeholder="e.g. SN1 vs SN2, Rolling Motion, Bayes Theorem"
+                            className="flex-1 h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#26354B]/15"
                           />
+                          <button
+                            type="button"
+                            onClick={handleAddManualTopic}
+                            className="h-9 px-3 rounded-lg bg-[#26354B] text-white text-xs font-semibold cursor-pointer shrink-0"
+                          >
+                            Add
+                          </button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Bottom Summary Bar */}
-                  <div
-                    className={`mt-4 px-4 py-2.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-semibold ${
-                      totalQuestions === totalSubjectQuestions && totalMarks === totalSubjectMarks
-                        ? "bg-blue-50/70 border-blue-100 text-blue-950"
-                        : "bg-amber-50/70 border-amber-200 text-amber-950"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Info
-                        size={14}
-                        className={
-                          totalQuestions === totalSubjectQuestions && totalMarks === totalSubjectMarks
-                            ? "text-blue-600 shrink-0"
-                            : "text-amber-600 shrink-0"
-                        }
-                      />
-                      <span>
-                        Total Questions: <b className="text-slate-900">{totalQuestions}</b>
-                      </span>
-                      <span className="text-slate-300 mx-1">|</span>
-                      <span>
-                        Total Marks: <b className="text-slate-900">{totalMarks}</b>
-                      </span>
-                    </div>
-
-                    {totalQuestions === totalSubjectQuestions && totalMarks === totalSubjectMarks ? (
-                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md self-start sm:self-auto">
-                        ✓ Matches Subject Totals
-                      </span>
-                    ) : (
-                      <div className="flex items-center gap-2 self-start sm:self-auto">
-                        <span className="text-[11px] font-bold text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md">
-                          Subjects: {totalSubjectQuestions} Qs / {totalSubjectMarks} M
-                        </span>
-                        <button
-                          type="button"
-                          onClick={syncTypesToSubjects}
-                          className="text-[11px] font-bold text-blue-700 hover:text-blue-900 underline cursor-pointer"
-                        >
-                          Sync Now
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right Column: Subject-wise Marks + Syllabus Weightage */}
-                <div className="lg:col-span-5 xl:col-span-5 space-y-5">
-                  {/* Box 1: Subject-wise Marks */}
-                  <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs">
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                        Subject-wise Marks <Info size={13} className="text-slate-400" />
-                      </h4>
-                      {totalQuestions === totalSubjectQuestions && totalMarks === totalSubjectMarks ? (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                          Synchronized ✓
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                          Mismatch
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-12 gap-2 text-[11px] font-semibold text-slate-400 pb-1.5 border-b border-slate-100">
-                        <span className="col-span-6">Subject</span>
-                        <span className="col-span-3 text-center">Questions</span>
-                        <span className="col-span-3 text-center">Marks</span>
-                      </div>
-
-                      {selectedSubjects.map((sub) => {
-                        const qVal = subjectDist[sub]?.questions ?? 0
-                        const mVal = subjectDist[sub]?.marks ?? 0
-                        const isZeroQ = qVal === 0
-
-                        return (
-                          <div key={sub} className="grid grid-cols-12 gap-2 items-center py-1">
-                            <span className="col-span-6 text-xs font-medium text-slate-800 truncate">{sub}</span>
-                            <div className="col-span-3 flex justify-center">
-                              <input
-                                type="number"
-                                min={0}
-                                max={200}
-                                value={qVal}
-                                onFocus={(e) => e.target.select()}
-                                onChange={(e) => {
-                                  const val = e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0)
-                                  updateSubjectDist(sub, "questions", val)
-                                }}
-                                className="w-16 h-8 px-2 text-center rounded-lg border border-slate-200 bg-slate-50/70 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#324158]/10 shadow-2xs"
-                              />
-                            </div>
-                            <div className="col-span-3 flex justify-center">
-                              <input
-                                type="text"
-                                readOnly
-                                disabled
-                                value={isZeroQ ? 0 : mVal}
-                                title="Marks are auto-calculated from questions and marks per question"
-                                className="w-16 h-8 px-2 text-center rounded-lg border border-slate-200 bg-slate-100/70 text-xs font-bold text-slate-800 shadow-2xs cursor-not-allowed select-none"
-                              />
-                            </div>
+                        {selectedTopics.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {selectedTopics.map((topic) => (
+                              <span
+                                key={topic}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-medium border border-slate-200"
+                              >
+                                <span>{topic}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveTopic(topic)}
+                                  className="text-slate-400 hover:text-red-600 cursor-pointer"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </span>
+                            ))}
                           </div>
-                        )
-                      })}
-
-                      {/* Total Row */}
-                      <div className="grid grid-cols-12 gap-2 items-center pt-2.5 border-t border-slate-100 font-bold text-xs text-slate-900">
-                        <span className="col-span-6">Total</span>
-                        <span
-                          className={`col-span-3 text-center ${
-                            totalSubjectQuestions === totalQuestions ? "text-slate-900" : "text-amber-700"
-                          }`}
-                        >
-                          {totalSubjectQuestions}
-                        </span>
-                        <span
-                          className={`col-span-3 text-center ${
-                            totalSubjectMarks === totalMarks ? "text-slate-900" : "text-amber-700"
-                          }`}
-                        >
-                          {totalSubjectMarks}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Box 2: Syllabus Weightage - Only show when Class 11 + 12 is selected */}
-                  {selectedGrade === "both" && (
-                    <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs">
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                          Syllabus Weightage <Info size={13} className="text-slate-400" />
-                        </h4>
-                        {class11Weightage + class12Weightage === 100 ? (
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                            100% Total ✓
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                            {class11Weightage + class12Weightage}% Total
-                          </span>
                         )}
                       </div>
 
-                      <div className="space-y-2.5">
-                        <div className="grid grid-cols-12 gap-2 text-[11px] font-semibold text-slate-400 pb-1.5 border-b border-slate-100">
-                          <span className="col-span-6">Class</span>
-                          <span className="col-span-6 text-center">Weightage</span>
-                        </div>
-
-                        <div className="grid grid-cols-12 gap-2 items-center py-1">
-                          <span className="col-span-6 text-xs font-medium text-slate-800">Class 11</span>
-                          <div className="col-span-6 flex justify-center relative">
-                            <select
-                              value={class11Weightage}
-                              onChange={(e) => handleClass11WeightageChange(Number(e.target.value))}
-                              className="w-24 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 appearance-none"
-                            >
-                              {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((v) => (
-                                <option key={v} value={v}>
-                                  {v}%
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-12 gap-2 items-center py-1">
-                          <span className="col-span-6 text-xs font-medium text-slate-800">Class 12</span>
-                          <div className="col-span-6 flex justify-center relative">
-                            <select
-                              value={class12Weightage}
-                              onChange={(e) => handleClass12WeightageChange(Number(e.target.value))}
-                              className="w-24 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#324158]/10 appearance-none"
-                            >
-                              {[100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0].map((v) => (
-                                <option key={v} value={v}>
-                                  {v}%
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                          </div>
-                        </div>
-
-                        {/* Total Weightage Summary Row */}
-                        <div className="grid grid-cols-12 gap-2 items-center pt-2.5 border-t border-slate-100 font-bold text-xs text-slate-900">
-                          <span className="col-span-6">Total Weightage</span>
-                          <div className="col-span-6 flex justify-center">
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                                class11Weightage + class12Weightage === 100
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                  : "bg-amber-50 text-amber-700 border border-amber-200"
-                              }`}
-                            >
-                              {class11Weightage + class12Weightage}% {class11Weightage + class12Weightage === 100 ? "✓" : "⚠️"}
+                      {/* Syllabus PDF Upload */}
+                      <div className="space-y-2">
+                        <label className="block text-[11px] font-bold text-slate-700">
+                          Upload Coaching / Board Syllabus PDF
+                        </label>
+                        <input
+                          ref={pdfInputRef}
+                          type="file"
+                          accept=".pdf"
+                          onChange={handlePdfUpload}
+                          className="hidden"
+                        />
+                        {uploadedPdf ? (
+                          <div className="h-9 px-3 rounded-lg border border-emerald-200 bg-emerald-50 flex items-center justify-between text-xs text-emerald-900">
+                            <span className="flex items-center gap-1.5 truncate font-medium">
+                              <FileCheck2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span className="truncate">{uploadedPdf.name}</span>
+                              <span className="text-[10px] text-emerald-700 shrink-0">
+                                ({uploadedPdf.wordCount} words)
+                              </span>
                             </span>
+                            <button
+                              type="button"
+                              onClick={handleRemovePdf}
+                              className="text-emerald-700 hover:text-red-600 cursor-pointer ml-2"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
-                        </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => pdfInputRef.current?.click()}
+                            disabled={isUploadingPdf}
+                            className="w-full h-9 px-3 rounded-lg border border-dashed border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center justify-center gap-2 cursor-pointer"
+                          >
+                            {isUploadingPdf ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>Extracting syllabus...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Choose Syllabus PDF</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                        {pdfError && <p className="text-[11px] text-red-600">{pdfError}</p>}
                       </div>
                     </div>
                   )}
-
-                  {/* Box 3: Negative Marking */}
-                  <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-800">
-                          Negative Marking
-                        </h4>
-                        <Info size={13} className="text-slate-400" />
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={negativeMarkingEnabled}
-                        onChange={(e) => handleToggleNegativeMarking(e.target.checked)}
-                        className="w-4 h-4 rounded text-slate-900 focus:ring-slate-900 cursor-pointer"
-                      />
-                    </div>
-                    <p className="text-[11px] text-slate-500">
-                      Penalty marks for incorrect choices.
-                    </p>
-                    {negativeMarkingEnabled && (
-                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100 flex-wrap">
-                        <span className="text-xs text-slate-600 font-medium">Penalty:</span>
-                        <div className="relative">
-                          <select
-                            value={[0.25, 0.33, 0.5, 1, 2].includes(negativeMarkPenalty) ? negativeMarkPenalty : "custom"}
-                            onChange={(e) => {
-                              if (e.target.value === "custom") {
-                                handleNegativePenaltyChange(1.5)
-                              } else {
-                                handleNegativePenaltyChange(parseFloat(e.target.value))
-                              }
-                            }}
-                            className="py-1 pl-2.5 pr-7 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:border-slate-800 cursor-pointer shadow-2xs appearance-none"
-                          >
-                            <option value={0.25}>-0.25 (1/4th penalty)</option>
-                            <option value={0.33}>-0.33 (1/3rd penalty)</option>
-                            <option value={0.5}>-0.50 (1/2 penalty)</option>
-                            <option value={1}>-1.00 (Standard)</option>
-                            <option value={2}>-2.00</option>
-                            <option value="custom">Custom penalty...</option>
-                          </select>
-                          <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        </div>
-                        {![0.25, 0.33, 0.5, 1, 2].includes(negativeMarkPenalty) && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-bold text-slate-700">-</span>
-                            <input
-                              type="number"
-                              step="0.05"
-                              min="0.05"
-                              max="10"
-                              value={negativeMarkPenalty}
-                              onChange={(e) => handleNegativePenaltyChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                              className="w-16 py-1 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 text-center focus:outline-none focus:border-slate-800"
-                            />
-                            <span className="text-[11px] text-slate-500">marks</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
+
+              {/* Validation Alert Banner */}
+              {validationErrors.length > 0 && (
+                <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 shadow-2xs">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div className="space-y-0.5">
+                    {validationErrors.map((err, idx) => (
+                      <p key={idx}>{err}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -3435,16 +4037,16 @@ function AIGeneratorContent() {
                               </button>
                             </div>
                           )}
-                        </div>
+                      </div>
 
-                        {/* Desktop Proceed Button */}
-                        <button
-                          type="button"
-                          onClick={() => {
+                      {/* Desktop Proceed Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
                             if (isGenerating) return
-                            setCurrentStep(4)
-                            window.scrollTo({ top: 0, behavior: "smooth" })
-                          }}
+                          setCurrentStep(4)
+                          window.scrollTo({ top: 0, behavior: "smooth" })
+                        }}
                           disabled={isGenerating || selectedQuestionIds.size === 0}
                           className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-sm font-medium shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                         >
@@ -3455,11 +4057,11 @@ function AIGeneratorContent() {
                             </>
                           ) : (
                             <>
-                              <span>Proceed to Exam Details</span>
-                              <ArrowRight className="w-4 h-4" />
+                        <span>Proceed to Exam Details</span>
+                        <ArrowRight className="w-4 h-4" />
                             </>
                           )}
-                        </button>
+                      </button>
                       </div>
                     </div>
 
@@ -3549,8 +4151,8 @@ function AIGeneratorContent() {
                           </>
                         ) : (
                           <>
-                            <span>Next: Details</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
+                        <span>Next: Details</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                           </>
                         )}
                       </button>
@@ -3582,6 +4184,32 @@ function AIGeneratorContent() {
                           }`}
                         >
                           MCQ ({formatCounts.mcq})
+                        </button>
+                      )}
+                      {formatCounts.mcq_multi > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFormatFilter("mcq_multi")}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer whitespace-nowrap ${
+                            formatFilter === "mcq_multi"
+                              ? "bg-indigo-600 text-white shadow-xs"
+                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Multi-Correct ({formatCounts.mcq_multi})
+                        </button>
+                      )}
+                      {formatCounts.diagram > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFormatFilter("diagram")}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer whitespace-nowrap ${
+                            formatFilter === "diagram"
+                              ? "bg-teal-600 text-white shadow-xs"
+                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Diagram ({formatCounts.diagram})
                         </button>
                       )}
                       {formatCounts.assertion > 0 && (
@@ -3892,49 +4520,49 @@ function AIGeneratorContent() {
                               )}
                             </div>
                           ) : (
-                            <div className={`grid gap-2.5 sm:gap-3 pl-0 sm:pl-8 mb-4 ${isTF ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
-                              {displayOptions.map((opt, oi) => {
-                                const label = isTF ? (opt === "True" ? "T" : "F") : ["A", "B", "C", "D"][oi]
+                          <div className={`grid gap-2.5 sm:gap-3 pl-0 sm:pl-8 mb-4 ${isTF ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
+                            {displayOptions.map((opt, oi) => {
+                              const label = isTF ? (opt === "True" ? "T" : "F") : ["A", "B", "C", "D"][oi]
                                 const isCorrect = isTF
                                   ? opt === displayCorrectAnswer
                                   : Array.isArray(q.correctAnswer)
                                   ? (q.correctAnswer.includes(label) || q.correctAnswer.some(a => String(a).trim().toLowerCase() === opt.trim().toLowerCase()))
                                   : (opt === displayCorrectAnswer || q.correctAnswer === label || String(q.correctAnswer).trim().toLowerCase() === opt.trim().toLowerCase())
 
-                                return (
-                                  <div
-                                    key={oi}
-                                    className={`p-3 sm:p-3.5 rounded-xl border flex items-start gap-2.5 sm:gap-3 transition-all ${
+                              return (
+                                <div
+                                  key={oi}
+                                  className={`p-3 sm:p-3.5 rounded-xl border flex items-start gap-2.5 sm:gap-3 transition-all ${
+                                    isCorrect
+                                      ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-normal shadow-2xs"
+                                      : "bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white"
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg text-xs font-medium flex items-center justify-center shrink-0 mt-0.5 ${
                                       isCorrect
-                                        ? "bg-emerald-50/70 border-emerald-500 text-emerald-950 font-normal shadow-2xs"
-                                        : "bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white"
+                                        ? "bg-emerald-600 text-white shadow-2xs"
+                                        : isTF
+                                        ? "bg-slate-200 text-slate-700"
+                                        : "bg-white border border-slate-200 text-slate-700"
                                     }`}
                                   >
-                                    <span
-                                      className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg text-xs font-medium flex items-center justify-center shrink-0 mt-0.5 ${
-                                        isCorrect
-                                          ? "bg-emerald-600 text-white shadow-2xs"
-                                          : isTF
-                                          ? "bg-slate-200 text-slate-700"
-                                          : "bg-white border border-slate-200 text-slate-700"
-                                      }`}
-                                    >
-                                      {isCorrect ? "✓" : label}
-                                    </span>
+                                    {isCorrect ? "✓" : label}
+                                  </span>
 
-                                    <div className="flex-1 text-xs sm:text-sm font-normal pt-0.5 leading-relaxed overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                                      <MathRenderer content={opt} />
-                                    </div>
-
-                                    {isCorrect && (
-                                      <span className="text-[10px] font-medium text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-1.5 py-0.5 rounded shrink-0 self-start mt-0.5">
-                                        Correct
-                                      </span>
-                                    )}
+                                  <div className="flex-1 text-xs sm:text-sm font-normal pt-0.5 leading-relaxed overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                                    <MathRenderer content={opt} />
                                   </div>
-                                )
-                              })}
-                            </div>
+
+                                  {isCorrect && (
+                                    <span className="text-[10px] font-medium text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-1.5 py-0.5 rounded shrink-0 self-start mt-0.5">
+                                      Correct
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
                           )}
 
                           {/* Solution Accordion */}
@@ -4043,15 +4671,15 @@ function AIGeneratorContent() {
                     </div>
 
                     {/* Row 2: Questions Per Minute */}
-                    <div>
+                      <div>
                       <label className="block text-[11px] font-medium text-slate-500 mb-1.5">
-                        Questions Per Minute <span className="text-slate-400 font-normal">(Optional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={questionsPerMinute}
-                        onChange={(e) => setQuestionsPerMinute(e.target.value)}
-                        placeholder="e.g., 1.5"
+                          Questions Per Minute <span className="text-slate-400 font-normal">(Optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={questionsPerMinute}
+                          onChange={(e) => setQuestionsPerMinute(e.target.value)}
+                          placeholder="e.g., 1.5"
                         className="w-full px-3.5 py-2 text-xs font-normal rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
                       />
                     </div>
@@ -4514,7 +5142,7 @@ function AIGeneratorContent() {
                           <div>
                             <span className="text-xs font-normal text-slate-700 block">
                               Enable Aspirant Calculator
-                            </span>
+                        </span>
                             <span className="text-[10px] text-slate-400 block">
                               Allow on-screen scientific calculator during exam
                             </span>
@@ -4667,54 +5295,54 @@ function AIGeneratorContent() {
             <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-6 sm:p-10 shadow-xs">
               <div className="mb-5">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                  STEP 6 · FINAL PUBLISH
-                </p>
+                    STEP 6 · FINAL PUBLISH
+                  </p>
                 <h2 className="mt-1 text-lg sm:text-xl font-bold tracking-tight text-slate-900">
-                  Ready to Publish Exam Paper
-                </h2>
+                    Ready to Publish Exam Paper
+                  </h2>
                 <p className="text-xs text-slate-500 mt-1 font-normal">
                   Review the final summary below. Once published, your exam will be active and scheduled for candidates.
-                </p>
-              </div>
+                  </p>
+                </div>
 
-              {/* Summary Card Grid */}
+                {/* Summary Card Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                 <div className="p-4 rounded-2xl border border-slate-200/90 bg-white">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1.5">
                     PAPER DETAILS
-                  </span>
+                    </span>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                    {examTitle || getDefaultExamTitle()}
-                  </p>
+                      {examTitle || getDefaultExamTitle()}
+                    </p>
                   <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
                     {examOverviewName} • {classOverviewText}
-                  </p>
-                </div>
+                    </p>
+                  </div>
 
                 <div className="p-4 rounded-2xl border border-slate-200/90 bg-white">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1.5">
                     QUESTIONS &amp; MARKS
-                  </span>
+                    </span>
                   <p className="text-xs sm:text-sm font-bold text-slate-900">
-                    {selectedQuestionIds.size > 0 ? selectedQuestionIds.size : totalQuestions} Questions
-                  </p>
+                      {selectedQuestionIds.size > 0 ? selectedQuestionIds.size : totalQuestions} Questions
+                    </p>
                   <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
                     {examTotalMarks} Marks • {duration} min
-                  </p>
-                </div>
+                    </p>
+                  </div>
 
                 <div className="p-4 rounded-2xl border border-slate-200/90 bg-white">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1.5">
                     SCHEDULED WINDOW
-                  </span>
+                    </span>
                   <p className="text-xs sm:text-sm font-bold text-slate-900">
-                    {formatDateDisplay(startDate)}
-                  </p>
+                      {formatDateDisplay(startDate)}
+                    </p>
                   <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
-                    {startHour}:{startMinute} {startPeriod} – {endHour}:{endMinute} {endPeriod}
-                  </p>
+                      {startHour}:{startMinute} {startPeriod} – {endHour}:{endMinute} {endPeriod}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
               {errorMsg && (
                 <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
@@ -4736,21 +5364,21 @@ function AIGeneratorContent() {
                   Back
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleSaveAsExam}
-                  disabled={creatingExam || selectedQuestionIds.size === 0}
+                  <button
+                    type="button"
+                    onClick={handleSaveAsExam}
+                    disabled={creatingExam || selectedQuestionIds.size === 0}
                   className="px-5 py-2 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-semibold text-xs shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md active:scale-[0.99]"
-                >
-                  {creatingExam ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                  >
+                    {creatingExam ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
                       <span>{editingExamId ? "Updating..." : "Publishing..."}</span>
-                    </>
-                  ) : (
+                      </>
+                    ) : (
                     <span>{editingExamId ? "Update Exam Paper" : "Publish Exam"}</span>
-                  )}
-                </button>
+                    )}
+                  </button>
               </div>
             </div>
           )}
@@ -4765,23 +5393,23 @@ function AIGeneratorContent() {
               }
             >
               <div className="mx-auto max-w-[1400px] flex items-center justify-between gap-2 sm:gap-3 w-full">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (currentStep > 1) {
-                      setCurrentStep((step) => step - 1)
-                      window.scrollTo({ top: 0, behavior: "smooth" })
-                    } else {
-                      router.push("/admin/exams")
-                    }
-                  }}
+            <button
+              type="button"
+              onClick={() => {
+                if (currentStep > 1) {
+                  setCurrentStep((step) => step - 1)
+                  window.scrollTo({ top: 0, behavior: "smooth" })
+                } else {
+                  router.push("/admin/exams")
+                }
+              }}
                   className="px-4 sm:px-6 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium text-xs sm:text-sm hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0 flex items-center gap-1.5"
-                >
+            >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Back</span>
-                </button>
+            </button>
 
-                {currentStep === 1 && (
+            {currentStep === 1 && (
                   <div className="flex items-center gap-2.5">
                     {generatedQuestions.length > 0 && (
                       <button
@@ -4796,28 +5424,28 @@ function AIGeneratorContent() {
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setCurrentStep(2)}
-                      disabled={selectedSubjects.length === 0}
-                      className="px-4 sm:px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <span>Next Step</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+              <button
+                type="button"
+                onClick={() => setCurrentStep(2)}
+                disabled={selectedSubjects.length === 0}
+                className="px-4 sm:px-6 py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <span>Next Step</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
                   </div>
-                )}
+            )}
 
-                {currentStep === 2 && (
-                  <div className="flex items-center gap-2 flex-wrap justify-end">
-                    {errorMsg && (
-                      <span className="text-xs text-red-600 font-medium bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg max-w-xs truncate">
-                        {errorMsg}
-                      </span>
-                    )}
+            {currentStep === 2 && (
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                {errorMsg && (
+                  <span className="text-xs text-red-600 font-medium bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg max-w-xs truncate">
+                    {errorMsg}
+                  </span>
+                )}
                     {generatedQuestions.length > 0 && (
-                      <button
-                        type="button"
+                <button
+                  type="button"
                         onClick={() => {
                           if (window.confirm("Are you sure you want to re-create questions? This will replace your current questions.")) {
                             handleGenerate()
@@ -4847,29 +5475,29 @@ function AIGeneratorContent() {
                           : "Proceed to next step"
                       }
                       className="px-6 py-2.5 rounded-xl bg-[#324158] hover:bg-[#253244] text-white font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
-                    >
-                      {isGenerating ? (
-                        <>
+                >
+                  {isGenerating ? (
+                    <>
                           <Loader2 className="w-4 h-4 animate-spin text-white" />
-                          <span>
-                            {generationStep === 1
-                              ? "Analyzing PYQs..."
-                              : generationStep === 2
+                      <span>
+                        {generationStep === 1
+                          ? "Analyzing PYQs..."
+                          : generationStep === 2
                               ? "Generating Questions..."
                               : "Validating Questions..."}
-                          </span>
-                        </>
-                      ) : (
-                        <>
+                      </span>
+                    </>
+                  ) : (
+                    <>
                           <span>{generatedQuestions.length > 0 ? `Next: View Questions (${generatedQuestions.length})` : "Next Step"}</span>
                           <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
 
-                {currentStep === 3 && (
+            {currentStep === 3 && (
                   <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
                     {generatedQuestions.length > 0 && (
                       <span className="hidden xl:inline-flex text-xs font-semibold text-slate-500 bg-slate-100/90 px-3 py-1.5 rounded-full border border-slate-200/80 mr-1">
@@ -4877,9 +5505,9 @@ function AIGeneratorContent() {
                       </span>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={() => {
+              <button
+                type="button"
+                onClick={() => {
                         setPrintMode("student")
                         setPrintModalOpen(true)
                       }}
@@ -4924,9 +5552,9 @@ function AIGeneratorContent() {
                             return base.filter((i) => !i.toLowerCase().includes("negative marking"))
                           }
                         })
-                        setCurrentStep(4)
-                        window.scrollTo({ top: 0, behavior: "smooth" })
-                      }}
+                  setCurrentStep(4)
+                  window.scrollTo({ top: 0, behavior: "smooth" })
+                }}
                       disabled={isGenerating || selectedQuestionIds.size === 0}
                       className="px-4 sm:px-7 py-2 sm:py-2.5 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.99]"
                     >
@@ -4937,42 +5565,42 @@ function AIGeneratorContent() {
                         </>
                       ) : (
                         <>
-                          <span>Next: Exam Details</span>
-                          <ArrowRight className="w-4 h-4" />
+                <span>Next: Exam Details</span>
+                <ArrowRight className="w-4 h-4" />
                         </>
                       )}
-                    </button>
+              </button>
                   </div>
-                )}
+            )}
 
-                {currentStep === 4 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentStep(5)
-                      window.scrollTo({ top: 0, behavior: "smooth" })
-                    }}
-                    className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
-                  >
-                    <span>Next: Settings</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                )}
+            {currentStep === 4 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentStep(5)
+                  window.scrollTo({ top: 0, behavior: "smooth" })
+                }}
+                className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
+              >
+                <span>Next: Settings</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
 
-                {currentStep === 5 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentStep(6)
-                      window.scrollTo({ top: 0, behavior: "smooth" })
-                    }}
-                    className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
-                  >
-                    <span>Next: Publish</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+            {currentStep === 5 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentStep(6)
+                  window.scrollTo({ top: 0, behavior: "smooth" })
+                }}
+                className="px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#0B192C] hover:bg-[#1E293B] text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer hover:shadow-lg active:scale-[0.99]"
+              >
+                <span>Next: Publish</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
             </div>
           )}
       </div>
@@ -5052,10 +5680,10 @@ function AIGeneratorContent() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-2.5">
-                <label className="text-xs font-medium text-gray-700 block">
-                  Options &amp; Correct Answer:
-                </label>
+            <div className="space-y-2.5">
+              <label className="text-xs font-medium text-gray-700 block">
+                Options &amp; Correct Answer:
+              </label>
                 {(editingQuestion.options || []).map((opt, i) => {
                   const letter = ["A", "B", "C", "D"][i]
                   const isMulti = editingQuestion.questionFormat === "mcq_multi" || editingQuestion.questionFormat === "mcq_multiple" || (Array.isArray(editingQuestion.correctAnswer) && editingQuestion.correctAnswer.length > 1)
@@ -5064,27 +5692,27 @@ function AIGeneratorContent() {
                     : (editingQuestion.correctAnswer === opt || editingQuestion.correctAnswer === letter)
 
                   return (
-                    <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                      <div className="flex items-center gap-2 flex-1">
-                        <span className="w-6 text-xs font-medium text-gray-500 shrink-0">
+                <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="w-6 text-xs font-medium text-gray-500 shrink-0">
                           {letter}:
-                        </span>
-                        <input
-                          type="text"
-                          value={opt}
-                          onChange={(e) => {
+                    </span>
+                    <input
+                      type="text"
+                      value={opt}
+                      onChange={(e) => {
                             const newOpts = [...(editingQuestion.options || [])]
-                            newOpts[i] = e.target.value
-                            setEditingQuestion({
-                              ...editingQuestion,
-                              options: newOpts,
-                            })
-                          }}
+                        newOpts[i] = e.target.value
+                        setEditingQuestion({
+                          ...editingQuestion,
+                          options: newOpts,
+                        })
+                      }}
                           className="flex-1 p-2 text-xs rounded-lg border border-gray-200 bg-white text-[#324158] font-mono focus:outline-none focus:border-[#2D3A4A]"
-                        />
-                      </div>
-                      <button
-                        type="button"
+                    />
+                  </div>
+                  <button
+                    type="button"
                         onClick={() => {
                           if (isMulti) {
                             const cur = Array.isArray(editingQuestion.correctAnswer)
@@ -5097,18 +5725,18 @@ function AIGeneratorContent() {
                             setEditingQuestion({ ...editingQuestion, correctAnswer: letter })
                           }
                         }}
-                        className={`self-end sm:self-auto px-3 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer shrink-0 ${
+                    className={`self-end sm:self-auto px-3 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer shrink-0 ${
                           isOptSelected
-                            ? "bg-emerald-600 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
+                        ? "bg-emerald-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
                         {isOptSelected ? "Correct Answer" : "Set Correct"}
-                      </button>
-                    </div>
+                  </button>
+                </div>
                   )
                 })}
-              </div>
+            </div>
             )}
 
             <div>

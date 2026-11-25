@@ -30,6 +30,8 @@ export async function GET(req: Request) {
         hasExamAccess: true,
         hasOtherExamsAccess: true,
         hasAspirantsAccess: true,
+        canEditLogo: true,
+        canEditThemeColor: true,
         maxExams: 999999,
         examCount: 0,
         isExamQuotaReached: false,
@@ -59,7 +61,8 @@ export async function GET(req: Request) {
       ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(t)
     ) && institute.limits?.features?.neetJeeGenerator !== false
 
-    const hasExamAccess = rawExamTypes.some((t) => ["EXAM", "CUSTOM"].includes(t))
+    // Standard Exams section is always enabled for all active organizations
+    const hasExamAccess = true
 
     const hasOtherExamsAccess = rawExamTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(t))
 
@@ -68,6 +71,9 @@ export async function GET(req: Request) {
       (rawExamTypes.some((t) => ["ASPIRANTS", "STUDENTS"].includes(t)) ||
        (institute.limits?.features?.aspirantsManagement === undefined && !rawExamTypes.some((t) => ["COMPETITIVE", "OTHER"].includes(t))))
     )
+
+    const canEditLogo = institute.limits?.features?.customLogo !== false
+    const canEditThemeColor = institute.limits?.features?.customThemeColor !== false
 
     const maxExams = Number(institute.limits?.maxExams ?? 20)
     const mongoose = (await import("mongoose")).default
@@ -109,6 +115,8 @@ export async function GET(req: Request) {
       hasExamAccess: isExpired ? false : hasExamAccess,
       hasOtherExamsAccess: isExpired ? false : hasOtherExamsAccess,
       hasAspirantsAccess: isExpired ? false : Boolean(hasAspirantsAccess),
+      canEditLogo: isExpired ? false : canEditLogo,
+      canEditThemeColor: isExpired ? false : canEditThemeColor,
       maxExams,
       examCount,
       isExamQuotaReached,

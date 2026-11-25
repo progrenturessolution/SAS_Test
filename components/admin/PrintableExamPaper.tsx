@@ -4,18 +4,23 @@ import React, { useState } from "react"
 import { Printer, X, CheckCircle2, BookOpen, Clock, Award, FileText, Check, HelpCircle } from "lucide-react"
 import { MathRenderer } from "@/components/exam/MathRenderer"
 import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
+import { normalizeFormatInput } from "@/lib/ai/canonicalSchema"
 
 export interface GeneratedCompetitiveQuestion {
   id: string
-  type: "mcq" | string
-  questionFormat?: "mcq" | "diagram" | "assertion" | "fib" | "true_false" | string
+  type: "mcq" | "mcq_multi" | "diagram" | "assertion" | "truefalse" | "fillblanks" | "descriptive" | string
+  questionFormat?: string
   questionText: string
   questionImage?: string
   difficulty: "easy" | "medium" | "hard"
   marks: number
   negativeMark: number
-  options: string[]
+  options?: string[]
   correctAnswer: string | string[]
+  blanks?: Array<{ id?: number; label?: string; answer: string; alsoAccept?: string[] }>
+  modelAnswer?: string
+  rubric?: string[]
+  wordLimit?: number
   explanation: string
   chapter: string
   pyqReference?: string
@@ -90,35 +95,9 @@ export function PrintableExamPaper({
   }
 
   const getQuestionFormat = (q: GeneratedCompetitiveQuestion): string => {
-    if (
-      q.questionFormat === "true_false" ||
-      q.questionText?.toLowerCase().startsWith("true or false") ||
-      q.questionText?.toLowerCase().startsWith("true/false") ||
-      (Array.isArray(q.options) && q.options.length === 2 && q.options.includes("True"))
-    ) {
-      return "true_false"
-    }
-    if (
-      q.questionFormat === "assertion" ||
-      q.questionFormat === "assertion_reason" ||
-      Boolean(parseAssertionReason(q.questionText || ""))
-    ) {
-      return "assertion"
-    }
-    if (
-      q.questionFormat === "diagram" ||
-      Boolean(q.questionImage && String(q.questionImage).includes("<svg"))
-    ) {
-      return "diagram"
-    }
-    if (
-      q.questionFormat === "fib" ||
-      q.questionFormat === "fill_in_the_blanks" ||
-      q.questionText?.includes("______")
-    ) {
-      return "fib"
-    }
-    return "mcq"
+    const canonical = normalizeFormatInput(q.questionFormat || q.type, q as any)
+    if (canonical === "mcq_single") return "mcq"
+    return canonical
   }
 
   const checkIsCorrect = (
@@ -130,7 +109,7 @@ export function PrintableExamPaper({
     if (!correctAnswer) return false
     if (Array.isArray(correctAnswer)) {
       const letter = ["A", "B", "C", "D"][index]
-      return correctAnswer.includes(letter) || correctAnswer.some(c => c.trim().toLowerCase() === opt.trim().toLowerCase())
+      return correctAnswer.includes(letter) || correctAnswer.some(c => String(c).trim().toLowerCase() === opt.trim().toLowerCase())
     }
     if (isTF) {
       const isFalse =
@@ -138,17 +117,34 @@ export function PrintableExamPaper({
       const target = isFalse ? "False" : "True"
       return opt.toLowerCase() === target.toLowerCase()
     }
-    if (opt.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) return true
+    if (opt.trim().toLowerCase() === String(correctAnswer).trim().toLowerCase()) return true
     const letter = ["A", "B", "C", "D"][index]
-    if (correctAnswer.trim().toUpperCase() === letter) return true
-    if (correctAnswer.trim().toLowerCase() === `option ${letter.toLowerCase()}`) return true
+    if (String(correctAnswer).trim().toUpperCase() === letter) return true
+    if (String(correctAnswer).trim().toLowerCase() === `option ${letter.toLowerCase()}`) return true
     return false
   }
 
   const getCorrectAnswerLabel = (q: GeneratedCompetitiveQuestion): string => {
     const qFormat = getQuestionFormat(q)
+    if (qFormat === "descriptive") {
+      return "Refer Model Answer & Rubric below"
+    }
+    if (qFormat === "fib") {
+      if (Array.isArray(q.blanks) && q.blanks.length > 0) {
+        return q.blanks
+          .map((b, i) => (q.blanks!.length > 1 ? `(${i + 1}) ${b.answer}` : b.answer))
+          .join(", ")
+      }
+      return Array.isArray(q.correctAnswer) ? q.correctAnswer.join(", ") : String(q.correctAnswer || "-")
+    }
     if (Array.isArray(q.correctAnswer)) {
-      return q.correctAnswer.map(c => `(${c.trim().toUpperCase()})`).join(", ")
+      const opts = q.options || []
+      return q.correctAnswer
+        .map((c) => {
+          const idx = opts.findIndex((o) => o.trim().toLowerCase() === String(c).trim().toLowerCase())
+          return idx !== -1 ? `(${["A", "B", "C", "D"][idx]})` : `(${String(c).trim().toUpperCase()})`
+        })
+        .join(", ")
     }
     const isTF = qFormat === "true_false"
     if (isTF) {
@@ -162,11 +158,121 @@ export function PrintableExamPaper({
         return ["(A)", "(B)", "(C)", "(D)"][i] || `(${i + 1})`
       }
     }
-    const trimmed = (q.correctAnswer || "").trim().toUpperCase()
+    const trimmed = String(q.correctAnswer || "").trim().toUpperCase()
     if (["A", "B", "C", "D"].includes(trimmed)) return `(${trimmed})`
     if (trimmed.startsWith("OPTION ")) return `(${trimmed.replace("OPTION ", "")})`
     return q.correctAnswer ? `(${q.correctAnswer})` : "-"
   }
+
+  const normalizeQuestionText = (text: string) =>
+    text.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase()
+
+  const getStructuralIssues = (q: GeneratedCompetitiveQuestion): string[] => {
+    const issues: string[] = []
+    const questionText = typeof q.questionText === "string" ? q.questionText.trim() : ""
+    const answer = q.correctAnswer
+    const options = Array.isArray(q.options)
+      ? q.options.filter((option): option is string => typeof option === "string" && option.trim().length > 0)
+      : []
+    const qFmt = getQuestionFormat(q)
+    const isDescriptive = qFmt === "descriptive"
+    const isFib = qFmt === "fib"
+    const isTrueFalse = qFmt === "true_false"
+    const isDiagram = qFmt === "diagram" || Boolean(q.questionImage)
+    const isMultiAnswer = qFmt === "mcq_multi" || Array.isArray(answer)
+
+    if (!questionText) issues.push("question text is missing")
+
+    if (isDescriptive) {
+      if (options.length > 0) issues.push("descriptive format has unexpected options")
+      const ansStr = typeof q.modelAnswer === "string" && q.modelAnswer.trim()
+        ? q.modelAnswer.trim()
+        : (typeof answer === "string" ? answer.trim() : "")
+      if (!ansStr) {
+        issues.push("descriptive model answer is missing")
+      }
+    } else if (isFib) {
+      const hasBlankMarker = /_{2,}/.test(questionText)
+      if (!hasBlankMarker) issues.push("fill-in-the-blanks question is missing ___ marker")
+      const hasBlanksKey = Array.isArray(q.blanks) && q.blanks.some((b) => String(b.answer || "").trim())
+      const hasOptionKey = options.length === 4 && typeof answer === "string" && Boolean(answer.trim())
+      if (!hasBlanksKey && !hasOptionKey) {
+        issues.push("fill-in-the-blanks answer key is missing")
+      }
+    } else if (isTrueFalse) {
+      if (options.length > 0 && !(options.length === 2 && options.some((o) => o.toLowerCase() === "true") && options.some((o) => o.toLowerCase() === "false"))) {
+        issues.push("true/false options must only be True and False")
+      }
+      const answerValues = Array.isArray(answer) ? answer : [answer]
+      const normalizedAnswers = answerValues.map(value => String(value ?? "").trim().toLowerCase())
+      const validAnswer =
+        normalizedAnswers.length === 1 &&
+        ["true", "false", "option a", "option b", "a", "b"].includes(normalizedAnswers[0])
+      if (!validAnswer) issues.push("true/false answer key must identify exactly one of True or False")
+    } else {
+      if (options.length < 2) issues.push("at least two non-empty options are required")
+      const normalizedOptions = options.map(option => option.trim().toLowerCase())
+      if (new Set(normalizedOptions).size !== normalizedOptions.length) {
+        issues.push("options contain duplicate text")
+      }
+
+      const answers = Array.isArray(answer) ? answer : [answer]
+      const nonEmptyAnswers = answers.filter(
+        (value): value is string => typeof value === "string" && value.trim().length > 0
+      )
+      if (nonEmptyAnswers.length === 0) {
+        issues.push(isMultiAnswer ? "multi-answer answer key is missing" : "single-answer key is missing")
+      } else {
+        if (isMultiAnswer && nonEmptyAnswers.length < 2) {
+          issues.push("multi-answer key must contain at least two answers")
+        }
+        if (!isMultiAnswer && nonEmptyAnswers.length !== 1) {
+          issues.push("single-answer key must contain exactly one answer")
+        }
+        const validAnswers = nonEmptyAnswers.every(value => {
+          const normalized = value.trim().toLowerCase().replace(/^\(|\)$/g, "")
+          const optionLetter = normalized.match(/^(?:option\s+)?([a-z])$/)?.[1]
+          if (optionLetter) {
+            const optionIndex = optionLetter.charCodeAt(0) - 97
+            return optionIndex >= 0 && optionIndex < options.length
+          }
+          return options.some(option => option.trim().toLowerCase() === normalized)
+        })
+        if (!validAnswers) issues.push("answer key does not match an available option")
+        if (new Set(nonEmptyAnswers.map(value => value.trim().toLowerCase())).size !== nonEmptyAnswers.length) {
+          issues.push("answer key contains duplicate entries")
+        }
+      }
+    }
+
+    if (isDiagram && !(typeof q.questionImage === "string" && q.questionImage.trim())) {
+      issues.push("diagram format is missing its image")
+    }
+    if (!isDescriptive && (typeof q.explanation !== "string" || !q.explanation.trim())) {
+      issues.push("explanation is missing")
+    }
+    return issues
+  }
+
+  const structuralChecks = questions.map((question, index) => ({
+    questionNumber: index + 1,
+    issues: getStructuralIssues(question),
+    normalizedText: typeof question.questionText === "string" ? normalizeQuestionText(question.questionText) : "",
+  }))
+  const textGroups = new Map<string, number[]>()
+  structuralChecks.forEach(({ questionNumber, normalizedText }) => {
+    if (!normalizedText) return
+    const group = textGroups.get(normalizedText) || []
+    group.push(questionNumber)
+    textGroups.set(normalizedText, group)
+  })
+  const duplicateGroups = Array.from(textGroups.values()).filter(group => group.length > 1)
+  const unresolvedCount =
+    structuralChecks.reduce((count, check) => count + check.issues.length, 0) + duplicateGroups.length
+  const questionsWithUnresolvedItems = new Set([
+    ...structuralChecks.filter(check => check.issues.length > 0).map(check => check.questionNumber),
+    ...duplicateGroups.flat(),
+  ]).size
 
   const handlePrint = () => {
     window.print()
@@ -365,7 +471,7 @@ export function PrintableExamPaper({
                   <li>Use the blank space in margins for rough work. No separate rough sheet will be provided.</li>
                 </>
               ) : (
-                <li>This reference guide contains the verified master answer key and detailed derivations for faculty discussion.</li>
+                <li>This reference guide contains the provided answer key and detailed derivations for faculty discussion.</li>
               )}
             </ol>
           </div>
@@ -399,10 +505,46 @@ export function PrintableExamPaper({
         )}
 
         {/* ─── Questions List ─── */}
+        {printMode === "teacher" && (
+          <section className="mb-6 p-4 border border-amber-400 rounded-lg bg-amber-50/50 text-xs text-slate-800 print-avoid-break">
+            <h3 className="font-bold uppercase tracking-wider text-amber-950">
+              Structural Quality Checks
+            </h3>
+            <p className="mt-1 text-[11px] leading-relaxed">
+              These checks cover structure only; they are not proof of factual answer correctness.
+              Answers have not been verified by this summary.
+            </p>
+            <p className="mt-2 font-semibold">
+              {questions.length} questions checked · {questionsWithUnresolvedItems} with unresolved items ·{" "}
+              {unresolvedCount} unresolved items · {duplicateGroups.length} duplicate-text groups
+            </p>
+            {unresolvedCount === 0 ? (
+              <p className="mt-1">No structural issues or exact normalized duplicate question text were detected.</p>
+            ) : (
+              <ul className="mt-2 list-disc pl-5 space-y-0.5">
+                {structuralChecks.flatMap(check =>
+                  check.issues.map((issue, issueIndex) => (
+                    <li key={`issue-${check.questionNumber}-${issueIndex}`}>
+                      Q{check.questionNumber}: {issue}
+                    </li>
+                  ))
+                )}
+                {duplicateGroups.map((group, groupIndex) => (
+                  <li key={`duplicate-${groupIndex}`}>
+                    Duplicate normalized question text: Q{group.join(", Q")}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
         <main className="space-y-6">
           {questions.map((q, idx) => {
             const qFormat = getQuestionFormat(q)
             const isTF = qFormat === "true_false"
+            const isMulti = qFormat === "mcq_multi"
+            const isDescriptive = qFormat === "descriptive"
             const parsedAR = parseAssertionReason(q.questionText)
             const isAR = qFormat === "assertion" || Boolean(parsedAR)
             const isDiagram = qFormat === "diagram" || Boolean(q.questionImage)
@@ -411,6 +553,8 @@ export function PrintableExamPaper({
             const formatBadge =
               isTF ? "True / False" :
               isAR ? "Assertion & Reason" :
+              isMulti ? "Multiple Correct MCQ" :
+              isDescriptive ? "Descriptive" :
               isDiagram ? "Diagram / Visual" :
               qFormat === "fib" ? "Fill in the Blank" : "MCQ"
 
@@ -476,56 +620,99 @@ export function PrintableExamPaper({
                   </div>
                 )}
 
-                {/* Options List */}
-                {qFormat === "fib" ? (
+                {/* Options / Answer Space / Teacher Solutions */}
+                {isDescriptive ? (
+                  <div className="pl-1 pt-1.5 space-y-2">
+                    {printMode === "student" ? (
+                      <div className="space-y-3 pt-1">
+                        {q.wordLimit && (
+                          <p className="text-[11px] text-slate-500 italic">Recommended length: ~{q.wordLimit} words</p>
+                        )}
+                        <div className="border-b border-dashed border-slate-300 h-6" />
+                        <div className="border-b border-dashed border-slate-300 h-6" />
+                        <div className="border-b border-dashed border-slate-300 h-6" />
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-lg bg-emerald-50/40 border border-emerald-200 space-y-2 text-xs">
+                        <p className="font-bold text-emerald-900">Model Answer:</p>
+                        <div className="text-slate-800 leading-relaxed">
+                          <MathRenderer content={q.modelAnswer || (Array.isArray(q.correctAnswer) ? q.correctAnswer.join(", ") : q.correctAnswer) || q.explanation || ""} />
+                        </div>
+                        {Array.isArray(q.rubric) && q.rubric.length > 0 && (
+                          <div className="pt-1.5 border-t border-emerald-200">
+                            <p className="font-bold text-emerald-900 mb-1">Marking Rubric:</p>
+                            <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
+                              {q.rubric.map((r, ri) => (
+                                <li key={ri}><MathRenderer content={r} /></li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : qFormat === "fib" && (!q.options || q.options.length === 0) ? (
                   <div className="pl-1 pt-1">
-                    <div className="text-xs font-medium text-slate-600 flex items-center gap-2">
-                      <span>Answer:</span>
-                      <div className="flex-1 max-w-xs border-b-2 border-slate-400 h-5"></div>
-                    </div>
+                    {printMode === "student" ? (
+                      <div className="text-xs font-medium text-slate-600 flex items-center gap-2">
+                        <span>Answer:</span>
+                        <div className="flex-1 max-w-xs border-b-2 border-slate-400 h-5"></div>
+                      </div>
+                    ) : (
+                      <div className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-2.5 py-1.5 inline-block">
+                        Key: {getCorrectAnswerLabel(q)}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className={`grid gap-2 pl-1 pt-1 ${isTF ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
-                    {displayOptions.map((opt, oi) => {
-                      const letter = isTF ? (opt === "True" ? "T" : "F") : ["(A)", "(B)", "(C)", "(D)"][oi] || `(${oi + 1})`
-                      const isCorrect = printMode === "teacher" && checkIsCorrect(opt, oi, q.correctAnswer, isTF)
+                  <div className="space-y-1.5">
+                    {isMulti && (
+                      <p className="text-[11px] font-medium text-indigo-700 pl-1">
+                        Select all correct options.
+                      </p>
+                    )}
+                    <div className={`grid gap-2 pl-1 pt-1 ${isTF ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
+                      {displayOptions.map((opt, oi) => {
+                        const letter = isTF ? (opt === "True" ? "T" : "F") : ["(A)", "(B)", "(C)", "(D)"][oi] || `(${oi + 1})`
+                        const isCorrect = printMode === "teacher" && checkIsCorrect(opt, oi, q.correctAnswer, isTF)
 
-                      return (
-                        <div
-                          key={oi}
-                          className={`p-2 rounded border text-xs flex items-start gap-2 ${
-                            isCorrect
-                              ? "bg-emerald-50/80 border-emerald-500 font-medium text-emerald-950"
-                              : "border-slate-200 bg-white text-slate-800"
-                          }`}
-                        >
-                          <span
-                            className={`w-5 h-5 rounded flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5 ${
+                        return (
+                          <div
+                            key={oi}
+                            className={`p-2 rounded border text-xs flex items-start gap-2 ${
                               isCorrect
-                                ? "bg-emerald-600 text-white"
-                                : "bg-slate-100 text-slate-700 border border-slate-300"
+                                ? "bg-emerald-50/80 border-emerald-500 font-medium text-emerald-950"
+                                : "border-slate-200 bg-white text-slate-800"
                             }`}
                           >
-                            {isCorrect ? "✓" : letter}
-                          </span>
-
-                          <div className="flex-1 leading-snug pt-0.5">
-                            <MathRenderer content={opt} />
-                          </div>
-
-                          {isCorrect && (
-                            <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-100 px-1 py-0.5 rounded self-start shrink-0">
-                              Correct
+                            <span
+                              className={`w-5 h-5 ${isMulti ? "rounded" : "rounded-full"} flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5 ${
+                                isCorrect
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-slate-100 text-slate-700 border border-slate-300"
+                              }`}
+                            >
+                              {isCorrect ? "✓" : letter}
                             </span>
-                          )}
-                        </div>
-                      )
-                    })}
+
+                            <div className="flex-1 leading-snug pt-0.5">
+                              <MathRenderer content={opt} />
+                            </div>
+
+                            {isCorrect && (
+                              <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-100 px-1 py-0.5 rounded self-start shrink-0">
+                                Correct
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
 
                 {/* Teacher Mode: Complete Step-by-Step Solution Box */}
-                {printMode === "teacher" && (
+                {printMode === "teacher" && !isDescriptive && (
                   <div className="mt-3 p-3 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-800 space-y-1.5 print-avoid-break">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-slate-900 uppercase tracking-wide text-[11px] flex items-center gap-1 text-emerald-800">

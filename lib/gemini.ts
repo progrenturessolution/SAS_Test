@@ -62,6 +62,7 @@ export function getGeminiApiKeys(): string[] {
 let currentKeyPointer = 0
 
 export interface GeminiCallPayload {
+  systemInstruction?: { role?: string; parts: Array<{ text: string }> }
   contents: Array<{
     role?: string
     parts: Array<{ text: string }>
@@ -72,7 +73,14 @@ export interface GeminiCallPayload {
     topK?: number
     maxOutputTokens?: number
     responseMimeType?: string
+    responseJsonSchema?: Record<string, unknown>
   }
+}
+
+function redactSecrets(msg: string): string {
+  return String(msg || "")
+    .replace(/AIza[0-9A-Za-z\-_]{10,}/g, "[REDACTED_KEY]")
+    .replace(/([?&]key=)[^&\s]+/gi, "$1[REDACTED]")
 }
 
 export interface GeminiCallOptions {
@@ -134,7 +142,7 @@ export async function generateContentWithKeyRotation(
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
-          const errorMsg = errData?.error?.message || `HTTP ${res.status} ${res.statusText}`
+          const errorMsg = redactSecrets(errData?.error?.message || `HTTP ${res.status} ${res.statusText}`)
           lastErrorMessage = errorMsg
           console.warn(`[GeminiPool] Key ${keyIndex + 1}/${keys.length} (${maskedKey}) on ${model} failed: ${errorMsg}`)
 
@@ -171,7 +179,8 @@ export async function generateContentWithKeyRotation(
         }
 
         const data = await res.json()
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ""
+        const candidate = data.candidates?.[0]
+        const text = String(candidate?.content?.parts?.map((p: any) => p?.text || "").join("") || "").trim()
 
         if (text) {
           console.log(`[GeminiPool] Successfully generated using Key ${keyIndex + 1}/${keys.length} (${model})`)
@@ -184,11 +193,14 @@ export async function generateContentWithKeyRotation(
             usedModel: model,
           }
         }
+        const reason = candidate?.finishReason || data?.promptFeedback?.blockReason || "EMPTY_RESPONSE"
+        lastErrorMessage = `Empty text from ${model} (${reason})`
+        console.warn(`[GeminiPool] Key ${keyIndex + 1}/${keys.length} (${maskedKey}) on ${model}: ${lastErrorMessage}`)
       } catch (err: any) {
         const isTimeout = err?.name === "AbortError"
-        lastErrorMessage = isTimeout 
-          ? `Timeout after ${timeoutMs}ms` 
-          : (err?.message || "Network request failed")
+        lastErrorMessage = redactSecrets(
+          isTimeout ? `Timeout after ${timeoutMs}ms` : (err?.message || "Network request failed")
+        )
         console.warn(`[GeminiPool] Key ${keyIndex + 1}/${keys.length} (${model}) threw error: ${lastErrorMessage}`)
         
         // On timeout or network error, skip remaining models for this key to prevent cascading delays, switch to next key immediately

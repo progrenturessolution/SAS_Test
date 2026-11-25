@@ -61,6 +61,8 @@ export default function SettingsPage() {
   const [validUntil, setValidUntil] = useState<string | null>(null)
   const [status, setStatus] = useState<string>("active")
   const [limits, setLimits] = useState<any>(null)
+  const [canEditLogo, setCanEditLogo] = useState(true)
+  const [canEditThemeColor, setCanEditThemeColor] = useState(true)
 
   // Credentials & Password state for organization
   const [adminPassword, setAdminPassword] = useState("")
@@ -97,6 +99,16 @@ export default function SettingsPage() {
           if (data.institute.validUntil) setValidUntil(data.institute.validUntil)
           if (data.institute.status) setStatus(data.institute.status)
           if (data.institute.limits) setLimits(data.institute.limits)
+          setCanEditLogo(
+            data.permissions?.canEditLogo !== undefined
+              ? Boolean(data.permissions.canEditLogo)
+              : data.institute.limits?.features?.customLogo !== false
+          )
+          setCanEditThemeColor(
+            data.permissions?.canEditThemeColor !== undefined
+              ? Boolean(data.permissions.canEditThemeColor)
+              : data.institute.limits?.features?.customThemeColor !== false
+          )
           const color = data.institute.themeColor || "#2D3A4A"
           setThemeColor(color)
           document.documentElement.style.setProperty("--primary", color)
@@ -149,6 +161,10 @@ export default function SettingsPage() {
 
   // Handle Logo Upload
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canEditLogo) {
+      toast.error("Custom Logo editing is disabled by your Platform Administrator.")
+      return
+    }
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -174,6 +190,10 @@ export default function SettingsPage() {
 
   // Handle Save
   const handleSave = async () => {
+    if (isInstitute && !canEditLogo && !canEditThemeColor) {
+      toast.error("Branding changes are locked by your Platform Administrator.")
+      return
+    }
     setSaving(true)
     setSaveError("")
     try {
@@ -184,8 +204,8 @@ export default function SettingsPage() {
             address,
             city,
             contactPerson,
-            logo,
-            themeColor,
+            ...(canEditLogo ? { logo } : {}),
+            ...(canEditThemeColor ? { themeColor } : {}),
           }
         : {
             platformName,
@@ -344,9 +364,15 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full border border-slate-200 w-fit">
-                White-Label Branding
-              </span>
+              {canEditLogo ? (
+                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full border border-slate-200 w-fit">
+                  White-Label Branding
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 w-fit">
+                  <Lock size={12} /> Locked by Admin
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
@@ -366,17 +392,19 @@ export default function SettingsPage() {
                       <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                         Active Brand Logo
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setLogo("")
-                          if (fileInputRef.current) fileInputRef.current.value = ""
-                          toast.info("Logo removed. Click 'Save All Changes' to confirm.")
-                        }}
-                        className="text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-0.5 rounded transition-colors inline-flex items-center gap-1 cursor-pointer"
-                      >
-                        <Trash2 size={12} /> Remove
-                      </button>
+                      {canEditLogo && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLogo("")
+                            if (fileInputRef.current) fileInputRef.current.value = ""
+                            toast.info("Logo removed. Click 'Save All Changes' to confirm.")
+                          }}
+                          className="text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-0.5 rounded transition-colors inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 size={12} /> Remove
+                        </button>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -404,19 +432,39 @@ export default function SettingsPage() {
                   ref={fileInputRef}
                   accept="image/png,image/jpeg,image/svg+xml,image/webp"
                   onChange={handleLogoUpload}
+                  disabled={!canEditLogo}
                   className="hidden"
                   id="logo-upload-input"
                 />
 
                 <div className="space-y-2">
-                  <label
-                    htmlFor="logo-upload-input"
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white text-xs sm:text-sm font-bold shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer"
-                    style={{ backgroundColor: themeColor }}
-                  >
-                    <Upload size={16} />
-                    {logo ? "Upload / Replace Logo" : "Upload Coaching Logo"}
-                  </label>
+                  {canEditLogo ? (
+                    <label
+                      htmlFor="logo-upload-input"
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white text-xs sm:text-sm font-bold shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+                      style={{ backgroundColor: themeColor }}
+                    >
+                      <Upload size={16} />
+                      {logo ? "Upload / Replace Logo" : "Upload Coaching Logo"}
+                    </label>
+                  ) : (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        disabled
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gray-100 text-gray-400 border border-gray-200 text-xs sm:text-sm font-bold cursor-not-allowed"
+                      >
+                        <Lock size={15} />
+                        <span>Logo Upload Locked</span>
+                      </button>
+                      <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
+                        <Lock size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                        <span>
+                          Custom Logo permission is disabled for your organization. Contact your Platform Administrator to allow logo changes.
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <p className="text-[11px] text-gray-400 leading-relaxed">
                     Recommended dimensions: <strong>300x80 px</strong> or higher. Transparent PNG or SVG yields best results across light headers.
                   </p>
@@ -446,16 +494,32 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-              <div
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-white text-xs font-mono font-bold shadow-2xs w-fit"
-                style={{ backgroundColor: themeColor, borderColor: themeColor }}
-              >
-                <span>{themeColor}</span>
+              <div className="flex items-center gap-2 w-fit">
+                {!canEditThemeColor && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                    <Lock size={12} /> Locked by Admin
+                  </span>
+                )}
+                <div
+                  className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-white text-xs font-mono font-bold shadow-2xs w-fit"
+                  style={{ backgroundColor: themeColor, borderColor: themeColor }}
+                >
+                  <span>{themeColor}</span>
+                </div>
               </div>
             </div>
 
+            {!canEditThemeColor && (
+              <div className="mb-5 p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
+                <Lock size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  Theme Color customization is locked for your organization. You can view your current theme preview below, and contact Platform Administrator to allow changes.
+                </span>
+              </div>
+            )}
+
             {/* Presets Grid - Wide 8 Columns on Large Screens */}
-            <div className="space-y-3 mb-6">
+            <div className={`space-y-3 mb-6 ${!canEditThemeColor ? "opacity-65" : ""}`}>
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                 Choose Brand Palette Preset
               </label>
@@ -466,11 +530,17 @@ export default function SettingsPage() {
                     <button
                       key={preset.hex}
                       type="button"
-                      onClick={() => setThemeColor(preset.hex)}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative ${
-                        isSelected
-                          ? "border-gray-900 ring-2 ring-gray-900/10 shadow-xs bg-gray-50/50"
-                          : "border-gray-200 hover:border-gray-300 bg-white"
+                      disabled={!canEditThemeColor}
+                      onClick={() => {
+                        if (!canEditThemeColor) return
+                        setThemeColor(preset.hex)
+                      }}
+                      className={`p-3 rounded-xl border text-left transition-all relative ${
+                        !canEditThemeColor
+                          ? "cursor-not-allowed bg-gray-50/60 border-gray-200"
+                          : isSelected
+                          ? "border-gray-900 ring-2 ring-gray-900/10 shadow-xs bg-gray-50/50 cursor-pointer"
+                          : "border-gray-200 hover:border-gray-300 bg-white cursor-pointer"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -492,7 +562,7 @@ export default function SettingsPage() {
 
             {/* Custom Color Input & Live Preview */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-5 border-t border-gray-100 items-center">
-              <div className="lg:col-span-6 space-y-2">
+              <div className={`lg:col-span-6 space-y-2 ${!canEditThemeColor ? "opacity-65" : ""}`}>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                   Or Pick Custom Hex Color
                 </label>
@@ -500,21 +570,29 @@ export default function SettingsPage() {
                   <div className="relative">
                     <input
                       type="color"
+                      disabled={!canEditThemeColor}
                       value={themeColor}
-                      onChange={(e) => setThemeColor(e.target.value)}
-                      className="w-12 h-11 rounded-xl border border-gray-200 p-1 cursor-pointer bg-white shadow-2xs"
+                      onChange={(e) => {
+                        if (!canEditThemeColor) return
+                        setThemeColor(e.target.value)
+                      }}
+                      className={`w-12 h-11 rounded-xl border border-gray-200 p-1 bg-white shadow-2xs ${
+                        canEditThemeColor ? "cursor-pointer" : "cursor-not-allowed opacity-70"
+                      }`}
                     />
                   </div>
                   <input
                     type="text"
+                    disabled={!canEditThemeColor}
                     value={themeColor}
                     onChange={(e) => {
+                      if (!canEditThemeColor) return
                       const val = e.target.value
                       if (val.startsWith("#") && val.length <= 7) setThemeColor(val)
                       else if (!val.startsWith("#") && val.length <= 6) setThemeColor("#" + val)
                     }}
                     placeholder="#2D3A4A"
-                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm font-bold text-gray-800 focus:outline-none focus:border-gray-400"
+                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm font-bold text-gray-800 focus:outline-none focus:border-gray-400 disabled:cursor-not-allowed disabled:bg-gray-100/80"
                   />
                 </div>
                 <p className="text-[11px] text-gray-400">
@@ -837,26 +915,35 @@ export default function SettingsPage() {
       )}
 
       {/* Save Button */}
-      <div className="flex justify-end pt-2 pb-6">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{ backgroundColor: saved ? "#059669" : themeColor }}
-          className="px-10 py-3 font-bold text-white rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-60"
-        >
-          {saving ? (
-            <>
-              <Loader2 size={16} className="animate-spin" /> Saving Changes...
-            </>
-          ) : saved ? (
-            <>
-              <CheckCircle2 size={16} /> Saved Successfully!
-            </>
-          ) : (
-            "Save All Changes"
-          )}
-        </button>
-      </div>
+      {isInstitute && !canEditLogo && !canEditThemeColor ? (
+        <div className="flex items-center justify-end pt-2 pb-6">
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+            <Lock size={14} className="text-amber-600 shrink-0" />
+            <span>Logo &amp; Theme Color customization are locked by your Platform Administrator</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex justify-end pt-2 pb-6">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{ backgroundColor: saved ? "#059669" : themeColor }}
+            className="px-10 py-3 font-bold text-white rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-60"
+          >
+            {saving ? (
+              <>
+                <Loader2 size={16} className="animate-spin" /> Saving Changes...
+              </>
+            ) : saved ? (
+              <>
+                <CheckCircle2 size={16} /> Saved Successfully!
+              </>
+            ) : (
+              "Save All Changes"
+            )}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

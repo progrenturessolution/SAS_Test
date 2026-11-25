@@ -16,6 +16,8 @@ import { getExamStartDateTime, getExamEndDateTime, formatScheduleDateTime } from
 import { ExamDateTimePicker } from "@/components/exam/ExamDateTimePicker"
 import { CompetitiveExamAIGenerator, GeneratedCompetitiveQuestion } from "@/components/exam/CompetitiveExamAIGenerator"
 import { MathRenderer } from "@/components/exam/MathRenderer"
+import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
+import { normalizeStoredQuestion, toExamQuestionPayload } from "@/lib/ai/canonicalSchema"
 import { toast } from "sonner"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -91,7 +93,70 @@ interface CodingQuestion {
   questionImage?: string
 }
 
-type Question = MCQQuestion | AssertionQuestion | TrueFalseQuestion | DescriptiveQuestion | FillBlanksQuestion | CodingQuestion
+type Question = (MCQQuestion | AssertionQuestion | TrueFalseQuestion | DescriptiveQuestion | FillBlanksQuestion | CodingQuestion) & {
+  answerNeedsReview?: boolean
+}
+
+function getQuestionValidationErrors(questions: Question[]) {
+  const errors: string[] = []
+  const seenTexts = new Set<string>()
+
+  questions.forEach((question, index) => {
+    const label = `Question ${index + 1}`
+    const text = String(question.questionText || "").trim()
+    if (!text) errors.push(`${label} has no question text`)
+
+    const normalizedText = text.toLowerCase().replace(/[^a-z0-9]/g, "")
+    if (normalizedText && seenTexts.has(normalizedText)) errors.push(`${label} duplicates another question`)
+    if (normalizedText) seenTexts.add(normalizedText)
+    if (question.answerNeedsReview) errors.push(`${label} has an unresolved answer key`)
+
+    if (question.type === "mcq" || question.type === "assertion") {
+      const options = (Array.isArray(question.options) ? question.options : []).map((option) => String(option || "").trim())
+      const distinctOptions = new Set(options.map((option) => option.toLowerCase()))
+      if (options.length !== 4 || options.some((option) => !option) || distinctOptions.size !== 4) {
+        errors.push(`${label} must have four distinct, non-empty options`)
+      }
+
+      const rawAnswers = Array.isArray(question.correctAnswer)
+        ? question.correctAnswer
+        : String(question.correctAnswer || "").split(/[,;|]|\band\b/i).map((answer) => answer.trim()).filter(Boolean)
+      const answerIndexes = rawAnswers.map((answer) => {
+        const letter = String(answer).trim().match(/^(?:option\s*)?([A-D])(?=$|[\s).:])/i)
+        if (letter) return letter[1].toUpperCase().charCodeAt(0) - 65
+        return options.findIndex((option) => option.toLowerCase() === String(answer).trim().toLowerCase())
+      })
+      const validAnswers = Array.from(new Set(answerIndexes.filter((answer) => answer >= 0 && answer < 4)))
+      const isMulti = (question as MCQQuestion).questionFormat === "mcq_multi" || Array.isArray(question.correctAnswer)
+      if (isMulti ? validAnswers.length < 2 : validAnswers.length !== 1) {
+        errors.push(`${label} has an invalid or unresolved answer key`)
+      }
+    } else if (question.type === "truefalse") {
+      if (!["True", "False"].includes(question.correctAnswer)) {
+        errors.push(`${label} needs a True/False answer`)
+      }
+    } else if (question.type === "fillblanks") {
+      const blankCount = (text.match(/_{2,}/g) || []).length
+      const blanks = Array.isArray(question.blanks) ? question.blanks : []
+      if (blankCount === 0 || blanks.length !== blankCount || blanks.some((blank) => !String(blank.answer || "").trim())) {
+        errors.push(`${label} has an unresolved fill-in-the-blank answer`)
+      }
+    } else if (question.type === "descriptive") {
+      if (!String(question.modelAnswer || "").trim()) errors.push(`${label} needs a model answer`)
+    } else if (question.type === "coding" && (!Array.isArray(question.testCases) || question.testCases.length === 0)) {
+      errors.push(`${label} needs at least one test case`)
+    }
+
+    if (
+      (question as MCQQuestion).questionFormat === "diagram" &&
+      !/^<svg\b[\s\S]*<\/svg>$/i.test(question.questionImage || "")
+    ) {
+      errors.push(`${label} is missing a valid SVG diagram`)
+    }
+  })
+
+  return errors
+}
 
 interface Step1Form {
   title: string; examType: string; duration: string
@@ -583,7 +648,7 @@ function AssertionModal({ onSave, onClose, initial }: {
       assertionText: initial.assertionText || parsed?.assertion || "",
       reasonText: initial.reasonText || parsed?.reason || "",
       options: initial.options?.length === 4 ? initial.options : [...defaultOptions],
-      correctAnswer: initial.correctAnswer || "A"
+      correctAnswer: initial.correctAnswer || ""
     }
   })
 
@@ -654,7 +719,7 @@ function AssertionModal({ onSave, onClose, initial }: {
         reasonText: item.reasonText,
         questionText: item.questionText || `Assertion (A): ${item.assertionText}\nReason (R): ${item.reasonText}`,
         options: item.options || [...defaultOptions],
-        correctAnswer: item.correctAnswer || "A",
+        correctAnswer: item.correctAnswer || "",
         explanation: item.explanation || "",
       }))
       onSave(generated); onClose()
@@ -1332,7 +1397,7 @@ function FillBlanksModal({ onSave, onClose, initial }: {
     if (initial) {
       const blanks = (initial.blanks && initial.blanks.length > 0)
         ? initial.blanks
-        : [{ answer: (initial as any).correctAnswer || (initial.options ? initial.options[0] : "") || "", alsoAccept: [] }]
+        : [{ answer: String((initial as any).correctAnswer || ""), alsoAccept: [] }]
       return { ...initial, blanks }
     }
     return blank()
@@ -3196,7 +3261,7 @@ function Step3({
           marks,
           negativeMark,
           options: item.options || [],
-          correctAnswer: item.correctAnswer || "A",
+          correctAnswer: item.correctAnswer || "",
           explanation: item.explanation || "",
         }))
         setQuestions(prev => [...prev, ...generatedQuestions])
@@ -3230,11 +3295,19 @@ function Step3({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to parse PDF")
       if (data.questions?.length) {
+        const importedQuestions: Question[] = data.questions.map((q: Omit<Question, "id">) => ({
+          ...q,
+          id: Math.random().toString(36).slice(2),
+        }))
         setQuestions(prev => [
           ...prev,
-          ...data.questions.map((q: Omit<Question, "id">) => ({ ...q, id: Math.random().toString(36).slice(2) }))
+          ...importedQuestions
         ])
-        toast.success(`Successfully imported ${data.questions.length} questions from PDF!`)
+        const reviewCount = importedQuestions.filter((question) => question.answerNeedsReview).length
+        toast.success(
+          `Successfully imported ${data.questions.length} questions from PDF!` +
+          (reviewCount ? ` ${reviewCount} answer key(s) need teacher review before publishing.` : "")
+        )
       } else {
         setPdfError("No questions could be extracted from this PDF")
       }
@@ -3266,22 +3339,55 @@ function Step3({
 
     if (activeType === "mcq" || activeType === "mcq_multi") {
       const validOptions = options.filter(o => o.trim())
-      if (validOptions.length < 2) {
-        toast.error("Please provide at least 2 options for the question")
+      if (validOptions.length !== 4 || options.length !== 4 || new Set(validOptions.map((option) => option.toLowerCase())).size !== 4) {
+        toast.error("Please provide exactly 4 distinct, non-empty options")
         return
       }
-      if (!correctAnswer || (Array.isArray(correctAnswer) && correctAnswer.length === 0)) {
+      const selectedAnswers = Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer]
+      if (
+        activeType === "mcq_multi"
+          ? selectedAnswers.filter(Boolean).length < 2
+          : selectedAnswers.length !== 1 || !selectedAnswers[0]
+      ) {
         toast.error("Please select the correct answer option")
         return
       }
     }
 
-    if (activeType === "fillblanks") {
-      const validBlanks = blanks.filter(b => b.answer.trim())
-      if (validBlanks.length === 0) {
-        toast.error("Please provide at least one blank answer")
+    if (activeType === "assertion") {
+      const validOptions = options.filter((option) => option.trim())
+      if (validOptions.length !== 4 || new Set(validOptions.map((option) => option.toLowerCase())).size !== 4) {
+        toast.error("Please provide exactly 4 distinct, non-empty options")
         return
       }
+      if (typeof correctAnswer !== "string" || !correctAnswer.trim()) {
+        toast.error("Please select the correct answer option")
+        return
+      }
+    }
+
+    if (activeType === "truefalse" && !["True", "False"].includes(String(correctAnswer))) {
+      toast.error("Please select True or False as the correct answer")
+      return
+    }
+
+    if (activeType === "fillblanks") {
+      const validBlanks = blanks.filter(b => b.answer.trim())
+      const blankCount = (finalQuestionText.match(/_{2,}/g) || []).length
+      if (blankCount === 0 || validBlanks.length !== blankCount) {
+        toast.error("Please provide one answer for every blank in the question")
+        return
+      }
+    }
+
+    if (["short_answer", "case_study", "descriptive"].includes(activeType) && !modelAnswer.trim()) {
+      toast.error("Please provide a model answer")
+      return
+    }
+
+    if (activeType === "coding" && codingTestCases.length === 0) {
+      toast.error("Please provide at least one test case")
+        return
     }
 
     const baseId = (editingIndex !== null && questions[editingIndex])
@@ -3303,7 +3409,7 @@ function Step3({
         marks: baseMarks,
         negativeMark: baseNeg,
         options: options.map(o => o.trim()),
-        correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] || "A",
+        correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] || "",
         explanation: explanation.trim(),
       }
     } else if (activeType === "mcq_multi") {
@@ -3337,7 +3443,7 @@ function Step3({
           "A is true but R is false",
           "A is false but R is true"
         ],
-        correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] || "A",
+        correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] || "",
         explanation: explanation.trim(),
       }
     } else if (activeType === "truefalse") {
@@ -3451,7 +3557,7 @@ function Step3({
       const isMulti = (q as any).questionFormat === "mcq_multi" || Array.isArray(q.correctAnswer)
       setActiveType(isMulti ? "mcq_multi" : "mcq")
       setOptions([...((q as MCQQuestion).options || ["", "", "", ""])])
-      setCorrectAnswer((q as MCQQuestion).correctAnswer || "A")
+      setCorrectAnswer(q.answerNeedsReview ? "" : (q as MCQQuestion).correctAnswer || "")
     } else if (q.type === "assertion") {
       setActiveType("assertion")
       const parsed = parseAssertionReason(q.questionText)
@@ -3463,10 +3569,10 @@ function Step3({
         "A is true but R is false",
         "A is false but R is true"
       ])
-      setCorrectAnswer((q as AssertionQuestion).correctAnswer || "A")
+      setCorrectAnswer(q.answerNeedsReview ? "" : (q as AssertionQuestion).correctAnswer || "")
     } else if (q.type === "truefalse") {
       setActiveType("truefalse")
-      setCorrectAnswer((q as TrueFalseQuestion).correctAnswer || "True")
+      setCorrectAnswer(q.answerNeedsReview ? "" : (q as TrueFalseQuestion).correctAnswer || "")
     } else if (q.type === "fillblanks") {
       setActiveType("fillblanks")
       setBlanks((q as FillBlanksQuestion).blanks?.length ? [...(q as FillBlanksQuestion).blanks] : [{ answer: "", alsoAccept: [] }])
@@ -3547,8 +3653,9 @@ function Step3({
 
   // Correct answer display helper
   const getCorrectAnswerDisplay = (q: Question) => {
+    if (q.answerNeedsReview) return "Not provided - teacher review required"
     if (q.type === "truefalse") {
-      return (q as TrueFalseQuestion).correctAnswer || "True"
+      return (q as TrueFalseQuestion).correctAnswer || "Not provided"
     }
     if (q.type === "fillblanks") {
       const b = (q as FillBlanksQuestion).blanks
@@ -3564,7 +3671,7 @@ function Step3({
     // MCQ / Assertion
     const ans = (q as any).correctAnswer
     if (Array.isArray(ans)) return ans.join(", ")
-    return String(ans || "A")
+    return String(ans || "Not provided")
   }
 
   const totalMarks = questions.reduce((s, q) => s + (Number(q.marks) || 0), 0)
@@ -4358,28 +4465,28 @@ function Step3({
                   <MathRenderer content={q.questionText} />
                 </div>
 
-                {/* Optional Image */}
+                {/* Optional Image / SVG Diagram */}
                 {q.questionImage && (
-                  <div className="my-2 max-w-sm rounded-lg overflow-hidden border border-slate-200 bg-slate-50 p-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={q.questionImage} alt="Diagram" className="max-h-48 rounded object-contain mx-auto" />
+                  <div className="my-2 max-w-sm rounded-lg overflow-hidden border border-slate-200 bg-slate-50 p-2">
+                    <QuestionDiagram src={q.questionImage} alt="Diagram" className="max-h-48 mx-auto" />
                   </div>
                 )}
 
-                {/* Options in 2 Columns (for MCQ / Assertion) */}
-                {(q.type === "mcq" || q.type === "assertion") && Array.isArray((q as MCQQuestion).options) && (
+                {/* Options in 2 Columns (for MCQ / Multiple-Correct / Diagram / Assertion) */}
+                {(q.type === "mcq" || q.type === ("mcq_multi" as any) || q.type === ("diagram" as any) || q.type === "assertion") && Array.isArray((q as MCQQuestion).options) && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
                     {(q as MCQQuestion).options.map((opt, oi) => {
                       const letter = ["A", "B", "C", "D", "E", "F"][oi]
-                      const isCorrect = Array.isArray(q.correctAnswer)
-                        ? (q.correctAnswer.includes(letter) || q.correctAnswer.some((a: any) => String(a).trim().toLowerCase() === opt.trim().toLowerCase()))
-                        : (q.correctAnswer === letter || opt.trim().toLowerCase() === String(q.correctAnswer).trim().toLowerCase())
+                      const ca = (q as any).correctAnswer
+                      const isCorrect = Array.isArray(ca)
+                        ? (ca.includes(letter) || ca.some((a: any) => String(a).trim().toLowerCase() === opt.trim().toLowerCase()))
+                        : (ca === letter || opt.trim().toLowerCase() === String(ca ?? "").trim().toLowerCase())
                       return (
                         <div
                           key={oi}
                           className="flex items-center gap-2 text-xs sm:text-sm text-slate-700"
                         >
-                          <span className={`w-3.5 h-3.5 ${Array.isArray(q.correctAnswer) ? "rounded-md" : "rounded-full"} border flex items-center justify-center shrink-0 ${
+                          <span className={`w-3.5 h-3.5 ${Array.isArray(ca) ? "rounded-md" : "rounded-full"} border flex items-center justify-center shrink-0 ${
                             isCorrect ? "border-blue-600 bg-blue-600" : "border-slate-300"
                           }`}>
                             {isCorrect && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -4414,8 +4521,10 @@ function Step3({
                 )}
 
                 {/* Correct Answer Banner */}
-                <div className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-medium text-[#047857]">
-                  <CheckCircle2 size={14} className="text-[#059669] shrink-0" />
+                <div className={`${q.answerNeedsReview ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-[#ECFDF5] border-[#A7F3D0] text-[#047857]"} border rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-medium`}>
+                  {q.answerNeedsReview
+                    ? <AlertTriangle size={14} className="shrink-0" />
+                    : <CheckCircle2 size={14} className="text-[#059669] shrink-0" />}
                   <span>Correct Answer: {getCorrectAnswerDisplay(q)}</span>
                 </div>
               </div>
@@ -4431,17 +4540,10 @@ function Step3({
         onAddQuestions={(newQuestions) => {
           setQuestions(prev => [
             ...prev,
-            ...newQuestions.map(q => ({
-              id: q.id,
-              type: "mcq" as const,
-              questionText: q.questionText,
-              difficulty: q.difficulty,
-              marks: q.marks,
-              negativeMark: q.negativeMark,
-              options: q.options || [],
-              correctAnswer: q.correctAnswer,
-              explanation: q.explanation,
-            }))
+            ...newQuestions.map((q, idx) => {
+              const normalized = normalizeStoredQuestion(q, prev.length + idx)
+              return toExamQuestionPayload(normalized) as unknown as Question
+            })
           ])
           setShowCompetitiveAiModal(false)
         }}
@@ -4621,7 +4723,25 @@ export default function ExamWizard({ editId }: { editId?: string } = {}) {
 
             const base: any = { ...q, id: q._id || q.id || Math.random().toString(36).slice(2), type: determinedType }
             if (determinedType === "fillblanks" && (!q.blanks || q.blanks.length === 0)) {
-              base.blanks = [{ id: 1, label: "Blank 1", answer: q.correctAnswer || (q.options ? q.options[0] : "") }]
+              const answerValues = Array.isArray(q.correctAnswer)
+                ? q.correctAnswer
+                : String(q.correctAnswer || "").split(/[,;|]/).map((answer: string) => answer.trim()).filter(Boolean)
+              base.blanks = answerValues.length > 0
+                ? answerValues.map((answer: string, index: number) => ({ id: index + 1, label: `Blank ${index + 1}`, answer }))
+                : [{ id: 1, label: "Blank 1", answer: "" }]
+              base.answerNeedsReview = answerValues.length === 0
+            }
+            if (determinedType === "fillblanks") {
+              const blankCount = (String(q.questionText || "").match(/_{2,}/g) || []).length
+              base.answerNeedsReview = Boolean(q.answerNeedsReview) ||
+                blankCount === 0 ||
+                base.blanks.length !== blankCount ||
+                base.blanks.some((blank: { answer?: string }) => !String(blank.answer || "").trim())
+            } else if (determinedType === "truefalse") {
+              base.answerNeedsReview = !["True", "False"].includes(q.correctAnswer)
+            } else if (determinedType === "mcq" || determinedType === "assertion") {
+              const answerValues = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer]
+              base.answerNeedsReview = !answerValues.some((answer: unknown) => String(answer || "").trim())
             }
             if (determinedType === "coding") {
               return {
@@ -4753,6 +4873,13 @@ export default function ExamWizard({ editId }: { editId?: string } = {}) {
     if (status === "active" && questions.length === 0) {
       setStep(1)
       return setError("Please add at least one question to publish the exam")
+    }
+    if (status === "active") {
+      const questionErrors = getQuestionValidationErrors(questions)
+      if (questionErrors.length > 0) {
+        setStep(1)
+        return setError(`Please fix question quality issues before publishing: ${questionErrors.slice(0, 5).join("; ")}`)
+      }
     }
     setSaving(true)
     try {

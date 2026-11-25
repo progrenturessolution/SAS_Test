@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
-import connectDB from "@/lib/mongodb"
+import connectDB, { invalidateMongoCache } from "@/lib/mongodb"
 import SupportQuery from "@/models/SupportQuery"
 import Institute from "@/models/Institute"
 
@@ -13,71 +13,103 @@ export async function GET(req: Request) {
     }
 
     const isSuperAdmin = session.role === "super_admin" || (session.role === "admin" && !session.instituteId)
-    await connectDB()
-
     const { searchParams } = new URL(req.url)
     const status = searchParams.get("status")
 
-    if (isSuperAdmin) {
-      const filter: any = {}
-      if (status && status !== "all") {
-        filter.status = status
+    const runQuery = async () => {
+      await connectDB()
+
+      if (isSuperAdmin) {
+        const filter: any = {}
+        if (status && status !== "all") {
+          filter.status = status
+        }
+
+        const [rawQueries, unreadCount, pendingCount] = await Promise.all([
+          SupportQuery.find(filter)
+            .populate("instituteId", "name code phone email city")
+            .sort({ createdAt: -1 })
+            .limit(200)
+            .lean(),
+          SupportQuery.countDocuments({ isReadByAdmin: false }),
+          SupportQuery.countDocuments({ status: "pending" }),
+        ])
+
+        const queries = rawQueries.map((q: any) => ({
+          ...q,
+          instituteName: q.instituteId?.name || q.instituteName || "Organization",
+          instituteCode: q.instituteId?.code || q.instituteCode || "",
+          instituteCity: q.instituteId?.city || "",
+          contactEmail: q.contactEmail || q.instituteId?.email || "",
+          contactPhone: q.contactPhone || q.instituteId?.phone || "",
+        }))
+
+        return {
+          success: true,
+          isSuperAdmin: true,
+          queries,
+          unreadCount,
+          pendingCount,
+        }
       }
 
-      const [rawQueries, unreadCount, pendingCount] = await Promise.all([
-        SupportQuery.find(filter)
-          .populate("instituteId", "name code phone email city")
-          .sort({ createdAt: -1 })
-          .limit(200)
-          .lean(),
-        SupportQuery.countDocuments({ isReadByAdmin: false }),
-        SupportQuery.countDocuments({ status: "pending" }),
-      ])
+      // Coaching institute: only their own queries
+      if (!session.instituteId) {
+        return { error: "No organization linked", statusCode: 403 as const }
+      }
 
-      const queries = rawQueries.map((q: any) => ({
-        ...q,
-        instituteName: q.instituteId?.name || q.instituteName || "Organization",
-        instituteCode: q.instituteId?.code || q.instituteCode || "",
-        instituteCity: q.instituteId?.city || "",
-        contactEmail: q.contactEmail || q.instituteId?.email || "",
-        contactPhone: q.contactPhone || q.instituteId?.phone || "",
-      }))
+      const queries = await SupportQuery.find({ instituteId: session.instituteId })
+        .sort({ createdAt: -1 })
+        .lean()
 
-      return NextResponse.json({
+      const unreadCount = queries.filter((q) => q.isReadByInstitute === false).length
+
+      return {
         success: true,
-        isSuperAdmin: true,
+        isSuperAdmin: false,
         queries,
+        unreadReplies: unreadCount,
         unreadCount,
-        pendingCount,
-      })
+        institute: {
+          id: session.instituteId,
+          name: session.instituteName || "Organization",
+          code: session.instituteCode || "",
+        },
+      }
     }
 
-    // Coaching institute: only their own queries
-    if (!session.instituteId) {
-      return NextResponse.json({ error: "No organization linked" }, { status: 403 })
+    let payload: Awaited<ReturnType<typeof runQuery>>
+    try {
+      payload = await runQuery()
+    } catch (firstErr: any) {
+      const msg = String(firstErr?.message || "")
+      const isNetworkBlip =
+        msg.includes("ENOTFOUND") ||
+        msg.includes("EAI_AGAIN") ||
+        String(firstErr?.name || "").includes("MongoNetworkError") ||
+        String(firstErr?.name || "").includes("MongoServerSelectionError")
+      if (!isNetworkBlip) throw firstErr
+      invalidateMongoCache()
+      payload = await runQuery()
     }
 
-    const queries = await SupportQuery.find({ instituteId: session.instituteId })
-      .sort({ createdAt: -1 })
-      .lean()
-
-    const unreadCount = queries.filter((q) => q.isReadByInstitute === false).length
-
-    return NextResponse.json({
-      success: true,
-      isSuperAdmin: false,
-      queries,
-      unreadReplies: unreadCount,
-      unreadCount,
-      institute: {
-        id: session.instituteId,
-        name: session.instituteName || "Organization",
-        code: session.instituteCode || "",
-      },
-    })
+    if ("statusCode" in payload) {
+      return NextResponse.json({ error: payload.error }, { status: payload.statusCode })
+    }
+    return NextResponse.json(payload)
   } catch (error: any) {
+    const msg = String(error?.message || "Failed to fetch queries")
+    const isOffline =
+      msg.includes("ENOTFOUND") ||
+      msg.includes("EAI_AGAIN") ||
+      String(error?.name || "").includes("MongoNetworkError") ||
+      String(error?.name || "").includes("MongoServerSelectionError")
+    if (isOffline) {
+      console.warn("GET /api/admin/queries temporary DB connectivity warning:", msg)
+      return NextResponse.json({ error: "Database temporarily unreachable. Retrying shortly." }, { status: 503 })
+    }
     console.error("GET /api/admin/queries error:", error)
-    return NextResponse.json({ error: error.message || "Failed to fetch queries" }, { status: 500 })
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 

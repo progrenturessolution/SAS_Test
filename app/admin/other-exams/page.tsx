@@ -43,6 +43,9 @@ import { MathRenderer } from "@/components/exam/MathRenderer"
 import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
 import { PrintableExamPaper } from "@/components/admin/PrintableExamPaper"
 import { toast } from "sonner"
+import { computeDifficultyCounts } from "@/lib/ai/promptBuilder"
+import { partitionDifficultyAcrossBatches } from "@/lib/ai/examBlueprint"
+import { normalizeFormatInput, normalizeStoredQuestion, toExamQuestionPayload } from "@/lib/ai/canonicalSchema"
 
 export interface ExamCategory {
   id: string
@@ -280,17 +283,17 @@ export interface BlueprintFormatRow {
 
 const DEFAULT_BLUEPRINT_FORMATS: BlueprintFormatRow[] = [
   { id: "mcq", name: "MCQ – Single Correct", checked: true, count: 20, marks: 4 },
-  { id: "mcq_multiple", name: "MCQ – Multiple Correct", checked: false, count: 5, marks: 4 },
+  { id: "mcq_multi", name: "MCQ – Multiple Correct", checked: false, count: 5, marks: 4 },
   { id: "assertion", name: "Assertion & Reason", checked: true, count: 5, marks: 4 },
   { id: "diagram", name: "Image-based / Diagram / Visual", checked: false, count: 5, marks: 4 },
   { id: "true_false", name: "True / False", checked: false, count: 5, marks: 2 },
   { id: "fib", name: "Fill in the Blanks", checked: false, count: 5, marks: 2 },
-  { id: "long_descriptive", name: "Long Answer / Descriptive", checked: false, count: 2, marks: 5 },
+  { id: "descriptive", name: "Long Answer / Descriptive", checked: false, count: 2, marks: 5 },
 ]
 
 export interface GeneratedQuestionItem {
   id: string
-  type: "mcq"
+  type: "mcq" | "mcq_multi" | "assertion" | "truefalse" | "descriptive" | "fillblanks" | "diagram"
   questionFormat?: string
   questionText: string
   questionImage?: string
@@ -298,9 +301,11 @@ export interface GeneratedQuestionItem {
   marks: number
   negativeMark: number
   options: string[]
-  correctAnswer: string
+  correctAnswer: string | string[]
   explanation: string
   chapter: string
+  subject?: string
+  grade?: string
   pyqReference?: string
 }
 
@@ -654,6 +659,8 @@ function OtherExamsContent() {
             explanation: q.explanation || "",
             difficulty: q.difficulty || "medium",
             chapter: q.chapter || cleanName || exam.title || "General",
+            subject: q.subject || exam.subject || "",
+            grade: q.grade || "",
             pyqReference: q.pyqReference,
           }))
         )
@@ -673,7 +680,8 @@ function OtherExamsContent() {
           // Pre-populate blueprint format counts from loaded questions
           const formatCounts: Record<string, { count: number; marks: number }> = {}
           loadedQuestions.forEach((q) => {
-            const fmt = q.questionFormat || q.type || "mcq"
+            const norm = normalizeFormatInput(q.questionFormat || q.type || "mcq", q as any)
+            const fmt = norm === "mcq_single" ? "mcq" : norm
             if (!formatCounts[fmt]) formatCounts[fmt] = { count: 0, marks: 0 }
             formatCounts[fmt].count += 1
             formatCounts[fmt].marks = q.marks || 4
@@ -862,13 +870,14 @@ function OtherExamsContent() {
     }
 
     try {
-      // Build micro-batches of max 3 questions (2 for diagram) to prevent Vercel 15s timeout
+      // Keep requests small enough for Vercel while reducing per-request overhead.
       interface BatchItem {
         id: string
         formatId: string
         formatLabel: string
         count: number
         marks: number
+        difficultyCounts?: { easy: number; medium: number; hard: number }
       }
 
       const activeFormats = blueprintFormats.filter((f) => f.checked && Number(f.count) > 0)
@@ -877,12 +886,12 @@ function OtherExamsContent() {
       for (const fmt of activeFormats) {
         let remaining = Number(fmt.count) || 0
         const marks = Number(fmt.marks) || 4
-        const chunkSize = fmt.id === "diagram" ? 2 : 3
+        const chunkSize = fmt.id === "diagram" ? 2 : 5
         while (remaining > 0) {
           const take = Math.min(remaining, chunkSize)
           batches.push({
             id: `${fmt.id}_${batches.length}_${Math.random().toString(36).slice(2, 6)}`,
-            formatId: fmt.id,
+            formatId: normalizeFormatInput(fmt.id),
             formatLabel: fmt.name,
             count: take,
             marks,
@@ -890,6 +899,15 @@ function OtherExamsContent() {
           remaining -= take
         }
       }
+
+      const totalScheduled = batches.reduce((s, b) => s + b.count, 0)
+      const batchDiffTargets = partitionDifficultyAcrossBatches(
+        computeDifficultyCounts(totalScheduled, difficultyRatio),
+        batches.map((b) => b.count)
+      )
+      batches.forEach((b, idx) => {
+        b.difficultyCounts = batchDiffTargets[idx]
+      })
 
       const queue = [...batches]
       let allGenerated: GeneratedQuestionItem[] = []
@@ -924,6 +942,7 @@ function OtherExamsContent() {
                   topics: selectedTopics,
                   syllabusText: uploadedSyllabusText,
                   difficulty: difficultyRatio,
+                  difficultyCounts: batch.difficultyCounts,
                   questionCount: batch.count,
                   questionPattern: "mixed",
                   blueprintFormats: [
@@ -957,7 +976,7 @@ function OtherExamsContent() {
                     seenTexts.add(norm)
                     uniqueNew.push({
                       ...q,
-                      type: "mcq",
+                      type: q.type || "mcq",
                       chapter: q.chapter || activeExamName,
                     })
                   }
@@ -1051,7 +1070,7 @@ function OtherExamsContent() {
       if (res.ok && data.success && Array.isArray(data.questions) && data.questions.length > 0) {
         const newItems: GeneratedQuestionItem[] = data.questions.map((q: any) => ({
           ...q,
-          type: "mcq" as const,
+          type: q.type || "mcq",
           chapter: q.chapter || activeExamName,
         }))
         const updated = [...generatedQuestions, ...newItems]
@@ -1100,7 +1119,8 @@ function OtherExamsContent() {
   const formatCounts = useMemo(() => {
     const counts: Record<string, number> = { all: generatedQuestions.length }
     for (const q of generatedQuestions) {
-      const f = q.questionFormat || q.type || "mcq"
+      const norm = normalizeFormatInput(q.questionFormat || q.type || "mcq", q as any)
+      const f = norm === "mcq_single" ? "mcq" : norm
       counts[f] = (counts[f] || 0) + 1
     }
     return counts
@@ -1145,31 +1165,61 @@ function OtherExamsContent() {
 
       const isNegativeEnabled = negativeMarkingEnabled
 
-      // Format questions into sections for exam model
-      const sections = [
-        {
-          name: `${activeExamName} (${selectedStage})`,
-          type: "mcq",
-          questionRange: `1-${selectedQuestions.length}`,
-          negativeMarking: isNegativeEnabled,
-          sectionNegativeMark: isNegativeEnabled ? negativeMarkPenalty : 0,
-          questions: selectedQuestions.map((q, idx) => ({
-            id: q.id || `q_${idx + 1}`,
-            type: q.type || "mcq",
-            questionFormat: q.questionFormat || "mcq",
-            questionText: q.questionText,
-            questionImage: q.questionImage,
-            marks: q.marks || 4,
-            negativeMark: isNegativeEnabled ? negativeMarkPenalty : 0,
-            options: q.options || [],
-            correctAnswer: q.correctAnswer,
-            explanation: q.explanation,
-            difficulty: q.difficulty || "medium",
-            chapter: q.chapter || activeExamName,
-            pyqReference: q.pyqReference,
-          })),
-        },
-      ]
+      // Format questions canonically & split cleanly into sections by question type when mixed
+      const normalizedQuestions = selectedQuestions.map((q, idx) => {
+        const canonical = normalizeStoredQuestion(q, idx)
+        const payload = toExamQuestionPayload({
+          ...canonical,
+          marks: q.marks || 4,
+          negativeMark: canonical.questionFormat === "descriptive" ? 0 : (isNegativeEnabled ? negativeMarkPenalty : 0),
+          subject: q.subject || selectedCategoryObj.title,
+          chapter: q.chapter || activeExamName,
+        })
+        return {
+          ...payload,
+          grade: q.grade || selectedStage,
+        } as any
+      })
+
+      const sectionTypeOrder = ["mcq", "mcq_multi", "diagram", "assertion", "truefalse", "fillblanks", "descriptive"]
+      const sectionTypeLabels: Record<string, string> = {
+        mcq: "Multiple Choice Questions",
+        mcq_multi: "Multiple-Correct Questions",
+        diagram: "Diagram & Visual Questions",
+        assertion: "Assertion & Reason",
+        truefalse: "True / False Questions",
+        fillblanks: "Fill in the Blanks",
+        descriptive: "Descriptive Questions",
+      }
+      const presentTypes = sectionTypeOrder.filter((t) => normalizedQuestions.some((q) => q.type === t))
+
+      let runningCount = 1
+      const sections =
+        presentTypes.length <= 1
+          ? [
+              {
+                name: `${activeExamName} (${selectedStage})`,
+                type: normalizedQuestions[0]?.type || "mcq",
+                questionRange: `1-${normalizedQuestions.length}`,
+                negativeMarking: isNegativeEnabled,
+                sectionNegativeMark: isNegativeEnabled ? negativeMarkPenalty : 0,
+                questions: normalizedQuestions,
+              },
+            ]
+          : presentTypes.map((secType) => {
+              const qs = normalizedQuestions.filter((q) => q.type === secType)
+              const startNum = runningCount
+              const endNum = runningCount + qs.length - 1
+              runningCount = endNum + 1
+              return {
+                name: `${activeExamName} — ${sectionTypeLabels[secType] || "Questions"}`,
+                type: secType,
+                questionRange: `${startNum}-${endNum}`,
+                negativeMarking: secType === "descriptive" ? false : isNegativeEnabled,
+                sectionNegativeMark: secType === "descriptive" ? 0 : (isNegativeEnabled ? negativeMarkPenalty : 0),
+                questions: qs,
+              }
+            })
 
       const endpoint = editingExamId ? `/api/exams/${editingExamId}` : "/api/exams"
       const method = editingExamId ? "PUT" : "POST"
@@ -2662,8 +2712,13 @@ function OtherExamsContent() {
                       {Array.isArray(q.options) && q.options.length > 0 && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-0 sm:pl-6 mb-3">
                           {q.options.map((opt, oi) => {
-                            const isCorrect = opt === q.correctAnswer
                             const optLetter = ["A", "B", "C", "D"][oi] || `${oi + 1}`
+                            const answers = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer]
+                            const isCorrect = answers.some((answer) => {
+                              const normalizedAnswer = String(answer || "").trim()
+                              if (/^[A-D]$/i.test(normalizedAnswer)) return normalizedAnswer.toUpperCase() === optLetter
+                              return normalizedAnswer.toLowerCase() === opt.toLowerCase()
+                            })
 
                             return (
                               <div
@@ -3624,7 +3679,7 @@ function OtherExamsContent() {
                 <label className="text-xs font-semibold text-slate-900 block mb-1">Correct Answer:</label>
                 <input
                   type="text"
-                  value={editingQuestion.correctAnswer}
+                  value={Array.isArray(editingQuestion.correctAnswer) ? editingQuestion.correctAnswer.join(", ") : editingQuestion.correctAnswer}
                   onChange={(e) => setEditingQuestion({ ...editingQuestion, correctAnswer: e.target.value })}
                   className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200"
                 />
@@ -3671,7 +3726,7 @@ function OtherExamsContent() {
                 : generatedQuestions
             ).map((q) => ({
               ...q,
-              type: "mcq" as const,
+              type: q.type || "mcq",
               chapter: q.chapter || activeExamName,
             }))}
             examTitle={examTitle || activeExamName}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import connectDB from "@/lib/mongodb"
 import Attempt from "@/models/Attempt"
 import Exam from "@/models/Exam"
+import { evaluateObjectiveAnswer } from "@/lib/ai/questionEvaluation"
 
 function normalizeOptionToken(val: string): string {
   return val
@@ -125,43 +126,16 @@ export async function GET(
       let autoScore = 0
       
       if (question) {
-        if (question.type === "mcq" || question.type === "truefalse" || (question as any).type === "mcq_multi") {
-          const isMulti =
-            (question as any).type === "mcq_multi" ||
-            (question as any).questionFormat === "mcq_multi" ||
-            (question as any).questionFormat === "mcq_multiple" ||
-            (Array.isArray(question.correctAnswer) && question.correctAnswer.length > 1)
-
-          if (isMulti) {
-            const studentIndices = parseTokens(ans.answer, question.options)
-            const correctIndices = parseTokens(question.correctAnswer, question.options)
-            const hasWrong = studentIndices.some(idx => !correctIndices.includes(idx))
-            const isExact = studentIndices.length > 0 &&
-              studentIndices.length === correctIndices.length &&
-              studentIndices.every((idx, i) => idx === correctIndices[i])
-
-            if (isExact) {
-              autoScore = question.marks || 0
-            } else if (!hasWrong && studentIndices.length > 0 && correctIndices.length > 0) {
-              autoScore = Math.round((studentIndices.length / correctIndices.length) * (question.marks || 0) * 10) / 10
-            }
-          } else {
-            const correct = Array.isArray(question.correctAnswer) 
-              ? question.correctAnswer[0] 
-              : question.correctAnswer
-            if (answersMatch(ans.answer, correct, question.type === "mcq" ? question.options : undefined)) {
-              autoScore = question.marks || 0
-            }
-          }
-        } else if (question.type === "fillblanks" && question.blanks) {
-          const studentAnswers = Array.isArray(ans.answer) 
-            ? ans.answer 
-            : [ans.answer]
-          question.blanks.forEach((blank: any, i: number) => {
-            if (studentAnswers[i] && studentAnswers[i].trim() === blank.answer.trim()) {
-              autoScore += question.marks / question.blanks.length
-            }
-          })
+        if (
+          question.type === "mcq" ||
+          (question as any).type === "mcq_multi" ||
+          (question as any).type === "diagram" ||
+          question.type === "assertion" ||
+          question.type === "truefalse" ||
+          question.type === "fillblanks"
+        ) {
+          const evalRes = evaluateObjectiveAnswer(question as any, ans.answer)
+          autoScore = evalRes.earnedMarks > 0 ? evalRes.earnedMarks : 0
         } else if (question.type === "coding") {
           const totalPassed = ans.totalPassed || 0
           const totalCases = ans.totalCases || 0
@@ -245,54 +219,20 @@ export async function PATCH(
           let isCorrect = false;
           let earnedMarks = 0;
 
-          if (question.type === "mcq" || question.type === "truefalse" || (question as any).type === "mcq_multi") {
-            const isMulti =
-              (question as any).type === "mcq_multi" ||
-              (question as any).questionFormat === "mcq_multi" ||
-              (question as any).questionFormat === "mcq_multiple" ||
-              (Array.isArray(question.correctAnswer) && question.correctAnswer.length > 1)
-
-            if (isMulti) {
-              const studentIndices = parseTokens(studentAnswer.answer, question.options)
-              const correctIndices = parseTokens(question.correctAnswer, question.options)
-              const hasWrong = studentIndices.some(idx => !correctIndices.includes(idx))
-              const isExact = studentIndices.length > 0 &&
-                studentIndices.length === correctIndices.length &&
-                studentIndices.every((idx, i) => idx === correctIndices[i])
-
-              if (isExact) {
-                isCorrect = true
-                earnedMarks = question.marks || 0
-              } else if (!hasWrong && studentIndices.length > 0 && correctIndices.length > 0) {
-                isCorrect = false
-                earnedMarks = Math.round((studentIndices.length / correctIndices.length) * (question.marks || 0) * 10) / 10
-              } else {
-                isCorrect = false
-                earnedMarks = 0
-              }
-            } else {
-              const correct = Array.isArray(question.correctAnswer) 
-                ? question.correctAnswer[0] 
-                : question.correctAnswer
-              if (answersMatch(studentAnswer.answer, correct, question.type === "mcq" ? question.options : undefined)) {
-                isCorrect = true;
-                earnedMarks = question.marks || 0;
-              }
-            }
-          } else if (question.type === "fillblanks" && question.blanks) {
-            const stuAnswers = Array.isArray(studentAnswer.answer) 
-              ? studentAnswer.answer 
-              : [studentAnswer.answer]
-            let blankScore = 0
-            let correctBlanks = 0;
-            question.blanks.forEach((blank: any, i: number) => {
-              if (stuAnswers[i] && stuAnswers[i].trim().toLowerCase() === blank.answer.trim().toLowerCase()) {
-                correctBlanks++;
-                blankScore += question.marks / question.blanks.length
-              }
+          if (
+            question.type === "mcq" ||
+            (question as any).type === "mcq_multi" ||
+            (question as any).type === "diagram" ||
+            question.type === "assertion" ||
+            question.type === "truefalse" ||
+            question.type === "fillblanks"
+          ) {
+            const evalRes = evaluateObjectiveAnswer(question as any, studentAnswer.answer, {
+              negativeMarking: Boolean(sectionNegativeMarking),
+              negativeValue: sectionNegativeValue ?? 0,
             })
-            earnedMarks = blankScore;
-            isCorrect = correctBlanks === question.blanks.length;
+            isCorrect = evalRes.isCorrect
+            earnedMarks = evalRes.earnedMarks
           } else if (question.type === "coding") {
             const totalPassed = studentAnswer.totalPassed || 0
             const totalCases = studentAnswer.totalCases || 0
@@ -312,11 +252,8 @@ export async function PATCH(
 
           if (isCorrect) {
             newTotalScore += earnedMarks;
-          } else if (earnedMarks > 0) {
+          } else if (earnedMarks !== 0) {
             newTotalScore += earnedMarks;
-          } else if (sectionNegativeMarking) {
-            const negativeValue = question.negativeMark ?? sectionNegativeValue;
-            newTotalScore -= Math.abs(negativeValue);
           }
         }
       })

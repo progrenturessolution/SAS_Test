@@ -9,7 +9,7 @@ import { getExamStartDateTime, getExamEndDateTime } from "@/lib/examSchedule"
 const isValidObjectId = (id: string) => mongoose.isValidObjectId(id) && /^[0-9a-fA-F]{24}$/.test(id)
 
 // GET /api/exams/[id]
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
     const { id } = await params
@@ -18,6 +18,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
     const exam: any = await Exam.findById(id).lean()
     if (!exam) return NextResponse.json({ error: "Exam not found" }, { status: 404 })
+
+    const session = await getSession(req)
+    const canReadGeneratorSetup = Boolean(session && (
+      session.role === "super_admin" ||
+      session.role === "admin" ||
+      (
+        session.instituteId &&
+        (
+          String(exam.instituteId || "") === String(session.instituteId) ||
+          String(exam.createdBy) === String(session.id)
+        )
+      )
+    ))
+    if (!canReadGeneratorSetup && exam.settings?.competitiveGenerator) {
+      delete exam.settings.competitiveGenerator
+    }
 
     // Attach coaching institute branding (logo, themeColor, name)
     let targetInstId = exam.instituteId
@@ -102,7 +118,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const hasCompAccess = allowedExamTypes.some((t) =>
         ["COMPETITIVE", "NEET", "JEE_MAIN", "JEE_ADVANCED", "MHT_CET", "CBSE_BOARD"].includes(t)
       )
-      const hasExamAccess = allowedExamTypes.some((t) => ["EXAM", "CUSTOM"].includes(t))
+      // Standard Exams section is always enabled for all organizations
+      const hasExamAccess = true
       const hasOtherAccess = allowedExamTypes.some((t) => ["OTHER", "OTHER_EXAMS"].includes(t))
 
       const isAllowed =
@@ -136,8 +153,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             Array.isArray(section.questions) ? section.questions.map((question) => question.type) : []
           )
         : []
+      const normalizedAllowedTypes = new Set(allowedCustomQuestionTypes)
+      if (normalizedAllowedTypes.has("mcq")) {
+        normalizedAllowedTypes.add("mcq_multi")
+        normalizedAllowedTypes.add("diagram")
+      }
       const disallowedType = questionTypes.find(
-        (type: unknown) => type && !allowedCustomQuestionTypes.includes(String(type).trim().toLowerCase())
+        (type: unknown) => type && !normalizedAllowedTypes.has(String(type).trim().toLowerCase())
       )
       if (disallowedType) {
         return NextResponse.json(
@@ -161,6 +183,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
     
+    if (Array.isArray(updateData.sections)) {
+      const { normalizeStoredQuestion, toExamQuestionPayload } = await import("@/lib/ai/canonicalSchema")
+      updateData.sections = updateData.sections.map((sec: any) => ({
+        ...sec,
+        questions: Array.isArray(sec.questions)
+          ? sec.questions.map((q: any, qIdx: number) => ({
+              ...q,
+              ...toExamQuestionPayload(normalizeStoredQuestion(q, qIdx)),
+            }))
+          : [],
+      }))
+    }
+
     const exam = await Exam.findByIdAndUpdate(id, updateData, { returnDocument: "after", runValidators: true })
     if (!exam) return NextResponse.json({ error: "Exam not found" }, { status: 404 })
     return NextResponse.json({ exam })

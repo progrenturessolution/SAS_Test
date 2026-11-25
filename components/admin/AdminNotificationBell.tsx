@@ -73,13 +73,14 @@ export default function AdminNotificationBell({ isSuperAdmin = false }: { isSupe
       const res = await fetch("/api/admin/queries", { credentials: "include" })
       const data = await res.json()
       if (data.success) {
-        setQueries(data.queries || [])
+        const fetchedQueries: QueryItem[] = data.queries || []
+        setQueries(fetchedQueries)
         setUnreadCount(data.unreadCount || 0)
-        // If an active query is open, sync its state
-        if (activeQuery) {
-          const updated = (data.queries || []).find((q: QueryItem) => q._id === activeQuery._id)
-          if (updated) setActiveQuery(updated)
-        }
+        // Use functional update so background polling never uses a stale activeQuery closure or closes an open chat
+        setActiveQuery((prev) => {
+          if (!prev) return prev
+          return fetchedQueries.find((q) => q._id === prev._id) || prev
+        })
       }
     } catch (err) {
       console.error("Failed to load notifications:", err)

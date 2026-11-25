@@ -1,194 +1,185 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
-import { robustJsonParse } from "@/lib/jsonRepair"
-import { generateContentWithKeyRotation, getGeminiApiKeys } from "@/lib/gemini"
+import { getGeminiApiKeys } from "@/lib/gemini"
+import {
+  CanonicalQuestion,
+  normalizeFormatInput,
+  toExamQuestionPayload,
+} from "@/lib/ai/canonicalSchema"
+import { generateQuestionBatch } from "@/lib/ai/orchestrator"
+import { QuestionDeduplicator } from "@/lib/ai/deduplication"
 
-export const maxDuration = 120
+/**
+ * Formats a verified CanonicalQuestion cleanly for ExamWizard modals
+ * (which use option letter "A"-"D" inside single-choice MCQ & Assertion UI state).
+ */
+function formatForObjectiveModal(q: CanonicalQuestion) {
+  const base = toExamQuestionPayload(q)
+
+  if ((q.questionFormat === "mcq_single" || q.questionFormat === "assertion" || q.questionFormat === "diagram") && Array.isArray(q.options)) {
+    const idx = q.options.findIndex((o) => o.trim() === String(q.correctAnswer).trim())
+    const letter = idx !== -1 ? String.fromCharCode(65 + idx) : String(q.correctAnswer)
+    return {
+      ...base,
+      correctAnswer: letter,
+      correctOptionText: String(q.correctAnswer),
+    }
+  }
+
+  if (q.questionFormat === "descriptive") {
+    return {
+      ...base,
+      wordLimit: String(q.wordLimit || 150),
+    }
+  }
+
+  return base
+}
 
 export async function POST(req: Request) {
   try {
     const session = await getSession(req)
-    const canGenerate = session && (
-      ["super_admin", "admin", "institute", "coaching_institute"].includes(session.role) ||
-      Boolean(session.instituteId)
-    )
+    const canGenerate =
+      session &&
+      (["admin", "institute", "super_admin", "coaching_institute"].includes(session.role) ||
+        Boolean(session.instituteId))
     if (!canGenerate) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { prompt, topics, type = "mcq", marks = 1, difficulty = "medium" } = await req.json()
-    const requestedTopics = Array.isArray(topics)
-      ? topics.filter((item: any) => typeof item.topic === "string" && item.topic.trim() && Number(item.count) > 0).slice(0, 10)
-      : []
-    const isBulk = requestedTopics.length > 0
-    const totalQuestions = isBulk
-      ? requestedTopics.reduce((sum: number, item: any) => sum + Math.min(60, Math.floor(Number(item.count) || 1)), 0)
-      : 1
+    const body = await req.json()
+    const {
+      prompt,
+      topics,
+      type = "mcq",
+      marks = 1,
+      negativeMark = 0,
+      difficulty = "medium",
+      subject = "General",
+      grade,
+      existingQuestions = [],
+    } = body
 
-    const effectivePrompt = isBulk
-      ? requestedTopics.map((item: any, index: number) => `${index + 1}. ${item.topic.trim()} — generate ${Math.min(60, Math.floor(Number(item.count)))} questions`).join("\n")
-      : prompt
+    const canonicalFormat = normalizeFormatInput(String(type))
+    const requestedTopics: Array<{ topic: string; count: number }> = Array.isArray(topics)
+      ? topics
+          .filter((item: any) => typeof item?.topic === "string" && item.topic.trim() && Number(item?.count) > 0)
+          .slice(0, 10)
+          .map((item: any) => ({
+            topic: item.topic.trim(),
+            count: Math.min(30, Math.max(1, Math.floor(Number(item.count) || 1))),
+          }))
+      : []
+
+    const isBulk = requestedTopics.length > 0
 
     if (!isBulk && (typeof prompt !== "string" || !prompt.trim())) {
       return NextResponse.json({ error: "Topic or question prompt is required" }, { status: 400 })
     }
-    if (type !== "mcq" && type !== "truefalse" && type !== "fillblanks" && type !== "descriptive" && type !== "assertion") {
-      return NextResponse.json({ error: "Unsupported question type" }, { status: 400 })
-    }
 
-    const keys = getGeminiApiKeys()
-    if (keys.length === 0) {
+    if (getGeminiApiKeys().length === 0) {
       return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 })
     }
 
-    const shape = type === "mcq"
-      ? `{"questionText":"string","options":["string","string","string","string"],"correctAnswer":"A","explanation":"string"}`
-      : type === "assertion"
-        ? `{"assertionText":"string","reasonText":"string","questionText":"Assertion (A): string\\nReason (R): string","options":["Both (A) and (R) are true and (R) is the correct explanation of (A)","Both (A) and (R) are true but (R) is not the correct explanation of (A)","(A) is true but (R) is false","(A) is false but (R) is true"],"correctAnswer":"A","explanation":"string"}`
-        : type === "truefalse"
-          ? `{"questionText":"string","correctAnswer":"True","explanation":"string"}`
-          : type === "fillblanks"
-            ? `{"questionText":"string containing one or more ___ blank markers","blanks":[{"answer":"string","alsoAccept":["string"]}]}`
-            : `{"questionText":"string","wordLimit":"150-200 words","modelAnswer":"string","rubric":["criterion 1","criterion 2","criterion 3"]}`
+    const qMarks = Math.max(1, Number(marks) || 1)
+    const qNeg = canonicalFormat === "descriptive" ? 0 : Math.max(0, Number(negativeMark) || 0)
 
-    const questionKind = type === "mcq"
-      ? "multiple-choice question with exactly four options"
-      : type === "assertion"
-        ? "assertion-reason question with Assertion (A) statement, Reason (R) statement, and 4 standard choices"
-        : type === "truefalse"
-          ? "clear true/false statement"
-          : type === "fillblanks"
-            ? "fill-in-the-blanks question with one or more blank markers"
-            : "descriptive question with model answer and grading rubric"
+    const seedExisting = Array.isArray(existingQuestions)
+      ? existingQuestions.map((q: any, i: number) => ({
+          id: String(q?.id || `ex_${i}`),
+          questionText: typeof q === "string" ? q : String(q?.questionText || ""),
+          options: Array.isArray(q?.options) ? q.options : undefined,
+        }))
+      : []
 
-    const promptText = `You are an expert exam question writer. Create ${isBulk ? "the requested questions for every topic below" : `one ${questionKind}`}.
-Topic/request:
-${effectivePrompt.trim()}
-Difficulty: ${difficulty}
-Marks: ${Number(marks) || 1}
+    if (!isBulk) {
+      const batchRes = await generateQuestionBatch({
+        examName: "Standard Assessment",
+        subject: String(subject),
+        grade: grade ? String(grade) : undefined,
+        chapters: [String(prompt).trim()],
+        topics: [String(prompt).trim()],
+        format: canonicalFormat,
+        fibMode: "blanks",
+        count: 1,
+        difficulty: String(difficulty),
+        marks: qMarks,
+        negativeMark: qNeg,
+        existingQuestions: seedExisting,
+        strictSyllabusCheck: false,
+        maxRetriesForDeficit: 2,
+      })
 
-Return only valid JSON ${isBulk ? `as an array, with each item in this exact shape: ${shape}` : `in this exact shape: ${shape}`}
-For MCQ, correctAnswer must be exactly one of A, B, C, or D and options must be distinct.
-For Assertion & Reason, provide Assertion (A) and Reason (R), format questionText as "Assertion (A): [statement]\\nReason (R): [statement]", set 4 standard options (A: Both true & R explains A, B: Both true & R does not explain A, C: A true R false, D: A false R true), and set correctAnswer to A, B, C, or D.
-For True/False, correctAnswer must be exactly True or False.
-For Fill in the Blanks, questionText must contain one ___ marker for every item in blanks. Return the answers in the same order as the markers.
-For Descriptive, provide an engaging questionText, suggested wordLimit, comprehensive modelAnswer, and a 3-point rubric array.
-For any mathematical formula or scientific notation, use standard LaTeX math syntax (e.g. $F = ma$, $\\frac{a}{b}$, $H_2SO_4$).
-Avoid ambiguous wording, trick questions, duplicate options, markdown headings, and markdown code fences.`
-
-    const timeoutMs = Math.min(120_000, Math.max(20_000, totalQuestions * 2500))
-
-    const geminiResult = await generateContentWithKeyRotation({
-      payload: {
-        contents: [
+      if (batchRes.questions.length === 0) {
+        return NextResponse.json(
           {
-            role: "user",
-            parts: [{ text: promptText }],
+            error: "AI failed to produce a valid question matching strict quality rules. Please refine your prompt and retry.",
+            qualityReport: batchRes.qualityReport,
           },
+          { status: 422 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: formatForObjectiveModal(batchRes.questions[0]),
+        qualityReport: batchRes.qualityReport,
+      })
+    }
+
+    // Bulk topic generation with cross-topic duplicate protection
+    const dedup = new QuestionDeduplicator(seedExisting)
+    const allAccepted: CanonicalQuestion[] = []
+    let totalRejected = 0
+
+    for (const row of requestedTopics) {
+      const batchRes = await generateQuestionBatch({
+        examName: "Standard Assessment",
+        subject: String(subject),
+        grade: grade ? String(grade) : undefined,
+        chapters: [row.topic],
+        topics: [row.topic],
+        format: canonicalFormat,
+        fibMode: "blanks",
+        count: row.count,
+        difficulty: String(difficulty),
+        marks: qMarks,
+        negativeMark: qNeg,
+        existingQuestions: [
+          ...seedExisting,
+          ...allAccepted.map((q) => ({ id: q.id, questionText: q.questionText, options: q.options, learningObjective: q.learningObjective })),
         ],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 8192,
-          responseMimeType: "application/json",
-        },
+        strictSyllabusCheck: false,
+        maxRetriesForDeficit: 1,
+      })
+
+      totalRejected += batchRes.qualityReport.rejectedCount
+      for (const q of batchRes.questions) {
+        if (!dedup.check(q).isDuplicate) {
+          dedup.add(q)
+          allAccepted.push(q)
+        }
+      }
+    }
+
+    if (allAccepted.length === 0) {
+      return NextResponse.json(
+        { error: "No valid questions could be generated across the specified topics." },
+        { status: 422 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: allAccepted.map(formatForObjectiveModal),
+      qualityReport: {
+        requestedCount: requestedTopics.reduce((s, r) => s + r.count, 0),
+        acceptedCount: allAccepted.length,
+        rejectedCount: totalRejected,
       },
-      timeoutMs,
     })
-
-    const parsed = robustJsonParse<any>(geminiResult.text)
-    if (!parsed) {
-      throw new Error("Gemini returned invalid JSON")
-    }
-
-    const items = isBulk ? (Array.isArray(parsed) ? parsed : (parsed.questions || [parsed])) : (Array.isArray(parsed) ? parsed : [parsed])
-    if (!Array.isArray(items) || items.length === 0) throw new Error("Gemini returned no questions")
-
-    const validItems = []
-    for (const item of items) {
-      if (typeof item.questionText !== "string" || !item.questionText.trim()) continue
-
-      if (type === "mcq") {
-        if (item.options && !Array.isArray(item.options) && typeof item.options === "object") {
-          item.options = ["A", "B", "C", "D"].map((k) => item.options[k]).filter(Boolean)
-        }
-        if (!Array.isArray(item.options) || item.options.length < 2) continue
-        while (item.options.length < 4) item.options.push(`Option ${item.options.length + 1}`)
-        item.options = item.options.slice(0, 4)
-
-        if (typeof item.correctAnswer === "number") {
-          const map: Record<number, string> = { 0: "A", 1: "B", 2: "C", 3: "D" }
-          item.correctAnswer = map[item.correctAnswer] ?? "A"
-        }
-        if (typeof item.correctAnswer === "string") {
-          const match = item.correctAnswer.trim().toUpperCase().match(/([A-D])/)
-          if (match) item.correctAnswer = match[1]
-        }
-        if (!["A", "B", "C", "D"].includes(item.correctAnswer)) item.correctAnswer = "A"
-      }
-
-      if (type === "assertion") {
-        const assertion = (item.assertionText || "").trim()
-        const reason = (item.reasonText || "").trim()
-        if (!item.questionText || !item.questionText.toLowerCase().includes("reason")) {
-          item.questionText = `Assertion (A): ${assertion || "Statement 1"}\nReason (R): ${reason || "Statement 2"}`
-        }
-        item.assertionText = assertion
-        item.reasonText = reason
-        if (!Array.isArray(item.options) || item.options.length < 4) {
-          item.options = [
-            "Both (A) and (R) are true and (R) is the correct explanation of (A)",
-            "Both (A) and (R) are true but (R) is not the correct explanation of (A)",
-            "(A) is true but (R) is false",
-            "(A) is false but (R) is true"
-          ]
-        }
-        if (typeof item.correctAnswer === "number") {
-          const map: Record<number, string> = { 0: "A", 1: "B", 2: "C", 3: "D" }
-          item.correctAnswer = map[item.correctAnswer] ?? "A"
-        }
-        if (typeof item.correctAnswer === "string") {
-          const match = item.correctAnswer.trim().toUpperCase().match(/([A-D])/)
-          if (match) item.correctAnswer = match[1]
-        }
-        if (!["A", "B", "C", "D"].includes(item.correctAnswer)) item.correctAnswer = "A"
-      }
-
-      if (type === "truefalse") {
-        if (typeof item.correctAnswer === "boolean") {
-          item.correctAnswer = item.correctAnswer ? "True" : "False"
-        } else if (typeof item.correctAnswer === "string") {
-          item.correctAnswer = item.correctAnswer.trim().toLowerCase() === "false" ? "False" : "True"
-        } else {
-          item.correctAnswer = "True"
-        }
-      }
-
-      if (type === "fillblanks") {
-        if (!Array.isArray(item.blanks) || item.blanks.length === 0) {
-          item.blanks = [{ answer: "answer", alsoAccept: [] }]
-        } else {
-          item.blanks = item.blanks.filter((b: any) => typeof b.answer === "string" && b.answer.trim())
-          if (item.blanks.length === 0) {
-            item.blanks = [{ answer: "answer", alsoAccept: [] }]
-          }
-        }
-      }
-
-      if (type === "descriptive") {
-        if (typeof item.modelAnswer !== "string") item.modelAnswer = item.explanation || ""
-        if (typeof item.wordLimit !== "string") item.wordLimit = "150-200 words"
-        if (!Array.isArray(item.rubric) || item.rubric.length === 0) {
-          item.rubric = ["Understanding of core concepts", "Accuracy and completeness", "Clarity and structure"]
-        }
-      }
-
-      validItems.push(item)
-    }
-
-    if (validItems.length === 0) throw new Error("Gemini returned no valid questions. Please try again.")
-    return NextResponse.json({ success: true, data: isBulk ? validItems : validItems[0] })
   } catch (error) {
-    console.error("[GenerateObjectiveQuestion] Error:", error)
+    console.error("[GenerateObjectiveQuestion] Error:", error instanceof Error ? error.message : error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to generate question" },
       { status: 500 }

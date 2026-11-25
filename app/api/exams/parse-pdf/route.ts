@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth"
 // Regex patterns to detect question types and extract content
 const MCQ_OPTION_RE = /^(?:\(|\[)?([A-Ea-e])(?:\)|\]|\.)\s*(.+)$/
 const ANSWER_LINE_RE = /^(?:correct\s*answer|correct|answer|ans)\s*[:=-]\s*([A-Ea-e])/i
+const TRUE_FALSE_ANSWER_RE = /^(?:correct\s*answer|correct|answer|ans)\s*[:=-]\s*(true|false)\b/i
 const BLANK_RE = /_{2,}/g
 const TRUE_FALSE_RE = /\b(true|false)\b/i
 const QUESTION_NUMBER_RE = /^(?:Q(?:uestion)?\.?\s*)?(\d+)\s*[.):-]\s*(.*)/i
@@ -21,6 +22,7 @@ interface ExtractedQuestion {
   wordLimit?: string
   modelAnswer?: string
   rubric?: string[]
+  answerNeedsReview?: boolean
 }
 
 function detectDifficulty(text: string): "easy" | "medium" | "hard" {
@@ -74,7 +76,15 @@ function extractMCQOptions(lines: string[]): { options: string[]; correctAnswer:
     }
   }
 
-  return { options, correctAnswer: correctAnswer || (options.length > 0 ? "A" : "") }
+  return { options, correctAnswer }
+}
+
+function extractTrueFalseAnswer(lines: string[]): "True" | "False" | "" {
+  for (const line of lines) {
+    const match = line.match(TRUE_FALSE_ANSWER_RE)
+    if (match) return match[1].toLowerCase() === "true" ? "True" : "False"
+  }
+  return ""
 }
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
@@ -176,6 +186,7 @@ export async function POST(req: Request) {
           difficulty, marks,
           blanks: Array.from({ length: blanksCount }, () => ({ answer: "", alsoAccept: [] })),
           caseInsensitive: true,
+          answerNeedsReview: true,
         })
         return
       }
@@ -183,12 +194,14 @@ export async function POST(req: Request) {
       // Detect True/False
       const isTF = TRUE_FALSE_RE.test(fullText) && (fullText.toLowerCase().includes("true or false") || fullText.toLowerCase().includes("true/false"))
       if (isTF) {
+        const correctAnswer = extractTrueFalseAnswer(block)
         questions.push({
           type: "truefalse",
           questionText: cleanText,
           difficulty, marks,
-          correctAnswer: "True",
+          correctAnswer,
           explanation: "",
+          answerNeedsReview: !correctAnswer,
         })
         return
       }
@@ -201,9 +214,10 @@ export async function POST(req: Request) {
           type: "mcq",
           questionText: cleanText,
           difficulty, marks,
-          options: options.length > 0 ? options : ["", "", "", ""],
+          options,
           correctAnswer,
           explanation: "",
+          answerNeedsReview: !correctAnswer || options.length !== 4,
         })
         return
       }
