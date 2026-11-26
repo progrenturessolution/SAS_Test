@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import connectDB from "@/lib/mongodb"
+import { getSession } from "@/lib/auth"
 import Attempt from "@/models/Attempt"
 import Exam from "@/models/Exam"
 import { IQuestion } from "@/models/Exam"
@@ -208,7 +209,7 @@ function answersMatch(
 }
 
 // GET /api/attempts/[id]
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
     const { id } = await params
@@ -216,7 +217,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Invalid attempt ID format" }, { status: 400 })
     }
     
-    const attempt = (await Attempt.findById(id).populate("examId", "title totalMarks passMarks duration subject settings sections instituteId").lean()) as any
+    const attempt = (await Attempt.findById(id)
+      .populate("examId", "title totalMarks passMarks duration subject settings sections instituteId createdBy")
+      .lean()) as any
     if (!attempt) {
       return NextResponse.json({ error: "Attempt not found" }, { status: 404 })
     }
@@ -242,8 +245,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       } catch {}
     }
     
+    const session = await getSession(req)
     const examData = attempt.examId as Record<string, unknown> | null
-    const showResults = (examData as any)?.settings?.showResults !== false
+    const examInstituteId = (examData as any)?.instituteId?.toString?.()
+    const examCreatedBy = (examData as any)?.createdBy?.toString?.()
+    const isPlatformAdmin = Boolean(
+      session && !session.instituteId && ["super_admin", "admin"].includes(session.role)
+    )
+    const isCreatorCoaching = Boolean(
+      session &&
+        (
+          (session.instituteId && examInstituteId === session.instituteId) ||
+          (session.id && examCreatedBy === session.id)
+        )
+    )
+    const showResults = isPlatformAdmin || isCreatorCoaching || (examData as any)?.settings?.showResults !== false
     
     // Sanitize attempt data if results are hidden
     const sanitizedAttempt = { ...attempt }

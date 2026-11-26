@@ -75,7 +75,12 @@ export default function FillBlanksPage({ params }: { params: Promise<{ id: strin
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ answers, autoSubmit: true }),
-    }).then(() => router.push(`/exam/${id}/result?attemptId=${attemptId}`))
+    })
+      .then((r) => r.json().catch(() => ({})))
+      .then((data) => {
+        const dest = data?.showResults === false ? "submitted" : "result"
+        router.push(`/exam/${id}/${dest}?attemptId=${attemptId}`)
+      })
   }, [attemptId, exam, blanksAnswers, buildAnswerPayload, id, router])
 
   const { state: procState, requestFullscreen } = useProctoring({

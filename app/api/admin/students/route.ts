@@ -196,6 +196,12 @@ export async function GET(req: Request) {
         const isDeactivated = s.status === "deactivated" || s.isActive === false
         const status = isDeactivated ? "deactivated" : "active"
 
+        const resolvedExamPassword =
+          s.examPassword ||
+          (typeof s.password === "string" && s.password && !s.password.startsWith("$2")
+            ? s.password
+            : "")
+
         return {
           _id: s._id.toString(),
           studentName: s.name,
@@ -209,7 +215,7 @@ export async function GET(req: Request) {
           status,
           isActive: !isDeactivated,
           deactivationReason: s.deactivationReason || "",
-          examPassword: s.examPassword || "",
+          examPassword: resolvedExamPassword,
           createdAt: s.createdAt,
           totalAttempts: attemptMap.get(s.email)?.totalAttempts || 0,
           lastAttempt: attemptMap.get(s.email)?.lastAttempt || "",

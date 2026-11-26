@@ -10,6 +10,12 @@ import {
   ExternalLink, ArrowLeft, ShieldAlert
 } from "lucide-react"
 import { MathRenderer } from "@/components/exam/MathRenderer"
+import {
+  evaluateObjectiveAnswer,
+  getFormattedOptionItems,
+  parseAssertionReasonText,
+} from "@/lib/ai/questionEvaluation"
+import { normalizeCompareText, normalizeTrueFalseAnswer } from "@/lib/ai/canonicalSchema"
 
 interface Section {
   name: string
@@ -385,38 +391,245 @@ export default function GradeAttemptPage({ params }: { params: Promise<{ id: str
                       {/* Question Body */}
                       <div className="p-4 sm:p-6 space-y-4">
                         {/* Question Text */}
-                        <div className="text-xs sm:text-sm text-slate-900 leading-relaxed overflow-x-auto break-words">
-                          <MathRenderer content={q.questionText} />
-                        </div>
+                        {(() => {
+                          const parsedAR = q.type === "assertion" ? parseAssertionReasonText(q.questionText) : null
+                          if (parsedAR) {
+                            return (
+                              <div className="space-y-2.5">
+                                <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/50">
+                                  <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-purple-600 text-white mb-1">
+                                    Assertion (A)
+                                  </span>
+                                  <div className="text-xs sm:text-sm text-slate-900 leading-relaxed overflow-x-auto break-words">
+                                    <MathRenderer content={parsedAR.assertion} />
+                                  </div>
+                                </div>
+                                <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50/50">
+                                  <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-indigo-600 text-white mb-1">
+                                    Reason (R)
+                                  </span>
+                                  <div className="text-xs sm:text-sm text-slate-900 leading-relaxed overflow-x-auto break-words">
+                                    <MathRenderer content={parsedAR.reason} />
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          }
+                          return (
+                            <div className="text-xs sm:text-sm text-slate-900 leading-relaxed overflow-x-auto break-words">
+                              <MathRenderer content={q.questionText} />
+                            </div>
+                          )
+                        })()}
 
                         {/* Aspirant's Answer */}
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
                           <div className="flex items-center gap-1.5 text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
                             <span>Aspirant's Response:</span>
                           </div>
 
-                          <div
-                            className={`rounded-xl p-3.5 border ${
-                              q.type === "coding"
-                                ? "bg-[#131B2A] text-slate-100 font-mono text-xs overflow-x-auto"
-                                : "bg-slate-50/80 border-slate-200 text-slate-800 text-xs sm:text-sm leading-relaxed"
-                            }`}
-                          >
-                            {q.type === "coding" ? (
-                              <pre className="whitespace-pre-wrap">{ans?.answer || "// No response provided"}</pre>
-                            ) : q.type === "mcq" ? (
-                              <div className="space-y-1">
-                                <p className="font-semibold text-slate-700">
-                                  Selected: <span className="font-bold text-slate-900">{ans?.answer !== undefined ? String(ans.answer) : "None"}</span>
-                                </p>
-                                <p className="text-emerald-700 font-semibold">
-                                  Correct: <span className="font-bold">{String(q.correctAnswer)}</span>
+                          {(() => {
+                            const hasOptionsGrid =
+                              Array.isArray(q.options) &&
+                              q.options.length > 0 &&
+                              (q.type === "mcq" ||
+                                q.type === "mcq_multi" ||
+                                q.type === "diagram" ||
+                                q.type === "assertion" ||
+                                q.questionFormat === "mcq_multi" ||
+                                (q.type === "fillblanks" && (!q.blanks || q.blanks.length === 0)))
+
+                            if (q.type === "coding") {
+                              return (
+                                <div className="rounded-xl p-3.5 border bg-[#131B2A] text-slate-100 font-mono text-xs overflow-x-auto">
+                                  <pre className="whitespace-pre-wrap">{ans?.answer || "// No response provided"}</pre>
+                                </div>
+                              )
+                            }
+
+                            if (hasOptionsGrid) {
+                              const evalInfo = evaluateObjectiveAnswer(q as any, ans?.answer)
+                              const studentItems = getFormattedOptionItems(ans?.answer, q.options)
+                              const correctItems = getFormattedOptionItems(q.correctAnswer, q.options)
+
+                              return (
+                                <div className="space-y-3">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {q.options.map((opt: string, optIdx: number) => {
+                                      const optKey = String.fromCharCode(65 + optIdx)
+                                      const optNorm = normalizeCompareText(opt)
+                                      const isSelected = evalInfo.resolvedStudentOptions.some(
+                                        (s) => normalizeCompareText(s) === optNorm
+                                      )
+                                      const isCorrect = evalInfo.resolvedCorrectOptions.some(
+                                        (c) => normalizeCompareText(c) === optNorm
+                                      )
+                                      return (
+                                        <div
+                                          key={`${q._id || q.id}-opt-${optKey}`}
+                                          className={`flex items-start gap-2 rounded-xl border p-2.5 ${
+                                            isCorrect
+                                              ? "border-emerald-500 bg-emerald-50/70 text-emerald-950"
+                                              : isSelected
+                                              ? "border-blue-500 bg-blue-50/70 text-blue-950"
+                                              : "border-slate-200 bg-white text-slate-700"
+                                          }`}
+                                        >
+                                          <span
+                                            className={`w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5 ${
+                                              isCorrect
+                                                ? "bg-emerald-600 text-white"
+                                                : isSelected
+                                                ? "bg-blue-600 text-white"
+                                                : "bg-slate-100 text-slate-700"
+                                            }`}
+                                          >
+                                            {optKey}
+                                          </span>
+                                          <div className="min-w-0 flex-1 text-xs leading-relaxed overflow-x-auto">
+                                            <MathRenderer content={opt} className="text-xs" />
+                                          </div>
+                                          {(isCorrect || isSelected) && (
+                                            <span
+                                              className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
+                                                isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
+                                              }`}
+                                            >
+                                              {isCorrect && isSelected ? "Selected • Correct" : isCorrect ? "Correct" : "Selected"}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                  <div className="rounded-xl p-3 border bg-slate-50/80 border-slate-200 text-xs space-y-1.5">
+                                    <div className="flex items-start gap-2">
+                                      <span className="font-semibold text-slate-600 shrink-0">Selected:</span>
+                                      {studentItems.length > 0 ? (
+                                        <div className="space-y-0.5 font-semibold text-slate-900">
+                                          {studentItems.map((item, i) => (
+                                            <div key={i} className="flex items-start gap-1">
+                                              {item.label && <span className="shrink-0">{item.label}.</span>}
+                                              <MathRenderer content={item.text} className="text-xs" />
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <span className="text-slate-500">None</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                      <span className="font-semibold text-emerald-700 shrink-0">Correct:</span>
+                                      <div className="space-y-0.5 font-semibold text-emerald-800">
+                                        {correctItems.map((item, i) => (
+                                          <div key={i} className="flex items-start gap-1">
+                                            {item.label && <span className="shrink-0">{item.label}.</span>}
+                                            <MathRenderer content={item.text} className="text-xs" />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            }
+
+                            if (q.type === "truefalse") {
+                              const studentTf = normalizeTrueFalseAnswer(
+                                Array.isArray(ans?.answer) ? ans?.answer[0] : ans?.answer
+                              )
+                              const correctTf = normalizeTrueFalseAnswer(q.correctAnswer)
+                              return (
+                                <div className="space-y-2.5">
+                                  <div className="grid grid-cols-2 gap-2.5 max-w-sm">
+                                    {(["True", "False"] as const).map((tf) => {
+                                      const isSelected = studentTf === tf
+                                      const isCorrect = correctTf === tf
+                                      return (
+                                        <div
+                                          key={tf}
+                                          className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-semibold ${
+                                            isCorrect
+                                              ? "border-emerald-500 bg-emerald-50/70 text-emerald-900"
+                                              : isSelected
+                                              ? "border-blue-500 bg-blue-50/70 text-blue-900"
+                                              : "border-slate-200 bg-white text-slate-600"
+                                          }`}
+                                        >
+                                          <span>{tf}</span>
+                                          {(isCorrect || isSelected) && (
+                                            <span
+                                              className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                                                isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
+                                              }`}
+                                            >
+                                              {isCorrect && isSelected ? "Selected • Correct" : isCorrect ? "Correct" : "Selected"}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            }
+
+                            if (q.type === "fillblanks") {
+                              const stuBlanks = Array.isArray(ans?.answer)
+                                ? ans.answer
+                                : ans?.answer
+                                  ? [String(ans.answer)]
+                                  : []
+                              const correctBlanks =
+                                Array.isArray(q.blanks) && q.blanks.length > 0
+                                  ? q.blanks.map((b: any) => b.answer)
+                                  : Array.isArray(q.correctAnswer)
+                                    ? q.correctAnswer
+                                    : q.correctAnswer
+                                      ? [String(q.correctAnswer)]
+                                      : []
+                              return (
+                                <div className="rounded-xl p-3.5 border bg-slate-50/80 border-slate-200 text-xs space-y-2">
+                                  <div>
+                                    <span className="font-semibold text-slate-600 block mb-1">Aspirant Answer:</span>
+                                    {stuBlanks.length > 0 ? (
+                                      <div className="space-y-1">
+                                        {stuBlanks.map((val: string, bi: number) => (
+                                          <div key={bi} className="flex items-start gap-1.5 text-slate-900 font-semibold">
+                                            <span className="shrink-0">{bi + 1}.</span>
+                                            <MathRenderer content={String(val || "—")} className="text-xs" />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-500">No response provided.</span>
+                                    )}
+                                  </div>
+                                  {correctBlanks.length > 0 && (
+                                    <div className="pt-1.5 border-t border-slate-200/70">
+                                      <span className="font-semibold text-emerald-700 block mb-1">Correct Answer:</span>
+                                      <div className="space-y-1">
+                                        {correctBlanks.map((val: string, bi: number) => (
+                                          <div key={bi} className="flex items-start gap-1.5 text-emerald-800 font-semibold">
+                                            <span className="shrink-0">{bi + 1}.</span>
+                                            <MathRenderer content={String(val || "—")} className="text-xs" />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            }
+
+                            return (
+                              <div className="rounded-xl p-3.5 border bg-slate-50/80 border-slate-200 text-slate-800 text-xs sm:text-sm leading-relaxed">
+                                <p className="whitespace-pre-wrap break-words">
+                                  {Array.isArray(ans?.answer) ? ans.answer.join(", ") : ans?.answer || "No response provided."}
                                 </p>
                               </div>
-                            ) : (
-                              <p className="whitespace-pre-wrap break-words">{ans?.answer || "No response provided."}</p>
-                            )}
-                          </div>
+                            )
+                          })()}
                         </div>
 
                         {/* AI Evaluation Breakdown (For Descriptive Questions) */}

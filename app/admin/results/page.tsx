@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Filter, Share2, Check, Globe, Users, Search, X } from "lucide-react"
+import { Filter, Share2, Check, Globe, Users, Search, X, Mail, Phone, Hash, Award, Calendar, ShieldAlert, ExternalLink, User } from "lucide-react"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { Toaster } from "@/components/ui/toaster"
 import { ResultActionMenu } from "@/components/ResultActionMenu"
@@ -15,6 +15,7 @@ interface Result {
   examSubject: string
   studentName: string
   studentEmail: string
+  studentPhone?: string
   rollNumber: string
   candidateType?: "institute" | "public"
   score?: number
@@ -37,6 +38,7 @@ function ResultsPageInner() {
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [profileResult, setProfileResult] = useState<Result | null>(null)
 
   const copyShareLink = () => {
     if (!examId) return
@@ -80,7 +82,10 @@ function ResultsPageInner() {
       (r) =>
         r.studentName?.toLowerCase().includes(q) ||
         r.rollNumber?.toLowerCase().includes(q) ||
-        r.studentEmail?.toLowerCase().includes(q)
+        r.studentEmail?.toLowerCase().includes(q) ||
+        r.studentPhone?.toLowerCase().includes(q) ||
+        r.examTitle?.toLowerCase().includes(q) ||
+        r.examSubject?.toLowerCase().includes(q)
     )
   }, [results, search])
 
@@ -127,11 +132,11 @@ function ResultsPageInner() {
           {/* Controls: Search + Side-by-side Dropdown Filters */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 flex-1 flex-wrap">
             {/* Search Input */}
-            <div className="relative w-full sm:w-64 md:w-72 shrink-0">
+            <div className="relative w-full sm:w-72 md:w-80 shrink-0">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
               <input
                 type="text"
-                placeholder="Search candidates by name, roll..."
+                placeholder="Search by name, roll, email, or exam name..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-9 pr-8 py-2 bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-all shadow-2xs"
@@ -310,17 +315,33 @@ function ResultsPageInner() {
                   </td>
                 </tr>
               )}
-              {filteredResults.map((r) => (
+              {filteredResults.map((r) => {
+                const warningCount = r.proctoring?.warnings || 0
+                return (
                 <tr key={r._id} className="border-b border-gray-50 hover:bg-gray-50 last:border-0">
                   <td className="px-5 py-4">
-                    <p className="text-sm font-medium text-foreground">{r.studentName}</p>
+                    <button
+                      type="button"
+                      onClick={() => setProfileResult(r)}
+                      className="text-left group cursor-pointer"
+                      title="View Candidate Profile"
+                    >
+                      <p className="text-sm font-medium text-foreground group-hover:text-primary group-hover:underline">
+                        {r.studentName}
+                      </p>
+                    </button>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
                       <span className="text-xs text-gray-400">{r.rollNumber}</span>
                       {r.candidateType === "public" ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-full">
+                        <button
+                          type="button"
+                          onClick={() => setProfileResult(r)}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-2 py-0.5 rounded-full cursor-pointer transition-colors"
+                          title="Open Public Candidate Profile"
+                        >
                           <Globe size={10} className="shrink-0" />
                           Public Candidate
-                        </span>
+                        </button>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
                           <Users size={10} className="shrink-0" />
@@ -369,23 +390,176 @@ function ResultsPageInner() {
                       </span>
                     )}
                   </td>
-                  <td className="px-5 py-4">
-                    <span className={`text-[10px] font-bold w-fit px-2.5 py-1 rounded-full border ${r.proctoring.warnings > 0 ? "text-amber-800 bg-amber-50 border-amber-200/80" : "text-gray-500 bg-gray-50 border-gray-100"}`}>
-                      {r.proctoring.warnings} warnings
+                  <td className="px-5 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex items-center whitespace-nowrap text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
+                        warningCount > 0
+                          ? "text-amber-800 bg-amber-50 border-amber-200/80"
+                          : "text-slate-600 bg-slate-50 border-slate-200/80"
+                      }`}
+                    >
+                      {warningCount === 0
+                        ? "No warnings"
+                        : `${warningCount} ${warningCount === 1 ? "warning" : "warnings"}`}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-[11px] font-medium text-gray-500">
+                  <td className="px-5 py-4 whitespace-nowrap text-[11px] font-medium text-gray-500">
                     {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                   </td>
                   <td className="px-5 py-4 text-right">
-                    <ResultActionMenu result={r} />
+                    <ResultActionMenu result={r} onViewProfile={() => setProfileResult(r)} />
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         )}
       </div>
+      {profileResult && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[2px] flex items-center justify-center p-4"
+          onClick={() => setProfileResult(null)}
+        >
+          <div
+            className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 bg-[#131B2A] text-white flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-sm font-bold shrink-0">
+                  {profileResult.studentName?.charAt(0).toUpperCase() || <User size={18} />}
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-sm sm:text-base font-bold truncate">
+                    {profileResult.studentName}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {profileResult.candidateType === "public" ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-blue-500/20 text-blue-200 px-2 py-0.5 rounded-full">
+                        <Globe size={10} /> Public Exam Applicant
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-white/15 text-slate-200 px-2 py-0.5 rounded-full">
+                        <Users size={10} /> Enrolled Aspirant
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProfileResult(null)}
+                className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                aria-label="Close profile"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 divide-y divide-slate-200/70 text-xs">
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                  <span className="inline-flex items-center gap-1.5 text-slate-500 font-medium shrink-0">
+                    <Mail size={13} className="text-slate-400" /> Email
+                  </span>
+                  <span className="font-semibold text-slate-800 break-all text-right">
+                    {profileResult.studentEmail || "—"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                  <span className="inline-flex items-center gap-1.5 text-slate-500 font-medium shrink-0">
+                    <Phone size={13} className="text-slate-400" /> Mobile Number
+                  </span>
+                  <span className="font-semibold text-slate-800 text-right">
+                    {profileResult.studentPhone || "Not provided"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                  <span className="inline-flex items-center gap-1.5 text-slate-500 font-medium shrink-0">
+                    <Hash size={13} className="text-slate-400" /> Roll / Applicant ID
+                  </span>
+                  <span className="font-semibold text-slate-800 text-right">
+                    {profileResult.rollNumber || "—"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                  <span className="inline-flex items-center gap-1.5 text-slate-500 font-medium shrink-0">
+                    <Award size={13} className="text-slate-400" /> Exam
+                  </span>
+                  <span className="font-semibold text-slate-800 text-right truncate max-w-[220px]" title={profileResult.examTitle}>
+                    {profileResult.examTitle}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                  <span className="inline-flex items-center gap-1.5 text-slate-500 font-medium shrink-0">
+                    <Calendar size={13} className="text-slate-400" /> Submitted
+                  </span>
+                  <span className="font-semibold text-slate-800 text-right">
+                    {profileResult.submittedAt
+                      ? new Date(profileResult.submittedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+                      : "—"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2.5 text-center">
+                <div className="rounded-xl border border-slate-200 p-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Score</p>
+                  <p className="text-sm font-bold text-slate-900 mt-0.5">
+                    {profileResult.score ?? "—"} / {profileResult.maxScore ?? "—"}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Percentage</p>
+                  <p className="text-sm font-bold text-slate-900 mt-0.5">
+                    {profileResult.percentage ?? "—"}%
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Warnings</p>
+                  <p className="text-sm font-bold text-slate-900 mt-0.5">
+                    {profileResult.proctoring?.warnings || 0}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                <Link
+                  href={`/admin/results/${profileResult._id}`}
+                  onClick={() => setProfileResult(null)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <ShieldAlert size={13} /> Proctoring
+                </Link>
+                <Link
+                  href={`/admin/results/${profileResult._id}/review`}
+                  onClick={() => setProfileResult(null)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <Award size={13} /> Review &amp; Grade
+                </Link>
+                {profileResult.examId && (
+                  <Link
+                    href={`/exam/${profileResult.examId}/result/analytics?attemptId=${profileResult._id}`}
+                    target="_blank"
+                    onClick={() => setProfileResult(null)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#131B2A] hover:bg-[#1f293d] text-xs font-semibold text-white transition-colors"
+                  >
+                    <span>Analytics</span>
+                    <ExternalLink size={12} />
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Toaster />
     </div>
   )

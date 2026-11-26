@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Eye, Pencil, Trash2, Link2, BarChart2, UserCheck, FileText, PlayCircle, HelpCircle, Users, Building2, ShieldAlert, Lock, Calendar, AlertCircle } from "lucide-react"
 import { ExamActionMenu } from "@/components/ExamActionMenu"
 import { toast } from "sonner"
-import { getExamEditUrl } from "@/lib/examEditHelper"
+import { getExamEditUrl, getExamSectionLabel, getExamSectionSource, type ExamSectionSource } from "@/lib/examEditHelper"
 import { formatDateDDMMYYYY } from "@/lib/utils"
 
 interface Stats {
@@ -46,6 +46,7 @@ export default function AdminDashboardClient() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [exams, setExams] = useState<Exam[]>([])
   const [search, setSearch] = useState("")
+  const [sectionFilter, setSectionFilter] = useState<"all" | ExamSectionSource>("all")
   const [copied, setCopied] = useState<string | null>(null)
   const [copiedPublic, setCopiedPublic] = useState<string | null>(null)
   const [hasExamAccess, setHasExamAccess] = useState(true)
@@ -137,11 +138,30 @@ export default function AdminDashboardClient() {
   const totalQuestions = (exam: Exam) =>
     exam.sections?.reduce((sum, sec) => sum + (sec.questions?.length || 0), 0) || 0
 
-  const filtered = exams.filter(
-    (e) =>
-      e.title.toLowerCase().includes(search.toLowerCase()) ||
-      e.subject.toLowerCase().includes(search.toLowerCase())
-  )
+  const sectionCounts = {
+    all: exams.length,
+    exam: exams.filter((e) => getExamSectionSource(e) === "exam").length,
+    entrance: exams.filter((e) => getExamSectionSource(e) === "entrance").length,
+    other: exams.filter((e) => getExamSectionSource(e) === "other").length,
+  }
+
+  const filtered = exams.filter((e) => {
+    const matchSection = sectionFilter === "all" || getExamSectionSource(e) === sectionFilter
+    if (!matchSection) return false
+    const q = search.trim().toLowerCase()
+    if (!q) return true
+    return (
+      e.title.toLowerCase().includes(q) ||
+      e.subject.toLowerCase().includes(q) ||
+      getExamSectionLabel(e).toLowerCase().includes(q)
+    )
+  })
+
+  const sectionBadgeClass = (source: ExamSectionSource) => {
+    if (source === "entrance") return "bg-indigo-50 text-indigo-700 border border-indigo-200"
+    if (source === "other") return "bg-purple-50 text-purple-700 border border-purple-200"
+    return "bg-slate-100 text-slate-700 border border-slate-200"
+  }
 
   const statusColor = (s: string) => {
     if (s === "active") return "bg-[#eaf0f8] text-[#324158] border border-[#cbd5e1] font-semibold"
@@ -317,14 +337,45 @@ export default function AdminDashboardClient() {
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-100">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-100">
           <div>
             <h2 className="font-semibold text-primary text-base">Recent Exams</h2>
             <p className="text-xs text-gray-500 mt-0.5">Quick access to manage and review active test sessions</p>
           </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-1.5 self-start lg:self-auto">
+            {(
+              [
+                { id: "all", label: "All", count: sectionCounts.all },
+                { id: "exam", label: "Exam Section", count: sectionCounts.exam },
+                { id: "entrance", label: "Entrance Exam", count: sectionCounts.entrance },
+                { id: "other", label: "Other Exams", count: sectionCounts.other },
+              ] as const
+            ).map((sec) => {
+              const active = sectionFilter === sec.id
+              return (
+                <button
+                  key={sec.id}
+                  type="button"
+                  onClick={() => setSectionFilter(sec.id)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer inline-flex items-center gap-1 border ${
+                    active
+                      ? "bg-[#324158] text-white border-[#324158] shadow-2xs"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>{sec.label}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {sec.count}
+                  </span>
+                </button>
+              )
+            })}
             {filtered.length > 0 && (
-              <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
+              <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full font-medium ml-1">
                 {filtered.length} {filtered.length === 1 ? "exam" : "exams"}
               </span>
             )}
@@ -335,15 +386,33 @@ export default function AdminDashboardClient() {
         <div className="block sm:hidden divide-y divide-gray-100">
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-gray-400 text-sm">
-              No exams found.{" "}
-              {effectiveQuotaReached ? (
-                <span className="text-amber-700 font-medium block mt-1">
-                  Exam quota reached ({effectiveExamCount}/{effectiveMaxExams}). Contact administrator.
-                </span>
+              {sectionFilter !== "all" || search ? (
+                <>
+                  No matching exams found.{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearch("")
+                      setSectionFilter("all")
+                    }}
+                    className="text-[#324158] hover:underline font-semibold block mt-1 mx-auto cursor-pointer"
+                  >
+                    Reset filters
+                  </button>
+                </>
               ) : (
-                <Link href="/admin/exams/create" className="text-[#324158] hover:underline font-semibold block mt-1">
-                  Create your first exam
-                </Link>
+                <>
+                  No exams found.{" "}
+                  {effectiveQuotaReached ? (
+                    <span className="text-amber-700 font-medium block mt-1">
+                      Exam quota reached ({effectiveExamCount}/{effectiveMaxExams}). Contact administrator.
+                    </span>
+                  ) : (
+                    <Link href="/admin/exams/create" className="text-[#324158] hover:underline font-semibold block mt-1">
+                      Create your first exam
+                    </Link>
+                  )}
+                </>
               )}
             </div>
           ) : (
@@ -353,6 +422,9 @@ export default function AdminDashboardClient() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-primary text-sm leading-snug line-clamp-2">{exam.title}</p>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold ${sectionBadgeClass(getExamSectionSource(exam))}`}>
+                        {getExamSectionLabel(exam)}
+                      </span>
                       <span className="text-[11px] font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
                         {exam.subject}
                       </span>
@@ -444,15 +516,33 @@ export default function AdminDashboardClient() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="text-center py-16 text-gray-400 text-sm">
-                    No exams found.{" "}
-                    {effectiveQuotaReached ? (
-                      <span className="text-amber-700 font-medium">
-                        Exam quota reached ({effectiveExamCount}/{effectiveMaxExams}). Contact administrator.
-                      </span>
+                    {sectionFilter !== "all" || search ? (
+                      <>
+                        No matching exams found.{" "}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearch("")
+                            setSectionFilter("all")
+                          }}
+                          className="text-[#324158] hover:underline font-semibold cursor-pointer"
+                        >
+                          Reset filters
+                        </button>
+                      </>
                     ) : (
-                      <Link href="/admin/exams/create" className="text-[#324158] hover:underline font-semibold">
-                        Create your first exam
-                      </Link>
+                      <>
+                        No exams found.{" "}
+                        {effectiveQuotaReached ? (
+                          <span className="text-amber-700 font-medium">
+                            Exam quota reached ({effectiveExamCount}/{effectiveMaxExams}). Contact administrator.
+                          </span>
+                        ) : (
+                          <Link href="/admin/exams/create" className="text-[#324158] hover:underline font-semibold">
+                            Create your first exam
+                          </Link>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>
@@ -461,7 +551,12 @@ export default function AdminDashboardClient() {
                 <tr key={exam._id} className="border-b border-gray-50 hover:bg-gray-50/80 transition-colors last:border-0">
                   <td className="px-4 sm:px-6 py-3.5 sm:py-4">
                     <p className="font-medium text-primary text-sm line-clamp-1">{exam.title}</p>
-                    {exam.class && <p className="text-xs text-gray-400 mt-0.5">{exam.class}</p>}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold ${sectionBadgeClass(getExamSectionSource(exam))}`}>
+                        {getExamSectionLabel(exam)}
+                      </span>
+                      {exam.class && <span className="text-xs text-gray-400">{exam.class}</span>}
+                    </div>
                   </td>
                   <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-sm text-gray-600">{exam.subject}</td>
                   <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-sm text-gray-600 font-medium">{totalQuestions(exam)}</td>

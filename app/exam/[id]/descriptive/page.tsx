@@ -67,7 +67,12 @@ export default function DescriptivePage({ params }: { params: Promise<{ id: stri
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ answers, autoSubmit: true }),
-    }).then(() => router.push(`/exam/${id}/result?attemptId=${attemptId}`))
+    })
+      .then((r) => r.json().catch(() => ({})))
+      .then((data) => {
+        const dest = data?.showResults === false ? "submitted" : "result"
+        router.push(`/exam/${id}/${dest}?attemptId=${attemptId}`)
+      })
   }, [attemptId, exam, textAnswers, buildPayload, id, router])
 
   const { state: procState, requestFullscreen } = useProctoring({

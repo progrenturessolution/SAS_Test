@@ -88,7 +88,12 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ answers, autoSubmit: true }),
-    }).then(() => router.push(`/exam/${id}/result?attemptId=${attemptId}`))
+    })
+      .then((r) => r.json().catch(() => ({})))
+      .then((data) => {
+        const dest = data?.showResults === false ? "submitted" : "result"
+        router.push(`/exam/${id}/${dest}?attemptId=${attemptId}`)
+      })
   }, [attemptId, exam, codes, id, router])
 
   const { state: procState, requestFullscreen } = useProctoring({
@@ -141,12 +146,14 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
       sectionType: "coding",
       answer: codes[q._id] ?? "",
     })) ?? []
-    await fetch(`/api/attempts/${attemptId}`, {
+    const res = await fetch(`/api/attempts/${attemptId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ answers, autoSubmit: false, timeSpent: exam.duration * 60 - timeLeft }),
     })
-    router.push(`/exam/${id}/result?attemptId=${attemptId}`)
+    const data = await res.json().catch(() => ({}))
+    const dest = data?.showResults === false ? "submitted" : "result"
+    router.push(`/exam/${id}/${dest}?attemptId=${attemptId}`)
   }
 
   if (!exam) return <CodingPageSkeleton />
@@ -196,15 +203,14 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
             <div className="px-3 py-1.5 bg-[#2D3A4A] text-white text-sm font-bold rounded">Q{currentQ + 1}</div>
             <div className="px-3 py-1.5 bg-blue-100 text-blue-600 text-xs font-semibold rounded-full">{question?.marks} Marks</div>
             {question?.difficulty && (
-              <div className={`px-3 py-1.5 text-xs font-semibold rounded-full ${
-                question.difficulty === "easy" ? "bg-green-100 text-green-600" :
-                question.difficulty === "medium" ? "bg-yellow-100 text-yellow-600" :
-                "bg-red-100 text-red-600"
-              }`}>
+              <div className={`px-3 py-1.5 text-xs font-semibold rounded-full ${question.difficulty === "easy" ? "bg-green-100 text-green-600" :
+                  question.difficulty === "medium" ? "bg-yellow-100 text-yellow-600" :
+                    "bg-red-100 text-red-600"
+                }`}>
                 {question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
               </div>
             )}
-            <button onClick={() => {}} className="ml-auto p-1 hover:bg-gray-100 rounded">
+            <button onClick={() => { }} className="ml-auto p-1 hover:bg-gray-100 rounded">
               <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
               </svg>
@@ -217,11 +223,10 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-2 text-sm font-semibold transition-colors relative ${
-                  activeTab === tab
+                className={`pb-2 text-sm font-semibold transition-colors relative ${activeTab === tab
                     ? "text-[#324158]"
                     : "text-gray-500 hover:text-gray-700"
-                } ${activeTab === tab ? "border-b-2 border-[#2D3A4A]" : ""}`}
+                  } ${activeTab === tab ? "border-b-2 border-[#2D3A4A]" : ""}`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -285,11 +290,10 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
                     <button
                       key={l}
                       onClick={() => setLang(l)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
-                        l === lang
+                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${l === lang
                           ? "bg-[#2D3A4A] text-white"
                           : "border border-gray-200 text-gray-600 hover:bg-gray-50"
-                      }`}
+                        }`}
                     >
                       {l}
                     </button>
@@ -353,11 +357,10 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
                       <div key={i} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <div className="flex items-center gap-3 mb-3">
                           <span className="text-sm font-bold text-gray-600">Test {i + 1}</span>
-                          <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                            testResults[i]?.passed
+                          <span className={`text-xs font-semibold px-2 py-1 rounded ${testResults[i]?.passed
                               ? "bg-green-100 text-[#10B981]"
                               : "bg-red-100 text-red-600"
-                          }`}>
+                            }`}>
                             {testResults[i]?.passed ? "✓ Passed" : "✗ Failed"}
                           </span>
                           {tc.input && <span className="ml-auto text-xs text-gray-500">{tc.input}</span>}
@@ -391,7 +394,7 @@ export default function CodingPage({ params }: { params: Promise<{ id: string }>
 
         <div className="flex items-center gap-3">
           <span className="text-xs font-bold text-gray-600">{currentQ + 1}/{questions.length}</span>
-          <button onClick={() => {}} className="p-2 hover:bg-gray-100 rounded" title="Mark for review">
+          <button onClick={() => { }} className="p-2 hover:bg-gray-100 rounded" title="Mark for review">
             <Flag size={18} className="text-gray-600" />
           </button>
         </div>

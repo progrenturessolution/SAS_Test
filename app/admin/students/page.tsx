@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useRef, useCallback } from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import {
   Search,
@@ -28,7 +29,11 @@ import {
   Eye,
   EyeOff,
   Users,
+  FileSpreadsheet,
+  Upload,
+  Download,
 } from "lucide-react"
+import * as XLSX from "xlsx"
 import { AdminListSkeleton } from "@/components/SkeletonLoaders"
 import { Toaster } from "@/components/ui/toaster"
 import { toast } from "sonner"
@@ -53,6 +58,240 @@ interface Student {
   avgPercentage?: number
 }
 
+interface ParsedExcelStudentRow {
+  rowNumber: number
+  name: string
+  email: string
+  rollNumber: string
+  password: string
+  phone: string
+  batch: string
+  totalFees: number
+  completedFees: number
+  error?: string
+}
+
+interface BulkUploadSummary {
+  createdCount: number
+  skippedCount: number
+  skippedRows: {
+    rowNumber: number
+    name: string
+    email: string
+    rollNumber: string
+    reason: string
+  }[]
+}
+
+interface StudentActionMenuProps {
+  student: Student
+  isDeactivated: boolean
+  isOpen: boolean
+  activating: boolean
+  deleting: boolean
+  ariaLabel?: string
+  onToggle: () => void
+  onClose: () => void
+  onViewProfile: () => void
+  onEdit: () => void
+  onActivate: () => void
+  onDeactivate: () => void
+  onDelete: () => void
+}
+
+function StudentActionMenu({
+  isDeactivated,
+  isOpen,
+  activating,
+  deleting,
+  ariaLabel = "More options",
+  onToggle,
+  onClose,
+  onViewProfile,
+  onEdit,
+  onActivate,
+  onDeactivate,
+  onDelete,
+}: StudentActionMenuProps) {
+  const [mounted, setMounted] = useState(false)
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; left: number; maxHeight: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+
+    // Skip invisible/display:none trigger elements so a hidden mobile/desktop copy never opens a portal at (0,0)
+    if (rect.width === 0 || rect.height === 0) {
+      setMenuPos(null)
+      return
+    }
+
+    const viewportHeight = window.innerHeight
+    const viewportWidth = window.innerWidth
+
+    if (rect.bottom < 0 || rect.top > viewportHeight) {
+      onClose()
+      return
+    }
+
+    const menuWidth = 192 // w-48
+    const estimatedHeight = 205
+    let left = rect.right - menuWidth
+    if (left < 8) left = 8
+    if (left + menuWidth > viewportWidth - 8) {
+      left = Math.max(8, viewportWidth - menuWidth - 8)
+    }
+
+    const spaceBelow = viewportHeight - rect.bottom
+    const spaceAbove = rect.top
+
+    if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
+      setMenuPos({
+        top: undefined,
+        bottom: viewportHeight - rect.top + 6,
+        left,
+        maxHeight: Math.max(150, spaceAbove - 16),
+      })
+    } else {
+      setMenuPos({
+        top: rect.bottom + 6,
+        bottom: undefined,
+        left,
+        maxHeight: Math.max(150, spaceBelow - 16),
+      })
+    }
+  }, [onClose])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setMenuPos(null)
+      return
+    }
+    updatePosition()
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(target) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(target)
+      ) {
+        onClose()
+      }
+    }
+
+    const handleScrollOrResize = () => updatePosition()
+
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("touchstart", handleClickOutside, { passive: true })
+    document.addEventListener("scroll", handleScrollOrResize, { capture: true, passive: true })
+    window.addEventListener("resize", handleScrollOrResize, { passive: true })
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("touchstart", handleClickOutside)
+      document.removeEventListener("scroll", handleScrollOrResize, { capture: true })
+      window.removeEventListener("resize", handleScrollOrResize)
+    }
+  }, [isOpen, updatePosition, onClose])
+
+  return (
+    <div className="relative inline-block text-left">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          if (!isOpen) updatePosition()
+          onToggle()
+        }}
+        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+        title={ariaLabel}
+        aria-label={ariaLabel}
+        aria-expanded={isOpen}
+      >
+        <MoreVertical size={16} />
+      </button>
+
+      {mounted &&
+        isOpen &&
+        menuPos &&
+        createPortal(
+          <div
+            ref={menuRef}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "fixed",
+              left: `${menuPos.left}px`,
+              ...(menuPos.top !== undefined ? { top: `${menuPos.top}px` } : { bottom: `${menuPos.bottom}px` }),
+              maxHeight: `${menuPos.maxHeight}px`,
+            }}
+            className="w-48 overflow-y-auto rounded-xl bg-white border border-gray-200 shadow-xl py-1 z-[9999] focus:outline-none animate-in fade-in zoom-in-95 duration-100"
+          >
+            <button
+              type="button"
+              onClick={onViewProfile}
+              className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <User size={14} className="text-[#324158]" />
+              <span>View Profile</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onEdit}
+              className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <Edit3 size={14} className="text-[#324158]" />
+              <span>Edit Aspirant</span>
+            </button>
+
+            {isDeactivated ? (
+              <button
+                type="button"
+                disabled={activating}
+                onClick={onActivate}
+                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
+              >
+                <UserCheck size={14} />
+                <span>{activating ? "Activating..." : "Activate Aspirant"}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onDeactivate}
+                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
+              >
+                <UserX size={14} className="text-[#324158]" />
+                <span>Deactivate Aspirant</span>
+              </button>
+            )}
+
+            <div className="border-t border-gray-100 my-1" />
+
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={onDelete}
+              className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
+            >
+              <Trash2 size={14} />
+              <span>{deleting ? "Removing..." : "Remove Aspirant"}</span>
+            </button>
+          </div>,
+          document.body
+        )}
+    </div>
+  )
+}
+
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
@@ -63,11 +302,20 @@ export default function StudentsPage() {
 
   // Modals & Popups
   const [showAddStudent, setShowAddStudent] = useState(false)
+  const [showBulkUpload, setShowBulkUpload] = useState(false)
   const [showAddPassword, setShowAddPassword] = useState(false)
   const [showEditPassword, setShowEditPassword] = useState(false)
   const [profileStudent, setProfileStudent] = useState<Student | null>(null)
   const [editStudent, setEditStudent] = useState<Student | null>(null)
   const [activeMenuStudentId, setActiveMenuStudentId] = useState<string | null>(null)
+
+  // Bulk Excel Upload state
+  const bulkFileInputRef = useRef<HTMLInputElement>(null)
+  const [bulkFileName, setBulkFileName] = useState("")
+  const [bulkRows, setBulkRows] = useState<ParsedExcelStudentRow[]>([])
+  const [bulkParseError, setBulkParseError] = useState("")
+  const [uploadingBulk, setUploadingBulk] = useState(false)
+  const [bulkResult, setBulkResult] = useState<BulkUploadSummary | null>(null)
 
   // Deactivate state
   const [deactivateTarget, setDeactivateTarget] = useState<Student | null>(null)
@@ -133,22 +381,9 @@ export default function StudentsPage() {
     return () => window.removeEventListener("institute-settings-updated", handleThemeUpdate)
   }, [])
 
-  // Close 3-dot menu on click outside anywhere on the screen
-  useEffect(() => {
-    if (!activeMenuStudentId) return
-    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
-      const target = event.target as HTMLElement
-      if (!target.closest(".student-action-menu-container")) {
-        setActiveMenuStudentId(null)
-      }
-    }
-    document.addEventListener("mousedown", handleOutsideClick)
-    document.addEventListener("touchstart", handleOutsideClick, { passive: true })
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick)
-      document.removeEventListener("touchstart", handleOutsideClick)
-    }
-  }, [activeMenuStudentId])
+  const closeActionMenu = useCallback(() => {
+    setActiveMenuStudentId(null)
+  }, [])
 
   const loadStudents = () => {
     setLoading(true)
@@ -457,6 +692,217 @@ export default function StudentsPage() {
     }
   }
 
+  const resetBulkUploadState = () => {
+    setBulkFileName("")
+    setBulkRows([])
+    setBulkParseError("")
+    setBulkResult(null)
+    if (bulkFileInputRef.current) bulkFileInputRef.current.value = ""
+  }
+
+  const handleDownloadSampleExcel = () => {
+    const sampleRows = [
+      {
+        Name: "Aarav Sharma",
+        Email: "aarav.sharma@example.com",
+        "Roll Number": "JEE-2026-001",
+        Password: "pass1234",
+        Phone: "9876543210",
+        Batch: "JEE Batch A - 2026",
+        "Total Fees": 25000,
+        "Completed Fees": 15000,
+      },
+      {
+        Name: "Diya Patel",
+        Email: "diya.patel@example.com",
+        "Roll Number": "NEET-2026-002",
+        Password: "diya2026",
+        Phone: "9123456789",
+        Batch: "NEET Target - 2026",
+        "Total Fees": 30000,
+        "Completed Fees": 30000,
+      },
+    ]
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleRows)
+    worksheet["!cols"] = [
+      { wch: 20 },
+      { wch: 28 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 15 },
+      { wch: 22 },
+      { wch: 12 },
+      { wch: 15 },
+    ]
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Aspirants")
+    XLSX.writeFile(workbook, "aspirants-upload-template.xlsx")
+    toast.success("Sample Excel template downloaded!")
+  }
+
+  const handleExcelFileChange = async (file: File | undefined) => {
+    if (!file) return
+    setBulkParseError("")
+    setBulkResult(null)
+    setBulkRows([])
+
+    const ext = file.name.split(".").pop()?.toLowerCase()
+    if (!ext || !["xlsx", "xls", "csv"].includes(ext)) {
+      setBulkParseError("Please upload a valid Excel (.xlsx, .xls) or CSV (.csv) file.")
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setBulkParseError("Excel file size must be less than 5MB.")
+      return
+    }
+
+    try {
+      const buffer = await file.arrayBuffer()
+      const workbook = XLSX.read(buffer, { type: "array" })
+      const firstSheetName = workbook.SheetNames[0]
+      if (!firstSheetName) {
+        setBulkParseError("The uploaded workbook has no sheets.")
+        return
+      }
+
+      const sheet = workbook.Sheets[firstSheetName]
+      const rawJson = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+        defval: "",
+        raw: false,
+      })
+
+      if (rawJson.length === 0) {
+        setBulkParseError("No rows found in the uploaded Excel sheet.")
+        return
+      }
+
+      const normalizeKey = (key: string) =>
+        key
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "")
+
+      const pickField = (row: Record<string, unknown>, aliases: string[]) => {
+        for (const [k, v] of Object.entries(row)) {
+          if (aliases.includes(normalizeKey(k))) {
+            return String(v ?? "").trim()
+          }
+        }
+        return ""
+      }
+
+      const existingEmails = new Set(students.map((s) => s.email?.toLowerCase()).filter(Boolean))
+      const existingRolls = new Set(students.map((s) => s.rollNumber?.trim().toLowerCase()).filter(Boolean))
+      const seenSheetEmails = new Set<string>()
+      const seenSheetRolls = new Set<string>()
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+      const parsed: ParsedExcelStudentRow[] = rawJson
+        .map((row, idx) => {
+          const rowNumber = idx + 2
+          const name = pickField(row, ["name", "fullname", "studentname", "aspirantname", "candidatename"])
+          const email = pickField(row, ["email", "emailaddress", "mail", "studentemail"]).toLowerCase()
+          const rollNumber = pickField(row, ["rollnumber", "rollno", "roll", "candidateid", "studentid", "id"])
+          const password = pickField(row, ["password", "exampassword", "pass", "loginpassword"])
+          const phone = pickField(row, ["phone", "phonenumber", "mobile", "mobilenumber", "contact", "contactnumber"])
+          const batch = pickField(row, ["batch", "class", "course", "batchclass"])
+          const totalFees = Math.max(0, Number(pickField(row, ["totalfees", "totalfee", "fees", "fee"])) || 0)
+          const completedFees = Math.max(0, Number(pickField(row, ["completedfees", "paidfees", "paid", "feespaid", "completedfee"])) || 0)
+
+          if (!name && !email && !rollNumber && !password && !phone && !batch) {
+            return null
+          }
+
+          let error = ""
+          if (!name || !email || !rollNumber || !password) {
+            error = "Missing required column (Name, Email, Roll Number, or Password)"
+          } else if (!emailPattern.test(email)) {
+            error = "Invalid email format"
+          } else if (password.length < 6) {
+            error = "Password must be at least 6 characters"
+          } else if (seenSheetEmails.has(email)) {
+            error = "Duplicate email in file"
+          } else if (seenSheetRolls.has(rollNumber.toLowerCase())) {
+            error = "Duplicate roll number in file"
+          } else if (existingEmails.has(email)) {
+            error = "Email already registered"
+          } else if (existingRolls.has(rollNumber.toLowerCase())) {
+            error = "Roll number already exists"
+          }
+
+          if (email) seenSheetEmails.add(email)
+          if (rollNumber) seenSheetRolls.add(rollNumber.toLowerCase())
+
+          return {
+            rowNumber,
+            name,
+            email,
+            rollNumber,
+            password,
+            phone,
+            batch,
+            totalFees,
+            completedFees,
+            ...(error ? { error } : {}),
+          }
+        })
+        .filter((item): item is ParsedExcelStudentRow => item !== null)
+
+      if (parsed.length === 0) {
+        setBulkParseError("No non-empty rows found in the uploaded sheet.")
+        return
+      }
+
+      setBulkFileName(file.name)
+      setBulkRows(parsed)
+    } catch (err) {
+      console.error("Failed to parse Excel:", err)
+      setBulkParseError("Could not read this file. Please ensure it matches the Excel template format.")
+    }
+  }
+
+  const handleConfirmBulkUpload = async () => {
+    const validRows = bulkRows.filter((r) => !r.error)
+    if (validRows.length === 0) {
+      setBulkParseError("No valid rows available to import. Please check the errors below.")
+      return
+    }
+
+    setUploadingBulk(true)
+    setBulkParseError("")
+    try {
+      const response = await fetch("/api/admin/students/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ students: validRows }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        if (data.skippedRows) {
+          setBulkResult({
+            createdCount: data.createdCount || 0,
+            skippedCount: data.skippedCount || data.skippedRows.length,
+            skippedRows: data.skippedRows,
+          })
+        }
+        throw new Error(data.error || "Failed to upload aspirants")
+      }
+
+      setBulkResult({
+        createdCount: data.createdCount || 0,
+        skippedCount: data.skippedCount || 0,
+        skippedRows: data.skippedRows || [],
+      })
+      toast.success(`${data.createdCount} aspirant${data.createdCount === 1 ? "" : "s"} imported successfully!`)
+      loadStudents()
+    } catch (err: any) {
+      setBulkParseError(err?.message || "Failed to import aspirants")
+    } finally {
+      setUploadingBulk(false)
+    }
+  }
+
   const activeCount = useMemo(
     () => students.filter((s) => s.status !== "deactivated" && s.isActive !== false).length,
     [students]
@@ -570,8 +1016,19 @@ export default function StudentsPage() {
           </div>
         </div>
 
-        {/* Right: Add Student Button */}
-        <div className="flex items-center justify-stretch sm:justify-end shrink-0 w-full md:w-auto">
+        {/* Right: Bulk Upload & Add Student Buttons */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 shrink-0 w-full md:w-auto">
+          <button
+            type="button"
+            onClick={() => {
+              resetBulkUploadState()
+              setShowBulkUpload(true)
+            }}
+            className="w-full sm:w-auto rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <FileSpreadsheet size={16} className="text-emerald-600" />
+            <span>Upload Excel</span>
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -579,7 +1036,7 @@ export default function StudentsPage() {
               setShowAddStudent(true)
             }}
             style={{ backgroundColor: themeColor || "#1E293B" }}
-            className="w-full md:w-auto rounded-xl px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+            className="w-full sm:w-auto rounded-xl px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
           >
             <UserPlus size={16} />
             <span>Add Aspirant</span>
@@ -841,7 +1298,7 @@ export default function StudentsPage() {
                       const isFullPaid = total > 0 && pending <= 0
                       const hasPending = pending > 0
                       const isDeactivated = s.status === "deactivated" || s.isActive === false
-                      const isMenuOpen = activeMenuStudentId === s._id
+                      const isMenuOpen = activeMenuStudentId === `desktop-${s._id}`
 
                       return (
                         <tr key={s._id} className="hover:bg-slate-50/70 transition-colors">
@@ -950,91 +1407,28 @@ export default function StudentsPage() {
 
                           {/* 3-Dot Action Menu */}
                           <td className="px-6 py-4 text-right">
-                            <div className="relative inline-block text-left student-action-menu-container">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setActiveMenuStudentId(isMenuOpen ? null : s._id)
-                                }}
-                                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
-                                title="More options"
-                              >
-                                <MoreVertical size={16} />
-                              </button>
-
-                              {isMenuOpen && (
-                                <>
-                                  {/* Invisible full-screen backdrop to dismiss menu on any screen click */}
-                                  <div
-                                    className="fixed inset-0 z-20 cursor-default"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setActiveMenuStudentId(null)
-                                    }}
-                                  />
-                                  <div className="absolute right-0 mt-1 w-48 rounded-xl bg-white border border-gray-200 shadow-xl py-1 z-30 focus:outline-none">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setProfileStudent(s)
-                                      setActiveMenuStudentId(null)
-                                    }}
-                                    className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer transition-colors"
-                                  >
-                                    <User size={14} className="text-[#324158]" />
-                                    <span>View Profile</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => openEditModal(s)}
-                                    className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
-                                  >
-                                    <Edit3 size={14} className="text-[#324158]" />
-                                    <span>Edit Aspirant</span>
-                                  </button>
-
-                                  {isDeactivated ? (
-                                    <button
-                                      type="button"
-                                      disabled={activatingId === s._id}
-                                      onClick={() => handleActivateStudent(s)}
-                                      className="w-full px-3.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer transition-colors"
-                                    >
-                                      <UserCheck size={14} />
-                                      <span>{activatingId === s._id ? "Activating..." : "Activate Aspirant"}</span>
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveMenuStudentId(null)
-                                        setDeactivateTarget(s)
-                                        setDeactivateReason("")
-                                      }}
-                                      className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
-                                    >
-                                      <UserX size={14} className="text-[#324158]" />
-                                      <span>Deactivate Aspirant</span>
-                                    </button>
-                                  )}
-
-                                  <div className="border-t border-gray-100 my-1" />
-
-                                  <button
-                                    type="button"
-                                    disabled={deletingId === s._id}
-                                    onClick={() => handleDeleteStudent(s)}
-                                    className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
-                                  >
-                                    <Trash2 size={14} />
-                                    <span>{deletingId === s._id ? "Removing..." : "Remove Aspirant"}</span>
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                            </div>
+                            <StudentActionMenu
+                              student={s}
+                              isDeactivated={isDeactivated}
+                              isOpen={isMenuOpen}
+                              activating={activatingId === s._id}
+                              deleting={deletingId === s._id}
+                              ariaLabel="More options"
+                              onToggle={() => setActiveMenuStudentId(isMenuOpen ? null : `desktop-${s._id}`)}
+                              onClose={closeActionMenu}
+                              onViewProfile={() => {
+                                setProfileStudent(s)
+                                setActiveMenuStudentId(null)
+                              }}
+                              onEdit={() => openEditModal(s)}
+                              onActivate={() => handleActivateStudent(s)}
+                              onDeactivate={() => {
+                                setActiveMenuStudentId(null)
+                                setDeactivateTarget(s)
+                                setDeactivateReason("")
+                              }}
+                              onDelete={() => handleDeleteStudent(s)}
+                            />
                           </td>
                         </tr>
                       )
@@ -1075,7 +1469,7 @@ export default function StudentsPage() {
                   const isFullPaid = total > 0 && pending <= 0
                   const hasPending = pending > 0
                   const isDeactivated = s.status === "deactivated" || s.isActive === false
-                  const isMenuOpen = activeMenuStudentId === s._id
+                  const isMenuOpen = activeMenuStudentId === `mobile-${s._id}`
 
                   return (
                     <div key={s._id} className="p-4 space-y-3 hover:bg-slate-50/60 transition-colors">
@@ -1118,90 +1512,29 @@ export default function StudentsPage() {
                         </div>
 
                         {/* 3-Dot Action Menu */}
-                        <div className="relative student-action-menu-container shrink-0">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setActiveMenuStudentId(isMenuOpen ? null : s._id)
+                        <div className="shrink-0">
+                          <StudentActionMenu
+                            student={s}
+                            isDeactivated={isDeactivated}
+                            isOpen={isMenuOpen}
+                            activating={activatingId === s._id}
+                            deleting={deletingId === s._id}
+                            ariaLabel="Aspirant options"
+                            onToggle={() => setActiveMenuStudentId(isMenuOpen ? null : `mobile-${s._id}`)}
+                            onClose={closeActionMenu}
+                            onViewProfile={() => {
+                              setProfileStudent(s)
+                              setActiveMenuStudentId(null)
                             }}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
-                            aria-label="Aspirant options"
-                          >
-                            <MoreVertical size={16} />
-                          </button>
-
-                          {isMenuOpen && (
-                            <>
-                              {/* Invisible full-screen backdrop to dismiss menu on any screen click */}
-                              <div
-                                className="fixed inset-0 z-20 cursor-default"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setActiveMenuStudentId(null)
-                                }}
-                              />
-                              <div className="absolute right-0 mt-1 w-48 rounded-xl bg-white border border-gray-200 shadow-xl py-1 z-30 focus:outline-none">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setProfileStudent(s)
-                                  setActiveMenuStudentId(null)
-                                }}
-                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
-                              >
-                                <User size={14} className="text-[#324158]" />
-                                <span>View Profile</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => openEditModal(s)}
-                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
-                              >
-                                <Edit3 size={14} className="text-[#324158]" />
-                                <span>Edit Aspirant</span>
-                              </button>
-
-                              {isDeactivated ? (
-                                <button
-                                  type="button"
-                                  disabled={activatingId === s._id}
-                                  onClick={() => handleActivateStudent(s)}
-                                  className="w-full px-3.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer transition-colors"
-                                >
-                                  <UserCheck size={14} />
-                                  <span>{activatingId === s._id ? "Activating..." : "Activate Aspirant"}</span>
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveMenuStudentId(null)
-                                    setDeactivateTarget(s)
-                                    setDeactivateReason("")
-                                  }}
-                                  className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-[#eaf0f8] hover:text-[#324158] flex items-center gap-2 cursor-pointer transition-colors"
-                                >
-                                  <UserX size={14} className="text-[#324158]" />
-                                  <span>Deactivate Aspirant</span>
-                                </button>
-                              )}
-
-                              <div className="border-t border-gray-100 my-1" />
-
-                              <button
-                                type="button"
-                                disabled={deletingId === s._id}
-                                onClick={() => handleDeleteStudent(s)}
-                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
-                              >
-                                <Trash2 size={14} />
-                                <span>{deletingId === s._id ? "Removing..." : "Remove Aspirant"}</span>
-                              </button>
-                            </div>
-                          </>
-                        )}
+                            onEdit={() => openEditModal(s)}
+                            onActivate={() => handleActivateStudent(s)}
+                            onDeactivate={() => {
+                              setActiveMenuStudentId(null)
+                              setDeactivateTarget(s)
+                              setDeactivateReason("")
+                            }}
+                            onDelete={() => handleDeleteStudent(s)}
+                          />
                         </div>
                       </div>
 
@@ -1563,6 +1896,11 @@ export default function StudentsPage() {
                         {showEditPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    {editStudent?.examPassword && (
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Current password: <span className="font-mono font-semibold text-slate-800 select-all">{editStudent.examPassword}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1946,11 +2284,11 @@ export default function StudentsPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] uppercase font-bold text-gray-400">Exam Password</p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono font-bold text-slate-800 select-all">
-                              {profileStudent.examPassword || "••••••••"}
-                            </span>
-                            {profileStudent.examPassword && (
+                          {profileStudent.examPassword ? (
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <span className="text-xs font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 select-all">
+                                {profileStudent.examPassword}
+                              </span>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1961,8 +2299,25 @@ export default function StudentsPage() {
                               >
                                 Copy
                               </button>
-                            )}
-                          </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <span className="text-[11px] font-medium text-amber-700">
+                                Not recorded (legacy account)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const target = profileStudent
+                                  setProfileStudent(null)
+                                  openEditModal(target)
+                                }}
+                                className="text-[10px] font-bold text-[#324158] bg-white border border-slate-200 hover:bg-slate-100 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                              >
+                                Set Password
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2121,7 +2476,16 @@ export default function StudentsPage() {
                           <strong className="text-slate-800 font-semibold">Aspirant Exam Login:</strong> Aspirant can log in to attend coaching tests with Roll Number (<strong>{profileStudent.rollNumber}</strong>) or registered email (<strong>{profileStudent.email}</strong>).
                         </p>
                         <p className="text-xs text-slate-700">
-                          Password: <strong className="font-mono text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 select-all">{profileStudent.examPassword || "••••••••"}</strong>
+                          Password:{" "}
+                          {profileStudent.examPassword ? (
+                            <strong className="font-mono text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 select-all">
+                              {profileStudent.examPassword}
+                            </strong>
+                          ) : (
+                            <span className="text-amber-700 font-medium">
+                              Legacy encrypted password — click &ldquo;Set Password&rdquo; or &ldquo;Edit Aspirant&rdquo; to set a visible password.
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -2181,6 +2545,263 @@ export default function StudentsPage() {
           </div>
         )
       })()}
+
+      {/* ═════════════════════════════════════════════════════════════════════
+          BULK UPLOAD EXCEL MODAL
+      ═════════════════════════════════════════════════════════════════════ */}
+      {showBulkUpload && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-xs overflow-y-auto">
+          <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl border border-gray-200/90 bg-white shadow-2xl overflow-hidden my-auto">
+            {/* Modal Header */}
+            <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-start justify-between shrink-0 bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700 shrink-0">
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">
+                    Upload Aspirants via Excel Sheet
+                  </h2>
+                  <p className="text-[11px] sm:text-xs text-gray-500">
+                    Bulk-import students using `.xlsx`, `.xls`, or `.csv` files with instant row validation.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBulkUpload(false)
+                  resetBulkUploadState()
+                }}
+                className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                aria-label="Close bulk upload modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+              {/* Step 1: Template Download & Required Columns Guide */}
+              <div className="p-4 rounded-2xl bg-slate-50/90 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5 min-w-0">
+                  <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Required &amp; Optional Columns
+                  </p>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    <strong className="text-slate-900">Required:</strong>{" "}
+                    <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-[11px]">Name</code>,{" "}
+                    <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-[11px]">Email</code>,{" "}
+                    <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-[11px]">Roll Number</code>,{" "}
+                    <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-[11px]">Password</code> (min 6 chars)
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    <strong>Optional:</strong> Phone, Batch, Total Fees, Completed Fees
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadSampleExcel}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-xs font-bold text-slate-800 shadow-2xs transition-colors cursor-pointer shrink-0"
+                >
+                  <Download size={14} className="text-emerald-600" />
+                  <span>Download Sample Excel</span>
+                </button>
+              </div>
+
+              {/* Error Alert */}
+              {bulkParseError && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-center gap-2.5">
+                  <AlertCircle size={15} className="shrink-0 text-red-600" />
+                  <span>{bulkParseError}</span>
+                </div>
+              )}
+
+              {/* Success / Result Summary */}
+              {bulkResult && (
+                <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 space-y-3">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-emerald-950">
+                          Import Completed: {bulkResult.createdCount} aspirant{bulkResult.createdCount === 1 ? "" : "s"} added
+                        </p>
+                        {bulkResult.skippedCount > 0 && (
+                          <p className="text-xs text-amber-800 font-medium">
+                            {bulkResult.skippedCount} row{bulkResult.skippedCount === 1 ? "" : "s"} skipped due to conflicts or validation rules.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {bulkResult.skippedRows.length > 0 && (
+                    <div className="max-h-36 overflow-y-auto rounded-xl border border-amber-200 bg-white divide-y divide-amber-100 text-xs">
+                      {bulkResult.skippedRows.map((sr, i) => (
+                        <div key={i} className="px-3 py-2 flex items-center justify-between gap-3">
+                          <span className="font-semibold text-slate-800 truncate">
+                            Row {sr.rowNumber}: {sr.name || sr.email || sr.rollNumber || "Empty"}
+                          </span>
+                          <span className="text-amber-700 font-medium shrink-0">{sr.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: File Upload Area */}
+              {bulkRows.length === 0 ? (
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    const droppedFile = e.dataTransfer.files?.[0]
+                    handleExcelFileChange(droppedFile)
+                  }}
+                  className="border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-2xl p-8 sm:p-10 text-center bg-slate-50/40 transition-colors"
+                >
+                  <input
+                    ref={bulkFileInputRef}
+                    id="bulk-excel-upload-input"
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={(e) => handleExcelFileChange(e.target.files?.[0])}
+                    className="hidden"
+                  />
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3 border border-emerald-200/70">
+                    <Upload size={22} />
+                  </div>
+                  <p className="text-sm font-bold text-slate-800">
+                    Drag &amp; drop your Excel sheet here
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1 mb-4">
+                    Supports `.xlsx`, `.xls`, and `.csv` up to 500 students per sheet (max 5MB)
+                  </p>
+                  <label
+                    htmlFor="bulk-excel-upload-input"
+                    style={{ backgroundColor: themeColor || "#1E293B" }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-90 cursor-pointer transition-all"
+                  >
+                    <FileSpreadsheet size={15} />
+                    <span>Choose Excel File</span>
+                  </label>
+                </div>
+              ) : (
+                /* Step 3: Preview Parsed Rows */
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                      <span className="font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                        {bulkFileName}
+                      </span>
+                      <span className="font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                        {bulkRows.filter((r) => !r.error).length} Ready to Import
+                      </span>
+                      {bulkRows.some((r) => r.error) && (
+                        <span className="font-semibold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+                          {bulkRows.filter((r) => r.error).length} Skipped / Invalid
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={resetBulkUploadState}
+                      className="text-xs font-semibold text-slate-600 hover:text-slate-900 underline cursor-pointer self-start sm:self-auto"
+                    >
+                      Choose Another File
+                    </button>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 overflow-auto max-h-72">
+                    <table className="w-full min-w-[760px] text-left border-collapse text-xs">
+                      <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
+                        <tr className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                          <th className="px-3.5 py-2.5">Row</th>
+                          <th className="px-3.5 py-2.5">Name</th>
+                          <th className="px-3.5 py-2.5">Email</th>
+                          <th className="px-3.5 py-2.5">Roll No</th>
+                          <th className="px-3.5 py-2.5">Phone</th>
+                          <th className="px-3.5 py-2.5">Batch</th>
+                          <th className="px-3.5 py-2.5">Fees (Paid / Total)</th>
+                          <th className="px-3.5 py-2.5">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {bulkRows.map((row) => (
+                          <tr
+                            key={row.rowNumber}
+                            className={row.error ? "bg-rose-50/40" : "hover:bg-slate-50/60"}
+                          >
+                            <td className="px-3.5 py-2 font-mono text-slate-400">#{row.rowNumber}</td>
+                            <td className="px-3.5 py-2 font-semibold text-slate-900">{row.name || "—"}</td>
+                            <td className="px-3.5 py-2 text-slate-600">{row.email || "—"}</td>
+                            <td className="px-3.5 py-2 font-mono text-slate-700">{row.rollNumber || "—"}</td>
+                            <td className="px-3.5 py-2 text-slate-600">{row.phone || "—"}</td>
+                            <td className="px-3.5 py-2 text-slate-600">{row.batch || "—"}</td>
+                            <td className="px-3.5 py-2 text-slate-700">
+                              ₹{row.completedFees.toLocaleString()} / ₹{row.totalFees.toLocaleString()}
+                            </td>
+                            <td className="px-3.5 py-2 whitespace-nowrap">
+                              {row.error ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+                                  {row.error}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                  Ready
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 sm:px-6 py-3.5 bg-gray-50/90 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBulkUpload(false)
+                  resetBulkUploadState()
+                }}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-white hover:border-gray-300 transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+              {!bulkResult && (
+                <button
+                  type="button"
+                  onClick={handleConfirmBulkUpload}
+                  disabled={uploadingBulk || bulkRows.filter((r) => !r.error).length === 0}
+                  style={{ backgroundColor: themeColor || "#1E293B" }}
+                  className="px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-2"
+                >
+                  {uploadingBulk ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Importing Aspirants...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={14} />
+                      <span>
+                        Import {bulkRows.filter((r) => !r.error).length || ""} Aspirant
+                        {bulkRows.filter((r) => !r.error).length === 1 ? "" : "s"}
+                      </span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Toaster />
     </div>

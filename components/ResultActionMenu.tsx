@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
 import Link from "next/link"
-import { MoreVertical, Award, ShieldAlert, BarChart2, ExternalLink } from "lucide-react"
+import { MoreVertical, Award, ShieldAlert, BarChart2, ExternalLink, User } from "lucide-react"
 
 interface ResultActionMenuProps {
   result: {
@@ -13,6 +13,7 @@ interface ResultActionMenuProps {
     rollNumber: string
     isGraded?: boolean
   }
+  onViewProfile?: () => void
 }
 
 interface MenuPosition {
@@ -22,7 +23,7 @@ interface MenuPosition {
   maxHeight: number
 }
 
-export function ResultActionMenu({ result }: ResultActionMenuProps) {
+export function ResultActionMenu({ result, onViewProfile }: ResultActionMenuProps) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [menuPos, setMenuPos] = useState<MenuPosition>({ top: 0, left: 0, maxHeight: 300 })
@@ -161,6 +162,21 @@ export function ResultActionMenu({ result }: ResultActionMenuProps) {
               }}
               className="w-52 rounded-2xl bg-white border border-slate-200/90 shadow-xl py-1.5 overflow-y-auto text-xs font-medium text-slate-700 animate-in fade-in-0 zoom-in-95 duration-100"
             >
+            {/* Candidate Profile */}
+            {onViewProfile && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false)
+                  onViewProfile()
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer text-left"
+              >
+                <User size={14} className="text-slate-500" />
+                <span className="font-semibold text-slate-800">Candidate Profile</span>
+              </button>
+            )}
+
             {/* Review & Grade */}
             <Link
               href={`/admin/results/${result._id}/review`}

@@ -9,12 +9,16 @@ import { getExamStartDateTime, getExamEndDateTime } from "@/lib/examSchedule"
 export async function POST(req: Request) {
   try {
     await connectDB()
-    const { examId, studentName, studentEmail, rollNumber, password, candidateType } = await req.json()
+    const { examId, studentName, studentEmail, studentPhone, rollNumber, password, candidateType } = await req.json()
     const isPublic = candidateType === "public"
     const normalizedEmail = String(studentEmail || "").trim().toLowerCase()
+    let resolvedPhone = String(studentPhone || "").trim()
     const normalizedRollNumber = String(rollNumber || "").trim() || (isPublic ? `PUB-${Date.now().toString().slice(-6)}` : "")
     if (!examId || !studentName || !normalizedEmail || (!isPublic && !normalizedRollNumber)) {
       return NextResponse.json({ error: "All required fields must be provided" }, { status: 400 })
+    }
+    if (isPublic && !resolvedPhone) {
+      return NextResponse.json({ error: "Mobile number is required for public exam applicants" }, { status: 400 })
     }
 
     // Verify exam status and schedule window
@@ -55,6 +59,17 @@ export async function POST(req: Request) {
             { status: 403 }
           )
         }
+
+        // Backfill plaintext examPassword for legacy aspirant accounts on successful login
+        if (!(student as any).examPassword && typeof password === "string" && password.trim()) {
+          await User.updateOne(
+            { _id: student._id },
+            { $set: { examPassword: password.trim() } }
+          )
+        }
+        if (!resolvedPhone && (student as any).phone) {
+          resolvedPhone = String((student as any).phone).trim()
+        }
       } else {
         const student = await User.findOne({
           role: "student",
@@ -68,6 +83,9 @@ export async function POST(req: Request) {
             (student as any).deactivationReason?.trim() ||
             "Your aspirant account has been deactivated. Please contact your coaching administrator."
           return NextResponse.json({ error: reason }, { status: 403 })
+        }
+        if (!resolvedPhone && (student as any)?.phone) {
+          resolvedPhone = String((student as any).phone).trim()
         }
       }
     }
@@ -114,6 +132,7 @@ export async function POST(req: Request) {
       examId,
       studentName,
       studentEmail: normalizedEmail,
+      studentPhone: resolvedPhone,
       rollNumber: normalizedRollNumber,
       candidateType: isPublic ? "public" : "institute",
       startedAt: new Date(),

@@ -24,6 +24,7 @@ import {
   Copy,
   Lock,
   Shield,
+  MapPin,
 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -183,7 +184,7 @@ export default function SettingsPage() {
     reader.onload = (event) => {
       const base64 = event.target?.result as string
       setLogo(base64)
-      toast.success("Logo uploaded! Click 'Save All Changes' to apply.")
+      toast.success("Logo uploaded! Click 'Save Logo & Colour Changes' to apply.")
     }
     reader.readAsDataURL(file)
   }
@@ -199,11 +200,6 @@ export default function SettingsPage() {
     try {
       const payload = isInstitute
         ? {
-            name: instituteName,
-            phone,
-            address,
-            city,
-            contactPerson,
             ...(canEditLogo ? { logo } : {}),
             ...(canEditThemeColor ? { themeColor } : {}),
           }
@@ -347,7 +343,7 @@ export default function SettingsPage() {
             )}
           </div>
 
-          {/* 1. Brand Logo Upload Card */}
+          {/* 2. Organization Details Card (Not Changeable) */}
           <div className="bg-white rounded-2xl border border-gray-200/90 p-6 sm:p-8 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
@@ -358,7 +354,89 @@ export default function SettingsPage() {
                   <Building2 size={20} />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-gray-900">Coaching Institute Logo</h2>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900">
+                    Organization Details
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Registered profile information managed by the platform administrator.
+                  </p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 w-fit">
+                <Lock size={12} className="text-slate-500" />
+                Not Changeable
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="p-3.5 rounded-xl border border-gray-200/80 bg-gray-50/70 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <Building2 size={11} /> Organization Name
+                </span>
+                <p className="text-xs sm:text-sm font-semibold text-gray-800 break-words">
+                  {instituteName || "—"}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-gray-200/80 bg-gray-50/70 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <User size={11} /> Contact Person Name
+                </span>
+                <p className="text-xs sm:text-sm font-semibold text-gray-800 break-words">
+                  {contactPerson || "—"}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-gray-200/80 bg-gray-50/70 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <Phone size={11} /> Mobile Number
+                </span>
+                <p className="text-xs sm:text-sm font-semibold text-gray-800 break-words">
+                  {phone || "—"}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-gray-200/80 bg-gray-50/70 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <Mail size={11} /> Email
+                </span>
+                <p className="text-xs sm:text-sm font-semibold text-gray-800 break-all">
+                  {email || "—"}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-gray-200/80 bg-gray-50/70 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <MapPin size={11} /> City
+                </span>
+                <p className="text-xs sm:text-sm font-semibold text-gray-800 break-words">
+                  {city || "—"}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-gray-200/80 bg-gray-50/70 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <MapPin size={11} /> Address
+                </span>
+                <p className="text-xs sm:text-sm font-semibold text-gray-800 break-words">
+                  {address || "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Change Logo Card */}
+          <div className="bg-white rounded-2xl border border-gray-200/90 p-6 sm:p-8 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
+                  style={{ backgroundColor: themeColor }}
+                >
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900">Change Logo</h2>
                   <p className="text-xs text-gray-500 mt-0.5">
                     Your logo replaces the default platform logo in your portal header and on all aspirant exam screens.
                   </p>
@@ -398,7 +476,7 @@ export default function SettingsPage() {
                           onClick={() => {
                             setLogo("")
                             if (fileInputRef.current) fileInputRef.current.value = ""
-                            toast.info("Logo removed. Click 'Save All Changes' to confirm.")
+                            toast.info("Logo removed. Click 'Save Logo & Colour Changes' to confirm.")
                           }}
                           className="text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-0.5 rounded transition-colors inline-flex items-center gap-1 cursor-pointer"
                         >
@@ -488,7 +566,7 @@ export default function SettingsPage() {
                   <Palette size={20} />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-gray-900">Theme & Brand Color</h2>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900">Change Colour</h2>
                   <p className="text-xs text-gray-500 mt-0.5">
                     Customize your coaching portal and aspirant exam accent colors to match your institute branding.
                   </p>
@@ -628,9 +706,44 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+
+            {saveError && (
+              <div className="mt-5 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold flex items-center gap-2">
+                <AlertCircle size={14} /> {saveError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end pt-5 mt-5 border-t border-gray-100">
+              {!canEditLogo && !canEditThemeColor ? (
+                <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+                  <Lock size={14} className="text-amber-600 shrink-0" />
+                  <span>Logo &amp; Theme Color customization are locked by your Platform Administrator</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  style={{ backgroundColor: saved ? "#059669" : themeColor }}
+                  className="px-8 py-2.5 text-xs sm:text-sm font-bold text-white rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Saving Changes...
+                    </>
+                  ) : saved ? (
+                    <>
+                      <CheckCircle2 size={16} /> Saved Successfully!
+                    </>
+                  ) : (
+                    "Save Logo & Colour Changes"
+                  )}
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* 3. Portal Login Credentials & Security Section */}
+          {/* 5. Password Change Section */}
           <div className="bg-white rounded-2xl border border-gray-200/90 p-6 sm:p-8 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
@@ -642,10 +755,10 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-gray-900">
-                    Portal Login Credentials & Security
+                    Password Change
                   </h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    View your organization login credentials and manage your account password.
+                    View your organization login credentials and update your account password.
                   </p>
                 </div>
               </div>
@@ -908,41 +1021,35 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {saveError && (
-        <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold flex items-center gap-2">
-          <AlertCircle size={14} /> {saveError}
-        </div>
-      )}
-
-      {/* Save Button */}
-      {isInstitute && !canEditLogo && !canEditThemeColor ? (
-        <div className="flex items-center justify-end pt-2 pb-6">
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
-            <Lock size={14} className="text-amber-600 shrink-0" />
-            <span>Logo &amp; Theme Color customization are locked by your Platform Administrator</span>
+      {/* Super Admin Save Button */}
+      {!isInstitute && (
+        <>
+          {saveError && (
+            <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold flex items-center gap-2">
+              <AlertCircle size={14} /> {saveError}
+            </div>
+          )}
+          <div className="flex justify-end pt-2 pb-6">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ backgroundColor: saved ? "#059669" : themeColor }}
+              className="px-10 py-3 font-bold text-white rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-60"
+            >
+              {saving ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Saving Changes...
+                </>
+              ) : saved ? (
+                <>
+                  <CheckCircle2 size={16} /> Saved Successfully!
+                </>
+              ) : (
+                "Save All Changes"
+              )}
+            </button>
           </div>
-        </div>
-      ) : (
-        <div className="flex justify-end pt-2 pb-6">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{ backgroundColor: saved ? "#059669" : themeColor }}
-            className="px-10 py-3 font-bold text-white rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-60"
-          >
-            {saving ? (
-              <>
-                <Loader2 size={16} className="animate-spin" /> Saving Changes...
-              </>
-            ) : saved ? (
-              <>
-                <CheckCircle2 size={16} /> Saved Successfully!
-              </>
-            ) : (
-              "Save All Changes"
-            )}
-          </button>
-        </div>
+        </>
       )}
     </div>
   )

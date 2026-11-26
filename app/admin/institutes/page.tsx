@@ -211,6 +211,10 @@ export default function InstitutesManagementPage() {
     try {
       setLoading(true)
       const res = await fetch("/api/admin/institutes")
+      if (res.status === 401 || res.status === 403) {
+        window.location.href = "/admin/login"
+        return
+      }
       const data = await readApiResponse<{ institutes?: Institute[]; error?: string }>(res)
       if (res.ok) {
         setInstitutes(data.institutes || [])

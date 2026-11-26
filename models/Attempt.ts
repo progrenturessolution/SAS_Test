@@ -4,6 +4,7 @@ export interface IAttempt extends Document {
   examId: Types.ObjectId | string
   studentName: string
   studentEmail: string
+  studentPhone?: string
   rollNumber: string
   startedAt: Date
   submittedAt?: Date
@@ -77,6 +78,7 @@ const AttemptSchema = new Schema<IAttempt>(
     examId: { type: Schema.Types.ObjectId, ref: "Exam", required: true, index: true },
     studentName: { type: String, required: true },
     studentEmail: { type: String, required: true },
+    studentPhone: { type: String, trim: true, default: "" },
     rollNumber: { type: String, required: true },
     startedAt: { type: Date, default: Date.now },
     candidateType: { type: String, enum: ["institute", "public"], default: "institute", index: true },

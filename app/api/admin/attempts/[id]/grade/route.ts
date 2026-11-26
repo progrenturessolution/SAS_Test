@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import connectDB from "@/lib/mongodb"
 import Attempt from "@/models/Attempt"
 import Exam from "@/models/Exam"
+import { getSession } from "@/lib/auth"
 import { evaluateObjectiveAnswer } from "@/lib/ai/questionEvaluation"
 
 function normalizeOptionToken(val: string): string {
@@ -110,13 +111,31 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSession(req)
+    const canReview =
+      session &&
+      (["super_admin", "admin", "institute", "coaching_institute"].includes(session.role) ||
+        Boolean(session.instituteId))
+    if (!canReview) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const { id } = await params
     await connectDB()
     const attempt = await Attempt.findById(id).populate("examId")
     if (!attempt) return NextResponse.json({ error: "Attempt not found" }, { status: 404 })
+
+    const exam = attempt.examId as any
+    if (session.instituteId) {
+      const ownsExam =
+        exam?.instituteId?.toString?.() === session.instituteId ||
+        exam?.createdBy?.toString?.() === session.id
+      if (!ownsExam) {
+        return NextResponse.json({ error: "Result does not belong to this organization." }, { status: 403 })
+      }
+    }
     
     // Calculate auto-graded score for each answer to show in the UI
-    const exam = attempt.examId as any
     const sections = exam?.sections || []
     const allQuestions = sections.flatMap((s: any) => s.questions || [])
     
@@ -170,6 +189,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSession(req)
+    const canGrade =
+      session &&
+      (["super_admin", "admin", "institute", "coaching_institute"].includes(session.role) ||
+        Boolean(session.instituteId))
+    if (!canGrade) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const { id } = await params
     const { answers } = await req.json()
 
@@ -178,6 +206,16 @@ export async function PATCH(
     const attempt = await Attempt.findById(id).populate("examId")
     if (!attempt) {
       return NextResponse.json({ error: "Attempt not found" }, { status: 404 })
+    }
+
+    const examDoc = attempt.examId as any
+    if (session.instituteId) {
+      const ownsExam =
+        examDoc?.instituteId?.toString?.() === session.instituteId ||
+        examDoc?.createdBy?.toString?.() === session.id
+      if (!ownsExam) {
+        return NextResponse.json({ error: "Result does not belong to this organization." }, { status: 403 })
+      }
     }
 
     // Update answers with manual scores

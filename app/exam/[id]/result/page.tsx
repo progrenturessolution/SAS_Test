@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect, use } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -8,6 +8,7 @@ import {
   BookOpen, TrendingUp, Target, Home
 } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
+import { SubmissionConfirmation } from "@/components/exam/SubmissionConfirmation"
 
 interface SectionResult {
   name: string
@@ -105,6 +106,19 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
           </Link>
         </div>
       </div>
+    )
+  }
+
+  if (!showResults) {
+    return (
+      <SubmissionConfirmation
+        examId={id}
+        examTitle={result.examId?.title}
+        studentName={result.studentName}
+        rollNumber={result.rollNumber}
+        submittedAt={result.submittedAt}
+        institute={result.examId?.institute}
+      />
     )
   }
 

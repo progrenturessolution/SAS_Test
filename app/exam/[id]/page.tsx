@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Clock, FileText, CheckCircle, Award, User, Mail, Hash, LockKeyhole, Shield, AlertCircle, Camera, Maximize, AlertTriangle, Globe } from "lucide-react"
+import { Clock, FileText, CheckCircle, Award, User, Mail, Phone, Hash, LockKeyhole, Shield, AlertCircle, Camera, Maximize, AlertTriangle, Globe } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
 import { getScheduleStatus, formatCountdown, formatScheduleDateTime } from "@/lib/examSchedule"
 
@@ -26,6 +26,7 @@ interface ExamData {
     themeColor?: string
   }
   settings?: {
+    showResults?: boolean
     startDate?: string
     startTime?: string
     endDate?: string
@@ -61,7 +62,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
   const [exam, setExam] = useState<ExamData | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [form, setForm] = useState({ name: "", email: "", roll: "", password: "", agreed: false })
+  const [form, setForm] = useState({ name: "", email: "", phone: "", roll: "", password: "", agreed: false })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [fetchError, setFetchError] = useState("")
   const [studentStats, setStudentStats] = useState<{ totalExams: number; avgScore: number } | null>(null)
@@ -142,6 +143,14 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
     const newErrors: Record<string, string> = {}
     if (!form.name.trim()) newErrors.name = "Full name is required"
     if (!form.email.trim()) newErrors.email = "Email address is required"
+    if (isPublicAccess) {
+      const cleanedPhone = form.phone.trim()
+      if (!cleanedPhone) {
+        newErrors.phone = "Mobile number is required"
+      } else if (!/^\+?[0-9\s()-]{8,16}$/.test(cleanedPhone)) {
+        newErrors.phone = "Enter a valid mobile number"
+      }
+    }
     if (!isPublicAccess && !form.roll.trim()) newErrors.roll = "Roll number is required"
     if (!isPublicAccess && !form.password) newErrors.password = "Exam password is required"
     if (!form.agreed) newErrors.agreed = "You must agree to the exam rules"
@@ -160,6 +169,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
           examId: id,
           studentName: form.name.trim(),
           studentEmail: form.email.trim(),
+          studentPhone: form.phone.trim(),
           rollNumber: effectiveRoll,
           password: form.password,
           candidateType: isPublicAccess ? "public" : "institute",
@@ -453,6 +463,9 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
             {[
               { key: "name", label: "Full Name", icon: User, type: "text", placeholder: "Enter your full name", required: true },
               { key: "email", label: "Email Address", icon: Mail, type: "email", placeholder: "Enter your email address", required: true },
+              ...(isPublicAccess
+                ? [{ key: "phone", label: "Mobile Number", icon: Phone, type: "tel", placeholder: "Enter your mobile number", required: true }]
+                : []),
               {
                 key: "roll",
                 label: isPublicAccess ? "Candidate ID / Roll Number (Optional)" : "Roll Number",
@@ -512,13 +525,19 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                 <p className="text-sm font-bold text-amber-800">You have already taken this exam.</p>
                 <p className="mt-1 text-xs text-amber-700">
-                  You cannot take this exam again. View your result and comprehensive analytics below.
+                  {exam?.settings?.showResults === false
+                    ? "Thank You! Your exam has been submitted successfully. Your result will be shared with you later."
+                    : "You cannot take this exam again. View your result and comprehensive analytics below."}
                 </p>
                 <Link
-                  href={`/exam/${id}/result/analytics?attemptId=${existingAttempt._id}`}
+                  href={
+                    exam?.settings?.showResults === false
+                      ? `/exam/${id}/submitted?attemptId=${existingAttempt._id}`
+                      : `/exam/${id}/result/analytics?attemptId=${existingAttempt._id}`
+                  }
                   className="mt-3 inline-flex rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-accent"
                 >
-                  View Comprehensive Analytics
+                  {exam?.settings?.showResults === false ? "View Submission Confirmation" : "View Comprehensive Analytics"}
                 </Link>
               </div>
             )}

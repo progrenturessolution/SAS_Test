@@ -442,7 +442,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         // 1. Check if already submitted
         const attempt = attemptRes.attempt || attemptRes
         if (attempt && (attempt.status === "submitted" || attempt.status === "auto-submitted" || attempt.status === "graded")) {
-          router.push(`/exam/${id}/result?attemptId=${attemptId}`)
+          const canShowResults = attemptRes.showResults !== false && exam?.settings?.showResults !== false
+          router.push(canShowResults ? `/exam/${id}/result?attemptId=${attemptId}` : `/exam/${id}/submitted?attemptId=${attemptId}`)
           return
         }
 
@@ -640,7 +641,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         document.exitFullscreen().catch(() => {})
       }
       
-      router.push(`/exam/${id}/result?attemptId=${attemptId}`)
+      const canShowResults = data?.showResults !== false && exam?.settings?.showResults !== false
+      router.push(canShowResults ? `/exam/${id}/result?attemptId=${attemptId}` : `/exam/${id}/submitted?attemptId=${attemptId}`)
     } catch (error) {
       addToast("Network issue during submission. Your responses are safely backed up locally. Retrying...", "danger")
       setSubmitting(false)
@@ -892,7 +894,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       // Stop camera and exit fullscreen
       setExamSubmitted(true)
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
-      router.push(`/exam/${id}/result?attemptId=${attemptId}`)
+      const canShowResults = data?.showResults !== false && exam?.settings?.showResults !== false
+      router.push(canShowResults ? `/exam/${id}/result?attemptId=${attemptId}` : `/exam/${id}/submitted?attemptId=${attemptId}`)
     } catch {
       addToast("Submission failed. Your answers are saved locally. Please click Submit again.", "danger")
       setSubmitting(false)

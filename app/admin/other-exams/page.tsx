@@ -1386,25 +1386,21 @@ function OtherExamsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-8 pt-3 sm:pt-4">
+    <div className="min-h-screen bg-[#F8FAFC] pb-12 pt-6 sm:pt-8">
       <div className="mx-auto max-w-[1400px] px-3 sm:px-8 lg:px-10">
         {/* ─── Breadcrumbs ─── */}
-        <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-medium text-slate-500 mb-1.5">
-          <Link href="/admin" className="hover:text-slate-900 transition-colors">
-            Dashboard
-          </Link>
-          <span>/</span>
+        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-2">
           <Link href="/admin/exams" className="hover:text-slate-900 transition-colors">
             Exams
           </Link>
           <span>/</span>
-          <span className="text-slate-900 font-semibold">Other Exam Section</span>
+          <span className="text-slate-900 font-semibold">Other Exam</span>
         </div>
 
         {/* ─── Studio Title & Badges Header ─── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
           <div>
-            <h1 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900">
+            <h1 className="text-lg sm:text-xl font-medium tracking-tight text-slate-900">
               Other Exam Section
             </h1>
             <p className="sm:hidden text-xs text-slate-500 mt-0.5">
@@ -1413,15 +1409,15 @@ function OtherExamsContent() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0] text-[11px] font-medium">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0] text-[11px] sm:text-xs font-medium">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#059669]" />
               <span>13 National Sectors</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] text-[11px] font-medium">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] text-[11px] sm:text-xs font-medium">
               <Zap className="w-3.5 h-3.5 text-[#2563EB]" />
               <span>Multi-Format AI Engine</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[11px] sm:text-xs font-medium">
               <Layers className="w-3.5 h-3.5 text-slate-600" />
               <span>Configurable Blueprint</span>
             </span>

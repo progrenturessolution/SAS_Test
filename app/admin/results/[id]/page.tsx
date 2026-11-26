@@ -18,7 +18,9 @@ interface AttemptDetail {
   _id: string
   studentName: string
   studentEmail: string
+  studentPhone?: string
   rollNumber: string
+  candidateType?: "institute" | "public"
   examId: string
   startedAt: string
   submittedAt?: string
@@ -171,6 +173,10 @@ export default function ResultDetailPage({ params }: { params: Promise<{ id: str
             </div>
 
             <div className="border-t border-slate-100 pt-2.5 space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Mobile Number:</span>
+                <span className="font-semibold text-slate-800">{attempt.studentPhone || "Not provided"}</span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Roll Number:</span>
                 <span className="font-semibold text-slate-800">{attempt.rollNumber}</span>

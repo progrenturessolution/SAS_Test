@@ -12,7 +12,13 @@ export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   if (!pathname.startsWith("/admin")) return NextResponse.next()
-  if (PUBLIC_ADMIN_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next()
+
+  const requestHeaders = new Headers(req.headers)
+  requestHeaders.set("x-pathname", pathname)
+
+  if (PUBLIC_ADMIN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return NextResponse.next({ request: { headers: requestHeaders } })
+  }
 
   // Differentiate super admin routes (/admin/institutes, /admin/overview)
   // from regular organization dashboard routes (/admin, /admin/exams, /admin/students, etc.)
@@ -28,8 +34,28 @@ export async function proxy(req: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, SECRET)
-    return NextResponse.next()
+    const { payload } = await jwtVerify(token, SECRET)
+    const role = typeof payload.role === "string" ? payload.role : ""
+    const instituteId = typeof payload.instituteId === "string" ? payload.instituteId : ""
+    const isSuperAdmin = !instituteId && (role === "super_admin" || role === "admin")
+    const isInstitute = Boolean(
+      instituteId || role === "institute" || role === "coaching_institute"
+    )
+
+    if (!isSuperAdmin && !isInstitute) {
+      const loginUrl = new URL(defaultLoginPath, req.nextUrl.origin)
+      const res = NextResponse.redirect(loginUrl)
+      res.cookies.delete(COOKIE_NAME)
+      return res
+    }
+
+    if (isSuperAdminPath && !isSuperAdmin) {
+      const loginUrl = new URL("/admin/login", req.nextUrl.origin)
+      loginUrl.searchParams.set("callbackUrl", pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+
+    return NextResponse.next({ request: { headers: requestHeaders } })
   } catch {
     const loginUrl = new URL(defaultLoginPath, req.nextUrl.origin)
     const res = NextResponse.redirect(loginUrl)

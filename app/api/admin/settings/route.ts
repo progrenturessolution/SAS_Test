@@ -100,12 +100,7 @@ export async function POST(req: Request) {
       const canEditLogo = institute.limits?.features?.customLogo !== false
       const canEditThemeColor = institute.limits?.features?.customThemeColor !== false
 
-      if (body.name !== undefined) institute.name = body.name.trim()
-      if (body.phone !== undefined) institute.phone = body.phone.trim()
-      if (body.address !== undefined) institute.address = body.address.trim()
-      if (body.city !== undefined) institute.city = body.city.trim()
-      if (body.contactPerson !== undefined) institute.contactPerson = body.contactPerson.trim()
-
+      // Organization details (name, contactPerson, phone, email, city, address) are read-only for organizations.
       if (body.logo !== undefined && body.logo !== (institute.logo || "")) {
         if (!canEditLogo) {
           return NextResponse.json(

@@ -329,6 +329,51 @@ export function evaluateObjectiveAnswer(
   }
 }
 
+export function parseAssertionReasonText(text: string): { assertion: string; reason: string } | null {
+  if (!text) return null
+  const match = text.match(
+    /(?:Assertion|Statement\s*1)\s*(?:\([Aa1]\))?\s*:\s*([\s\S]*?)(?:Reason|Statement\s*2)\s*(?:\([Rr2]\))?\s*:\s*([\s\S]*)$/i
+  )
+  if (!match) return null
+  return {
+    assertion: match[1].trim(),
+    reason: match[2].trim(),
+  }
+}
+
+export interface FormattedOptionItem {
+  label: string
+  text: string
+}
+
+export function getFormattedOptionItems(
+  answer: string | string[] | undefined | null,
+  options?: string[]
+): FormattedOptionItem[] {
+  if (!answer || (Array.isArray(answer) && answer.length === 0)) return []
+  const tokens = Array.isArray(answer)
+    ? answer.map((v) => String(v ?? "").trim()).filter(Boolean)
+    : parseMultiTokens(String(answer))
+
+  return tokens.map((token) => {
+    if (!options || options.length === 0) {
+      return { label: "", text: token }
+    }
+    const resolved = resolveSingleOptionAnswer(token, options)
+    if (!resolved) {
+      return { label: "", text: token }
+    }
+    const idx = options.findIndex((o) => normalizeCompareText(o) === normalizeCompareText(resolved))
+    if (idx !== -1) {
+      const letter = String.fromCharCode(65 + idx)
+      const optText = options[idx].trim()
+      const stripped = optText.replace(new RegExp(`^\\(?${letter}\\)?[\\.\\):\\-]\\s+`, "i"), "").trim()
+      return { label: letter, text: stripped || optText }
+    }
+    return { label: "", text: resolved }
+  })
+}
+
 export function formatOptionDisplay(
   answer: string | string[] | undefined,
   options?: string[]
@@ -350,7 +395,10 @@ function formatSingleAnswerDisplay(answer: string, options?: string[]): string {
   if (!resolved) return s
   const idx = options.findIndex((o) => normalizeCompareText(o) === normalizeCompareText(resolved))
   if (idx !== -1) {
-    return `${String.fromCharCode(65 + idx)}. ${options[idx]}`
+    const letter = String.fromCharCode(65 + idx)
+    const optText = options[idx].trim()
+    const alreadyPrefixed = new RegExp(`^\\(?${letter}\\)?[\\.\\):\\-]\\s+`, "i").test(optText)
+    return alreadyPrefixed ? optText : `${letter}. ${optText}`
   }
   return resolved
 }

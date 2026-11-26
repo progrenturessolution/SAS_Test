@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth"
 import connectDB from "@/lib/mongodb"
 import Attempt from "@/models/Attempt"
 import Exam from "@/models/Exam"
+import User from "@/models/User"
 
 // GET /api/admin/results
 export async function GET(req: Request) {
@@ -61,14 +62,24 @@ export async function GET(req: Request) {
     ])
     
     const examIds = [...new Set(attempts.map((a) => a.examId?.toString()).filter(Boolean))]
-    const exams = await Exam.find({ _id: { $in: examIds } }, "title subject").lean()
+    const studentEmails = [...new Set(attempts.map((a) => String(a.studentEmail || "").trim().toLowerCase()).filter(Boolean))]
+    const [exams, users] = await Promise.all([
+      Exam.find({ _id: { $in: examIds } }, "title subject").lean(),
+      studentEmails.length > 0
+        ? User.find({ email: { $in: studentEmails } }, "email phone").lean()
+        : Promise.resolve([]),
+    ])
     const examMap = Object.fromEntries(exams.map((e) => [e._id.toString(), e]))
+    const phoneMap = Object.fromEntries(
+      (users as any[]).map((u) => [String(u.email || "").toLowerCase(), u.phone || ""])
+    )
 
     const enriched = attempts.map((a: any) => ({
       ...a,
       examId: a.examId.toString(), // Keep as string for API response
       examTitle: examMap[a.examId?.toString()]?.title || "Unknown",
       examSubject: examMap[a.examId?.toString()]?.subject || "",
+      studentPhone: a.studentPhone || phoneMap[String(a.studentEmail || "").toLowerCase()] || "",
       isGraded: !!a.isGraded,
       candidateType: a.candidateType || "institute",
     }))

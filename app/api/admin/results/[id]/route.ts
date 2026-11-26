@@ -3,6 +3,7 @@ import connectDB from "@/lib/mongodb"
 import Attempt from "@/models/Attempt"
 import { getSession } from "@/lib/auth"
 import Exam from "@/models/Exam"
+import User from "@/models/User"
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -25,7 +26,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       }).select("_id").lean()
       if (!exam) return NextResponse.json({ error: "Result does not belong to this institute." }, { status: 403 })
     }
-    return NextResponse.json({ attempt })
+    let studentPhone = (attempt as any).studentPhone || ""
+    if (!studentPhone && attempt.studentEmail) {
+      const studentDoc = (await User.findOne(
+        { email: String(attempt.studentEmail).trim().toLowerCase() },
+        "phone"
+      ).lean()) as { phone?: string } | null
+      studentPhone = studentDoc?.phone || ""
+    }
+    return NextResponse.json({ attempt: { ...attempt, studentPhone } })
   } catch (error) {
     console.error("[v0] Get attempt detail error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
