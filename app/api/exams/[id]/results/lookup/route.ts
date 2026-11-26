@@ -25,6 +25,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Exam not found" }, { status: 404 })
     }
 
+    const canViewResults =
+      (exam as any)?.settings?.showResults !== false ||
+      (exam as any)?.settings?.resultsPublished === true
+    if (!canViewResults) {
+      return NextResponse.json(
+        {
+          error: "Results have not been published yet. Please check back later.",
+          unpublished: true,
+        },
+        { status: 403 }
+      )
+    }
+
     // Build query — match by exam + at least one credential + only submitted attempts
     const query: Record<string, unknown> = {
       examId,

@@ -4,76 +4,17 @@ import React, { memo } from "react"
 import katex from "katex"
 import "katex/dist/katex.min.css"
 import "katex/contrib/mhchem"
+import { MATH_DELIMITED_REGEX, normalizeMathContent } from "@/lib/mathFormat"
 
 interface MathRendererProps {
   content: string
   className?: string
 }
 
-function wrapBareMhchemBlocks(input: string): string {
-  let out = ""
-  let inDisplay = false
-  let inInline = false
-
-  for (let i = 0; i < input.length; i++) {
-    if (!inInline && input.startsWith("$$", i)) {
-      inDisplay = !inDisplay
-      out += "$$"
-      i++
-      continue
-    }
-    if (!inDisplay && input[i] === "$" && (i === 0 || input[i - 1] !== "\\")) {
-      inInline = !inInline
-      out += "$"
-      continue
-    }
-
-    if (!inDisplay && !inInline && input.startsWith("\\ce{", i)) {
-      let depth = 0
-      let j = i + 3
-      for (; j < input.length; j++) {
-        if (input[j] === "\\") {
-          j++
-          continue
-        }
-        if (input[j] === "{") depth++
-        else if (input[j] === "}") {
-          depth--
-          if (depth === 0) break
-        }
-      }
-      if (depth === 0 && j < input.length) {
-        out += `$${input.slice(i, j + 1)}$`
-        i = j
-        continue
-      }
-    }
-
-    out += input[i]
-  }
-  return out
-}
-
-function normalizeFormulaText(value: string): string {
-  if (!value) return ""
-  const repaired = value
-    .replace(/\u000c(?=(?:frac|tfrac|dfrac|cfrac|forall|fbox|flat|frown)?)/g, "\\f")
-    .replace(/\u0008(?=(?:beta|bar|binom|boldsymbol|bot|bowtie|brace|brack|breve|bullet|big|begin))/gi, "\\b")
-    .replace(/\u0009(?=(?:theta|tau|text|textbf|textit|textrm|textstyle|times|tanh|tan\b|to\b|tilde|triangle|top\b|therefore))/gi, "\\t")
-    .replace(/\u000d(?=(?:rho|rightarrow|Rightarrow|right|root))/gi, "\\r")
-    .replace(/\u0009/g, " ")
-    .replace(/\\\(|\\\)/g, "$")
-    .replace(/\\\[|\\\]/g, "$$")
-    .replace(/\\ce\s+([A-Z(][A-Za-z0-9()_^{}+=-]*)/g, "\\ce{$1}")
-    .replace(/\\ce(?=[A-Z(][A-Za-z0-9]*(?:\d|[()]))([A-Za-z0-9()_^{}+=-]+)/g, "\\ce{$1}")
-
-  return wrapBareMhchemBlocks(repaired)
-}
-
-const MATH_REGEX = /(\$\$[\s\S]*?\$\$|\$(?!\$)[\s\S]+?\$|\\ce\{[\s\S]*?\}|\\begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|array)\}[\s\S]*?\\end\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|array)\})/g
+const MATH_REGEX = MATH_DELIMITED_REGEX
 
 function isStandaloneFormula(value: string): boolean {
-  return /^[-+]?\\(?:ce|frac|sqrt|dfrac|tfrac|binom|text|mathrm|mathbf|vec|hat|bar|sin|cos|tan|log|ln|lim|sum|int|prod|left|right|times|cdot|pm|leq?|geq?|neq|approx|infty|alpha|beta|gamma|delta|Delta|theta|lambda|mu|pi|rho|sigma|phi|omega|rightarrow|leftarrow|rightleftharpoons|xrightarrow|xleftarrow|begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|cases))\b/.test(
+  return /^[-+]?\\(?:ce|frac|sqrt|dfrac|tfrac|binom|text|mathrm|mathbf|vec|hat|bar|sin|cos|tan|log|ln|lim|sum|int|prod|left|right|times|cdot|pm|leq?|geq?|neq|approx|infty|alpha|beta|gamma|delta|Delta|epsilon|varepsilon|theta|Theta|lambda|Lambda|mu|pi|rho|sigma|phi|Phi|omega|Omega|rightarrow|leftarrow|rightleftharpoons|xrightarrow|xleftarrow|begin\{(?:bmatrix|pmatrix|vmatrix|Vmatrix|matrix|cases))\b/.test(
     value.trim()
   )
 }
@@ -111,7 +52,7 @@ function renderFormula(formula: string, displayMode: boolean): string {
 export const MathRenderer = memo(function MathRenderer({ content, className = "" }: MathRendererProps) {
   if (!content) return null
 
-  const normalized = normalizeFormulaText(content)
+  const normalized = normalizeMathContent(content)
   const parts = normalized.split(MATH_REGEX)
 
   return (

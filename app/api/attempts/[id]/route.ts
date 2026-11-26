@@ -259,7 +259,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           (session.id && examCreatedBy === session.id)
         )
     )
-    const showResults = isPlatformAdmin || isCreatorCoaching || (examData as any)?.settings?.showResults !== false
+    const showResults =
+      isPlatformAdmin ||
+      isCreatorCoaching ||
+      (examData as any)?.settings?.showResults !== false ||
+      (examData as any)?.settings?.resultsPublished === true
     
     // Sanitize attempt data if results are hidden
     const sanitizedAttempt = { ...attempt }
@@ -320,7 +324,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // return existing calculated result immediately without re-grading or extra DB writes.
     if (attempt.status === "graded" || (attempt.status === "submitted" && attempt.submittedAt)) {
       const existingExam = (await Exam.findById(attempt.examId).select("settings").lean()) as any
-      const showResults = existingExam?.settings?.showResults !== false
+      const showResults = existingExam?.settings?.showResults !== false || existingExam?.settings?.resultsPublished === true
       const sanitizedAttempt = { ...attempt.toObject() }
       if (!showResults) {
         delete (sanitizedAttempt as any).score
@@ -497,7 +501,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     attempt.passed = exam ? attempt.score >= exam.passMarks : false
 
     await attempt.save()
-    const showResults = exam?.settings?.showResults !== false
+    const showResults = exam?.settings?.showResults !== false || exam?.settings?.resultsPublished === true
     
     // Sanitize attempt data if results are hidden
     const sanitizedAttempt = { ...attempt.toObject() }

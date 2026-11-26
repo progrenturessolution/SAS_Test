@@ -39,6 +39,10 @@ interface Exam {
   status: string
   createdAt: string
   examType?: string
+  settings?: {
+    showResults?: boolean
+    resultsPublished?: boolean
+  }
 }
 
 export default function AdminDashboardClient() {
@@ -98,6 +102,34 @@ export default function AdminDashboardClient() {
     } catch (error) {
       console.error("Failed to toggle status:", error)
       setExams((prev) => prev.map((e) => e._id === id ? { ...e, status: currentStatus } : e))
+      throw error
+    }
+  }
+
+  const handleTogglePublishResults = async (id: string, nextPublished: boolean) => {
+    const prevExam = exams.find((e) => e._id === id)
+    const nextSettings = nextPublished
+      ? { ...(prevExam?.settings || {}), resultsPublished: true }
+      : { ...(prevExam?.settings || {}), resultsPublished: false, showResults: false }
+
+    setExams((prev) =>
+      prev.map((e) => (e._id === id ? { ...e, settings: nextSettings } : e))
+    )
+    try {
+      const res = await fetch(`/api/exams/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          settings: nextPublished
+            ? { resultsPublished: true }
+            : { resultsPublished: false, showResults: false },
+        }),
+      })
+      if (!res.ok) throw new Error("Failed to update result visibility")
+    } catch (error) {
+      setExams((prev) =>
+        prev.map((e) => (e._id === id ? { ...e, settings: prevExam?.settings } : e))
+      )
       throw error
     }
   }
@@ -436,12 +468,18 @@ export default function AdminDashboardClient() {
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${statusColor(exam.status)}`}>
                         {exam.status}
                       </span>
+                      {exam.settings?.resultsPublished && (
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Results Live
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="shrink-0 pt-0.5">
                     <ExamActionMenu
                       exam={exam}
                       onToggleStatus={handleToggleStatus}
+                      onTogglePublishResults={handleTogglePublishResults}
                       onDelete={handleDelete}
                       onShare={handleShare}
                       onCopy={handleCopyLink}
@@ -562,9 +600,16 @@ export default function AdminDashboardClient() {
                   <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-sm text-gray-600 font-medium">{totalQuestions(exam)}</td>
                   <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-sm text-gray-600">{exam.duration} mins</td>
                   <td className="px-4 sm:px-6 py-3.5 sm:py-4">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColor(exam.status)}`}>
-                      {exam.status}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColor(exam.status)}`}>
+                        {exam.status}
+                      </span>
+                      {exam.settings?.resultsPublished && (
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Results Live
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-sm text-gray-500 whitespace-nowrap">
                     {new Date(exam.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -573,6 +618,7 @@ export default function AdminDashboardClient() {
                     <ExamActionMenu
                       exam={exam}
                       onToggleStatus={handleToggleStatus}
+                      onTogglePublishResults={handleTogglePublishResults}
                       onDelete={handleDelete}
                       onShare={handleShare}
                       onCopy={handleCopyLink}

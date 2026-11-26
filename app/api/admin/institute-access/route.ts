@@ -122,9 +122,7 @@ export async function GET(req: Request) {
       isExamQuotaReached,
       examTypes: isExpired ? [] : rawExamTypes,
       features: institute.limits?.features || {},
-      customQuestionTypes: Array.isArray(institute.limits?.customQuestionTypes)
-        ? institute.limits.customQuestionTypes
-        : ALL_CUSTOM_QUESTION_TYPES,
+      customQuestionTypes: ALL_CUSTOM_QUESTION_TYPES,
     })
   } catch (error) {
     console.error("Fetch institute access error:", error)

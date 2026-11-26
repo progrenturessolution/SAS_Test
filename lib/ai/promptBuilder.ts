@@ -181,15 +181,16 @@ export function buildFormatDirectives(
 ): string {
   const baseFields = `
 Required shared JSON keys on EVERY item:
-- "questionText": string (clear, self-contained question; use inline LaTeX $...$ with JSON-escaped backslashes like "\\\\frac{1}{2}")
+- "questionText": string (clear, self-contained question; wrap EVERY math symbol, subscript, superscript, fraction, Greek letter, and unit expression in inline LaTeX $...$ with JSON-escaped backslashes like "\\\\frac{1}{2}")
 - "chapter": string (MUST match one of the authorized chapters/topics listed in the task prompt)
 - "topic": string (specific subtopic tested)
 - "learningObjective": string (concise phrase describing the concept + skill tested)
 - "difficulty": "easy" | "medium" | "hard"
 - "marks": ${marks}
 - "negativeMark": ${negativeMark}
-- "explanation": string (solve step-by-step mathematically/scientifically BEFORE stating why the correct option(s) are right and why distractors fail)
+- "explanation": string (solve step-by-step mathematically/scientifically BEFORE stating why the correct option(s) are right and why distractors fail; wrap all formulas in $...$)
 - "pyqReference": "" (leave empty string "" OR write "PYQ-Inspired Concept: <concept>" ONLY — NEVER claim an unverified official exam year like "Official JEE 2023")
+- CRITICAL LATEX RULE FOR OPTIONS & TEXT: In "questionText", EVERY item of "options", and "explanation", NEVER output un-delimited LaTeX or raw underscores/powers like "2.5 \\\\mu\\\\text{F}", "f_0/2", "2 \\\\Omega", "10^{-4} \\\\text{ T}", or "(2n+1)\\\\frac{\\\\lambda}{2}" without dollar signs — ALWAYS wrap them inside $...$ (e.g. "$2.5\\\\,\\\\mu\\\\text{F}$", "$f_0/2$", "$2\\\\,\\\\Omega$", "$10^{-4}\\\\text{ T}$").
 `
 
   switch (format) {

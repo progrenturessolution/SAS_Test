@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
 import Link from "next/link"
-import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Share2, MoreVertical, Check, Globe } from "lucide-react"
+import { Eye, EyeOff, Pencil, Trash2, Link2, BarChart2, Share2, MoreVertical, Check, Globe, CheckCircle2, Clock } from "lucide-react"
 import { toast } from "sonner"
 import { getExamEditUrl } from "@/lib/examEditHelper"
 
@@ -14,8 +14,13 @@ interface ExamActionMenuProps {
     status: string
     examType?: string
     subject?: string
+    settings?: {
+      showResults?: boolean
+      resultsPublished?: boolean
+    }
   }
   onToggleStatus: (id: string, status: string) => Promise<void>
+  onTogglePublishResults?: (id: string, nextPublished: boolean) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onShare: (id: string, email: string) => Promise<void>
   onCopy: (id: string) => void
@@ -34,6 +39,7 @@ interface MenuPosition {
 export function ExamActionMenu({
   exam,
   onToggleStatus,
+  onTogglePublishResults,
   onDelete,
   onShare,
   onCopy,
@@ -61,8 +67,8 @@ export function ExamActionMenu({
       return
     }
 
-    const menuWidth = 192 // w-48 (12rem)
-    const menuEstimatedHeight = 265
+    const menuWidth = 224 // w-56
+    const menuEstimatedHeight = 340
 
     // Clamp horizontal position so menu stays within viewport
     let left = rect.right - menuWidth
@@ -138,6 +144,33 @@ export function ExamActionMenu({
     } else {
       setOpen(false)
     }
+  }
+
+  const isResultsPublished = exam.settings?.resultsPublished === true
+
+  const handleTogglePublishResults = async () => {
+    if (!onTogglePublishResults) return
+    const nextPublished = !isResultsPublished
+    setLoading(true)
+    try {
+      await onTogglePublishResults(exam._id, nextPublished)
+      toast.success(
+        nextPublished
+          ? "Results published! Students can now check results from the exam link."
+          : "Results unpublished! Student result view is now hidden."
+      )
+      setOpen(false)
+    } catch {
+      toast.error("Failed to update result visibility")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCopyResultLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/exam/${exam._id}/results`)
+    toast.success("Result portal link copied!")
+    setOpen(false)
   }
 
   const handleToggleStatus = async () => {
@@ -237,7 +270,7 @@ export function ExamActionMenu({
               maxHeight: `${menuPos.maxHeight}px`,
               zIndex: 9999,
             }}
-            className="w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] overflow-y-auto overscroll-contain divide-y divide-gray-100"
+            className="w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] overflow-y-auto overscroll-contain divide-y divide-gray-100"
           >
             {/* Status Toggle */}
             <button
@@ -324,6 +357,43 @@ export function ExamActionMenu({
               <BarChart2 size={15} className="text-[#324158] shrink-0" />
               <span className="flex-1">View Results</span>
             </Link>
+
+            {/* Publish / Unpublish Results Toggle */}
+            {onTogglePublishResults && (
+              <button
+                type="button"
+                onClick={handleTogglePublishResults}
+                disabled={loading}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700 cursor-pointer"
+              >
+                {isResultsPublished ? (
+                  <>
+                    <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                    <span className="flex-1">Unpublish Results</span>
+                    <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">Live</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock size={15} className="text-amber-600 shrink-0" />
+                    <span className="flex-1">Publish Results</span>
+                    <span className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">Hidden</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Copy Student Result Portal Link (when published) */}
+            {isResultsPublished && (
+              <button
+                type="button"
+                onClick={handleCopyResultLink}
+                disabled={loading}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#eaf0f8] hover:text-[#324158] transition-colors text-sm text-left font-medium text-gray-700 cursor-pointer"
+              >
+                <Link2 size={15} className="text-emerald-600 shrink-0" />
+                <span className="flex-1">Copy Result Link</span>
+              </button>
+            )}
 
             {/* Share */}
             <button

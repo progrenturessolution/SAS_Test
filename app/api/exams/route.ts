@@ -33,7 +33,7 @@ export async function GET(req: Request) {
 
     const exams = await Exam.find(
       query,
-      "title examType subject class duration status createdAt sections.name sections.title sections.questions._id sections.questions.title"
+      "title examType subject class duration status createdAt settings.showResults settings.resultsPublished sections.name sections.title sections.questions._id sections.questions.title"
     )
       .sort({ createdAt: -1 })
       .lean()
@@ -125,29 +125,7 @@ export async function POST(req: Request) {
       }
       body.examType = examType
       if (examType === "CUSTOM") {
-        const allowedCustomQuestionTypes = Array.isArray(institute.limits?.customQuestionTypes)
-          ? institute.limits.customQuestionTypes.map((type: string) => String(type).trim().toLowerCase())
-          : []
-        const questionTypes = Array.isArray(body.sections)
-          ? body.sections.flatMap((section: { questions?: { type?: string }[] }) =>
-            Array.isArray(section.questions) ? section.questions.map((question) => question.type) : []
-          )
-          : []
-        const normalizedAllowedTypes = new Set(allowedCustomQuestionTypes)
-        if (normalizedAllowedTypes.has("mcq")) {
-          normalizedAllowedTypes.add("mcq_multi")
-          normalizedAllowedTypes.add("diagram")
-        }
-
-        const disallowedType = questionTypes.find(
-          (type: unknown) => type && !normalizedAllowedTypes.has(String(type).trim().toLowerCase())
-        )
-        if (disallowedType) {
-          return NextResponse.json(
-            { error: `${String(disallowedType)} questions are not enabled for Custom Tests in this institute.` },
-            { status: 403 }
-          )
-        }
+        // All standard custom question types (including coding) are enabled for organizations
       }
       const mongoose = (await import("mongoose")).default
       const instObjId = targetInstituteId && mongoose.Types.ObjectId.isValid(targetInstituteId)

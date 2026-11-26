@@ -4,7 +4,7 @@ import { useState, useEffect, use, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { Loader2, ClipboardList } from "lucide-react"
+import { Loader2, ClipboardList, Clock, ArrowLeft } from "lucide-react"
 
 // ─── Inner Component ──────────────────────────────────────────────────────────
 
@@ -15,6 +15,8 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
   const [rollNumber, setRollNumber] = useState("")
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
+  const [checkingAvailability, setCheckingAvailability] = useState(true)
+  const [resultsAvailable, setResultsAvailable] = useState(true)
   const [error, setError] = useState("")
   const [examInfo, setExamInfo] = useState<{
     title: string
@@ -32,6 +34,10 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
             subject: data.exam.subject,
             institute: data.exam.institute,
           })
+          const canShow =
+            data.exam.settings?.showResults !== false ||
+            data.exam.settings?.resultsPublished === true
+          setResultsAvailable(canShow)
           if (data.exam.institute?.themeColor) {
             document.documentElement.style.setProperty("--primary", data.exam.institute.themeColor)
           }
@@ -42,6 +48,7 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
       .catch((err) => {
         console.warn('Error fetching exam info:', err)
       })
+      .finally(() => setCheckingAvailability(false))
   }, [id])
 
   const handleLookup = async (e: React.FormEvent) => {
@@ -121,6 +128,40 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
       <div className="flex-1 flex items-center justify-center px-4 py-6 z-10">
         <div className="w-full max-w-[440px]">
           <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/60 border border-gray-100/80 px-8 py-10">
+            {checkingAvailability ? (
+              <div className="py-10 flex flex-col items-center justify-center gap-3 text-gray-500 text-sm">
+                <Loader2 size={24} className="animate-spin text-[#324158]" />
+                <span>Checking result status...</span>
+              </div>
+            ) : !resultsAvailable ? (
+              <div className="text-center space-y-4 py-2">
+                <div className="flex justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center">
+                    <Clock size={22} className="text-amber-600" />
+                  </div>
+                </div>
+                <h1 className="text-xl font-bold text-[#324158]">
+                  Results Not Published Yet
+                </h1>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  {examInfo?.title ? (
+                    <>Results for <strong className="text-gray-700">{examInfo.title}</strong> have not been published yet. Please check back later.</>
+                  ) : (
+                    "Exam results have not been published yet. Please check back later."
+                  )}
+                </p>
+                <div className="pt-2">
+                  <Link
+                    href={`/exam/${id}`}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-[#2D3A4A] text-white text-sm font-semibold hover:bg-[#1e2a38] transition-colors"
+                  >
+                    <ArrowLeft size={15} />
+                    <span>Back to Exam Page</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <>
             {/* Icon */}
             <div className="flex justify-center mb-5">
               <div className="w-12 h-12 rounded-xl bg-[#f0f3f8] flex items-center justify-center">
@@ -207,6 +248,8 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
             <p className="text-xs text-gray-400 text-center mt-5">
               Forgot your credentials? Contact your exam administrator
             </p>
+              </>
+            )}
           </div>
         </div>
       </div>

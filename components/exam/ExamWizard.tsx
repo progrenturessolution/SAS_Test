@@ -18,6 +18,7 @@ import { CompetitiveExamAIGenerator, GeneratedCompetitiveQuestion } from "@/comp
 import { MathRenderer } from "@/components/exam/MathRenderer"
 import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
 import { normalizeStoredQuestion, toExamQuestionPayload } from "@/lib/ai/canonicalSchema"
+import { CodingStudioModal, DEFAULT_TEMPLATES, DEFAULT_DRIVERS } from "@/components/exam/CodingStudioModal"
 import { toast } from "sonner"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1713,431 +1714,7 @@ function FillBlanksModal({ onSave, onClose, initial }: {
   )
 }
 
-// ─── Coding Modal ─────────────────────────────────────────────────────────────
-
-const DEFAULT_TEMPLATES: Record<string, string> = {
-  python: "class Solution:\n    def solve(self, nums, target):\n        # Write your code here\n        pass\n",
-  javascript: "class Solution {\n    solve(nums, target) {\n        // Write your code here\n    }\n}\n",
-  java: "public class Solution {\n    public int[] solve(int[] nums, int target) {\n        // Write your code here\n        return new int[]{0, 1};\n    }\n}",
-  cpp: "#include <iostream>\n#include <vector>\n\nclass Solution {\npublic:\n    std::vector<int> solve(std::vector<int>& nums, int target) {\n        // Write your code here\n        return {0, 1};\n    }\n};",
-  go: "package main\n\ntype Solution struct{}\n\nfunc (s *Solution) Solve(nums []int, target int) []int {\n    // Write your code here\n    return []int{0, 1}\n}",
-  rust: "struct Solution;\n\nimpl Solution {\n    pub fn solve(nums: Vec<i32>, target: i32) -> Vec<i32> {\n        // Write your code here\n        vec![0, 1]\n    }\n}"
-}
-
-const DEFAULT_DRIVERS: Record<string, string> = {
-  python: "if __name__ == '__main__':\n    import sys, json, inspect\n    sol = Solution()\n    for line in sys.stdin:\n        if not line.strip(): continue\n        try:\n            data = json.loads(line)\n            if isinstance(data, dict):\n                sig = inspect.signature(sol.solve)\n                params = list(sig.parameters.keys())\n                if len(params) == 1 and params[0] not in data:\n                    result = sol.solve(data)\n                else:\n                    filtered_data = {k: v for k, v in data.items() if k in params}\n                    result = sol.solve(**filtered_data)\n            elif isinstance(data, list):\n                result = sol.solve(*data)\n            else:\n                result = sol.solve(data)\n            print(json.dumps(result))\n        except Exception as e: sys.stderr.write(str(e))",
-  javascript: "const readline = require('readline');\nconst rl = readline.createInterface({ input: process.stdin });\nconst sol = new Solution();\nfunction getParamNames(func) {\n    const str = func.toString();\n    const result = str.slice(str.indexOf('(') + 1, str.indexOf(')')).match(/([^\\s,]+)/g);\n    return result === null ? [] : result;\n}\nrl.on('line', (line) => {\n    if (!line.trim()) return;\n    try {\n        const data = JSON.parse(line);\n        let result;\n        if (typeof data === 'object' && !Array.isArray(data)) {\n            const params = getParamNames(sol.solve);\n            if (params.length === 1 && !(params[0] in data)) {\n                result = sol.solve(data);\n            } else {\n                const args = params.map(p => data[p]);\n                result = sol.solve(...args);\n            }\n        } else if (Array.isArray(data)) {\n            result = sol.solve(...data);\n        } else {\n            result = sol.solve(data);\n        }\n        console.log(JSON.stringify(result));\n    }\n    catch (e) { console.error(e); }\n});",
-  java: "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        Solution sol = new Solution();\n        while (sc.hasNextLine()) {\n            String line = sc.nextLine();\n            if (line.trim().isEmpty()) continue;\n            System.out.println(sol.solve(line));\n        }\n    }\n}",
-  cpp: "#include <iostream>\n#include <string>\nint main() {\n    std::string line;\n    Solution sol;\n    while (std::getline(std::cin, line)) {\n        if (line.empty()) continue;\n        std::cout << sol.solve(line) << std::endl;\n    }\n    return 0;\n}",
-  go: "func main() {\n    var input string\n    sol := Solution{}\n    for {\n        _, err := fmt.Scanln(&input)\n        if err != nil { break }\n        fmt.Println(sol.Solve(input))\n    }\n}",
-  rust: "fn main() {\n    use std::io::{self, BufRead};\n    let stdin = io::stdin();\n    for line in stdin.lock().lines() {\n        let s = line.unwrap();\n        if s.trim().is_empty() { continue; }\n        println!(\"{}\", Solution::solve(s));\n    }\n}"
-}
-
-function CodingModal({ onSave, onClose, initial }: {
-  onSave: (q: CodingQuestion) => void; onClose: () => void; initial?: CodingQuestion
-}) {
-  const blank = (): CodingQuestion => ({
-    id: Math.random().toString(36).slice(2), type: "coding",
-    questionText: "", difficulty: "hard", marks: 15,
-    codeTemplate: "",
-    codeTemplates: { ...DEFAULT_TEMPLATES },
-    driverCode: { ...DEFAULT_DRIVERS },
-    testCases: [{ input: "", expectedOutput: "" }],
-    constraints: [], languages: ["Python", "JavaScript"]
-  })
-
-  // Merge initial data with defaults for missing fields (new multi-lang support)
-  const [q, setQ] = useState<CodingQuestion>(() => {
-    const base = initial ?? blank()
-    // Ensure all enabled languages have a template/driver (fallback to defaults if missing)
-    const templates = { ...DEFAULT_TEMPLATES, ...(base.codeTemplates || {}) }
-    const drivers = { ...DEFAULT_DRIVERS, ...(base.driverCode || {}) }
-    return { ...base, codeTemplates: templates, driverCode: drivers }
-  })
-  const [activeLang, setActiveLang] = useState<string>(q.languages[0]?.toLowerCase() || "python")
-  const [error, setError] = useState("")
-  const [aiPrompt, setAiPrompt] = useState("")
-  const [isAiGenerating, setIsAiGenerating] = useState(false)
-  const [aiError, setAiError] = useState("")
-
-  const handleAiGenerate = async () => {
-    if (!aiPrompt.trim()) return
-    setIsAiGenerating(true)
-    setAiError("")
-    try {
-      const res = await fetch("/api/admin/generate-coding-question", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          prompt: aiPrompt,
-          languages: q.languages.length > 0 ? q.languages : ["Python", "Java", "C++", "JavaScript"]
-        })
-      })
-      const json = await res.json()
-      if (!res.ok) {
-        throw new Error(json.error || "Failed to generate question")
-      }
-      const data = json.data
-      setQ(prev => {
-        const langs = prev.languages.length > 0 ? prev.languages : ["Python", "Java", "C++", "JavaScript"]
-        return {
-          ...prev,
-          questionText: data.questionText || prev.questionText,
-          difficulty: (data.difficulty as Difficulty) || prev.difficulty,
-          constraints: Array.isArray(data.constraints) ? data.constraints : prev.constraints,
-          codeTemplates: {
-            ...prev.codeTemplates,
-            ...(data.codeTemplates || {})
-          },
-          testCases: Array.isArray(data.testCases) && data.testCases.length > 0
-            ? data.testCases
-            : prev.testCases,
-          languages: langs
-        }
-      })
-      if (data.codeTemplates && Object.keys(data.codeTemplates).length > 0) {
-        const firstKey = Object.keys(data.codeTemplates)[0].toLowerCase()
-        setActiveLang(firstKey)
-      }
-    } catch (err: any) {
-      setAiError(err.message || "Failed to generate")
-    } finally {
-      setIsAiGenerating(false)
-    }
-  }
-
-  const save = () => {
-    if (!q.questionText.trim()) return setError("Problem statement is required")
-    if (q.languages.length === 0) return setError("At least one language must be enabled")
-    onSave(q); onClose()
-  }
-
-  return (
-    <ModalShell
-      title="Coding Challenge Studio"
-      icon={
-        <div className="w-9 h-9 rounded-xl bg-[#eaf0f8] border border-[#cbd5e1] flex items-center justify-center text-[#324158] shadow-2xs">
-          <Code2 size={18} />
-        </div>
-      }
-      onClose={onClose}
-      maxWidth="max-w-4xl"
-    >
-      <div className="space-y-4 pb-2 overflow-y-auto max-h-[82vh] px-0.5 custom-scrollbar">
-        {/* Gemini AI Auto-Generator */}
-        <div className="p-4 bg-gradient-to-b from-[#f8fafc] to-[#eaf0f8]/35 border border-[#cbd5e1] rounded-2xl space-y-3 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#324158]">
-              <Sparkles size={14} className="text-[#324158]" />
-              <span>Smart AI Coding Problem Generator</span>
-            </div>
-            <span className="text-[10px] font-bold text-[#324158] px-2.5 py-0.5 bg-[#eaf0f8] border border-[#cbd5e1] rounded-full">
-              Auto-Fill
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="e.g. Check Palindrome / Two Sum / Reverse Linked List / Binary Search..."
-              value={aiPrompt}
-              onChange={e => setAiPrompt(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAiGenerate(); } }}
-              disabled={isAiGenerating}
-              className="flex-1 h-10 px-3.5 text-xs font-semibold bg-white border border-[#cbd5e1] rounded-xl text-[#324158] placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] disabled:opacity-60 shadow-2xs transition-all"
-            />
-            <button
-              type="button"
-              disabled={isAiGenerating || !aiPrompt.trim()}
-              onClick={handleAiGenerate}
-              className="h-10 px-4 bg-[#324158] hover:bg-[#253244] text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer"
-            >
-              {isAiGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-              <span>{isAiGenerating ? "Generating..." : "Generate AI"}</span>
-            </button>
-          </div>
-          {aiError && (
-            <p className="text-[11px] text-red-600 font-semibold flex items-center gap-1">
-              <AlertCircle size={12} /> {aiError}
-            </p>
-          )}
-          <p className="text-[11px] text-slate-500">
-            Type any programming problem or topic name to auto-fill description, starter templates for all languages, and test cases instantly.
-          </p>
-        </div>
-
-        {/* Step-by-Step Guide */}
-        <div className="bg-slate-50/80 border border-[#cbd5e1] rounded-xl p-3.5 text-xs text-[#324158] leading-relaxed">
-          <p className="font-bold mb-1 flex items-center gap-1.5 text-[#324158]">
-            <Info size={13} className="text-[#324158]" />
-            How to configure a LeetCode-style problem:
-          </p>
-          <ol className="list-decimal list-inside space-y-1 ml-1 text-[11.5px] text-slate-600">
-            <li>Write the <b>Problem Statement</b> and configure <b>Difficulty</b> & <b>Marks</b>.</li>
-            <li>Select the <b>Languages</b> you want candidates to be able to choose from.</li>
-            <li>Under each language tab, the <b>Initial Template</b> is what the aspirant sees in their code editor.</li>
-            <li>The <b>Driver Code</b> (hidden internal runner) executes the candidate's code and feeds test cases via <code>stdin</code>.</li>
-            <li>Add <b>Test Cases</b> with sample inputs & expected outputs matching your driver logic.</li>
-          </ol>
-        </div>
-
-        {/* Problem Statement */}
-        <div>
-          <label className="block text-xs font-bold text-[#324158] mb-1.5">Problem Statement <span className="text-rose-500">*</span></label>
-          <textarea
-            value={q.questionText}
-            onChange={e => setQ({...q, questionText: e.target.value})}
-            rows={4}
-            placeholder="Describe the problem clearly, including input format, output format, and constraints..."
-            className="w-full px-3.5 py-2.5 rounded-xl border border-[#cbd5e1] bg-white hover:border-[#324158]/50 text-sm font-medium text-[#324158] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-all shadow-2xs resize-none"
-          />
-        </div>
-
-        {/* Question Image URL */}
-        <div>
-          <label className="block text-xs font-bold text-[#324158] mb-1.5">
-            Diagram / Image URL <span className="text-slate-400 font-normal">(Optional)</span>
-          </label>
-          <input
-            value={q.questionImage || ""}
-            onChange={e => setQ({...q, questionImage: e.target.value})} 
-            placeholder="https://example.com/graph-diagram.png"
-            className="w-full h-10 px-3.5 rounded-xl border border-[#cbd5e1] bg-white hover:border-[#324158]/50 text-sm text-[#324158] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] transition-all shadow-2xs"
-          />
-        </div>
-
-        {/* Difficulty, Marks, Negative Marks */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-bold text-[#324158] mb-1.5">Difficulty Level <span className="text-rose-500">*</span></label>
-            <select
-              value={q.difficulty}
-              onChange={e => setQ({...q, difficulty: e.target.value as Difficulty})}
-              className="w-full h-10 px-3 rounded-xl border border-[#cbd5e1] bg-white text-xs font-bold text-[#324158] focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] shadow-2xs cursor-pointer capitalize"
-            >
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[#324158] mb-1.5">Marks <span className="text-rose-500">*</span></label>
-            <input
-              type="number"
-              value={q.marks}
-              onChange={e => setQ({...q, marks: +e.target.value})}
-              min={1}
-              className="w-full h-10 px-3.5 rounded-xl border border-[#cbd5e1] bg-white text-xs font-bold text-[#324158] focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] shadow-2xs"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[#324158] mb-1.5">Negative Mark</label>
-            <input
-              type="number"
-              step="0.1"
-              value={q.negativeMark || 0}
-              onChange={e => setQ({...q, negativeMark: +e.target.value})}
-              min={0}
-              className="w-full h-10 px-3.5 rounded-xl border border-[#cbd5e1] bg-white text-xs font-bold text-[#324158] focus:outline-none focus:ring-2 focus:ring-[#324158]/20 focus:border-[#324158] shadow-2xs"
-              placeholder="0"
-            />
-          </div>
-        </div>
-
-        {/* Multi-Language Boilerplates */}
-        <div>
-          <label className="block text-xs font-bold text-[#324158] mb-1.5">
-            Enabled Programming Languages <span className="text-rose-500">*</span>
-          </label>
-          <div className="flex gap-2 flex-wrap mb-3.5">
-            {["Python","Java","C++","JavaScript","Go","Rust"].map(lang => {
-              const active = q.languages.includes(lang)
-              return (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => setQ(prev => {
-                    const langs = active ? prev.languages.filter(l => l !== lang) : [...prev.languages, lang]
-                    return { ...prev, languages: langs }
-                  })}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                    active
-                      ? "bg-[#324158] text-white border-[#324158] shadow-xs"
-                      : "bg-white border-[#cbd5e1] text-slate-600 hover:border-[#324158]"
-                  }`}
-                >
-                  {active && <span className="mr-1">✓</span>}
-                  {lang}
-                </button>
-              )
-            })}
-          </div>
-
-          {q.languages.length > 0 && (
-            <div className="border border-[#cbd5e1] rounded-2xl overflow-hidden bg-white shadow-2xs">
-              {/* Language selection tabs */}
-              <div className="flex bg-slate-100/80 p-1 border-b border-[#cbd5e1] gap-1 overflow-x-auto">
-                {q.languages.map(lang => {
-                  const isActive = activeLang === lang.toLowerCase()
-                  return (
-                    <button
-                      key={lang}
-                      type="button"
-                      onClick={() => setActiveLang(lang.toLowerCase())}
-                      className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
-                        isActive
-                          ? "bg-[#324158] text-white shadow-xs"
-                          : "text-slate-600 hover:text-[#324158] hover:bg-white/60"
-                      }`}
-                    >
-                      {lang}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Code Editors */}
-              <div className="p-4 space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Initial Boilerplate Template ({activeLang})
-                    </label>
-                    <span className="text-[9px] font-bold text-[#324158] bg-[#eaf0f8] border border-[#cbd5e1] px-2 py-0.5 rounded-full">
-                      VISIBLE TO CANDIDATE
-                    </span>
-                  </div>
-                  <textarea
-                    value={q.codeTemplates[activeLang] || ""}
-                    onChange={e => setQ({
-                      ...q,
-                      codeTemplates: { ...q.codeTemplates, [activeLang]: e.target.value }
-                    })}
-                    rows={6}
-                    className="w-full p-3 bg-[#1e293b] text-slate-100 font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-[#324158] border border-slate-700"
-                    placeholder={`Enter starter boilerplate function / class for ${activeLang}...`}
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Driver Code Runner ({activeLang})
-                    </label>
-                    <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded-full">
-                      INTERNAL TEST RUNNER (HIDDEN)
-                    </span>
-                  </div>
-                  <textarea
-                    value={q.driverCode[activeLang] || ""}
-                    onChange={e => setQ({
-                       ...q,
-                       driverCode: { ...q.driverCode, [activeLang]: e.target.value }
-                    })}
-                    rows={4}
-                    className="w-full p-3 bg-slate-50 text-[#324158] font-mono text-xs rounded-xl border border-[#cbd5e1] focus:outline-none focus:ring-1 focus:ring-[#324158]"
-                    placeholder={`Enter driver code to run test cases in ${activeLang}...`}
-                  />
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    Reads candidate solution inputs via <code>stdin</code> and prints output to <code>stdout</code> for assertion.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Test Cases Studio */}
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-bold text-[#324158]">
-                Test Cases ({q.testCases.length})
-              </label>
-              <span className="text-[10px] text-slate-400">At least 1 required</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setQ({...q, testCases: [...q.testCases, {input:"", expectedOutput:"", hidden: false}]})}
-              className="text-xs text-[#324158] hover:bg-[#eaf0f8] px-2.5 py-1 rounded-lg border border-[#cbd5e1] flex items-center gap-1 font-bold transition-colors cursor-pointer"
-            >
-              <Plus size={13}/>
-              <span>+ Add Test Case</span>
-            </button>
-          </div>
-          <div className="space-y-3">
-            {q.testCases.map((tc, i) => (
-              <div key={i} className="bg-slate-50/70 p-3.5 rounded-xl border border-[#cbd5e1] space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-extrabold text-[#324158]">Test Case #{i + 1}</span>
-                    <label className="flex items-center gap-1.5 cursor-pointer ml-2">
-                      <input
-                        type="checkbox"
-                        checked={!!tc.hidden}
-                        onChange={e => {
-                          const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], hidden: e.target.checked}; setQ({...q, testCases: tc2})
-                        }}
-                        className="rounded border-[#cbd5e1] text-[#324158] focus:ring-[#324158]"
-                      />
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Hidden Test Case
-                      </span>
-                    </label>
-                  </div>
-                  {q.testCases.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setQ({...q, testCases: q.testCases.filter((_, idx) => idx !== i)})}
-                      className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                      title="Delete test case"
-                    >
-                      <Trash2 size={14}/>
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Input (stdin)</label>
-                    <textarea
-                      value={tc.input}
-                      onChange={e => {
-                        const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], input: e.target.value}; setQ({...q, testCases: tc2})
-                      }}
-                      placeholder="e.g. 5\n1 2 3 4 5"
-                      className="w-full h-18 p-2.5 text-xs font-mono bg-white border border-[#cbd5e1] rounded-xl text-[#324158] focus:outline-none focus:ring-1 focus:ring-[#324158] resize-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Expected Output (stdout)</label>
-                    <textarea
-                      value={tc.expectedOutput}
-                      onChange={e => {
-                        const tc2 = [...q.testCases]; tc2[i] = {...tc2[i], expectedOutput: e.target.value}; setQ({...q, testCases: tc2})
-                      }}
-                      placeholder="e.g. 15"
-                      className="w-full h-18 p-2.5 text-xs font-mono bg-white border border-[#cbd5e1] rounded-xl text-[#324158] focus:outline-none focus:ring-1 focus:ring-[#324158] resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {error && (
-          <p className="text-xs text-red-600 flex items-center gap-1.5 font-bold bg-red-50 border border-red-200 p-2.5 rounded-xl">
-            <AlertCircle size={14}/> {error}
-          </p>
-        )}
-      </div>
-      <ModalFooter
-        note={<span className="font-semibold text-slate-500">Multi-language code challenge configured</span>}
-        onCancel={onClose}
-        onSave={save}
-      />
-    </ModalShell>
-  )
-}
+// ─── Coding Studio uses components/exam/CodingStudioModal.tsx ──────────────────
 
 // ─── Modal Shell & Footer ─────────────────────────────────────────────────────
 
@@ -3099,12 +2676,8 @@ function Step3({
   const [modelAnswer, setModelAnswer] = useState("")
   const [wordLimit, setWordLimit] = useState("150")
 
-  // Coding
-  const [codingLang, setCodingLang] = useState("python")
-  const [codingStarter, setCodingStarter] = useState("def solution():\n    # write code here\n    pass")
-  const [codingTestCases, setCodingTestCases] = useState<{ input: string; expectedOutput: string; hidden?: boolean }[]>([
-    { input: "1 2", expectedOutput: "3", hidden: false }
-  ])
+  // Coding draft (populated only if generated from single-topic AI before opening Studio)
+  const [codingDraft, setCodingDraft] = useState<CodingQuestion | null>(null)
 
   // ── AI Generation State Inside Form ──
   const [bulkTopics, setBulkTopics] = useState<{ topic: string; count: number }[]>([{ topic: "", count: 1 }])
@@ -3119,6 +2692,8 @@ function Step3({
 
   // ── Modal states (for fallback or deep editing) ──
   const [showCompetitiveAiModal, setShowCompetitiveAiModal] = useState(false)
+  const [showCodingModal, setShowCodingModal] = useState(false)
+  const [editingCodingIndex, setEditingCodingIndex] = useState<number | null>(null)
 
   // Reset form to blank state
   const resetForm = () => {
@@ -3138,9 +2713,7 @@ function Step3({
     setBlanks([{ answer: "", alsoAccept: [] }])
     setModelAnswer("")
     setWordLimit("150")
-    setCodingLang("python")
-    setCodingStarter("def solution():\n    # write code here\n    pass")
-    setCodingTestCases([{ input: "1 2", expectedOutput: "3", hidden: false }])
+    setCodingDraft(null)
     setBulkTopics([{ topic: "", count: 1 }])
     setAiSingleTopic("")
   }
@@ -3187,6 +2760,47 @@ function Step3({
     }
     setIsGeneratingSingle(true)
     try {
+      if (activeType === "coding") {
+        const res = await fetch("/api/admin/generate-coding-question", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            prompt: aiSingleTopic.trim(),
+            languages: ["Python", "Java", "C++", "JavaScript"],
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || "Failed to generate coding question")
+        const data = json.data
+        if (data) {
+          const generatedTemplates: Record<string, string> = { ...DEFAULT_TEMPLATES }
+          Object.entries(data.codeTemplates || {}).forEach(([k, v]) => {
+            generatedTemplates[k.toLowerCase() === "c++" ? "cpp" : k.toLowerCase()] = String(v || "")
+          })
+          setCodingDraft({
+            id: Math.random().toString(36).slice(2),
+            type: "coding",
+            questionText: data.questionText || "",
+            difficulty: (["easy", "medium", "hard"].includes(data.difficulty) ? data.difficulty : "medium") as Difficulty,
+            marks: Math.max(1, Number(marks) || 15),
+            negativeMark: Math.max(0, Number(negativeMark) || 0),
+            codeTemplate: generatedTemplates.python || DEFAULT_TEMPLATES.python,
+            codeTemplates: generatedTemplates,
+            driverCode: { ...DEFAULT_DRIVERS },
+            testCases: Array.isArray(data.testCases) && data.testCases.length > 0
+              ? data.testCases
+              : [{ input: "", expectedOutput: "", hidden: false }],
+            constraints: Array.isArray(data.constraints) ? data.constraints : [],
+            languages: ["Python", "Java", "C++", "JavaScript"],
+          })
+          setEditingCodingIndex(null)
+          setShowCodingModal(true)
+          toast.success("AI coding problem generated in Coding Studio!")
+        }
+        return
+      }
+
       const genType = (activeType === "assertion" || activeType === "truefalse" || activeType === "fillblanks" || activeType === "descriptive")
         ? activeType
         : "mcq"
@@ -3385,11 +2999,6 @@ function Step3({
       return
     }
 
-    if (activeType === "coding" && codingTestCases.length === 0) {
-      toast.error("Please provide at least one test case")
-        return
-    }
-
     const baseId = (editingIndex !== null && questions[editingIndex])
       ? questions[editingIndex].id
       : Math.random().toString(36).slice(2)
@@ -3500,22 +3109,6 @@ function Step3({
         modelAnswer: modelAnswer.trim(),
         rubric: [],
       } as any
-    } else if (activeType === "coding") {
-      createdQ = {
-        id: baseId,
-        type: "coding",
-        questionText: finalQuestionText,
-        questionImage: questionImage.trim() || undefined,
-        difficulty,
-        marks: baseMarks,
-        negativeMark: baseNeg,
-        codeTemplate: codingStarter,
-        codeTemplates: { [codingLang]: codingStarter },
-        driverCode: {},
-        testCases: codingTestCases.filter(tc => tc.input.trim() || tc.expectedOutput.trim()),
-        constraints: [],
-        languages: [codingLang],
-      }
     } else {
       createdQ = {
         id: baseId,
@@ -3552,6 +3145,11 @@ function Step3({
   const handleEditQuestion = (index: number) => {
     const q = questions[index]
     if (!q) return
+    if (q.type === "coding") {
+      setEditingCodingIndex(index)
+      setShowCodingModal(true)
+      return
+    }
     setEditingIndex(index)
     if (q.type === "mcq") {
       const isMulti = (q as any).questionFormat === "mcq_multi" || Array.isArray(q.correctAnswer)
@@ -3581,10 +3179,6 @@ function Step3({
       setActiveType(qf === "short_answer" ? "short_answer" : qf === "case_study" ? "case_study" : "descriptive")
       setModelAnswer((q as DescriptiveQuestion).modelAnswer || "")
       setWordLimit(String((q as DescriptiveQuestion).wordLimit || "150"))
-    } else if (q.type === "coding") {
-      setActiveType("coding")
-      setCodingStarter((q as CodingQuestion).codeTemplate || "")
-      setCodingTestCases((q as CodingQuestion).testCases || [])
     }
     setQuestionText(q.questionText || "")
     setQuestionImage(q.questionImage || "")
@@ -3684,6 +3278,7 @@ function Step3({
     { id: "truefalse", label: "True / False", icon: <CheckCircle2 size={14} /> },
     { id: "fillblanks", label: "Fill in the Blanks", icon: <FileText size={14} /> },
     { id: "descriptive", label: "Long Answer / Descriptive", icon: <AlignLeft size={14} /> },
+    { id: "coding", label: "Coding / Programming", icon: <Code2 size={14} /> },
   ]
 
   return (
@@ -3941,7 +3536,8 @@ function Step3({
 
             {/* Right Column: Question Content & Options */}
             <div className="space-y-3.5">
-              {/* Question Description / Rich Text Editor */}
+              {/* Question Description / Rich Text Editor (Coding uses Coding Studio instead) */}
+              {activeType !== "coding" && (
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-medium text-slate-700">
@@ -4041,6 +3637,7 @@ function Step3({
                   </div>
                 )}
               </div>
+              )}
 
               {/* ── Type Specific: Assertion & Reason Statements ── */}
               {activeType === "assertion" && (
@@ -4267,35 +3864,45 @@ function Step3({
 
               {/* ── Type Specific: Coding ── */}
               {activeType === "coding" && (
-                <div className="space-y-2.5 pt-1">
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-3 pt-1">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Language</label>
-                      <select
-                        value={codingLang}
-                        onChange={(e) => setCodingLang(e.target.value)}
-                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-[#324158]"
-                      >
-                        <option value="python">Python</option>
-                        <option value="javascript">JavaScript</option>
-                        <option value="java">Java</option>
-                        <option value="cpp">C++</option>
-                      </select>
+                      <p className="text-xs sm:text-sm font-bold text-[#324158] flex items-center gap-1.5">
+                        <Code2 size={15} className="text-[#324158]" />
+                        Coding Challenge Studio
+                      </p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Configure problem statement, multi-language starter templates, hidden driver runner code, AI generator, and test cases in the LeetCode-style studio.
+                      </p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCodingIndex(editingIndex)
+                        setShowCodingModal(true)
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-[#324158] hover:bg-[#253244] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
+                    >
+                      <Code2 size={14} />
+                      <span>Open Coding Studio</span>
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Starter Code Template</label>
-                    <textarea
-                      value={codingStarter}
-                      onChange={(e) => setCodingStarter(e.target.value)}
-                      rows={4}
-                      className="w-full p-2.5 bg-slate-900 text-emerald-400 font-mono text-xs rounded-xl focus:outline-none"
-                    />
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleCloseForm}
+                      className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs sm:text-sm font-medium text-slate-700 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* ── Bottom Row: Difficulty, Marks, Negative Mark ── */}
+              {activeType !== "coding" && (
+              <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
                 <div>
                   <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -4357,6 +3964,8 @@ function Step3({
                   {editingIndex !== null ? "Update Question" : "Add Question"}
                 </button>
               </div>
+              </>
+              )}
             </div>
           </div>
         </div>
@@ -4548,6 +4157,39 @@ function Step3({
           setShowCompetitiveAiModal(false)
         }}
       />
+
+      {/* Full LeetCode-Style Coding Challenge Studio Modal */}
+      {showCodingModal && (
+        <CodingStudioModal
+          initial={
+            editingCodingIndex !== null && questions[editingCodingIndex]?.type === "coding"
+              ? (questions[editingCodingIndex] as CodingQuestion)
+              : codingDraft || undefined
+          }
+          onClose={() => {
+            setShowCodingModal(false)
+            setEditingCodingIndex(null)
+            setCodingDraft(null)
+          }}
+          onSave={(savedCodingQ) => {
+            if (editingCodingIndex !== null && editingCodingIndex >= 0) {
+              setQuestions((prev) => {
+                const next = [...prev]
+                next[editingCodingIndex] = savedCodingQ
+                return next
+              })
+              toast.success("Coding challenge updated!")
+            } else {
+              setQuestions((prev) => [...prev, savedCodingQ])
+              toast.success("Coding challenge added!")
+            }
+            setShowCodingModal(false)
+            setEditingCodingIndex(null)
+            setIsAddFormOpen(false)
+            resetForm()
+          }}
+        />
+      )}
     </div>
   )
 }

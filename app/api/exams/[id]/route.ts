@@ -136,51 +136,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
       body.examType = examType
     }
-    if (session.instituteId && String(body.examType || existingExam.examType).trim().toUpperCase() === "CUSTOM") {
-      const Institute = (await import("@/models/Institute")).default
-      const institute = await Institute.findById(session.instituteId).select("limits").lean()
-      if (!institute) {
-        return NextResponse.json(
-          { error: "Institute access could not be verified. Please sign in again." },
-          { status: 403 }
-        )
-      }
-      const allowedCustomQuestionTypes = Array.isArray(institute?.limits?.customQuestionTypes)
-        ? institute.limits.customQuestionTypes.map((type: string) => String(type).trim().toLowerCase())
-        : []
-      const questionTypes = Array.isArray(body.sections)
-        ? body.sections.flatMap((section: { questions?: { type?: string }[] }) =>
-            Array.isArray(section.questions) ? section.questions.map((question) => question.type) : []
-          )
-        : []
-      const normalizedAllowedTypes = new Set(allowedCustomQuestionTypes)
-      if (normalizedAllowedTypes.has("mcq")) {
-        normalizedAllowedTypes.add("mcq_multi")
-        normalizedAllowedTypes.add("diagram")
-      }
-      const disallowedType = questionTypes.find(
-        (type: unknown) => type && !normalizedAllowedTypes.has(String(type).trim().toLowerCase())
-      )
-      if (disallowedType) {
-        return NextResponse.json(
-          { error: `${String(disallowedType)} questions are not enabled for Custom Tests in this institute.` },
-          { status: 403 }
-        )
-      }
-    }
+    // All standard custom question types (including coding) are enabled across organizations
     
     // Properly handle nested settings update with Date conversion
     const updateData = { ...body }
     delete updateData.createdBy
     delete updateData.instituteId
     if (updateData.settings) {
-      updateData.settings = { ...updateData.settings }
+      const mergedSettings = {
+        ...((existingExam as any).settings || {}),
+        ...updateData.settings,
+      }
       if (updateData.settings.startDate) {
-        updateData.settings.startDate = getExamStartDateTime(updateData.settings) || new Date(updateData.settings.startDate)
+        mergedSettings.startDate = getExamStartDateTime(mergedSettings) || new Date(updateData.settings.startDate)
       }
       if (updateData.settings.endDate) {
-        updateData.settings.endDate = getExamEndDateTime(updateData.settings) || new Date(updateData.settings.endDate)
+        mergedSettings.endDate = getExamEndDateTime(mergedSettings) || new Date(updateData.settings.endDate)
       }
+      updateData.settings = mergedSettings
     }
     
     if (Array.isArray(updateData.sections)) {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Clock, FileText, CheckCircle, Award, User, Mail, Phone, Hash, LockKeyhole, Shield, AlertCircle, Camera, Maximize, AlertTriangle, Globe } from "lucide-react"
+import { Clock, FileText, CheckCircle, Award, User, Mail, Phone, Hash, LockKeyhole, Shield, AlertCircle, Camera, Maximize, AlertTriangle, Globe, BarChart2, ArrowRight } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
 import { getScheduleStatus, formatCountdown, formatScheduleDateTime } from "@/lib/examSchedule"
 
@@ -27,6 +27,7 @@ interface ExamData {
   }
   settings?: {
     showResults?: boolean
+    resultsPublished?: boolean
     startDate?: string
     startTime?: string
     endDate?: string
@@ -123,6 +124,8 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
 
   const totalQuestions = exam?.sections?.reduce((s, sec) => s + (sec.questions?.length || 0), 0) || 0
   const schedule = getScheduleStatus(exam?.settings, currentTime)
+  const resultsPublished = exam?.settings?.resultsPublished === true
+  const canShowCandidateResult = exam?.settings?.showResults !== false || resultsPublished
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -247,12 +250,23 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
         ) : (
           <ProcrentureLogo />
         )}
-        <button className="hidden sm:block px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors">
-          Need Help?
-        </button>
-        <button className="sm:hidden p-2 text-gray-500">
-          <Hash size={20} />
-        </button>
+        <div className="flex items-center gap-2.5">
+          {resultsPublished && (
+            <Link
+              href={`/exam/${id}/results`}
+              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors"
+            >
+              <BarChart2 size={15} />
+              <span>Check Results</span>
+            </Link>
+          )}
+          <button className="hidden sm:block px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors">
+            Need Help?
+          </button>
+          <button className="sm:hidden p-2 text-gray-500">
+            <Hash size={20} />
+          </button>
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6 sm:gap-8 items-start">
@@ -350,6 +364,31 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
 
         {/* Right - Form */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 lg:sticky lg:top-24">
+          {/* Published Results Banner directly on Exam Link */}
+          {resultsPublished && (
+            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-xs flex flex-col gap-3">
+              <div className="flex items-start gap-2.5">
+                <CheckCircle size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-emerald-900 uppercase tracking-wider">
+                    Results Published
+                  </p>
+                  <p className="text-xs text-emerald-800 mt-0.5 leading-relaxed">
+                    Exam results are now live. Enter your Roll Number or Email in the Result Portal to view your score and analytics.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href={`/exam/${id}/results`}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white transition-colors shadow-xs"
+              >
+                <BarChart2 size={15} />
+                <span>View Your Result</span>
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+          )}
+
           {/* Public Access Mode Banner */}
           {isPublicAccess && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3 shadow-xs">
@@ -525,19 +564,19 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                 <p className="text-sm font-bold text-amber-800">You have already taken this exam.</p>
                 <p className="mt-1 text-xs text-amber-700">
-                  {exam?.settings?.showResults === false
+                  {!canShowCandidateResult
                     ? "Thank You! Your exam has been submitted successfully. Your result will be shared with you later."
                     : "You cannot take this exam again. View your result and comprehensive analytics below."}
                 </p>
                 <Link
                   href={
-                    exam?.settings?.showResults === false
+                    !canShowCandidateResult
                       ? `/exam/${id}/submitted?attemptId=${existingAttempt._id}`
                       : `/exam/${id}/result/analytics?attemptId=${existingAttempt._id}`
                   }
                   className="mt-3 inline-flex rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-accent"
                 >
-                  {exam?.settings?.showResults === false ? "View Submission Confirmation" : "View Comprehensive Analytics"}
+                  {!canShowCandidateResult ? "View Submission Confirmation" : "View Comprehensive Analytics"}
                 </Link>
               </div>
             )}

@@ -453,14 +453,25 @@ html.lenis, html.lenis body {
   background-color: #1E293B !important;
 }
 
-/* 8. Code editors and syntax blocks: preserve dark navy background for coding */
-.coaching-portal pre,
+/* 8. Code editors and syntax blocks: preserve dark navy background only for dark-themed code containers */
 .coaching-portal pre.bg-\[\#1e2a38\],
-.coaching-portal textarea.font-mono,
+.coaching-portal pre.bg-\[\#131B2A\],
 .coaching-portal textarea.bg-\[\#1e2a38\],
-.coaching-portal code {
+.coaching-portal textarea.bg-\[\#1e293b\],
+.coaching-portal textarea.bg-slate-900 {
   background-color: #1e2a38 !important;
   color: #ffffff !important;
+}
+
+.coaching-portal textarea.font-mono.bg-white,
+.coaching-portal textarea.font-mono.bg-slate-50 {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+.coaching-portal .monaco-editor textarea.inputarea {
+  background-color: transparent !important;
+  color: transparent !important;
 }
 
 

@@ -26,6 +26,7 @@ import { buildQuestionGenerationPrompt, computeDifficultyCounts } from "../lib/a
 import { generateQuestionBatch } from "../lib/ai/orchestrator"
 import { callGeminiJson, sanitizeErrorMessage, type GeminiTransportFn } from "../lib/ai/geminiClient"
 import { evaluateObjectiveAnswer, formatOptionDisplay } from "../lib/ai/questionEvaluation"
+import { isBareStandaloneMath, normalizeMathContent } from "../lib/mathFormat"
 
 // ─── 1. JSON Parsing & LaTeX Backslash Preservation ───────────────────────────
 
@@ -789,4 +790,59 @@ test("Chemistry prompt builder and validator support organic ring/mechanism SVGs
     { throwOnError: false, strict: "ignore", trust: true }
   )
   assert.ok(!renderedReaction.includes("katex-error"), "KaTeX must render \\ce arrow reactions cleanly")
+})
+
+test("normalizeMathContent wraps bare Physics LaTeX options/prose without corrupting plain text", () => {
+  const physicsOptions = [
+    "2.5 \\mu\\text{F}",
+    "5.0 \\mu\\text{F}",
+    "f_0/2",
+    "f_0",
+    "2f_0",
+    "0.123 \\text{\\AA}",
+    "1.227 \\text{\\AA}",
+    "10^{-4} \\text{ T}",
+    "2 \\times 10^{-5} \\text{ T}",
+    "-1.386 \\times 10^5\\text{ J}",
+    "2 \\Omega",
+    "9 \\Omega",
+    "3 \\epsilon_0 A / d",
+    "n\\lambda",
+    "(2n+1)\\frac{\\lambda}{2}",
+    "(2n-1)\\frac{\\lambda}{2}",
+  ]
+
+  for (const raw of physicsOptions) {
+    assert.equal(isBareStandaloneMath(raw), true, `Expected standalone math detection for: ${raw}`)
+    const normalized = normalizeMathContent(raw)
+    assert.ok(normalized.startsWith("$") && normalized.endsWith("$"), `Must wrap ${raw} in $...$`)
+    const html = katex.renderToString(normalized.slice(1, -1), {
+      throwOnError: true,
+      strict: "ignore",
+      trust: true,
+    })
+    assert.ok(!html.includes("katex-error"), `KaTeX failed for ${raw}`)
+  }
+
+  // Mixed prose with bare Physics LaTeX must wrap only math tokens and keep English intact
+  const mixedProse =
+    "If resonance frequency is f_0/2 and path difference is (2n+1)\\frac{\\lambda}{2} at B = 2 \\times 10^{-5} \\text{ T}, find C."
+  const normalizedProse = normalizeMathContent(mixedProse)
+  assert.ok(normalizedProse.includes("$f_0/2$"))
+  assert.ok(normalizedProse.includes("$(2n+1)\\frac{\\lambda}{2}$"))
+  assert.ok(normalizedProse.includes("$2 \\times 10^{-5} \\text{ T}$"))
+  assert.ok(normalizedProse.startsWith("If resonance frequency is "))
+
+  // Plain options, code snake_case identifiers, and URLs must NOT be wrapped as math
+  for (const plain of [
+    "40 days",
+    "0.16 N-m",
+    "2.99 cm",
+    "2.21 pC",
+    "expected_output",
+    "https://example.com/path_name",
+  ]) {
+    assert.equal(isBareStandaloneMath(plain), false, `Must NOT treat plain text as math: ${plain}`)
+    assert.equal(normalizeMathContent(plain), plain)
+  }
 })

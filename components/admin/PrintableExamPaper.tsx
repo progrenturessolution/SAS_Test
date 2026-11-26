@@ -399,10 +399,10 @@ export function PrintableExamPaper({
               {customInstitute}
             </h1>
             <div className="text-xs sm:text-sm font-semibold tracking-wide text-slate-700 uppercase">
-              {examTarget} EXAMINATION PREPARATION &amp; ASSESSMENT
+              {examTarget.replace(/_/g, " ")} EXAMINATION PREPARATION &amp; ASSESSMENT
             </div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900 pt-1">
-              {examTitle ? (subject && examTitle.includes(subject) ? examTitle.replaceAll(subject, customSubject) : examTitle) : `${examTarget} ${customSubject} Mock Examination`}
+              {examTitle ? (subject && examTitle.includes(subject) ? examTitle.replaceAll(subject, customSubject) : examTitle) : `${examTarget.replace(/_/g, " ")} ${customSubject} Mock Examination`}
             </h2>
           </div>
 
@@ -735,7 +735,7 @@ export function PrintableExamPaper({
 
         {/* ─── Footer of Document ─── */}
         <footer className="mt-8 pt-4 border-t border-slate-300 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 print-avoid-break">
-          <span>{examTitle ? (subject && examTitle.includes(subject) ? examTitle.replaceAll(subject, customSubject) : examTitle) : `${examTarget} ${customSubject}`} · {printMode === "student" ? "Aspirant Examination Booklet" : "Teacher Solution Key"}</span>
+          <span>{examTitle ? (subject && examTitle.includes(subject) ? examTitle.replaceAll(subject, customSubject) : examTitle) : `${examTarget.replace(/_/g, " ")} ${customSubject}`} · {printMode === "student" ? "Aspirant Examination Booklet" : "Teacher Solution Key"}</span>
           <span className="font-medium text-slate-700">*** END OF QUESTION PAPER ***</span>
           <span>{customInstitute}</span>
         </footer>
