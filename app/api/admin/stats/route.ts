@@ -62,8 +62,12 @@ export async function GET(req: Request) {
       : { $or: [{ createdBy: session.id }, { sharedWith: session.email }] }
 
     const [instituteDoc, accessibleExams] = await Promise.all([
-      session.instituteId ? Institute.findById(session.instituteId).lean() : Promise.resolve(null),
-      Exam.find(query, "_id sections status createdAt").lean(),
+      session.instituteId
+        ? Institute.findById(session.instituteId)
+            .select("name code status validUntil limits")
+            .lean()
+        : Promise.resolve(null),
+      Exam.find(query, "_id status createdAt sections.questions._id").lean(),
     ])
     institute = instituteDoc
 

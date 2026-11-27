@@ -203,7 +203,7 @@ const ExamSchema = new Schema<IExam>(
       },
       competitiveGenerator: { type: Schema.Types.Mixed },
     },
-    createdBy: { type: String, required: true },
+    createdBy: { type: String, required: true, index: true },
     instituteId: { type: Schema.Types.ObjectId, ref: "Institute", index: true },
     sharedWith: [{ type: String }],
   },

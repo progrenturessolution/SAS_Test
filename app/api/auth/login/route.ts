@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { cookies } from "next/headers"
 import connectDB from "@/lib/mongodb"
 import User from "@/models/User"
 import Institute from "@/models/Institute"
@@ -15,11 +14,11 @@ export async function POST(req: Request) {
 
     await connectDB()
 
-    // Run user lookup — do NOT use .lean() here as we need comparePassword() method
+    // Run lightweight user lookup — select only auth fields needed while keeping comparePassword()
     const user = await User.findOne({
       email: email.toLowerCase(),
       role: { $in: ["super_admin", "admin", "institute", "coaching_institute"] },
-    })
+    }).select("name email password role instituteId")
     if (!user) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
@@ -53,7 +52,9 @@ export async function POST(req: Request) {
       )
     }
     if (user.instituteId) {
-      instituteData = await Institute.findById(user.instituteId).lean()
+      instituteData = await Institute.findById(user.instituteId)
+        .select("name code status validUntil")
+        .lean()
       if (!instituteData) {
         return NextResponse.json(
           { error: "This organization account is no longer available. Please contact platform support." },
@@ -94,13 +95,6 @@ export async function POST(req: Request) {
       sameSite: "lax" as const,
       maxAge: COOKIE_MAX_AGE,
       path: "/",
-    }
-
-    try {
-      const cookieStore = await cookies()
-      cookieStore.set(COOKIE_NAME, token, cookieOptions)
-    } catch {
-      // fallback handled below
     }
 
     const response = NextResponse.json({

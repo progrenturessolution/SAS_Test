@@ -12,7 +12,7 @@ const rawMongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb
 // Cache the resolved SRV URI and recent host lookups across transient DNS hiccups
 let resolvedUriCache: string | null = null
 const hostDnsCache = new Map<string, { addresses: string[]; expiresAt: number; staleUntil: number }>()
-const customDnsResolver = new dns.promises.Resolver()
+const customDnsResolver = new dns.promises.Resolver({ timeout: 2000, tries: 1 })
 try {
   customDnsResolver.setServers(["8.8.8.8", "1.1.1.1", "9.9.9.9"])
 } catch {}
@@ -33,8 +33,8 @@ const deliverLookupResult = (
 }
 
 /**
- * Custom socket lookup with public-DNS (8.8.8.8 / 1.1.1.1) and short-lived cache fallback
- * so transient Windows OS getaddrinfo ENOTFOUND glitches do not drop MongoDB Atlas calls.
+ * Custom socket lookup racing public-DNS (8.8.8.8 / 1.1.1.1) in parallel with OS lookup
+ * plus a 5-minute cache so slow Windows OS getaddrinfo stalls never delay logins or DB calls.
  */
 const resilientLookup: LookupFunction = (hostname, options, callback) => {
   const safeOpts: dns.LookupOptions = typeof options === "object" && options !== null ? options : {}
@@ -42,13 +42,41 @@ const resilientLookup: LookupFunction = (hostname, options, callback) => {
   const now = Date.now()
   const cachedEntry = hostDnsCache.get(hostname)
 
-  // Serve fresh cached IPv4 immediately to avoid repeated OS getaddrinfo failures on Atlas heartbeats
+  // Serve fresh cached IPv4 immediately to avoid repeated DNS lookups on Atlas traffic
   if (cachedEntry && now < cachedEntry.expiresAt && cachedEntry.addresses.length > 0) {
     deliverLookupResult(wantAll, cachedEntry.addresses, callback)
     return
   }
 
-  dns.lookup(hostname, safeOpts, async (err, address, family) => {
+  let settled = false
+  let pending = 2
+  let lastErr: NodeJS.ErrnoException | null = null
+
+  const cacheAndDeliver = (addresses: string[]) => {
+    if (settled || addresses.length === 0) return
+    settled = true
+    const ts = Date.now()
+    hostDnsCache.set(hostname, {
+      addresses,
+      expiresAt: ts + 300_000,
+      staleUntil: ts + 1_800_000,
+    })
+    deliverLookupResult(wantAll, addresses, callback)
+  }
+
+  const finishFailure = (err: NodeJS.ErrnoException | null) => {
+    if (err) lastErr = err
+    pending--
+    if (settled || pending > 0) return
+    settled = true
+    if (cachedEntry && Date.now() < cachedEntry.staleUntil && cachedEntry.addresses.length > 0) {
+      deliverLookupResult(wantAll, cachedEntry.addresses, callback)
+      return
+    }
+    callback(lastErr, wantAll ? [] : ("" as unknown as dns.LookupAddress[]), 4)
+  }
+
+  dns.lookup(hostname, { ...safeOpts, family: 4 }, (err, address) => {
     if (!err) {
       const list = Array.isArray(address)
         ? address.map((item) => item.address).filter(Boolean)
@@ -56,36 +84,25 @@ const resilientLookup: LookupFunction = (hostname, options, callback) => {
         ? [address]
         : []
       if (list.length > 0) {
-        hostDnsCache.set(hostname, {
-          addresses: list,
-          expiresAt: Date.now() + 60_000,
-          staleUntil: Date.now() + 900_000,
-        })
-      }
-      callback(null, address as string | dns.LookupAddress[], family)
-      return
-    }
-
-    try {
-      const resolved = await customDnsResolver.resolve4(hostname)
-      if (resolved && resolved.length > 0) {
-        hostDnsCache.set(hostname, {
-          addresses: resolved,
-          expiresAt: Date.now() + 60_000,
-          staleUntil: Date.now() + 900_000,
-        })
-        deliverLookupResult(wantAll, resolved, callback)
+        cacheAndDeliver(list)
         return
       }
-    } catch {}
-
-    if (cachedEntry && Date.now() < cachedEntry.staleUntil && cachedEntry.addresses.length > 0) {
-      deliverLookupResult(wantAll, cachedEntry.addresses, callback)
-      return
     }
-
-    callback(err, wantAll ? [] : ("" as unknown as dns.LookupAddress[]), 4)
+    finishFailure(err)
   })
+
+  customDnsResolver
+    .resolve4(hostname)
+    .then((resolved) => {
+      if (resolved && resolved.length > 0) {
+        cacheAndDeliver(resolved)
+        return
+      }
+      finishFailure(null)
+    })
+    .catch((err) => {
+      finishFailure(err as NodeJS.ErrnoException)
+    })
 }
 
 async function getEffectiveMongoUri(uri: string): Promise<string> {
@@ -95,19 +112,19 @@ async function getEffectiveMongoUri(uri: string): Promise<string> {
   try {
     const parsed = new URL(uri)
     const hostname = parsed.hostname
-    const srvRecords = await customDnsResolver.resolveSrv(`_mongodb._tcp.${hostname}`)
+    const [srvRecords, txtRecords] = await Promise.all([
+      customDnsResolver.resolveSrv(`_mongodb._tcp.${hostname}`),
+      customDnsResolver.resolveTxt(hostname).catch(() => []),
+    ])
     if (!srvRecords || srvRecords.length === 0) {
       return uri
     }
 
     const hosts = srvRecords.map((r) => `${r.name}:${r.port}`).join(",")
-    let txtParams = ""
-    try {
-      const txtRecords = await customDnsResolver.resolveTxt(hostname)
-      if (txtRecords && txtRecords.length > 0) {
-        txtParams = txtRecords.map((r) => r.join("")).join("&")
-      }
-    } catch {}
+    const txtParams =
+      txtRecords && txtRecords.length > 0
+        ? txtRecords.map((r) => r.join("")).join("&")
+        : ""
 
     const auth = parsed.username ? `${parsed.username}:${parsed.password}@` : ""
     const dbPath = parsed.pathname || "/myDatabase"
@@ -171,12 +188,12 @@ if (mongoose.connection.listenerCount("disconnected") === 0) {
 async function connectWithRetry(attempt = 0): Promise<typeof import("mongoose")> {
   const opts: ConnectOptions = {
     bufferCommands: false,
-    maxPoolSize: 3,
-    minPoolSize: 0,
-    maxIdleTimeMS: 60000,
-    serverSelectionTimeoutMS: 12000,
+    maxPoolSize: 10,
+    minPoolSize: 1,
+    maxIdleTimeMS: 120000,
+    serverSelectionTimeoutMS: 8000,
     socketTimeoutMS: 25000,
-    connectTimeoutMS: 12000,
+    connectTimeoutMS: 8000,
     family: 4,
     autoSelectFamily: false,
     lookup: resilientLookup,

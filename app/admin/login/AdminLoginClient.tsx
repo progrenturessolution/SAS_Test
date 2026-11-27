@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
 interface AdminLoginClientProps {
@@ -11,7 +10,6 @@ interface AdminLoginClientProps {
 }
 
 export default function AdminLoginClient({ portalType }: AdminLoginClientProps) {
-  const router = useRouter()
   const isInstitute = portalType === "institute"
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -35,15 +33,15 @@ export default function AdminLoginClient({ portalType }: AdminLoginClientProps) 
 
       if (!response.ok) {
         setError(data.error || "Invalid email or password")
+        setLoading(false)
         return
       }
 
       const targetUrl = data.role === "super_admin" ? "/admin/institutes" : "/admin"
-      router.push(targetUrl)
-      router.refresh()
+      // Single clean navigation so cookies & server layout apply without double RSC fetches
+      window.location.assign(targetUrl)
     } catch {
       setError("Network connection error. Please try again.")
-    } finally {
       setLoading(false)
     }
   }

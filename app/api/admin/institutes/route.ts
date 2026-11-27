@@ -16,47 +16,77 @@ export async function GET() {
 
     await connectDB()
 
-    const institutes = await Institute.find().sort({ createdAt: -1 }).lean()
+    const [institutes, allExams, studentCounts, attemptEmailsByExam] = await Promise.all([
+      Institute.find().select("-logo").sort({ createdAt: -1 }).lean(),
+      Exam.find({}, "_id instituteId createdBy").lean(),
+      User.aggregate<{ _id: unknown; count: number }>([
+        { $match: { role: "student", instituteId: { $ne: null } } },
+        { $group: { _id: "$instituteId", count: { $sum: 1 } } },
+      ]),
+      Attempt.aggregate<{ _id: unknown; emails: string[] }>([
+        { $group: { _id: "$examId", emails: { $addToSet: "$studentEmail" } } },
+      ]),
+    ])
 
-    // Calculate usage for each institute
-    const enrichedInstitutes = await Promise.all(
-      institutes.map(async (inst: any) => {
-        // Count exams created for this institute
-        const examCount = await Exam.countDocuments({
-          $or: [{ instituteId: inst._id }, { createdBy: inst.adminUserId?.toString() }],
-        })
+    const studentCountByInst = new Map<string, number>()
+    for (const row of studentCounts) {
+      if (row._id) studentCountByInst.set(String(row._id), row.count)
+    }
 
-        // Count unique students (from attempts or student users)
-        const studentUserCount = await User.countDocuments({
-          instituteId: inst._id,
-          role: "student",
-        })
+    const emailsByExamId = new Map<string, string[]>()
+    for (const row of attemptEmailsByExam) {
+      if (row._id) emailsByExamId.set(String(row._id), row.emails || [])
+    }
 
-        // Also check distinct student emails in attempts associated with this institute's exams
-        const instExams = await Exam.find(
-          { $or: [{ instituteId: inst._id }, { createdBy: inst.adminUserId?.toString() }] },
-          "_id"
-        ).lean()
-        const examIds = instExams.map((e) => e._id)
-        const distinctAttemptStudents = examIds.length > 0
-          ? (await Attempt.distinct("studentEmail", { examId: { $in: examIds } })).length
-          : 0
+    const examsByInstId = new Map<string, string[]>()
+    const examsByCreatorId = new Map<string, string[]>()
+    for (const ex of allExams as any[]) {
+      const exId = String(ex._id)
+      if (ex.instituteId) {
+        const key = String(ex.instituteId)
+        const list = examsByInstId.get(key) || []
+        list.push(exId)
+        examsByInstId.set(key, list)
+      }
+      if (ex.createdBy) {
+        const key = String(ex.createdBy)
+        const list = examsByCreatorId.get(key) || []
+        list.push(exId)
+        examsByCreatorId.set(key, list)
+      }
+    }
 
-        const totalStudentsUsed = Math.max(studentUserCount, distinctAttemptStudents)
+    const enrichedInstitutes = institutes.map((inst: any) => {
+      const instIdStr = String(inst._id)
+      const adminIdStr = inst.adminUserId ? String(inst.adminUserId) : ""
+      const examIdSet = new Set<string>([
+        ...(examsByInstId.get(instIdStr) || []),
+        ...(adminIdStr ? examsByCreatorId.get(adminIdStr) || [] : []),
+      ])
+      const examCount = examIdSet.size
 
-        return {
-          ...inst,
-          usage: {
-            examsCreated: examCount,
-            studentsEnrolled: totalStudentsUsed,
-            examLimit: inst.limits?.maxExams ?? 20,
-            studentLimit: inst.limits?.maxStudents ?? 100,
-            isExamLimitReached: examCount >= (inst.limits?.maxExams ?? 20),
-            isStudentLimitReached: totalStudentsUsed >= (inst.limits?.maxStudents ?? 100),
-          },
+      const studentUserCount = studentCountByInst.get(instIdStr) || 0
+      const distinctAttemptEmails = new Set<string>()
+      examIdSet.forEach((exId) => {
+        for (const em of emailsByExamId.get(exId) || []) {
+          if (em) distinctAttemptEmails.add(em)
         }
       })
-    )
+
+      const totalStudentsUsed = Math.max(studentUserCount, distinctAttemptEmails.size)
+
+      return {
+        ...inst,
+        usage: {
+          examsCreated: examCount,
+          studentsEnrolled: totalStudentsUsed,
+          examLimit: inst.limits?.maxExams ?? 20,
+          studentLimit: inst.limits?.maxStudents ?? 100,
+          isExamLimitReached: examCount >= (inst.limits?.maxExams ?? 20),
+          isStudentLimitReached: totalStudentsUsed >= (inst.limits?.maxStudents ?? 100),
+        },
+      }
+    })
 
     return NextResponse.json({ institutes: enrichedInstitutes })
   } catch (error: any) {
