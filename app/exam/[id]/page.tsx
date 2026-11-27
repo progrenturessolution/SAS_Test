@@ -25,6 +25,12 @@ interface ExamData {
     logo?: string | null
     themeColor?: string
   }
+  publicAccessLimit?: {
+    maxStudents: number
+    usedSeats: number
+    remainingSeats: number
+    limitReached: boolean
+  }
   settings?: {
     showResults?: boolean
     resultsPublished?: boolean
@@ -179,6 +185,9 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
         }),
       })
       const data = await res.json()
+      if (data.publicAccessLimit) {
+        setExam((prev) => (prev ? { ...prev, publicAccessLimit: data.publicAccessLimit } : prev))
+      }
       if (data.alreadySubmitted && data.attempt?._id) {
         setExistingAttempt(data.attempt)
         setErrors({})
@@ -374,7 +383,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
                     Results Published
                   </p>
                   <p className="text-xs text-emerald-800 mt-0.5 leading-relaxed">
-                    Exam results are now live. Enter your Roll Number or Email in the Result Portal to view your score and analytics.
+                    Exam results are now live. Enter your Email Address and Mobile Number in the Result Portal to view your score and analytics.
                   </p>
                 </div>
               </div>
@@ -391,17 +400,58 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
 
           {/* Public Access Mode Banner */}
           {isPublicAccess && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3 shadow-xs">
-              <Globe className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-blue-900 uppercase tracking-wide">Public / Open Access</span>
-                  <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200">
-                    Open to Anyone
-                  </span>
+            <div
+              className={`mb-6 p-4 rounded-2xl flex items-start gap-3 shadow-xs border ${
+                exam.publicAccessLimit?.limitReached
+                  ? "bg-red-50 border-red-200"
+                  : "bg-blue-50 border-blue-200"
+              }`}
+            >
+              {exam.publicAccessLimit?.limitReached ? (
+                <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              ) : (
+                <Globe className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs font-bold uppercase tracking-wide ${
+                        exam.publicAccessLimit?.limitReached ? "text-red-900" : "text-blue-900"
+                      }`}
+                    >
+                      {exam.publicAccessLimit?.limitReached ? "Public Limit Reached" : "Public / Open Access"}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                        exam.publicAccessLimit?.limitReached
+                          ? "bg-red-100 text-red-700 border-red-200"
+                          : "bg-blue-100 text-blue-700 border-blue-200"
+                      }`}
+                    >
+                      {exam.publicAccessLimit?.limitReached ? "Registration Closed" : "Open to Anyone"}
+                    </span>
+                  </div>
+                  {exam.publicAccessLimit && (
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        exam.publicAccessLimit.limitReached
+                          ? "bg-red-100 text-red-800 border-red-300"
+                          : "bg-white text-blue-800 border-blue-200"
+                      }`}
+                    >
+                      {exam.publicAccessLimit.usedSeats} / {exam.publicAccessLimit.maxStudents} Seats
+                    </span>
+                  )}
                 </div>
-                <p className="text-xs text-blue-800 mt-1 leading-relaxed">
-                  Anyone with this link can take this examination. You do not need an institute aspirant account or exam password.
+                <p
+                  className={`text-xs mt-1 leading-relaxed ${
+                    exam.publicAccessLimit?.limitReached ? "text-red-800" : "text-blue-800"
+                  }`}
+                >
+                  {exam.publicAccessLimit?.limitReached
+                    ? `This exam has reached the maximum limit of ${exam.publicAccessLimit.maxStudents} public participants allowed for this institute. Already registered candidates can still enter their email below to resume or view submission status.`
+                    : "Anyone with this link can take this examination. You do not need an institute aspirant account or exam password."}
                 </p>
               </div>
             </div>
@@ -605,6 +655,8 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
                 </>
               ) : schedule.isAfterEnd ? (
                 "EXAMINATION CLOSED"
+              ) : isPublicAccess && exam.publicAccessLimit?.limitReached ? (
+                "SEATS FULL — RESUME EXISTING ATTEMPT"
               ) : (
                 "Start Examination"
               )}

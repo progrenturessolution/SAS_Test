@@ -3,6 +3,7 @@ import connectDB from "@/lib/mongodb"
 import Attempt from "@/models/Attempt"
 import Exam from "@/models/Exam"
 import User from "@/models/User"
+import { getPublicExamCapacity } from "@/lib/examCapacity"
 import { getExamStartDateTime, getExamEndDateTime } from "@/lib/examSchedule"
 
 // POST /api/attempts - start an exam attempt
@@ -126,6 +127,21 @@ export async function POST(req: Request) {
         { attempt: existing, alreadySubmitted: existing.status !== "in-progress" },
         { status: existing.status === "in-progress" ? 200 : 409 }
       )
+    }
+
+    // Enforce institute student limit for public exam links
+    if (isPublic) {
+      const capacity = await getPublicExamCapacity(exam)
+      if (capacity && capacity.limitReached) {
+        return NextResponse.json(
+          {
+            error: `Public exam registration limit reached (${capacity.usedSeats}/${capacity.maxStudents}). Only ${capacity.maxStudents} public students are allowed to take this exam.`,
+            limitReached: true,
+            publicAccessLimit: capacity,
+          },
+          { status: 403 }
+        )
+      }
     }
 
     const attempt = await Attempt.create({

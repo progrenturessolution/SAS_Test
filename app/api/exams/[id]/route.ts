@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import connectDB from "@/lib/mongodb"
+import { getPublicExamCapacity, resolveExamInstitute } from "@/lib/examCapacity"
 import Exam from "@/models/Exam"
 import GlobalSettings from "@/models/GlobalSettings"
 import mongoose from "mongoose"
@@ -35,30 +36,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       delete exam.settings.competitiveGenerator
     }
 
-    // Attach coaching institute branding (logo, themeColor, name)
-    let targetInstId = exam.instituteId
-    if (!targetInstId && exam.createdBy) {
-      try {
-        const User = (await import("@/models/User")).default
-        const creator: any = await User.findById(exam.createdBy).select("instituteId").lean()
-        if (creator?.instituteId) targetInstId = creator.instituteId
-      } catch {}
-    }
-    if (targetInstId) {
-      try {
-        const Institute = (await import("@/models/Institute")).default
-        const inst: any = await Institute.findById(targetInstId).select("name code logo themeColor").lean()
-        if (inst) {
-          exam.institute = {
-            name: inst.name,
-            code: inst.code,
-            logo: inst.logo || null,
-            themeColor: inst.themeColor || "#2D3A4A",
-          }
+    // Attach coaching institute branding (logo, themeColor, name) and public seat capacity
+    try {
+      const inst: any = await resolveExamInstitute(exam)
+      if (inst) {
+        exam.institute = {
+          name: inst.name,
+          code: inst.code,
+          logo: inst.logo || null,
+          themeColor: inst.themeColor || "#2D3A4A",
         }
-      } catch (instErr) {
-        console.warn("[GetExam] Could not load institute branding:", instErr)
+        const capacity = await getPublicExamCapacity(exam, inst)
+        if (capacity) {
+          exam.publicAccessLimit = capacity
+        }
       }
+    } catch (instErr) {
+      console.warn("[GetExam] Could not load institute branding:", instErr)
     }
 
     return NextResponse.json({ exam })

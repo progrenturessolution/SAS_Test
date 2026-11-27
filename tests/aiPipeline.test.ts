@@ -27,6 +27,7 @@ import { generateQuestionBatch } from "../lib/ai/orchestrator"
 import { callGeminiJson, sanitizeErrorMessage, type GeminiTransportFn } from "../lib/ai/geminiClient"
 import { evaluateObjectiveAnswer, formatOptionDisplay } from "../lib/ai/questionEvaluation"
 import { isBareStandaloneMath, normalizeMathContent } from "../lib/mathFormat"
+import { computePublicExamCapacity } from "../lib/publicExamCapacity"
 
 // ─── 1. JSON Parsing & LaTeX Backslash Preservation ───────────────────────────
 
@@ -845,4 +846,37 @@ test("normalizeMathContent wraps bare Physics LaTeX options/prose without corrup
     assert.equal(isBareStandaloneMath(plain), false, `Must NOT treat plain text as math: ${plain}`)
     assert.equal(normalizeMathContent(plain), plain)
   }
+})
+
+test("computePublicExamCapacity enforces institute maxStudents seat limit cleanly", () => {
+  assert.deepEqual(computePublicExamCapacity(10, 0), {
+    maxStudents: 10,
+    usedSeats: 0,
+    remainingSeats: 10,
+    limitReached: false,
+  })
+  assert.deepEqual(computePublicExamCapacity(10, 9), {
+    maxStudents: 10,
+    usedSeats: 9,
+    remainingSeats: 1,
+    limitReached: false,
+  })
+  assert.deepEqual(computePublicExamCapacity(10, 10), {
+    maxStudents: 10,
+    usedSeats: 10,
+    remainingSeats: 0,
+    limitReached: true,
+  })
+  assert.deepEqual(computePublicExamCapacity(10, 14), {
+    maxStudents: 10,
+    usedSeats: 14,
+    remainingSeats: 0,
+    limitReached: true,
+  })
+  assert.deepEqual(computePublicExamCapacity(0, 0), {
+    maxStudents: 0,
+    usedSeats: 0,
+    remainingSeats: 0,
+    limitReached: true,
+  })
 })

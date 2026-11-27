@@ -12,8 +12,8 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
 
-  const [rollNumber, setRollNumber] = useState("")
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [loading, setLoading] = useState(false)
   const [checkingAvailability, setCheckingAvailability] = useState(true)
   const [resultsAvailable, setResultsAvailable] = useState(true)
@@ -53,8 +53,12 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
 
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!rollNumber.trim() && !email.trim()) {
-      setError("Please enter your Roll Number or Email")
+    if (!email.trim() || !phone.trim()) {
+      setError("Please enter both your Email Address and Mobile Number")
+      return
+    }
+    if (phone.replace(/\D/g, "").length < 8) {
+      setError("Please enter a valid Mobile Number")
       return
     }
     setLoading(true)
@@ -65,8 +69,8 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          rollNumber: rollNumber.trim(),
           email: email.trim().toLowerCase(),
+          phone: phone.trim(),
         }),
       })
       const data = await res.json()
@@ -174,7 +178,7 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
               View Your Results
             </h1>
             <p className="text-sm text-gray-400 text-center mb-7">
-              Enter your credentials to access your exam results
+              Enter your Email Address and Mobile Number to view your exam results
             </p>
 
             {/* Form */}
@@ -182,7 +186,7 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
               {/* Exam ID (read-only) */}
               <div>
                 <label className="block text-sm font-medium text-[#324158] mb-1.5">
-                  Exam ID / Code
+                  Exam Title / Code
                 </label>
                 <input
                   type="text"
@@ -192,30 +196,32 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
                 />
               </div>
 
-              {/* Roll Number */}
+              {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-[#324158] mb-1.5">
-                  Roll Number / Aspirant ID
+                  Email Address <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
-                  value={rollNumber}
-                  onChange={(e) => { setRollNumber(e.target.value); setError("") }}
-                  placeholder="Enter your roll number"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError("") }}
+                  placeholder="Enter your email address"
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/15 focus:border-[#2D3A4A]/40 transition-all"
                 />
               </div>
 
-              {/* Email */}
+              {/* Mobile Number */}
               <div>
                 <label className="block text-sm font-medium text-[#324158] mb-1.5">
-                  Email Address
+                  Mobile Number <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setError("") }}
-                  placeholder="Enter your email address"
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => { setPhone(e.target.value); setError("") }}
+                  placeholder="Enter your mobile number"
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2D3A4A]/15 focus:border-[#2D3A4A]/40 transition-all"
                 />
               </div>

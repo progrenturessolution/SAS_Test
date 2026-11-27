@@ -2,16 +2,40 @@ import { NextResponse } from "next/server"
 import connectDB from "@/lib/mongodb"
 import Attempt from "@/models/Attempt"
 import Exam from "@/models/Exam"
+import User from "@/models/User"
 
-// POST /api/exams/[id]/results/lookup — public result lookup by credentials
+function phonesMatch(storedPhone: unknown, inputPhone: string): boolean {
+  const storedDigits = String(storedPhone || "").replace(/\D/g, "")
+  const inputDigits = inputPhone.replace(/\D/g, "")
+  if (!storedDigits || !inputDigits) return false
+  if (storedDigits === inputDigits) return true
+  if (storedDigits.length >= 10 && inputDigits.length >= 10) {
+    return storedDigits.slice(-10) === inputDigits.slice(-10)
+  }
+  return false
+}
+
+// POST /api/exams/[id]/results/lookup — public result lookup by Email and Mobile Number
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
     const { id: examId } = await params
-    const { rollNumber, email } = await req.json()
+    const { email, phone } = await req.json()
+    const cleanEmail = String(email || "").trim().toLowerCase()
+    const cleanPhone = String(phone || "").trim()
 
-    if (!rollNumber && !email) {
-      return NextResponse.json({ error: "Please provide Roll Number or Email" }, { status: 400 })
+    if (!cleanEmail || !cleanPhone) {
+      return NextResponse.json(
+        { error: "Please enter both your Email Address and Mobile Number." },
+        { status: 400 }
+      )
+    }
+
+    if (cleanPhone.replace(/\D/g, "").length < 8) {
+      return NextResponse.json(
+        { error: "Please enter a valid Mobile Number." },
+        { status: 400 }
+      )
     }
 
     // Validate ObjectId format
@@ -38,35 +62,39 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       )
     }
 
-    // Build query — match by exam + at least one credential + only submitted attempts
-    const query: Record<string, unknown> = {
+    const attempts = await Attempt.find({
       examId,
-      status: { $in: ["submitted", "auto-submitted", "graded"] }, // Include graded attempts
-    }
-
-    if (rollNumber && email) {
-      query.rollNumber = rollNumber.trim()
-      query.studentEmail = email.trim().toLowerCase()
-    } else if (rollNumber) {
-      query.rollNumber = rollNumber.trim()
-    } else {
-      query.studentEmail = email.trim().toLowerCase()
-    }
-
-    const attempt = await Attempt.findOne(query)
+      studentEmail: cleanEmail,
+      status: { $in: ["submitted", "auto-submitted", "graded"] },
+    })
       .sort({ submittedAt: -1 })
       .lean()
 
-    if (!attempt) {
+    let matchedAttempt = attempts.find((att) => phonesMatch(att.studentPhone, cleanPhone))
+
+    // Fallback for institute attempts created before studentPhone was copied onto Attempt
+    if (!matchedAttempt && attempts.length > 0) {
+      const studentUser = await User.findOne({
+        email: cleanEmail,
+        role: "student",
+      })
+        .select("phone")
+        .lean()
+      if (studentUser?.phone && phonesMatch(studentUser.phone, cleanPhone)) {
+        matchedAttempt = attempts[0]
+      }
+    }
+
+    if (!matchedAttempt) {
       return NextResponse.json(
-        { error: "No submitted result found. Please check your Roll Number and Email." },
+        { error: "No submitted result found. Please check your Email Address and Mobile Number." },
         { status: 404 }
       )
     }
 
     return NextResponse.json({
       attempt: {
-        _id: attempt._id,
+        _id: matchedAttempt._id,
         examId: {
           _id: exam._id,
           title: (exam as any).title,
@@ -75,15 +103,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           duration: (exam as any).duration,
           subject: (exam as any).subject,
         },
-        studentName: attempt.studentName,
-        rollNumber: attempt.rollNumber,
-        score: attempt.score,
-        maxScore: attempt.maxScore,
-        percentage: attempt.percentage,
-        passed: attempt.passed,
-        timeSpent: attempt.timeSpent,
-        submittedAt: attempt.submittedAt,
-        answers: attempt.answers,
+        studentName: matchedAttempt.studentName,
+        rollNumber: matchedAttempt.rollNumber,
+        score: matchedAttempt.score,
+        maxScore: matchedAttempt.maxScore,
+        percentage: matchedAttempt.percentage,
+        passed: matchedAttempt.passed,
+        timeSpent: matchedAttempt.timeSpent,
+        submittedAt: matchedAttempt.submittedAt,
+        answers: matchedAttempt.answers,
       },
     })
   } catch (error) {
