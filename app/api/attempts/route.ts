@@ -1,4 +1,5 @@
 import crypto from "crypto"
+import bcrypt from "bcryptjs"
 import { NextResponse } from "next/server"
 import connectDB from "@/lib/mongodb"
 import Attempt from "@/models/Attempt"
@@ -26,16 +27,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Mobile number is required for public exam applicants" }, { status: 400 })
     }
 
-    // Verify exam status and schedule window
-    const exam = await Exam.findById(examId).lean()
+    // Load only the minimal fields required for access/schedule verification (skip multi-MB question arrays)
+    const exam = (await Exam.findById(examId)
+      .select("status instituteId createdBy settings.startDate settings.startTime settings.endDate settings.endTime")
+      .lean()) as any
     if (!exam || exam.status !== "active") {
       return NextResponse.json({ error: "Exam is not active or available" }, { status: 400 })
+    }
+
+    // Enforce schedule window early before querying student/attempt/capacity records
+    const now = Date.now()
+    if (exam.settings?.startDate) {
+      const startDateTime = getExamStartDateTime(exam.settings)
+      const setupAllowedTime = startDateTime ? startDateTime.getTime() - 5 * 60 * 1000 : 0
+      if (startDateTime && now < setupAllowedTime) {
+        return NextResponse.json(
+          {
+            error: `Camera setup opens 5 minutes before the exam (at ${new Date(setupAllowedTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })}).`,
+          },
+          { status: 403 }
+        )
+      }
+    }
+
+    if (exam.settings?.endDate) {
+      const endDateTime = getExamEndDateTime(exam.settings)
+      if (endDateTime && now > endDateTime.getTime()) {
+        return NextResponse.json(
+          {
+            error: `This exam has ended and is closed.`,
+          },
+          { status: 403 }
+        )
+      }
     }
 
     // For non-public (institute registered) candidates, verify coaching student credentials and password
     if (!isPublic) {
       if (exam.instituteId) {
-        const student = await User.findOne({
+        const student = (await User.findOne({
           role: "student",
           instituteId: exam.instituteId,
           $or: [
@@ -43,6 +73,8 @@ export async function POST(req: Request) {
             { rollNumber: normalizedRollNumber },
           ],
         })
+          .select("name email password rollNumber phone status isActive deactivationReason examPassword")
+          .lean()) as any
 
         if (!student) {
           return NextResponse.json(
@@ -51,14 +83,14 @@ export async function POST(req: Request) {
           )
         }
 
-        if (student.status === "deactivated" || (student as any).isActive === false) {
+        if (student.status === "deactivated" || student.isActive === false) {
           const reason =
-            (student as any).deactivationReason?.trim() ||
+            student.deactivationReason?.trim() ||
             "Your aspirant account has been deactivated. Please contact your coaching administrator."
           return NextResponse.json({ error: reason }, { status: 403 })
         }
 
-        if (!password || !(await student.comparePassword(password))) {
+        if (!password || !(await bcrypt.compare(password, student.password))) {
           return NextResponse.json(
             { error: "Invalid aspirant credentials or password." },
             { status: 403 }
@@ -70,64 +102,52 @@ export async function POST(req: Request) {
         normalizedRollNumber = String(student.rollNumber || normalizedRollNumber).trim()
         resolvedName = String(student.name || resolvedName).trim()
 
-        // Backfill plaintext examPassword for legacy aspirant accounts on successful login
-        if (!(student as any).examPassword && typeof password === "string" && password.trim()) {
-          await User.updateOne(
+        // Non-blocking backfill of plaintext examPassword for legacy aspirant accounts
+        if (!student.examPassword && typeof password === "string" && password.trim()) {
+          void User.updateOne(
             { _id: student._id },
             { $set: { examPassword: password.trim() } }
-          )
+          ).catch(() => {})
         }
-        if (!resolvedPhone && (student as any).phone) {
-          resolvedPhone = String((student as any).phone).trim()
+        if (!resolvedPhone && student.phone) {
+          resolvedPhone = String(student.phone).trim()
         }
       } else {
-        const student = await User.findOne({
+        const student = (await User.findOne({
           role: "student",
           $or: [
             { email: normalizedEmail },
             { rollNumber: normalizedRollNumber },
           ],
         })
-        if (student && (student.status === "deactivated" || (student as any).isActive === false)) {
+          .select("phone status isActive deactivationReason")
+          .lean()) as any
+        if (student && (student.status === "deactivated" || student.isActive === false)) {
           const reason =
-            (student as any).deactivationReason?.trim() ||
+            student.deactivationReason?.trim() ||
             "Your aspirant account has been deactivated. Please contact your coaching administrator."
           return NextResponse.json({ error: reason }, { status: 403 })
         }
-        if (!resolvedPhone && (student as any)?.phone) {
-          resolvedPhone = String((student as any).phone).trim()
+        if (!resolvedPhone && student?.phone) {
+          resolvedPhone = String(student.phone).trim()
         }
       }
     }
 
-    const now = Date.now()
-    if (exam.settings?.startDate) {
-      const startDateTime = getExamStartDateTime(exam.settings)
-      // Allow early entrance 5 minutes before start time so candidate can complete camera setup
-      const setupAllowedTime = startDateTime ? startDateTime.getTime() - (5 * 60 * 1000) : 0
-      if (startDateTime && now < setupAllowedTime) {
-        return NextResponse.json({
-          error: `Camera setup opens 5 minutes before the exam (at ${new Date(setupAllowedTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}).`
-        }, { status: 403 })
-      }
-    }
-
-    if (exam.settings?.endDate) {
-      const endDateTime = getExamEndDateTime(exam.settings)
-      if (endDateTime && now > endDateTime.getTime()) {
-        return NextResponse.json({
-          error: `This exam has ended and is closed.`
-        }, { status: 403 })
-      }
-    }
-
-    // Check if this candidate (strictly matched by email, never by colliding rollNumber across students)
-    // already has an active OR completed attempt.
-    const existing = await Attempt.findOne({
+    // Run existing-attempt lookup (slim projection) in parallel with public capacity check
+    const existingQuery = Attempt.findOne({
       examId,
       studentEmail: normalizedEmail,
       status: { $in: ["in-progress", "submitted", "auto-submitted", "graded"] },
     })
+      .select("_id status")
+      .lean()
+
+    const [existing, capacity] = await Promise.all([
+      existingQuery,
+      isPublic ? getPublicExamCapacity(exam) : Promise.resolve(null),
+    ])
+
     if (existing) {
       return NextResponse.json(
         { attempt: existing, alreadySubmitted: existing.status !== "in-progress" },
@@ -136,18 +156,15 @@ export async function POST(req: Request) {
     }
 
     // Enforce institute student limit for public exam links
-    if (isPublic) {
-      const capacity = await getPublicExamCapacity(exam)
-      if (capacity && capacity.limitReached) {
-        return NextResponse.json(
-          {
-            error: `Public exam registration limit reached (${capacity.usedSeats}/${capacity.maxStudents}). Only ${capacity.maxStudents} public students are allowed to take this exam.`,
-            limitReached: true,
-            publicAccessLimit: capacity,
-          },
-          { status: 403 }
-        )
-      }
+    if (isPublic && capacity && capacity.limitReached) {
+      return NextResponse.json(
+        {
+          error: `Public exam registration limit reached (${capacity.usedSeats}/${capacity.maxStudents}). Only ${capacity.maxStudents} public students are allowed to take this exam.`,
+          limitReached: true,
+          publicAccessLimit: capacity,
+        },
+        { status: 403 }
+      )
     }
 
     const attempt = await Attempt.create({
@@ -162,7 +179,7 @@ export async function POST(req: Request) {
       proctoring: { warnings: 0, events: [] },
     })
 
-    return NextResponse.json({ attempt }, { status: 201 })
+    return NextResponse.json({ attempt: { _id: attempt._id, status: attempt.status } }, { status: 201 })
   } catch (error) {
     console.error("[v0] Start attempt error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

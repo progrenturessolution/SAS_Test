@@ -50,6 +50,10 @@ UserSchema.pre("save", async function () {
   this.password = await bcrypt.hash(this.password, 10)
 })
 
+UserSchema.index({ role: 1, instituteId: 1, email: 1 })
+UserSchema.index({ role: 1, instituteId: 1, rollNumber: 1 })
+UserSchema.index({ role: 1, rollNumber: 1 })
+
 UserSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
   return bcrypt.compare(password, this.password)
 }

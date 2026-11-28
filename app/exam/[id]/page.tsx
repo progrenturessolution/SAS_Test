@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Clock, FileText, CheckCircle, Award, User, Mail, Phone, Hash, LockKeyhole, Shield, AlertCircle, Camera, Maximize, AlertTriangle, Globe, BarChart2, ArrowRight } from "lucide-react"
-import { ProcrentureLogo } from "@/components/exam/ExamShared"
+import { ProcrentureLogo } from "@/components/exam/BrandLogo"
 import { getScheduleStatus, formatCountdown, formatScheduleDateTime } from "@/lib/examSchedule"
 import { formatExamInstructions, getCleanExamDescription } from "@/lib/attemptHelpers"
 
@@ -18,8 +18,9 @@ interface ExamData {
   duration: number
   totalMarks: number
   passMarks: number
+  totalQuestions?: number
   status: string
-  sections: { name: string; questions: unknown[] }[]
+  sections: { name: string; questionCount?: number; questions?: unknown[] }[]
   institute?: {
     name: string
     code?: string
@@ -53,9 +54,9 @@ interface ExistingAttempt {
   status: "in-progress" | "submitted" | "auto-submitted" | "graded"
 }
 
-async function getExam(id: string): Promise<ExamData | null> {
+async function getExamSummary(id: string, isPublic: boolean): Promise<ExamData | null> {
   try {
-    const res = await fetch(`/api/exams/${id}`)
+    const res = await fetch(`/api/exams/${id}?summary=1&capacity=${isPublic ? "1" : "0"}`)
     if (!res.ok) return null
     const data = await res.json()
     return data.exam
@@ -78,28 +79,28 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
   const [currentTime, setCurrentTime] = useState(Date.now())
   const [isPublicAccess, setIsPublicAccess] = useState(false)
 
-  // Detect public access link (?type=public, ?access=public, ?mode=open)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const sp = new URLSearchParams(window.location.search)
-      const p = sp.get("type") || sp.get("access") || sp.get("mode")
-      if (p === "public" || p === "open") {
-        setIsPublicAccess(true)
-      }
-    }
-  }, [])
-
   // Ticker for live scheduled exam countdown
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [])
 
-  // Resolve params then fetch exam
+  // Resolve params + access mode then fetch lightweight exam summary and prefetch /take route
   useEffect(() => {
+    let publicFlag = false
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search)
+      const p = sp.get("type") || sp.get("access") || sp.get("mode")
+      if (p === "public" || p === "open") {
+        publicFlag = true
+        setIsPublicAccess(true)
+      }
+    }
+
     params.then(({ id: resolvedId }) => {
       setId(resolvedId)
-      getExam(resolvedId).then((e) => {
+      router.prefetch(`/exam/${resolvedId}/take`)
+      getExamSummary(resolvedId, publicFlag).then((e) => {
         setExam(e)
         if (e?.institute?.themeColor) {
           document.documentElement.style.setProperty("--primary", e.institute.themeColor)
@@ -108,7 +109,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
         if (!e) setFetchError("Exam not found or has been removed.")
       })
     })
-  }, [params])
+  }, [params, router])
 
   // Fetch student stats when email/roll changed
   useEffect(() => {
@@ -129,7 +130,10 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
     return () => clearTimeout(timer)
   }, [form.email, form.roll])
 
-  const totalQuestions = exam?.sections?.reduce((s, sec) => s + (sec.questions?.length || 0), 0) || 0
+  const totalQuestions =
+    exam?.totalQuestions ??
+    exam?.sections?.reduce((s, sec) => s + (sec.questionCount ?? sec.questions?.length ?? 0), 0) ??
+    0
   const schedule = getScheduleStatus(exam?.settings, currentTime)
   const resultsPublished = exam?.settings?.resultsPublished === true
   const canShowCandidateResult = exam?.settings?.showResults !== false || resultsPublished

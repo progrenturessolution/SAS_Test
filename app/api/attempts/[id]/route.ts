@@ -218,9 +218,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!/^[0-9a-fA-F]{24}$/.test(id)) {
       return NextResponse.json({ error: "Invalid attempt ID format" }, { status: 400 })
     }
-    
+    const { searchParams } = new URL(req.url)
+    const isLight = searchParams.get("light") === "1"
+
+    // Never populate heavy exam.sections here (callers read exam sections from /api/exams/[id])
     const attempt = (await Attempt.findById(id)
-      .populate("examId", "title totalMarks passMarks duration subject settings sections instituteId createdBy")
+      .populate("examId", "title totalMarks passMarks duration subject settings instituteId createdBy")
       .lean()) as any
     if (!attempt) {
       return NextResponse.json({ error: "Attempt not found" }, { status: 404 })
@@ -232,7 +235,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: "Exam data not found for this attempt" }, { status: 500 })
     }
 
-    if ((attempt.examId as any)?.instituteId) {
+    if (!isLight && (attempt.examId as any)?.instituteId) {
       try {
         const Institute = (await import("@/models/Institute")).default
         const inst: any = await Institute.findById((attempt.examId as any).instituteId).select("name code logo themeColor").lean()

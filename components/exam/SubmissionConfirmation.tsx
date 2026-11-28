@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { CheckCircle2, Clock, FileCheck2, Home, MailCheck, User } from "lucide-react"
-import { ProcrentureLogo } from "@/components/exam/ExamShared"
+import { ProcrentureLogo } from "@/components/exam/BrandLogo"
 import { getExamPortalUrl } from "@/lib/attemptHelpers"
 
 interface InstituteBrand {

@@ -1,57 +1,10 @@
 "use client"
 
-import Link from "next/link"
-import Image from "next/image"
 import { Clock, Camera, CheckCircle2, Calculator, FileText } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
-import * as faceDetection from "@mediapipe/face_detection"
-import * as cocoSsd from "@tensorflow-models/coco-ssd"
-import "@tensorflow/tfjs"
+import { ProcrentureLogo } from "@/components/exam/BrandLogo"
 
-// ─── Logo ────────────────────────────────────────────────────────────────────
-
-export function ProcrentureLogo({
-  small,
-  large,
-  src,
-  alt,
-}: {
-  small?: boolean
-  large?: boolean
-  src?: string | null
-  alt?: string
-}) {
-  const w = large ? 180 : (small ? 60 : 120)
-  const h = large ? 60 : (small ? 20 : 40)
-
-  if (src) {
-    return (
-      <div className="flex items-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={alt || "Coaching Logo"}
-          style={{ maxHeight: h, maxWidth: w }}
-          className="object-contain"
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex items-center">
-      <Image
-        src="/logo.png"
-        alt="Progrentures Testro Lab"
-        width={w}
-        height={h}
-        priority
-        loading="eager"
-        className="object-contain"
-      />
-    </div>
-  )
-}
+export { ProcrentureLogo }
 
 // ─── Exam Header ──────────────────────────────────────────────────────────────
 
@@ -274,6 +227,10 @@ export function ProctoringCamera({ onFaceEvent, onCameraStatusChange }: Proctori
         const ctx = canvas.getContext("2d")
         if (!ctx) return
 
+        // Dynamically load heavy ML proctoring packages only when ProctoringCamera actually mounts
+        const faceDetection = await import("@mediapipe/face_detection")
+        if (cancelled) return
+
         const detector = new (faceDetection as any).FaceDetection({
           locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`,
         })
@@ -335,12 +292,17 @@ export function ProctoringCamera({ onFaceEvent, onCameraStatusChange }: Proctori
 
         detectorRef.current = detector
 
-        try {
-          const cocoModel = await (cocoSsd as any).load()
-          if (!cancelled) objectDetectorRef.current = cocoModel
-        } catch (e) {
-          // Optional phone detector failure should not block camera
-        }
+        // Load TensorFlow + phone detection asynchronously in the background so camera startup isn't stalled
+        void (async () => {
+          try {
+            await import("@tensorflow/tfjs")
+            const cocoSsd = await import("@tensorflow-models/coco-ssd")
+            const cocoModel = await (cocoSsd as any).load()
+            if (!cancelled) objectDetectorRef.current = cocoModel
+          } catch {
+            // Optional phone detector failure should not block camera
+          }
+        })()
 
         let stream: MediaStream | null = null
         try {

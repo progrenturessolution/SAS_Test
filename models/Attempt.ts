@@ -135,6 +135,11 @@ const AttemptSchema = new Schema<IAttempt>(
   { timestamps: true }
 )
 
+AttemptSchema.index({ examId: 1, studentEmail: 1, status: 1 })
+AttemptSchema.index({ examId: 1, candidateType: 1, status: 1 })
+AttemptSchema.index({ studentEmail: 1, rollNumber: 1, status: 1 })
+AttemptSchema.index({ examId: 1, submittedAt: -1 })
+
 if (mongoose.models.Attempt) {
   mongoose.deleteModel("Attempt");
 }

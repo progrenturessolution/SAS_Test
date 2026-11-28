@@ -15,8 +15,15 @@ export interface ExamInstituteRef {
  * Resolves the owning Institute document for an exam (using exam.instituteId
  * or falling back to the exam creator's instituteId).
  */
-export async function resolveExamInstitute(exam: ExamInstituteRef | null | undefined) {
+export async function resolveExamInstitute(
+  exam: ExamInstituteRef | null | undefined,
+  options?: { includeLogo?: boolean }
+) {
   if (!exam) return null
+
+  const selectFields = options?.includeLogo === false
+    ? "name code themeColor limits.maxStudents status"
+    : "name code logo themeColor limits.maxStudents status"
 
   let targetInstId = exam.instituteId ? String(exam.instituteId) : ""
   if (!targetInstId && exam.createdBy) {
@@ -33,9 +40,7 @@ export async function resolveExamInstitute(exam: ExamInstituteRef | null | undef
   if (!targetInstId) return null
 
   try {
-    return await Institute.findById(targetInstId)
-      .select("name code logo themeColor limits.maxStudents status")
-      .lean()
+    return await Institute.findById(targetInstId).select(selectFields).lean()
   } catch {
     return null
   }
@@ -51,17 +56,24 @@ export async function getPublicExamCapacity(
 ): Promise<PublicExamCapacity | null> {
   if (!exam?._id) return null
 
-  const inst = preloadedInstitute !== undefined ? preloadedInstitute : await resolveExamInstitute(exam)
-  if (!inst) return null
-
-  const rawLimit = inst.limits?.maxStudents
-  const maxStudents = typeof rawLimit === "number" && Number.isFinite(rawLimit) ? rawLimit : 100
-
-  const usedSeats = await Attempt.countDocuments({
+  const countQuery = Attempt.countDocuments({
     examId: exam._id,
     candidateType: "public",
     status: { $in: ["in-progress", "submitted", "auto-submitted", "graded"] },
   })
+
+  // Parallelize Institute lookup (without heavy base64 logo) and Attempt seat count when possible
+  const [inst, usedSeats] = await Promise.all([
+    preloadedInstitute !== undefined
+      ? Promise.resolve(preloadedInstitute)
+      : resolveExamInstitute(exam, { includeLogo: false }),
+    countQuery,
+  ])
+
+  if (!inst) return null
+
+  const rawLimit = inst.limits?.maxStudents
+  const maxStudents = typeof rawLimit === "number" && Number.isFinite(rawLimit) ? rawLimit : 100
 
   return computePublicExamCapacity(maxStudents, usedSeats)
 }

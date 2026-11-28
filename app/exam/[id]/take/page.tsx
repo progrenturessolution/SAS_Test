@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useCallback, use, useMemo, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import Editor from "@monaco-editor/react"
-import { ExamHeader, ProctoringCamera, QuestionStatus, statusColorMap, ProcrentureLogo } from "@/components/exam/ExamShared"
+import dynamic from "next/dynamic"
+import { ExamHeader, ProctoringCamera, QuestionStatus, statusColorMap } from "@/components/exam/ExamShared"
+import { ProcrentureLogo } from "@/components/exam/BrandLogo"
+
+const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
 import { Code, Shield, AlertCircle, FileText, Clock, CheckCircle2, Monitor, Wifi, Camera, Info, Play, ChevronLeft, ChevronRight, Sparkles, LayoutGrid, Layers, ArrowRight, HelpCircle, BookOpen, Calculator, CheckSquare, Check, X } from "lucide-react"
 import { ScientificCalculator } from "@/components/exam/ScientificCalculator"
 import { ProctoringWarning } from "@/components/exam/ProctoringWarning"
@@ -406,8 +409,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     if (!attemptId) { router.push(getExamPortalUrl(id, hasPublicParam)); return }
     Promise.all([
-      fetch(`/api/exams/${id}`).then((r) => r.json()),
-      fetch(`/api/attempts/${attemptId}`).then((r) => r.json()),
+      fetch(`/api/exams/${id}?mode=take`).then((r) => r.json()),
+      fetch(`/api/attempts/${attemptId}?light=1`).then((r) => r.json()),
     ])
       .then(async ([examRes, attemptRes]) => {
         if (!examRes.exam || examRes.exam.status !== "active") {

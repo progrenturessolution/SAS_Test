@@ -28,7 +28,7 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
   } | null>(null)
 
   useEffect(() => {
-    fetch(`/api/exams/${id}`)
+    fetch(`/api/exams/${id}?summary=1&capacity=0`)
       .then(r => r.json())
       .then(data => {
         if (data.exam) {

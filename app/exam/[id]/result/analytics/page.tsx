@@ -13,7 +13,7 @@ import {
   Download, Printer, Share2, HelpCircle, Target, FileText,
   TrendingUp, EyeOff, LayoutDashboard, Mail, Calendar, Check, Bell, Award, Sparkles
 } from "lucide-react"
-import { ProcrentureLogo } from "@/components/exam/ExamShared"
+import { ProcrentureLogo } from "@/components/exam/BrandLogo"
 import { MathRenderer } from "@/components/exam/MathRenderer"
 import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
 import { ResultAnalyticsSkeleton } from "@/components/SkeletonLoaders"

@@ -7,7 +7,7 @@ import {
   CheckCircle2, XCircle, Award, Clock, BarChart2,
   BookOpen, TrendingUp, Target, Home
 } from "lucide-react"
-import { ProcrentureLogo } from "@/components/exam/ExamShared"
+import { ProcrentureLogo } from "@/components/exam/BrandLogo"
 import { SubmissionConfirmation } from "@/components/exam/SubmissionConfirmation"
 import { getExamPortalUrl } from "@/lib/attemptHelpers"
 

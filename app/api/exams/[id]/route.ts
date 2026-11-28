@@ -17,26 +17,97 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!isValidObjectId(id)) {
       return NextResponse.json({ error: "Exam not found" }, { status: 404 })
     }
-    const exam: any = await Exam.findById(id).lean()
-    if (!exam) return NextResponse.json({ error: "Exam not found" }, { status: 404 })
 
-    const session = await getSession(req)
-    const canReadGeneratorSetup = Boolean(session && (
-      session.role === "super_admin" ||
-      session.role === "admin" ||
-      (
-        session.instituteId &&
-        (
-          String(exam.instituteId || "") === String(session.instituteId) ||
-          String(exam.createdBy) === String(session.id)
+    const { searchParams } = new URL(req.url)
+    const isSummary = searchParams.get("summary") === "1" || searchParams.get("summary") === "true"
+    const isTakeMode = searchParams.get("mode") === "take"
+    const wantCapacity = searchParams.get("capacity") !== "0"
+
+    let exam: any = null
+
+    if (isSummary) {
+      // Summary mode for exam login / result lookup pages: aggregate question counts without transferring questions/SVGs
+      const aggregated = await Exam.aggregate([
+        { $match: { _id: new mongoose.Types.ObjectId(id) } },
+        {
+          $project: {
+            title: 1,
+            examType: 1,
+            subject: 1,
+            class: 1,
+            description: 1,
+            instructions: 1,
+            duration: 1,
+            minDuration: 1,
+            totalMarks: 1,
+            passMarks: 1,
+            status: 1,
+            proctoring: 1,
+            createdBy: 1,
+            instituteId: 1,
+            "settings.minDuration": 1,
+            "settings.randomize": 1,
+            "settings.showResults": 1,
+            "settings.resultsPublished": 1,
+            "settings.allowReview": 1,
+            "settings.negativeMarking": 1,
+            "settings.allowCalculator": 1,
+            "settings.enableCalculator": 1,
+            "settings.startDate": 1,
+            "settings.startTime": 1,
+            "settings.endDate": 1,
+            "settings.endTime": 1,
+            "settings.proctoring": 1,
+            sections: {
+              $map: {
+                input: { $ifNull: ["$sections", []] },
+                as: "sec",
+                in: {
+                  name: "$$sec.name",
+                  title: "$$sec.title",
+                  type: "$$sec.type",
+                  questionCount: { $size: { $ifNull: ["$$sec.questions", []] } },
+                },
+              },
+            },
+          },
+        },
+      ])
+      exam = aggregated[0] || null
+      if (exam) {
+        exam.totalQuestions = Array.isArray(exam.sections)
+          ? exam.sections.reduce((sum: number, s: any) => sum + (s.questionCount || 0), 0)
+          : 0
+      }
+    } else if (isTakeMode) {
+      // Take mode omits answer keys, explanations, rubrics, and generator setup to shrink payload & protect answers
+      exam = await Exam.findById(id)
+        .select(
+          "-sections.questions.explanation -sections.questions.modelAnswer -sections.questions.rubric -sections.questions.correctAnswer -settings.competitiveGenerator"
         )
-      )
-    ))
-    if (!canReadGeneratorSetup && exam.settings?.competitiveGenerator) {
-      delete exam.settings.competitiveGenerator
+        .lean()
+    } else {
+      exam = await Exam.findById(id).lean()
     }
 
-    // Attach coaching institute branding (logo, themeColor, name) and public seat capacity
+    if (!exam) return NextResponse.json({ error: "Exam not found" }, { status: 404 })
+
+    if (!isSummary && !isTakeMode && exam.settings?.competitiveGenerator) {
+      const session = await getSession(req)
+      const canReadGeneratorSetup = Boolean(
+        session &&
+          (session.role === "super_admin" ||
+            session.role === "admin" ||
+            (session.instituteId &&
+              (String(exam.instituteId || "") === String(session.instituteId) ||
+                String(exam.createdBy) === String(session.id))))
+      )
+      if (!canReadGeneratorSetup) {
+        delete exam.settings.competitiveGenerator
+      }
+    }
+
+    // Attach coaching institute branding (logo, themeColor, name) and optional public seat capacity
     try {
       const inst: any = await resolveExamInstitute(exam)
       if (inst) {
@@ -46,9 +117,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           logo: inst.logo || null,
           themeColor: inst.themeColor || "#2D3A4A",
         }
-        const capacity = await getPublicExamCapacity(exam, inst)
-        if (capacity) {
-          exam.publicAccessLimit = capacity
+        if (wantCapacity && !isTakeMode) {
+          const capacity = await getPublicExamCapacity(exam, inst)
+          if (capacity) {
+            exam.publicAccessLimit = capacity
+          }
         }
       }
     } catch (instErr) {
