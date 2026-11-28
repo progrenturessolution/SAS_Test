@@ -18,7 +18,7 @@ import { getExamStartDateTime, getExamEndDateTime, formatCountdown, formatSchedu
 import { MathRenderer } from "@/components/exam/MathRenderer"
 import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
 import { ExamSubmitModal } from "@/components/exam/ExamSubmitModal"
-import { mergeAttemptAnswers, getExamPortalUrl } from "@/lib/attemptHelpers"
+import { mergeAttemptAnswers, getExamPortalUrl, formatExamInstructions } from "@/lib/attemptHelpers"
 
 // ─── Micro-toast types ────────────────────────────────────────────────────────
 interface Toast { id: number; message: string; type: "warn" | "info" | "danger" }
@@ -2510,11 +2510,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
               </button>
             </div>
             <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
-              {(exam.instructions?.length ? exam.instructions : [
-                "Read all questions carefully before answering.",
-                "Do not switch tabs or exit the exam screen during the test.",
-                "Ensure you have completed all required questions before finishing the exam.",
-              ]).map((inst, idx) => (
+              {formatExamInstructions(exam.instructions).map((inst, idx) => (
                 <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
                   <span className="w-6 h-6 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs">
                     {idx + 1}

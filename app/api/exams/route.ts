@@ -191,9 +191,6 @@ export async function POST(req: Request) {
         "Do not switch tabs or exit the exam screen during the test.",
         "Ensure you have completed all required questions before finishing the exam.",
       ]
-      if (!examData.description) {
-        examData.description = examData.instructions.join("\n")
-      }
     }
 
     // Normalize sections & questions canonically for storage while preserving all fields safely

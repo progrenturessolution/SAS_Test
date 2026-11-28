@@ -2454,8 +2454,8 @@ function AIGeneratorContent() {
           totalMarks: examTotalMarks || totalMarks,
           passMarks: passMarks || Math.floor((examTotalMarks || totalMarks) * 0.4),
           questionsPerMin: questionsPerMinute ? Number(questionsPerMinute) : undefined,
-          description: finalInstructions.join("\n"),
-          instructions: finalInstructions,
+          description: "",
+          instructions: finalInstructions.flatMap((line) => String(line || "").split(/\r?\n+/)).map((s) => s.trim()).filter(Boolean),
           sections,
           proctoring: {
             enabled: proctoringSettings.faceDetection || proctoringSettings.tabSwitchPrevention || proctoringSettings.enforceFullscreen || proctoringSettings.aiStatusAnalysis,

@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Clock, FileText, CheckCircle, Award, User, Mail, Phone, Hash, LockKeyhole, Shield, AlertCircle, Camera, Maximize, AlertTriangle, Globe, BarChart2, ArrowRight } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
 import { getScheduleStatus, formatCountdown, formatScheduleDateTime } from "@/lib/examSchedule"
+import { formatExamInstructions, getCleanExamDescription } from "@/lib/attemptHelpers"
 
 interface ExamData {
   _id: string
@@ -224,13 +225,8 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
     )
   }
 
-  const instructions = exam.instructions?.length
-    ? exam.instructions
-    : [
-        "Read all questions carefully before answering.",
-        "Do not switch tabs or exit the exam screen during the test.",
-        "Ensure you have completed all required questions before finishing the exam.",
-      ]
+  const instructions = formatExamInstructions(exam.instructions)
+  const customDescription = getCleanExamDescription(exam.description, exam.instructions)
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
@@ -287,7 +283,6 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#324158] mb-2 leading-tight">{exam.title}</h1>
             {exam.class && <p className="text-gray-500 font-medium">{exam.class}</p>}
-            {exam.description && <p className="text-gray-500 text-sm mt-2 leading-relaxed">{exam.description}</p>}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
@@ -345,8 +340,8 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
 
           <div className="mb-8">
             <h2 className="text-lg font-bold text-[#324158] mb-3">About This Exam</h2>
-            <p className="text-sm text-gray-500 leading-relaxed">
-              {exam.description || `This examination covers the ${exam.subject} curriculum. The exam is designed to assess your understanding and problem-solving abilities.`}
+            <p className="text-sm text-gray-500 leading-relaxed whitespace-pre-line">
+              {customDescription || `This examination covers the ${exam.subject || "prescribed"} curriculum. The exam is designed to assess your understanding and problem-solving abilities.`}
             </p>
           </div>
 

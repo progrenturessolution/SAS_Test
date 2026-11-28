@@ -1237,16 +1237,12 @@ function OtherExamsContent() {
           questionsPerMin: questionsPerMinute ? Number(questionsPerMinute) : undefined,
           totalMarks: examTotalMarks || totalCalculatedMarks,
           passMarks: passMarks || Math.round((examTotalMarks || totalCalculatedMarks) * 0.4),
-          description: (instructionsList && instructionsList.length > 0 ? instructionsList : [
+          description: "",
+          instructions: (instructionsList && instructionsList.length > 0 ? instructionsList : [
             "Read all questions carefully before answering.",
             "Do not switch tabs or exit the exam screen during the test.",
             "Ensure you have completed all required questions before finishing the exam.",
-          ]).join("\n"),
-          instructions: instructionsList && instructionsList.length > 0 ? instructionsList : [
-            "Read all questions carefully before answering.",
-            "Do not switch tabs or exit the exam screen during the test.",
-            "Ensure you have completed all required questions before finishing the exam.",
-          ],
+          ]).flatMap((line) => String(line || "").split(/\r?\n+/)).map((s) => s.trim()).filter(Boolean),
           sections,
           proctoring: {
             enabled: proctoringSettings.faceDetection || proctoringSettings.tabSwitchPrevention || proctoringSettings.enforceFullscreen || proctoringSettings.aiStatusAnalysis,

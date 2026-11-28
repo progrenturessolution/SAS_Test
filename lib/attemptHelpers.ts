@@ -111,3 +111,95 @@ export function resolveAnalyticsDisplayScore(params: {
 
   return calculatedScore
 }
+
+export const DEFAULT_EXAM_INSTRUCTIONS = [
+  "Read all questions carefully before answering.",
+  "Do not switch tabs or exit the exam screen during the test.",
+  "Ensure you have completed all required questions before finishing the exam.",
+] as const
+
+const INSTRUCTION_LABEL_PREFIX_REGEX =
+  /\s+(?=(?:Face Detection|Tab-Switch Prevention|Enforce Fullscreen|AI Status Analysis|Negative marking)\s*:)/gi
+
+/**
+ * Normalizes exam instructions into clean bullet items, splitting multi-line or
+ * inadvertently concatenated instruction paragraphs into individual readable guidelines.
+ */
+export function formatExamInstructions(
+  rawInstructions: string[] | string | null | undefined
+): string[] {
+  const chunks = Array.isArray(rawInstructions)
+    ? rawInstructions.map((item) => String(item ?? ""))
+    : typeof rawInstructions === "string"
+      ? [rawInstructions]
+      : []
+
+  const items: string[] = []
+  for (const chunk of chunks) {
+    const lines = chunk
+      .split(/\r?\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+
+    for (const line of lines) {
+      const labelSplit = line
+        .replace(INSTRUCTION_LABEL_PREFIX_REGEX, "\n")
+        .split(/\r?\n+/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+
+      for (const part of labelSplit) {
+        if (part.length > 90 && /[.!?]\s+[A-Z]/.test(part)) {
+          const sentences = part
+            .split(/(?<=[.!?])\s+(?=[A-Z])/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+          items.push(...sentences)
+        } else {
+          items.push(part)
+        }
+      }
+    }
+  }
+
+  return items.length > 0 ? items : [...DEFAULT_EXAM_INSTRUCTIONS]
+}
+
+const normalizeProseForCompare = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim()
+
+/**
+ * Returns the exam description only when it is distinct from exam instructions,
+ * hiding legacy walls of text where instructions were copied into `description`.
+ */
+export function getCleanExamDescription(
+  description: string | null | undefined,
+  instructions: string[] | string | null | undefined
+): string | null {
+  const trimmed = String(description || "").trim()
+  if (!trimmed) return null
+
+  const normalizedDesc = normalizeProseForCompare(trimmed)
+  const parsedInstructions = formatExamInstructions(instructions)
+  const joinedInstructions = normalizeProseForCompare(parsedInstructions.join(" "))
+
+  if (normalizedDesc === joinedInstructions) return null
+
+  // Legacy generator/API payloads copied default/proctoring instructions straight into description
+  const instructionFingerprints = [
+    "read all questions carefully before answering",
+    "ensure you have completed all required questions before finishing the exam",
+    "do not switch tabs or exit the exam screen during the test",
+    "face detection: sit alone",
+    "tab-switch prevention:",
+    "enforce fullscreen:",
+    "ai status analysis:",
+  ]
+  const matchedFingerprints = instructionFingerprints.filter((fp) => normalizedDesc.includes(fp)).length
+  if (matchedFingerprints >= 2) return null
+
+  return trimmed
+}

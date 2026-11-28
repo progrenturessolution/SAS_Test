@@ -28,7 +28,14 @@ import { callGeminiJson, sanitizeErrorMessage, type GeminiTransportFn } from "..
 import { evaluateObjectiveAnswer, formatOptionDisplay } from "../lib/ai/questionEvaluation"
 import { isBareStandaloneMath, normalizeMathContent } from "../lib/mathFormat"
 import { computePublicExamCapacity } from "../lib/publicExamCapacity"
-import { findAnswerForQuestion, getExamPortalUrl, mergeAttemptAnswers, resolveAnalyticsDisplayScore } from "../lib/attemptHelpers"
+import {
+  findAnswerForQuestion,
+  formatExamInstructions,
+  getCleanExamDescription,
+  getExamPortalUrl,
+  mergeAttemptAnswers,
+  resolveAnalyticsDisplayScore,
+} from "../lib/attemptHelpers"
 
 // ─── 1. JSON Parsing & LaTeX Backslash Preservation ───────────────────────────
 
@@ -950,5 +957,18 @@ test("attemptHelpers prevent answer wipes, resolve _id/id answers, and preserve 
       isGraded: true,
     }),
     15
+  )
+
+  // Format concatenated instruction paragraph into clean bullet items and suppress duplicate description
+  const legacyParagraph =
+    "Read all questions carefully before answering. Ensure you have completed all required questions before finishing the exam. Face Detection: Sit alone in a well-lit, quiet place with your face clearly visible. Tab-Switch Prevention: Do not switch tabs or open other applications during the exam."
+  const splitInstructions = formatExamInstructions([legacyParagraph])
+  assert.ok(splitInstructions.length >= 4)
+  assert.ok(splitInstructions.some((i) => i.startsWith("Face Detection:")))
+  assert.ok(splitInstructions.some((i) => i.startsWith("Tab-Switch Prevention:")))
+  assert.equal(getCleanExamDescription(legacyParagraph, splitInstructions), null)
+  assert.equal(
+    getCleanExamDescription("Full syllabus mock exam based on MHT-CET 2026 pattern.", splitInstructions),
+    "Full syllabus mock exam based on MHT-CET 2026 pattern."
   )
 })
