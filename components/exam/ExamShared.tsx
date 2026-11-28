@@ -105,89 +105,91 @@ export function ExamHeader({
   const initials = studentName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 
   return (
-    <header className="bg-white border-b border-gray-200 px-2 sm:px-6 py-1.5 sm:py-3 flex items-center justify-between shrink-0 h-14 sm:h-20 relative select-none">
+    <header className="bg-white border-b border-gray-200 px-2 sm:px-6 py-1.5 sm:py-3 flex items-center justify-between gap-1.5 sm:gap-3 shrink-0 h-14 sm:h-20 relative select-none overflow-hidden">
       {/* Left section: Logo and Title */}
-      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 shrink lg:max-w-[30%]">
         {instituteLogo ? (
-          <div className="flex items-center">
+          <div className="flex items-center min-w-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={instituteLogo}
               alt={instituteName || "Institute Logo"}
-              className="h-7 sm:h-9 max-w-[130px] sm:max-w-[180px] object-contain"
+              className="h-6 sm:h-9 max-w-[68px] sm:max-w-[160px] object-contain"
             />
           </div>
         ) : instituteName ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <div
               className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs"
               style={{ backgroundColor: themeColor || "#2D3A4A" }}
             >
               {instituteName.charAt(0).toUpperCase()}
             </div>
-            <span className="text-xs sm:text-sm font-bold text-gray-800 line-clamp-1 max-w-[140px] sm:max-w-[200px]">
+            <span className="hidden min-[440px]:inline text-xs sm:text-sm font-bold text-gray-800 truncate max-w-[84px] sm:max-w-[180px]">
               {instituteName}
             </span>
           </div>
         ) : (
           <>
-            <div className="sm:hidden">
+            <div className="sm:hidden shrink-0">
               <ProcrentureLogo small />
             </div>
-            <div className="hidden sm:block">
+            <div className="hidden sm:block shrink-0">
               <ProcrentureLogo />
             </div>
           </>
         )}
-        <div className="hidden sm:block h-8 border-l border-gray-200 mx-1" />
-        <div className="hidden sm:block">
-          <p className="text-xs sm:text-sm font-bold text-foreground line-clamp-1">{title}</p>
-          <p className="text-[10px] sm:text-xs text-gray-400">{section}</p>
+        <div className="hidden lg:block h-8 border-l border-gray-200 mx-1 shrink-0" />
+        <div className="hidden lg:block min-w-0">
+          <p className="text-xs sm:text-sm font-bold text-foreground truncate">{title}</p>
+          <p className="text-[10px] sm:text-xs text-gray-400 truncate">{section}</p>
         </div>
       </div>
 
-      {/* Center section: Timer Block */}
-      <div className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl border-2 transition-all duration-500 ${timerBorder} absolute left-1/2 -translate-x-1/2 z-10 shadow-xs`}>
+      {/* Center section: Timer Block (in-flow on mobile/tablet so it never overlaps right buttons; centered on desktop) */}
+      <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl border-2 transition-all duration-500 ${timerBorder} shrink-0 shadow-xs lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:z-10`}>
         <Clock className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${timerIconColor} shrink-0`} />
         <div className="text-center">
           <p className="hidden sm:block text-[7px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-widest leading-none mb-0.5">
             {endTimeLabel ? `Time Left · Closes ${endTimeLabel}` : "Time Left"}
           </p>
-          <p className={`text-sm sm:text-2xl font-black tabular-nums leading-none ${timerColor}`}>
+          <p className={`text-xs sm:text-2xl font-black tabular-nums leading-none ${timerColor}`}>
             {timeFormatted}
           </p>
         </div>
       </div>
 
       {/* Right section: Profile and Stats */}
-      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-1 sm:gap-2.5 shrink-0 min-w-0">
         {onToggleInstructions && (
           <button
             type="button"
             onClick={onToggleInstructions}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#324158] text-xs font-bold shadow-2xs transition-colors cursor-pointer shrink-0"
+            className="flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg sm:rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#324158] text-xs font-bold shadow-2xs transition-colors cursor-pointer shrink-0 touch-manipulation"
             title="View Exam Instructions"
+            aria-label="View Exam Instructions"
           >
             <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#324158]" />
-            <span className="hidden sm:inline">Instructions</span>
+            <span className="hidden xl:inline">Instructions</span>
           </button>
         )}
         {onToggleCalculator && (
           <button
             type="button"
             onClick={onToggleCalculator}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#324158] text-xs font-bold shadow-2xs transition-colors cursor-pointer shrink-0"
+            className="flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg sm:rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#324158] text-xs font-bold shadow-2xs transition-colors cursor-pointer shrink-0 touch-manipulation"
             title="Open Calculator"
+            aria-label="Open Calculator"
           >
             <Calculator className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#324158]" />
-            <span className="hidden sm:inline">Calculator</span>
+            <span className="hidden xl:inline">Calculator</span>
           </button>
         )}
         {onSubmit && (
           <button
             type="button"
             onClick={onSubmit}
-            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-all cursor-pointer shrink-0"
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-all cursor-pointer shrink-0 touch-manipulation"
           >
             <CheckCircle2 size={14} className="shrink-0" />
             <span>Submit Exam</span>
@@ -198,12 +200,12 @@ export function ExamHeader({
             <span className="text-xs text-amber-700 font-semibold">Warnings: {warningCount}/{maxWarnings}</span>
           </div>
         )}
-        <div className="text-right flex flex-col items-end max-w-[70px] xs:max-w-[100px] sm:max-w-none">
-          <p className="text-[10px] sm:text-sm font-bold text-foreground leading-tight truncate hover:text-primary transition-colors cursor-default" title={studentName}>
+        <div className="hidden min-[380px]:flex text-right flex-col items-end max-w-[54px] sm:max-w-[110px] lg:max-w-[150px] min-w-0">
+          <p className="text-[10px] sm:text-sm font-bold text-foreground leading-tight truncate max-w-full hover:text-primary transition-colors cursor-default" title={studentName}>
             {studentName}
           </p>
-          <div className="flex items-center gap-1 text-[8px] sm:text-xs text-gray-400 font-medium">
-            <span className="hidden sm:inline">Roll No:</span>
+          <div className="flex items-center gap-1 text-[8px] sm:text-xs text-gray-400 font-medium max-w-full">
+            <span className="hidden sm:inline shrink-0">Roll No:</span>
             <span className="truncate">{rollNo}</span>
           </div>
         </div>

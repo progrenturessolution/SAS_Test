@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
 import { SubmissionConfirmation } from "@/components/exam/SubmissionConfirmation"
+import { getExamPortalUrl } from "@/lib/attemptHelpers"
 
 interface SectionResult {
   name: string
@@ -33,6 +34,7 @@ interface AttemptResult {
   }
   studentName: string
   rollNumber: string
+  candidateType?: "institute" | "public"
   score: number
   maxScore: number
   percentage: number
@@ -56,6 +58,7 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
   const { id } = use(params)
   const searchParams = useSearchParams()
   const attemptId = searchParams.get("attemptId")
+  const hasPublicParam = searchParams.get("access") === "public" || searchParams.get("type") === "public"
   const router = useRouter()
 
   const [result, setResult] = useState<AttemptResult | null>(null)
@@ -64,7 +67,7 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
 
   useEffect(() => {
     if (!attemptId) {
-      router.push("/exam/")
+      router.push(getExamPortalUrl(id, hasPublicParam))
       return
     }
     fetch("/api/attempts/" + attemptId)
@@ -75,7 +78,9 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [id, attemptId, router])
+  }, [id, attemptId, router, hasPublicParam])
+
+  const isPublicAttempt = hasPublicParam || result?.candidateType === "public"
 
   if (loading) {
     return (
@@ -98,11 +103,11 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
           <h2 className="text-2xl font-bold text-slate-900 mb-2">No Result Found</h2>
           <p className="text-slate-500 mb-8 text-sm">We couldn't find the results for this attempt. It might still be processing.</p>
           <Link
-            href="/exam"
+            href={getExamPortalUrl(id, isPublicAttempt)}
             className="flex items-center justify-center gap-2 w-full py-3 bg-[#131B2A] text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors"
           >
             <Home className="w-4 h-4" />
-            Back to Exams
+            Return to Exam Portal
           </Link>
         </div>
       </div>
@@ -118,6 +123,7 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
         rollNumber={result.rollNumber}
         submittedAt={result.submittedAt}
         institute={result.examId?.institute}
+        isPublic={isPublicAttempt}
       />
     )
   }

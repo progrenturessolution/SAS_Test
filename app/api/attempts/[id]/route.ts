@@ -5,7 +5,9 @@ import Attempt from "@/models/Attempt"
 import Exam from "@/models/Exam"
 import { IQuestion } from "@/models/Exam"
 import { generateContentWithKeyRotation } from "@/lib/gemini"
-import { evaluateObjectiveAnswer } from "@/lib/ai/questionEvaluation"
+import { evaluateObjectiveAnswer, isObjectiveFormat } from "@/lib/ai/questionEvaluation"
+import { normalizeFormatInput } from "@/lib/ai/canonicalSchema"
+import { findAnswerForQuestion, mergeAttemptAnswers } from "@/lib/attemptHelpers"
 
 async function evaluateDescriptiveAnswerWithAI({
   questionText,
@@ -295,8 +297,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params
     const body = await req.json()
 
+    const existing = await Attempt.findById(id).select("answers status")
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
+    if (existing.status !== "in-progress") {
+      return NextResponse.json({ attempt: existing, alreadySubmitted: true })
+    }
+
     const update: Record<string, unknown> = {}
-    if (body.answers !== undefined) update.answers = body.answers
+    if (Array.isArray(body.answers) && body.answers.length > 0) {
+      update.answers = mergeAttemptAnswers(existing.answers as any, body.answers, {
+        preserveNonEmptyOnEmptyIncoming: false,
+      })
+    }
     if (body.proctoring !== undefined) update.proctoring = body.proctoring
     if (body.timeLeft !== undefined) update.timeLeft = body.timeLeft
     update.lastSavedAt = new Date()
@@ -342,7 +354,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ attempt: sanitizedAttempt, showResults, alreadySubmitted: true })
     }
 
-    if (body.answers) attempt.answers = body.answers
+    if (Array.isArray(body.answers) && body.answers.length > 0) {
+      attempt.answers = mergeAttemptAnswers(attempt.answers as any, body.answers, {
+        preserveNonEmptyOnEmptyIncoming: Boolean(body.autoSubmit),
+      }) as any
+    }
     if (body.proctoring) attempt.proctoring = body.proctoring
     if (body.autoSubmit) attempt.proctoring.autoSubmitted = true
 
@@ -373,9 +389,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         for (const q of section.questions as IQuestion[]) {
           secMaxScore += q.marks
           maxScore += q.marks
-          const studentAnswer = attempt.answers.find(
-            (a: { questionId: string }) => a.questionId === q._id?.toString()
-          )
+          const studentAnswer = findAnswerForQuestion(attempt.answers as any[], q as any)
           
           if (!studentAnswer || !studentAnswer.answer || (Array.isArray(studentAnswer.answer) && !studentAnswer.answer.some(Boolean))) continue
 
@@ -385,14 +399,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           let earnedMarks = 0;
           let negativeApplied = 0;
 
-          if (
-            q.type === "mcq" ||
-            (q as any).type === "mcq_multi" ||
-            (q as any).type === "diagram" ||
-            q.type === "truefalse" ||
-            q.type === "assertion" ||
-            q.type === "fillblanks"
-          ) {
+          const canonicalFormat = normalizeFormatInput((q as any).questionFormat || q.type, q as any)
+          if (isObjectiveFormat(canonicalFormat)) {
             const evalRes = evaluateObjectiveAnswer(q as any, studentAnswer.answer, {
               negativeMarking: sectionNegativeMarking,
               negativeValue: sectionNegativeValue,

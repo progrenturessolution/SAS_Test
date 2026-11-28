@@ -70,7 +70,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .sort({ submittedAt: -1 })
       .lean()
 
-    let matchedAttempt = attempts.find((att) => phonesMatch(att.studentPhone, cleanPhone))
+    const phoneMatchedAttempts = attempts.filter((att) => phonesMatch(att.studentPhone, cleanPhone))
+    let matchedAttempt =
+      phoneMatchedAttempts.find(
+        (att) =>
+          (Array.isArray(att.answers) && att.answers.length > 0) ||
+          (typeof att.score === "number" && att.score !== 0)
+      ) || phoneMatchedAttempts[0]
 
     // Fallback for institute attempts created before studentPhone was copied onto Attempt
     if (!matchedAttempt && attempts.length > 0) {
@@ -81,7 +87,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         .select("phone")
         .lean()
       if (studentUser?.phone && phonesMatch(studentUser.phone, cleanPhone)) {
-        matchedAttempt = attempts[0]
+        matchedAttempt =
+          attempts.find(
+            (att) =>
+              (Array.isArray(att.answers) && att.answers.length > 0) ||
+              (typeof att.score === "number" && att.score !== 0)
+          ) || attempts[0]
       }
     }
 

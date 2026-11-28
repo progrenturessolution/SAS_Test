@@ -24,9 +24,12 @@ import {
   evaluateObjectiveAnswer,
   formatOptionDisplay,
   getFormattedOptionItems,
+  isObjectiveFormat,
   parseAssertionReasonText,
 } from "@/lib/ai/questionEvaluation"
-import { normalizeCompareText, normalizeTrueFalseAnswer } from "@/lib/ai/canonicalSchema"
+import { normalizeCompareText, normalizeFormatInput, normalizeTrueFalseAnswer } from "@/lib/ai/canonicalSchema"
+import { findAnswerForQuestion, getExamPortalUrl, resolveAnalyticsDisplayScore } from "@/lib/attemptHelpers"
+import { normalizeMathContent } from "@/lib/mathFormat"
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,6 +47,7 @@ interface QuestionData {
   rubric?: string[]
   marks: number
   negativeMark?: number
+  scoringMode?: "all" | "partial"
   difficulty?: string
   blanks?: { id: number; label: string; answer: string; alsoAccept?: string[] }[]
   explanation?: string
@@ -66,6 +70,9 @@ interface AnswerData {
   marks?: number
   manualScore?: number
   earnedMarks?: number
+  totalPassed?: number
+  totalCases?: number
+  testResults?: { passed: boolean }[]
   feedback?: string
   aiEvaluation?: {
     score?: number
@@ -86,7 +93,9 @@ interface AttemptResult {
   studentName: string
   studentEmail: string
   rollNumber: string
+  candidateType?: "institute" | "public"
   score: number
+  manualScore?: number
   maxScore: number
   percentage: number
   passed: boolean
@@ -95,6 +104,15 @@ interface AttemptResult {
   startedAt?: string
   status: "in-progress" | "submitted" | "auto-submitted" | "graded"
   isGraded?: boolean
+  sectionResults?: {
+    name: string
+    type: string
+    attempted: number
+    total: number
+    correctOrMarked: number
+    score: number
+    maxScore: number
+  }[]
   answers: AnswerData[]
 }
 
@@ -271,6 +289,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const searchParams = useSearchParams()
   const attemptId = searchParams.get("attemptId")
+  const hasPublicParam = searchParams.get("access") === "public" || searchParams.get("type") === "public"
   const router = useRouter()
 
   const [attempt, setAttempt] = useState<AttemptResult | null>(null)
@@ -283,7 +302,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
   const [showResults, setShowResults] = useState(true)
 
   useEffect(() => {
-    if (!attemptId) { router.push(`/exam/${id}`); return }
+    if (!attemptId) { router.push(getExamPortalUrl(id, hasPublicParam)); return }
     
     const fetchMainData = async () => {
       try {
@@ -315,7 +334,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         
         // Fetch history using rollNumber and studentEmail
         const historyRes = await fetch(
-          `/api/attempts?examId=${id}&rollNumber=${mainAttempt.rollNumber}&studentEmail=${mainAttempt.studentEmail}`
+          `/api/attempts?examId=${encodeURIComponent(id)}&rollNumber=${encodeURIComponent(mainAttempt.rollNumber || "")}&studentEmail=${encodeURIComponent(mainAttempt.studentEmail || "")}`
         ).then(r => r.json())
 
         if (historyRes.attempts) {
@@ -394,7 +413,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
 
       for (const q of section.questions) {
         sMax += q.marks
-        const studentAns = attempt.answers.find(a => a.questionId === q._id?.toString())
+        const studentAns = findAnswerForQuestion(attempt.answers, q as any)
         const answerValue = studentAns?.answer
         const isEmpty = !answerValue || (Array.isArray(answerValue) ? answerValue.every(v => !v) : answerValue === "")
 
@@ -404,16 +423,15 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         if (isEmpty) {
           sSkipped++
         } else {
-          if (
-            q.type === "mcq" ||
-            q.type === "mcq_multi" ||
-            q.type === "diagram" ||
-            q.type === "assertion" ||
-            q.type === "truefalse" ||
-            q.type === "fillblanks"
-          ) {
+          const canonicalFormat = normalizeFormatInput(q.questionFormat || q.type, q as any)
+          if (typeof studentAns?.manualScore === "number") {
+            marksEarned = studentAns.manualScore
+            isCorrect = studentAns.isCorrect ?? marksEarned > 0
+            if (isCorrect || marksEarned > 0) sCorrect++
+            else sIncorrect++
+          } else if (isObjectiveFormat(canonicalFormat)) {
             const evalRes = evaluateObjectiveAnswer(q as any, answerValue as any, {
-              negativeMarking: Boolean(section.negativeMarking),
+              negativeMarking: Boolean(section.negativeMarking || examFull.settings?.negativeMarking),
               negativeValue: section.sectionNegativeMark ?? 0,
             })
             isCorrect = evalRes.isCorrect
@@ -421,7 +439,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
             if (evalRes.isCorrect || evalRes.isPartiallyCorrect) sCorrect++
             else sIncorrect++
           } else if (q.type === "descriptive") {
-            const earned = studentAns?.earnedMarks ?? studentAns?.manualScore ?? studentAns?.marks ?? 0
+            const earned = studentAns?.earnedMarks ?? studentAns?.manualScore ?? studentAns?.aiEvaluation?.score ?? studentAns?.marks ?? 0
             const aiEval = studentAns?.aiEvaluation
             marksEarned = earned
             isCorrect = studentAns?.isCorrect ?? (aiEval?.verdict === "Correct" || earned >= q.marks * 0.85)
@@ -430,10 +448,27 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
             } else {
               sIncorrect++
             }
+          } else if (q.type === "coding") {
+            const totalPassed = studentAns?.totalPassed ?? studentAns?.testResults?.filter((r) => r.passed).length ?? 0
+            const totalCases = studentAns?.totalCases ?? studentAns?.testResults?.length ?? 1
+            if (typeof studentAns?.earnedMarks === "number") {
+              marksEarned = studentAns.earnedMarks
+              isCorrect = marksEarned >= q.marks
+            } else if (typeof studentAns?.marks === "number") {
+              marksEarned = studentAns.marks
+              isCorrect = marksEarned >= q.marks
+            } else if (totalPassed > 0 && totalCases > 0) {
+              const scoringMode = q.scoringMode || "partial"
+              isCorrect = totalPassed === totalCases
+              marksEarned = scoringMode === "all" ? (isCorrect ? q.marks : 0) : q.marks * (totalPassed / totalCases)
+            }
+            if (isCorrect || marksEarned > 0) sCorrect++
+            else sIncorrect++
           } else {
-            // coding or custom types
-            sCorrect++
-            marksEarned = studentAns?.marks ?? 0
+            marksEarned = studentAns?.earnedMarks ?? studentAns?.marks ?? 0
+            isCorrect = studentAns?.isCorrect ?? marksEarned > 0
+            if (isCorrect || marksEarned > 0) sCorrect++
+            else sIncorrect++
           }
           sMarks += marksEarned
         }
@@ -449,16 +484,25 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         })
       }
 
+      const storedSection = attempt.sectionResults?.find((sr) => sr.name === section.name)
+      const useStoredSectionMarks =
+        storedSection &&
+        sMarks === 0 &&
+        storedSection.score !== 0 &&
+        sCorrect === 0 &&
+        sIncorrect === 0
+      const resolvedSectionMarks = useStoredSectionMarks ? storedSection.score : Math.round(sMarks * 100) / 100
+
       sectionAnalyses.push({
         name: section.name,
         type: section.type,
         totalQuestions: section.questions.length,
-        correct: sCorrect,
+        correct: useStoredSectionMarks ? storedSection.correctOrMarked : sCorrect,
         incorrect: sIncorrect,
         skipped: sSkipped,
-        marksObtained: Math.round(sMarks * 100) / 100,
+        marksObtained: resolvedSectionMarks,
         maxMarks: sMax,
-        percentage: sMax > 0 ? Math.round((sMarks / sMax) * 100) : 0,
+        percentage: sMax > 0 ? Math.round((resolvedSectionMarks / sMax) * 100) : 0,
       })
     }
 
@@ -499,20 +543,26 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
   }
 
   const exam = attempt.examId
+  const isGraded = attempt.status === "graded" || attempt.isGraded === true
+  const hasManualGrades = Boolean(
+    attempt.manualScore !== undefined ||
+      attempt.answers?.some((ans) => typeof ans.manualScore === "number")
+  )
   const calculatedScore = showResults
-    ? Math.round(analytics.questionAnalyses.reduce((total, qa) => {
-        if (qa.isSkipped) return total
-        if (qa.isCorrect || qa.marksEarned > 0) return total + qa.marksEarned
-
-        const section = examFull.sections.find(section => section.name === qa.sectionName)
-        const negativeMarking = section?.negativeMarking || examFull.settings?.negativeMarking || false
-        if (negativeMarking && (qa.question.type === "mcq" || qa.question.type === "truefalse")) {
-          return total - Math.abs(qa.question.negativeMark ?? section?.sectionNegativeMark ?? 0)
-        }
-        return total
-      }, 0) * 100) / 100
+    ? Math.round(
+        analytics.questionAnalyses.reduce(
+          (total, qa) => (qa.isSkipped ? total : total + qa.marksEarned),
+          0
+        ) * 100
+      ) / 100
     : 0
-  const displayScore = showResults ? calculatedScore : attempt.score
+  const displayScore = resolveAnalyticsDisplayScore({
+    showResults,
+    attemptScore: attempt.score,
+    calculatedScore,
+    isGraded,
+    hasManualGrades,
+  })
   const passed = showResults ? displayScore >= exam.passMarks : attempt.passed
   const submittedDate = attempt.submittedAt ? new Date(attempt.submittedAt) : null
   const formattedDate = submittedDate
@@ -522,7 +572,6 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
   const timeTakenSec = (attempt.timeSpent || 0) % 60
   const timeTakenStr = `${timeTakenMin > 0 ? timeTakenMin + "m " : ""}${timeTakenSec > 0 ? timeTakenSec + "s" : timeTakenMin > 0 ? "" : "0s"}`
   const passMarksDiff = displayScore - exam.passMarks
-  const isGraded = attempt.status === "graded" || attempt.isGraded === true
   const totalScore = attempt.maxScore || exam.totalMarks
 
   // Filtered questions for Q&A section
@@ -664,44 +713,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
     .replace(/'/g, "&#039;")
 
   const renderPrintableMath = (value: string) => {
-    const preFixed = String(value || "")
-      .replace(/\u000c/g, "\\f")
-      .replace(/\u0008/g, "\\b")
-      .replace(/\u0009(?=(?:theta|tau|text|times|tan\b|to\b|tilde|triangle))/gi, "\\t")
-      .replace(/\u0009/g, " ")
-      .replace(/\\\(/g, "$")
-      .replace(/\\\)/g, "$")
-      .replace(/\\\[/g, "$$")
-      .replace(/\\\]/g, "$$")
-      .replace(/\\ce\s+([A-Z(][A-Za-z0-9()_^{}+=-]*)/g, "\\ce{$1}")
-      .replace(/\\ce(?=[A-Z(][A-Za-z0-9]*(?:\d|[()]))([A-Za-z0-9()_^{}+=-]+)/g, "\\ce{$1}")
-
-    // Wrap any bare \ce{...} (even with nested braces) cleanly inside $...$ before splitting
-    let normalized = ""
-    let inDisp = false
-    let inInl = false
-    for (let i = 0; i < preFixed.length; i++) {
-      if (!inInl && preFixed.startsWith("$$", i)) {
-        inDisp = !inDisp; normalized += "$$"; i++; continue
-      }
-      if (!inDisp && preFixed[i] === "$" && (i === 0 || preFixed[i - 1] !== "\\")) {
-        inInl = !inInl; normalized += "$"; continue
-      }
-      if (!inDisp && !inInl && preFixed.startsWith("\\ce{", i)) {
-        let d = 0, j = i + 3
-        for (; j < preFixed.length; j++) {
-          if (preFixed[j] === "\\") { j++; continue }
-          if (preFixed[j] === "{") d++
-          else if (preFixed[j] === "}" && --d === 0) break
-        }
-        if (d === 0 && j < preFixed.length) {
-          normalized += `$${preFixed.slice(i, j + 1)}$`
-          i = j
-          continue
-        }
-      }
-      normalized += preFixed[i]
-    }
+    const normalized = normalizeMathContent(value)
     return normalized.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g).map(part => {
       if (part.startsWith("$$") && part.endsWith("$$")) {
         return `<div class="formula display-formula">${katex.renderToString(part.slice(2, -2).trim(), { displayMode: true, throwOnError: false, strict: "ignore", trust: true })}</div>`
@@ -955,6 +967,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         rollNumber={attempt?.rollNumber}
         submittedAt={attempt?.submittedAt}
         institute={examFull?.institute || attempt?.examId?.institute}
+        isPublic={hasPublicParam || attempt?.candidateType === "public"}
       />
     )
   }
@@ -988,7 +1001,7 @@ function AnalyticsResultInner({ params }: { params: Promise<{ id: string }> }) {
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <Link
-            href={`/exam/${id}/result?attemptId=${attemptId}`}
+            href={`/exam/${id}/result?attemptId=${attemptId}${hasPublicParam || attempt?.candidateType === "public" ? "&access=public" : ""}`}
             className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
           >
             ← <span className="hidden sm:inline">Back to </span>Summary

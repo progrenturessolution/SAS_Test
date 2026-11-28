@@ -1,15 +1,18 @@
 "use client"
 
 import { useState, useEffect, use, Suspense } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Loader2, ClipboardList, Clock, ArrowLeft } from "lucide-react"
+import { getExamPortalUrl } from "@/lib/attemptHelpers"
 
 // ─── Inner Component ──────────────────────────────────────────────────────────
 
 function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const searchParams = useSearchParams()
+  const isPublicAccess = searchParams.get("access") === "public" || searchParams.get("type") === "public"
   const router = useRouter()
 
   const [email, setEmail] = useState("")
@@ -82,7 +85,7 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
       }
 
       if (data.attempt?._id) {
-        router.push(`/exam/${id}/result/analytics?attemptId=${data.attempt._id}`)
+        router.push(`/exam/${id}/result/analytics?attemptId=${data.attempt._id}${isPublicAccess ? "&access=public" : ""}`)
       } else {
         setError("Result not found")
         setLoading(false)
@@ -156,7 +159,7 @@ function ResultsLookupInner({ params }: { params: Promise<{ id: string }> }) {
                 </p>
                 <div className="pt-2">
                   <Link
-                    href={`/exam/${id}`}
+                    href={getExamPortalUrl(id, isPublicAccess)}
                     className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-[#2D3A4A] text-white text-sm font-semibold hover:bg-[#1e2a38] transition-colors"
                   >
                     <ArrowLeft size={15} />

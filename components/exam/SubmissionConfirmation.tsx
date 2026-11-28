@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { CheckCircle2, Clock, FileCheck2, Home, MailCheck, User } from "lucide-react"
 import { ProcrentureLogo } from "@/components/exam/ExamShared"
+import { getExamPortalUrl } from "@/lib/attemptHelpers"
 
 interface InstituteBrand {
   name?: string
@@ -18,6 +19,7 @@ export interface SubmissionConfirmationProps {
   rollNumber?: string
   submittedAt?: string
   institute?: InstituteBrand | null
+  isPublic?: boolean
 }
 
 function formatSubmissionTime(value?: string) {
@@ -37,9 +39,11 @@ export function SubmissionConfirmation({
   rollNumber,
   submittedAt,
   institute,
+  isPublic = false,
 }: SubmissionConfirmationProps) {
   const accentColor = institute?.themeColor || "#131B2A"
   const formattedTime = formatSubmissionTime(submittedAt)
+  const portalUrl = getExamPortalUrl(examId, isPublic)
 
   return (
     <div className="min-h-screen bg-[#F8F9FD] flex flex-col">
@@ -58,7 +62,7 @@ export function SubmissionConfirmation({
             )}
           </div>
           <Link
-            href={`/exam/${examId}`}
+            href={portalUrl}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors shrink-0"
           >
             <Home className="w-3.5 h-3.5" />
@@ -132,7 +136,7 @@ export function SubmissionConfirmation({
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
-                href={`/exam/${examId}`}
+                href={portalUrl}
                 style={{ backgroundColor: accentColor }}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-sm hover:opacity-95 transition-opacity"
               >

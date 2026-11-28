@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import { NextResponse } from "next/server"
 import connectDB from "@/lib/mongodb"
 import Attempt from "@/models/Attempt"
@@ -12,10 +13,13 @@ export async function POST(req: Request) {
     await connectDB()
     const { examId, studentName, studentEmail, studentPhone, rollNumber, password, candidateType } = await req.json()
     const isPublic = candidateType === "public"
-    const normalizedEmail = String(studentEmail || "").trim().toLowerCase()
+    let normalizedEmail = String(studentEmail || "").trim().toLowerCase()
+    let resolvedName = String(studentName || "").trim()
     let resolvedPhone = String(studentPhone || "").trim()
-    const normalizedRollNumber = String(rollNumber || "").trim() || (isPublic ? `PUB-${Date.now().toString().slice(-6)}` : "")
-    if (!examId || !studentName || !normalizedEmail || (!isPublic && !normalizedRollNumber)) {
+    let normalizedRollNumber =
+      String(rollNumber || "").trim() ||
+      (isPublic ? `PUB-${crypto.randomUUID().slice(0, 8).toUpperCase()}` : "")
+    if (!examId || !resolvedName || !normalizedEmail || (!isPublic && !normalizedRollNumber)) {
       return NextResponse.json({ error: "All required fields must be provided" }, { status: 400 })
     }
     if (isPublic && !resolvedPhone) {
@@ -60,6 +64,11 @@ export async function POST(req: Request) {
             { status: 403 }
           )
         }
+
+        // Anchor identity to the verified User document so another candidate can never inherit someone else's session
+        normalizedEmail = String(student.email || normalizedEmail).trim().toLowerCase()
+        normalizedRollNumber = String(student.rollNumber || normalizedRollNumber).trim()
+        resolvedName = String(student.name || resolvedName).trim()
 
         // Backfill plaintext examPassword for legacy aspirant accounts on successful login
         if (!(student as any).examPassword && typeof password === "string" && password.trim()) {
@@ -112,14 +121,11 @@ export async function POST(req: Request) {
       }
     }
 
-    // Check if already has an active OR completed attempt.
-    // Prevents a student who already submitted from starting a fresh attempt.
+    // Check if this candidate (strictly matched by email, never by colliding rollNumber across students)
+    // already has an active OR completed attempt.
     const existing = await Attempt.findOne({
       examId,
-      $or: [
-        { rollNumber: normalizedRollNumber },
-        { studentEmail: normalizedEmail },
-      ],
+      studentEmail: normalizedEmail,
       status: { $in: ["in-progress", "submitted", "auto-submitted", "graded"] },
     })
     if (existing) {
@@ -146,7 +152,7 @@ export async function POST(req: Request) {
 
     const attempt = await Attempt.create({
       examId,
-      studentName,
+      studentName: resolvedName,
       studentEmail: normalizedEmail,
       studentPhone: resolvedPhone,
       rollNumber: normalizedRollNumber,

@@ -169,7 +169,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
     }
 
     setSubmitting(true)
-    const effectiveRoll = form.roll.trim() || `PUB-${Date.now().toString().slice(-6)}`
+    const effectiveRoll = form.roll.trim()
     try {
       const res = await fetch("/api/attempts", {
         method: "POST",
@@ -195,7 +195,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
         return
       }
       if (!res.ok) throw new Error(data.error || "Failed to start exam")
-      router.push(`/exam/${id}/take?attemptId=${data.attempt._id}`)
+      router.push(`/exam/${id}/take?attemptId=${data.attempt._id}${isPublicAccess ? "&access=public" : ""}`)
     } catch (err) {
       setErrors({ submit: (err as Error).message })
       setSubmitting(false)
@@ -262,7 +262,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
         <div className="flex items-center gap-2.5">
           {resultsPublished && (
             <Link
-              href={`/exam/${id}/results`}
+              href={`/exam/${id}/results${isPublicAccess ? "?access=public" : ""}`}
               className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors"
             >
               <BarChart2 size={15} />
@@ -388,7 +388,7 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
                 </div>
               </div>
               <Link
-                href={`/exam/${id}/results`}
+                href={`/exam/${id}/results${isPublicAccess ? "?access=public" : ""}`}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white transition-colors shadow-xs"
               >
                 <BarChart2 size={15} />
@@ -621,8 +621,8 @@ export default function ExamLoginPage({ params }: { params: Promise<{ id: string
                 <Link
                   href={
                     !canShowCandidateResult
-                      ? `/exam/${id}/submitted?attemptId=${existingAttempt._id}`
-                      : `/exam/${id}/result/analytics?attemptId=${existingAttempt._id}`
+                      ? `/exam/${id}/submitted?attemptId=${existingAttempt._id}${isPublicAccess ? "&access=public" : ""}`
+                      : `/exam/${id}/result/analytics?attemptId=${existingAttempt._id}${isPublicAccess ? "&access=public" : ""}`
                   }
                   className="mt-3 inline-flex rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-accent"
                 >

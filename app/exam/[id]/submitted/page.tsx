@@ -9,6 +9,7 @@ interface ConfirmationData {
   studentName?: string
   rollNumber?: string
   submittedAt?: string
+  isPublic?: boolean
   institute?: {
     name?: string
     code?: string
@@ -20,8 +21,9 @@ interface ConfirmationData {
 function SubmittedPageContent({ examId }: { examId: string }) {
   const searchParams = useSearchParams()
   const attemptId = searchParams.get("attemptId")
+  const hasPublicParam = searchParams.get("access") === "public" || searchParams.get("type") === "public"
 
-  const [data, setData] = useState<ConfirmationData>({})
+  const [data, setData] = useState<ConfirmationData>({ isPublic: hasPublicParam })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -45,6 +47,7 @@ function SubmittedPageContent({ examId }: { examId: string }) {
           studentName: attempt?.studentName,
           rollNumber: attempt?.rollNumber,
           submittedAt: attempt?.submittedAt,
+          isPublic: hasPublicParam || attempt?.candidateType === "public",
           institute: exam?.institute || attemptExam?.institute || null,
         })
       } finally {
@@ -56,7 +59,7 @@ function SubmittedPageContent({ examId }: { examId: string }) {
     return () => {
       active = false
     }
-  }, [examId, attemptId])
+  }, [examId, attemptId, hasPublicParam])
 
   if (loading) {
     return (
@@ -77,6 +80,7 @@ function SubmittedPageContent({ examId }: { examId: string }) {
       rollNumber={data.rollNumber}
       submittedAt={data.submittedAt}
       institute={data.institute}
+      isPublic={data.isPublic}
     />
   )
 }

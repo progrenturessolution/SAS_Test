@@ -28,6 +28,7 @@ import { callGeminiJson, sanitizeErrorMessage, type GeminiTransportFn } from "..
 import { evaluateObjectiveAnswer, formatOptionDisplay } from "../lib/ai/questionEvaluation"
 import { isBareStandaloneMath, normalizeMathContent } from "../lib/mathFormat"
 import { computePublicExamCapacity } from "../lib/publicExamCapacity"
+import { findAnswerForQuestion, getExamPortalUrl, mergeAttemptAnswers, resolveAnalyticsDisplayScore } from "../lib/attemptHelpers"
 
 // ─── 1. JSON Parsing & LaTeX Backslash Preservation ───────────────────────────
 
@@ -879,4 +880,75 @@ test("computePublicExamCapacity enforces institute maxStudents seat limit cleanl
     remainingSeats: 0,
     limitReached: true,
   })
+})
+
+test("attemptHelpers prevent answer wipes, resolve _id/id answers, and preserve public portal URL", () => {
+  const savedOnServer = [
+    { questionId: "q1", sectionType: "mcq", answer: "A" },
+    { questionId: "q2", sectionType: "mcq", answer: "B" },
+  ]
+
+  // Stale empty client payload must NEVER erase persisted DB answers
+  const preservedOnEmpty = mergeAttemptAnswers(savedOnServer, [])
+  assert.deepEqual(preservedOnEmpty, savedOnServer)
+
+  // Auto-submit with stale empty entry must keep DB answer intact while merging new answers
+  const mergedAutoSubmit = mergeAttemptAnswers(
+    savedOnServer,
+    [
+      { questionId: "q1", sectionType: "mcq", answer: "" },
+      { questionId: "q3", sectionType: "mcq", answer: "C" },
+    ],
+    { preserveNonEmptyOnEmptyIncoming: true }
+  )
+  assert.equal(mergedAutoSubmit.find((a) => a.questionId === "q1")?.answer, "A")
+  assert.equal(mergedAutoSubmit.find((a) => a.questionId === "q2")?.answer, "B")
+  assert.equal(mergedAutoSubmit.find((a) => a.questionId === "q3")?.answer, "C")
+
+  // Explicit user clear (non-autoSubmit) updates that question while keeping others
+  const explicitClear = mergeAttemptAnswers(
+    savedOnServer,
+    [{ questionId: "q1", sectionType: "mcq", answer: "" }],
+    { preserveNonEmptyOnEmptyIncoming: false }
+  )
+  assert.equal(explicitClear.find((a) => a.questionId === "q1")?.answer, "")
+  assert.equal(explicitClear.find((a) => a.questionId === "q2")?.answer, "B")
+
+  // Answer lookup works with either MongoDB _id or string id
+  assert.equal(findAnswerForQuestion(savedOnServer, { id: "q2" })?.answer, "B")
+  assert.equal(findAnswerForQuestion(savedOnServer, { _id: "q1" })?.answer, "A")
+
+  // Public exam portal redirect URL preservation
+  assert.equal(getExamPortalUrl("674a123", true), "/exam/674a123?access=public")
+  assert.equal(getExamPortalUrl("674a123", false), "/exam/674a123")
+
+  // Analytics display score preserves backend-stored organization score when client recalculation misses marks
+  assert.equal(
+    resolveAnalyticsDisplayScore({
+      showResults: true,
+      attemptScore: 18,
+      calculatedScore: 0,
+      isGraded: true,
+    }),
+    18
+  )
+  assert.equal(
+    resolveAnalyticsDisplayScore({
+      showResults: true,
+      attemptScore: 12,
+      calculatedScore: 16,
+      isGraded: true,
+      hasManualGrades: true,
+    }),
+    12
+  )
+  assert.equal(
+    resolveAnalyticsDisplayScore({
+      showResults: true,
+      attemptScore: 0,
+      calculatedScore: 15,
+      isGraded: true,
+    }),
+    15
+  )
 })

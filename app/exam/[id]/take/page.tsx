@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, use, useMemo } from "react"
+import { useState, useEffect, useCallback, use, useMemo, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Editor from "@monaco-editor/react"
 import { ExamHeader, ProctoringCamera, QuestionStatus, statusColorMap, ProcrentureLogo } from "@/components/exam/ExamShared"
@@ -18,6 +18,7 @@ import { getExamStartDateTime, getExamEndDateTime, formatCountdown, formatSchedu
 import { MathRenderer } from "@/components/exam/MathRenderer"
 import { QuestionDiagram } from "@/components/exam/QuestionDiagram"
 import { ExamSubmitModal } from "@/components/exam/ExamSubmitModal"
+import { mergeAttemptAnswers, getExamPortalUrl } from "@/lib/attemptHelpers"
 
 // ─── Micro-toast types ────────────────────────────────────────────────────────
 interface Toast { id: number; message: string; type: "warn" | "info" | "danger" }
@@ -251,12 +252,18 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const { id } = use(params)
   const searchParams = useSearchParams()
   const attemptId = searchParams.get("attemptId")
+  const hasPublicParam = searchParams.get("access") === "public" || searchParams.get("type") === "public"
   const router = useRouter()
 
   const [exam, setExam] = useState<ExamData | null>(null)
   const [loading, setLoading] = useState(true)
   const [agreed, setAgreed] = useState(false)
   const [timeLeft, setTimeLeft] = useState(0)
+  const [isPublicAttempt, setIsPublicAttempt] = useState(hasPublicParam)
+  const answersRef = useRef<Answer[]>([])
+  const timeLeftRef = useRef<number>(0)
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const submittingRef = useRef(false)
   const [currentSection, setCurrentSection] = useState(0)
   const [activeSectionId, setActiveSectionId] = useState<string>("")
   const [sectionPosMap, setSectionPosMap] = useState<Record<string, number>>({})
@@ -321,8 +328,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 3000)
   }, [])
 
-  // Save exam state to localStorage
-  const saveExamState = useCallback(() => {
+  const saveExamState = useCallback((overrideAnswers?: Answer[], overrideTimeLeft?: number) => {
     if (!attemptId) return
     const examState = {
       attemptId,
@@ -332,9 +338,9 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
       sectionPosMap,
       visitedQuestionIds,
       currentQ,
-      answers,
+      answers: overrideAnswers ?? answersRef.current,
       blankInputs,
-      timeLeft,
+      timeLeft: overrideTimeLeft ?? timeLeftRef.current,
       codeLanguage,
       timestamp: Date.now(),
     }
@@ -343,71 +349,40 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     } catch (e) {
       console.error("Failed to save exam state:", e)
     }
-  }, [attemptId, id, activeSectionId, currentSection, sectionPosMap, visitedQuestionIds, currentQ, answers, blankInputs, timeLeft, codeLanguage])
+  }, [attemptId, id, activeSectionId, currentSection, sectionPosMap, visitedQuestionIds, currentQ, blankInputs, codeLanguage])
 
-  // Restore exam state from localStorage + Server merging
-  const restoreExamState = useCallback((serverAttempt?: any) => {
+  const flushAnswersToDb = useCallback(async (keepalive = false) => {
+    if (!attemptId || submittingRef.current) return
+    const currentAnswers = answersRef.current
     try {
-      const saved = localStorage.getItem(`exam-state-${id}`)
-      let localState = null
-      if (saved) {
-        localState = JSON.parse(saved)
-        if (localState.attemptId !== attemptId) localState = null
-      }
-
-      // 1. Restore Answers (prioritize local state as most recent)
-      const serverAnswers = serverAttempt?.answers || []
-      const localAnswers = localState?.answers || []
-      const mergedAnswers = [...serverAnswers]
-      localAnswers.forEach((la: Answer) => {
-        const idx = mergedAnswers.findIndex(sa => sa.questionId === la.questionId)
-        if (idx >= 0) mergedAnswers[idx] = la
-        else mergedAnswers.push(la)
+      await fetch(`/api/attempts/${attemptId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answers: currentAnswers,
+          timeLeft: timeLeftRef.current,
+        }),
+        keepalive,
       })
-      setAnswers(mergedAnswers)
-      
-      // 2. Restore Timer (Prioritize local state, then server, then full duration)
-      const scheduledEnd = getExamEndDateTime(exam?.settings)
-      const secondsUntilEnd = scheduledEnd ? Math.max(0, Math.floor((scheduledEnd.getTime() - Date.now()) / 1000)) : null
-      const capWithScheduledEnd = (t: number) => (secondsUntilEnd !== null ? Math.min(t, secondsUntilEnd) : t)
-
-      if (localState?.timeLeft !== undefined) {
-        setTimeLeft(capWithScheduledEnd(localState.timeLeft))
-      } else if (serverAttempt?.timeLeft !== undefined) {
-        setTimeLeft(capWithScheduledEnd(serverAttempt.timeLeft))
-      }
-      
-      // 3. Restore Warnings
-      if (serverAttempt?.proctoring?.warnings !== undefined) {
-        setInitialWarnings(serverAttempt.proctoring.warnings)
-      }
-
-      // 4. Other UI states
-      if (localState) {
-        if (localState.activeSectionId) setActiveSectionId(localState.activeSectionId)
-        if (localState.sectionPosMap) setSectionPosMap(localState.sectionPosMap)
-        if (localState.visitedQuestionIds) setVisitedQuestionIds(localState.visitedQuestionIds)
-        setCurrentSection(localState.currentSection ?? 0)
-        setCurrentQ(localState.currentQ ?? 0)
-        setBlankInputs(localState.blankInputs || {})
-        setCodeLanguage(localState.codeLanguage || {})
-      }
-      
-      setStateRestored(true)
-      setServerStateLoaded(true)
-      
-      // Show notification only if there's actual restored data
-      if ((localState?.answers?.length || 0) > 0 || (serverAnswers.length || 0) > 0) {
-        addToast("Your previous progress has been restored", "info")
-      }
-      return true
-    } catch (e) {
-      console.error("Failed to restore exam state:", e)
-      setStateRestored(true)
-      setServerStateLoaded(true)
+    } catch {
+      // Background sync failure is safe; periodic autosave & final submit retry with localStorage backup
     }
-    return false
-  }, [id, attemptId, addToast])
+  }, [attemptId])
+
+  const scheduleDbSync = useCallback((delayMs = 200) => {
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current)
+    }
+    syncTimerRef.current = setTimeout(() => {
+      syncTimerRef.current = null
+      void flushAnswersToDb(false)
+    }, delayMs)
+  }, [flushAnswersToDb])
+
+  // Keep refs aligned with state
+  useEffect(() => {
+    timeLeftRef.current = timeLeft
+  }, [timeLeft])
 
   const runCode = async (qId: string, code: string) => {
     const lang = codeLanguage[qId] || "python"
@@ -429,23 +404,52 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   }
   // Load exam
   useEffect(() => {
-    if (!attemptId) { router.push(`/exam/${id}`); return }
+    if (!attemptId) { router.push(getExamPortalUrl(id, hasPublicParam)); return }
     Promise.all([
       fetch(`/api/exams/${id}`).then((r) => r.json()),
       fetch(`/api/attempts/${attemptId}`).then((r) => r.json()),
     ])
-      .then(([examRes, attemptRes]) => {
-        if (!examRes.exam || examRes.exam.status !== "active") { 
-          router.push(`/exam/${id}`)
-          return 
-        }
-        // 1. Check if already submitted
-        const attempt = attemptRes.attempt || attemptRes
-        if (attempt && (attempt.status === "submitted" || attempt.status === "auto-submitted" || attempt.status === "graded")) {
-          const canShowResults = attemptRes.showResults !== false && exam?.settings?.showResults !== false
-          router.push(canShowResults ? `/exam/${id}/result?attemptId=${attemptId}` : `/exam/${id}/submitted?attemptId=${attemptId}`)
+      .then(async ([examRes, attemptRes]) => {
+        if (!examRes.exam || examRes.exam.status !== "active") {
+          router.push(getExamPortalUrl(id, hasPublicParam))
           return
         }
+        const attempt = attemptRes.attempt || attemptRes
+        const resolvedIsPublic = hasPublicParam || attempt?.candidateType === "public"
+        setIsPublicAttempt(resolvedIsPublic)
+
+        // 1. Check if already submitted
+        if (attempt && (attempt.status === "submitted" || attempt.status === "auto-submitted" || attempt.status === "graded")) {
+          const canShowResults = attemptRes.showResults !== false
+          const suffix = resolvedIsPublic ? "&access=public" : ""
+          router.push(canShowResults ? `/exam/${id}/result?attemptId=${attemptId}${suffix}` : `/exam/${id}/submitted?attemptId=${attemptId}${suffix}`)
+          return
+        }
+
+        // 1b. If mobile/browser lost connectivity right during a previous submit, replay the backed-up submit automatically
+        try {
+          const pendingRaw = localStorage.getItem(`exam-pending-submit-${attemptId}`)
+          if (pendingRaw) {
+            const pendingPayload = JSON.parse(pendingRaw)
+            const replayRes = await fetch(`/api/attempts/${attemptId}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(pendingPayload),
+              keepalive: true,
+            })
+            if (replayRes.ok) {
+              const replayData = await replayRes.json().catch(() => ({}))
+              try {
+                localStorage.removeItem(`exam-state-${id}`)
+                localStorage.removeItem(`exam-pending-submit-${attemptId}`)
+              } catch {}
+              const canShowResults = replayData?.showResults !== false
+              const suffix = resolvedIsPublic ? "&access=public" : ""
+              router.push(canShowResults ? `/exam/${id}/result?attemptId=${attemptId}${suffix}` : `/exam/${id}/submitted?attemptId=${attemptId}${suffix}`)
+              return
+            }
+          }
+        } catch {}
 
         const examData: ExamData = examRes.exam
         
@@ -517,54 +521,71 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           const lsRaw = localStorage.getItem(`exam-state-${id}`)
           let localState = null
           if (lsRaw) {
-            localState = JSON.parse(lsRaw)
-            if (localState.attemptId === attemptId) {
-              // Restore from localStorage
-              setAnswers(localState.answers || [])
-              if (localState.timeLeft !== undefined) {
-                setTimeLeft(capWithScheduledEnd(localState.timeLeft))
-              } else {
-                setTimeLeft(capWithScheduledEnd(examData.duration * 60))
-              }
-              setCurrentSection(localState.currentSection ?? initialSection)
-              if (localState.activeSectionId) setActiveSectionId(localState.activeSectionId)
-              if (localState.sectionPosMap) setSectionPosMap(localState.sectionPosMap)
-              if (localState.visitedQuestionIds) setVisitedQuestionIds(localState.visitedQuestionIds)
-              setCurrentQ(localState.currentQ ?? 0)
-              setBlankInputs(localState.blankInputs || {})
-              setCodeLanguage(localState.codeLanguage || {})
-              if (localState.answers?.length > 0) {
-                addToast("Your previous progress has been restored", "info")
-              }
-            } else {
-              // localStorage state is from different attempt, use server data
-              if (attempt?.timeLeft !== undefined) {
-                setTimeLeft(capWithScheduledEnd(attempt.timeLeft))
-              } else {
-                setTimeLeft(capWithScheduledEnd(examData.duration * 60))
-              }
-              if (attempt?.answers) setAnswers(attempt.answers)
-              setCurrentSection(initialSection)
+            const parsedLs = JSON.parse(lsRaw)
+            if (parsedLs?.attemptId === attemptId) {
+              localState = parsedLs
+            }
+          }
+
+          const serverAnswers: Answer[] = Array.isArray(attempt?.answers) ? attempt.answers : []
+          const localAnswers: Answer[] = Array.isArray(localState?.answers) ? localState.answers : []
+          const mergedAnswers = mergeAttemptAnswers(serverAnswers, localAnswers, {
+            preserveNonEmptyOnEmptyIncoming: true,
+          }) as Answer[]
+
+          answersRef.current = mergedAnswers
+          setAnswers(mergedAnswers)
+
+          // Seed blankInputs from restored array answers for fill-in-the-blanks questions
+          const restoredBlanks: Record<string, string[]> = { ...(localState?.blankInputs || {}) }
+          for (const ans of mergedAnswers) {
+            if (Array.isArray(ans.answer) && ans.sectionType === "fillblanks" && !restoredBlanks[ans.questionId]) {
+              restoredBlanks[ans.questionId] = ans.answer.map((v) => String(v ?? ""))
+            }
+          }
+          setBlankInputs(restoredBlanks)
+
+          if (localState) {
+            const initTime =
+              localState.timeLeft !== undefined
+                ? capWithScheduledEnd(localState.timeLeft)
+                : attempt?.timeLeft !== undefined
+                ? capWithScheduledEnd(attempt.timeLeft)
+                : capWithScheduledEnd(examData.duration * 60)
+            timeLeftRef.current = initTime
+            setTimeLeft(initTime)
+            setCurrentSection(localState.currentSection ?? initialSection)
+            if (localState.activeSectionId) setActiveSectionId(localState.activeSectionId)
+            if (localState.sectionPosMap) setSectionPosMap(localState.sectionPosMap)
+            if (localState.visitedQuestionIds) setVisitedQuestionIds(localState.visitedQuestionIds)
+            setCurrentQ(localState.currentQ ?? 0)
+            setCodeLanguage(localState.codeLanguage || {})
+            if (mergedAnswers.length > 0) {
+              addToast("Your previous progress has been restored", "info")
             }
           } else {
-            // No localStorage, use server data
-            if (attempt?.timeLeft !== undefined) {
-              setTimeLeft(capWithScheduledEnd(attempt.timeLeft))
-            } else {
-              setTimeLeft(capWithScheduledEnd(examData.duration * 60))
-            }
-            if (attempt?.answers) setAnswers(attempt.answers)
+            const initTime =
+              attempt?.timeLeft !== undefined
+                ? capWithScheduledEnd(attempt.timeLeft)
+                : capWithScheduledEnd(examData.duration * 60)
+            timeLeftRef.current = initTime
+            setTimeLeft(initTime)
             setCurrentSection(initialSection)
+            if (mergedAnswers.length > 0) {
+              addToast("Your previous progress has been restored", "info")
+            }
           }
         } catch(e) {
           console.error("Failed to restore state:", e)
-          // Fallback to server data
-          if (attempt?.timeLeft !== undefined) {
-            setTimeLeft(capWithScheduledEnd(attempt.timeLeft))
-          } else {
-            setTimeLeft(capWithScheduledEnd(examData.duration * 60))
-          }
-          if (attempt?.answers) setAnswers(attempt.answers)
+          const initTime =
+            attempt?.timeLeft !== undefined
+              ? capWithScheduledEnd(attempt.timeLeft)
+              : capWithScheduledEnd(examData.duration * 60)
+          timeLeftRef.current = initTime
+          setTimeLeft(initTime)
+          const serverAnswers: Answer[] = Array.isArray(attempt?.answers) ? attempt.answers : []
+          answersRef.current = serverAnswers
+          setAnswers(serverAnswers)
           setCurrentSection(initialSection)
         }
         
@@ -576,8 +597,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         setServerStateLoaded(true)
         setLoading(false)
       })
-      .catch(() => router.push(`/exam/${id}`))
-  }, [id, attemptId, router, addToast])
+      .catch(() => router.push(getExamPortalUrl(id, hasPublicParam)))
+  }, [id, attemptId, router, addToast, hasPublicParam])
 
   // Resilient submit with micro-jitter (to prevent 100+ students hitting server at the exact same millisecond)
   // and 3x auto-retry with exponential backoff so zero student answers are ever lost.
@@ -600,6 +621,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          keepalive: true,
         })
 
         if (!res.ok) {
@@ -628,26 +650,38 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     throw lastError || new Error("Failed to submit after 3 attempts")
   }
 
-  // Auto-submit with thundering herd jitter & retry
+  // Auto-submit with thundering herd jitter & retry (always uses live answersRef & timeLeftRef)
   const handleAutoSubmit = useCallback(async () => {
-    if (!attemptId || submitting) return
+    if (!attemptId || submittingRef.current) return
+    submittingRef.current = true
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current)
+      syncTimerRef.current = null
+    }
     setSubmitting(true)
     try {
-      const data = await submitAttemptWithRetry({ answers, autoSubmit: true, timeLeft })
+      const data = await submitAttemptWithRetry({
+        answers: answersRef.current,
+        autoSubmit: true,
+        timeLeft: timeLeftRef.current,
+      })
 
       // Stop camera and exit fullscreen
       setExamSubmitted(true)
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {})
       }
-      
-      const canShowResults = data?.showResults !== false && exam?.settings?.showResults !== false
-      router.push(canShowResults ? `/exam/${id}/result?attemptId=${attemptId}` : `/exam/${id}/submitted?attemptId=${attemptId}`)
-    } catch (error) {
+
+      const canShowResults = data?.showResults !== false
+      const isPub = isPublicAttempt || data?.attempt?.candidateType === "public"
+      const suffix = isPub ? "&access=public" : ""
+      router.push(canShowResults ? `/exam/${id}/result?attemptId=${attemptId}${suffix}` : `/exam/${id}/submitted?attemptId=${attemptId}${suffix}`)
+    } catch {
       addToast("Network issue during submission. Your responses are safely backed up locally. Retrying...", "danger")
+      submittingRef.current = false
       setSubmitting(false)
     }
-  }, [attemptId, submitting, answers, timeLeft, id, router, addToast])
+  }, [attemptId, id, router, addToast, isPublicAttempt])
 
   const handleWarning = useCallback((type: string) => {
     setActiveWarning(type)
@@ -716,18 +750,33 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     return () => clearInterval(t)
   }, [attemptId, stateRestored, saveExamState])
 
+  // Flush live progress when user switches tabs or backgrounds mobile browser
   useEffect(() => {
-    if (!attemptId || !stateRestored || !serverStateLoaded) return
-    const t = setInterval(() => {
-      fetch(`/api/attempts/${attemptId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers, timeLeft }),
-      })
+    if (!attemptId || !stateRestored || !serverStateLoaded || examSubmitted) return
+    const handleVisibilitySave = () => {
+      if (document.hidden) {
+        saveExamState()
+        void flushAnswersToDb(true)
+      }
+    }
+    const handlePageHide = () => {
       saveExamState()
-    }, 30000)
-    return () => clearInterval(t)
-  }, [attemptId, answers, timeLeft, stateRestored, serverStateLoaded, saveExamState])
+      void flushAnswersToDb(true)
+    }
+    document.addEventListener("visibilitychange", handleVisibilitySave)
+    window.addEventListener("pagehide", handlePageHide)
+
+    const syncInterval = setInterval(() => {
+      void flushAnswersToDb(false)
+      saveExamState()
+    }, 25000)
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilitySave)
+      window.removeEventListener("pagehide", handlePageHide)
+      clearInterval(syncInterval)
+    }
+  }, [attemptId, stateRestored, serverStateLoaded, examSubmitted, saveExamState, flushAnswersToDb])
 
   // Clipboard / copy detection
   useEffect(() => {
@@ -810,62 +859,43 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   }, [exam, addToast])
 
   // ── Answer helpers ──────────────────────────────────────────────
-  const getAnswer = (qId: string) => answers.find((a) => a.questionId === qId)
+  const getAnswer = (qId: string) => answersRef.current.find((a) => a.questionId === qId) || answers.find((a) => a.questionId === qId)
   const isReview = (qId: string) => getAnswer(qId)?.isMarkedForReview ?? false
 
-  const setAnswer = async (qId: string, value: string | string[], sectionType: string, saveToDb: boolean = false) => {
-    let updatedAnswers: Answer[] = []
-    setAnswers((prev) => {
-      const idx = prev.findIndex((a) => a.questionId === qId)
-      const entry: Answer = { questionId: qId, sectionType, answer: value, isMarkedForReview: isReview(qId) }
-      if (idx >= 0) { 
-          updatedAnswers = [...prev]; 
-          updatedAnswers[idx] = entry; 
-      } else {
-          updatedAnswers = [...prev, entry];
-      }
-      return updatedAnswers
-    })
+  const setAnswer = (qId: string, value: string | string[], sectionType: string, saveToDb: boolean = false) => {
+    const prev = answersRef.current
+    const idx = prev.findIndex((a) => a.questionId === qId)
+    const entry: Answer = {
+      questionId: qId,
+      sectionType,
+      answer: value,
+      isMarkedForReview: idx >= 0 ? Boolean(prev[idx].isMarkedForReview) : false,
+    }
+    const updatedAnswers = idx >= 0 ? [...prev.slice(0, idx), entry, ...prev.slice(idx + 1)] : [...prev, entry]
+
+    answersRef.current = updatedAnswers
+    setAnswers(updatedAnswers)
+    saveExamState(updatedAnswers, timeLeftRef.current)
 
     if (saveToDb && attemptId) {
-      try {
-        await fetch(`/api/attempts/${attemptId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answers: updatedAnswers }),
-        })
-      } catch (e) {
-        addToast("Failed to save answer to server", "danger")
-      }
+      scheduleDbSync(180)
     }
   }
 
-  const toggleReview = async (qId: string, sectionType: string) => {
-    let updatedAnswers: Answer[] = []
-    setAnswers((prev) => {
-      const idx = prev.findIndex((a) => a.questionId === qId)
-      if (idx >= 0) {
-        updatedAnswers = [...prev];
-        updatedAnswers[idx] = { ...updatedAnswers[idx], isMarkedForReview: !updatedAnswers[idx].isMarkedForReview };
-      } else {
-        updatedAnswers = [...prev, { questionId: qId, sectionType, answer: "", isMarkedForReview: true }];
-      }
-      return updatedAnswers
-    })
+  const toggleReview = (qId: string, sectionType: string) => {
+    const prev = answersRef.current
+    const idx = prev.findIndex((a) => a.questionId === qId)
+    const updatedAnswers: Answer[] =
+      idx >= 0
+        ? prev.map((item, i) => (i === idx ? { ...item, isMarkedForReview: !item.isMarkedForReview } : item))
+        : [...prev, { questionId: qId, sectionType, answer: "", isMarkedForReview: true }]
+
+    answersRef.current = updatedAnswers
+    setAnswers(updatedAnswers)
+    saveExamState(updatedAnswers, timeLeftRef.current)
 
     if (attemptId) {
-      // Immediate save to DB for review toggle
-      setTimeout(async () => {
-         try {
-           await fetch(`/api/attempts/${attemptId}`, {
-             method: "PATCH",
-             headers: { "Content-Type": "application/json" },
-             body: JSON.stringify({ 
-                answers: updatedAnswers.length > 0 ? updatedAnswers : undefined 
-             }),
-           })
-         } catch (e) { console.error("Auto-sync for review toggle failed") }
-      }, 0)
+      scheduleDbSync(180)
     }
   }
 
@@ -885,19 +915,31 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   }
 
   const confirmSubmit = async () => {
-    if (!attemptId) return
+    if (!attemptId || submittingRef.current) return
+    submittingRef.current = true
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current)
+      syncTimerRef.current = null
+    }
     setSubmitting(true)
     setShowSubmitConfirm(false)
     try {
-      const data = await submitAttemptWithRetry({ answers, autoSubmit: false, timeLeft })
+      const data = await submitAttemptWithRetry({
+        answers: answersRef.current,
+        autoSubmit: false,
+        timeLeft: timeLeftRef.current,
+      })
 
       // Stop camera and exit fullscreen
       setExamSubmitted(true)
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
-      const canShowResults = data?.showResults !== false && exam?.settings?.showResults !== false
-      router.push(canShowResults ? `/exam/${id}/result?attemptId=${attemptId}` : `/exam/${id}/submitted?attemptId=${attemptId}`)
+      const canShowResults = data?.showResults !== false
+      const isPub = isPublicAttempt || data?.attempt?.candidateType === "public"
+      const suffix = isPub ? "&access=public" : ""
+      router.push(canShowResults ? `/exam/${id}/result?attemptId=${attemptId}${suffix}` : `/exam/${id}/submitted?attemptId=${attemptId}${suffix}`)
     } catch {
       addToast("Submission failed. Your answers are saved locally. Please click Submit again.", "danger")
+      submittingRef.current = false
       setSubmitting(false)
     }
   }
@@ -937,22 +979,24 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
   const submitCode = async (questionId: string, code: string, question: Question) => {
     const data = await runTestCases(questionId, code, question.testCases, false, question)
     if (!data) return
-    // Save test results into the answer
-    setAnswers(prev => {
-      const idx = prev.findIndex(a => a.questionId === questionId)
-      const entry: Answer = {
-        questionId,
-        sectionType: "coding",
-        answer: code,
-        isMarkedForReview: prev[idx]?.isMarkedForReview ?? false,
-        // @ts-ignore
-        testResults: data.results,
-        totalPassed: data.totalPassed,
-        totalCases: data.totalCases,
-      }
-      if (idx >= 0) { const n = [...prev]; n[idx] = entry; return n }
-      return [...prev, entry]
-    })
+    // Save test results into the answer synchronously on answersRef
+    const prev = answersRef.current
+    const idx = prev.findIndex(a => a.questionId === questionId)
+    const entry: Answer = {
+      questionId,
+      sectionType: "coding",
+      answer: code,
+      isMarkedForReview: idx >= 0 ? Boolean(prev[idx].isMarkedForReview) : false,
+      // @ts-ignore
+      testResults: data.results,
+      totalPassed: data.totalPassed,
+      totalCases: data.totalCases,
+    }
+    const updatedAnswers = idx >= 0 ? [...prev.slice(0, idx), entry, ...prev.slice(idx + 1)] : [...prev, entry]
+    answersRef.current = updatedAnswers
+    setAnswers(updatedAnswers)
+    saveExamState(updatedAnswers, timeLeftRef.current)
+    scheduleDbSync(100)
     setCodeSubmitted(p => ({ ...p, [questionId]: true }))
     if (data.allPassed) {
       addToast("All test cases passed! 🎉", "info")
@@ -1133,9 +1177,15 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     }
   }
 
-  const handleSaveAndNext = async () => {
+  const handleSaveAndNext = () => {
     if (!question) return
-    await setAnswer(question._id, getAnswer(question._id)?.answer || "", question.type, true)
+    const existingEntry = answersRef.current.find((a) => a.questionId === question._id)
+    if (existingEntry) {
+      saveExamState(answersRef.current, timeLeftRef.current)
+      scheduleDbSync(150)
+    } else {
+      setAnswer(question._id, "", question.type, true)
+    }
     if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
       setShowSubmitConfirm(true)
     } else {
@@ -1143,7 +1193,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
     }
   }
 
-  const handleSkip = async () => {
+  const handleSkip = () => {
     if (!question) return
     if (isLastQuestionOverall || (isLastQuestionInSection && !nextSectionTab)) {
       setShowSubmitConfirm(true)
@@ -1509,7 +1559,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
         <h2 className="text-xl font-medium mb-4 text-[#324158]">No questions found for this exam.</h2>
         <p className="mb-6 text-gray-500 text-sm">Please contact your instructor or administrator.</p>
         <button
-          onClick={() => router.push(`/exam/${id}`)}
+          onClick={() => router.push(getExamPortalUrl(id, isPublicAttempt))}
           className="px-8 py-3 bg-[#1E293B] text-white text-sm font-medium rounded-xl hover:bg-[#0F172A] transition-colors"
         >
           Return to Exam Page
@@ -1801,7 +1851,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                                 setAnswer(question._id, originalKey, question.type, true);
                               }
                             }}
-                            className={`flex flex-col border-2 rounded-xl sm:rounded-2xl text-left transition-all min-h-16 sm:min-h-auto cursor-pointer ${
+                            className={`flex flex-col border-2 rounded-xl sm:rounded-2xl text-left transition-all min-h-16 sm:min-h-auto cursor-pointer touch-manipulation ${
                               selected ? "border-primary bg-blue-50/20 shadow-xs" : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
                             }`}
                           >
@@ -1835,8 +1885,8 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                       return (
                         <button
                           key={val}
-                          onClick={() => setAnswer(question._id, val, question.type)}
-                          className={`flex-1 py-3 sm:py-4 border-2 rounded-xl sm:rounded-2xl text-center font-medium text-sm sm:text-base transition-all cursor-pointer ${
+                          onClick={() => setAnswer(question._id, val, question.type, true)}
+                          className={`flex-1 py-3 sm:py-4 border-2 rounded-xl sm:rounded-2xl text-center font-medium text-sm sm:text-base transition-all cursor-pointer touch-manipulation ${
                             selected ? "border-[#2D3A4A] bg-[#2D3A4A] text-white shadow-sm" : "border-gray-200 bg-white hover:border-gray-300 text-gray-700"
                           }`}
                         >
@@ -1854,7 +1904,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                       rows={6}
                       placeholder="Write your answer here..."
                       value={(getAnswer(question._id)?.answer as string) || ""}
-                      onChange={(e) => setAnswer(question._id, e.target.value, question.type)}
+                      onChange={(e) => setAnswer(question._id, e.target.value, question.type, true)}
                       className="w-full border-2 border-gray-200 rounded-2xl p-4 text-base sm:text-sm text-[#324158] focus:outline-none focus:border-[#2D3A4A] resize-none transition-colors"
                     />
                     {question.wordLimit && (
@@ -1885,7 +1935,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                                 const updated = [...(blankInputs[question._id] || question.blanks!.map(() => ""))];
                                 updated[bi] = e.target.value;
                                 setBlankInputs((prev) => ({ ...prev, [question._id]: updated }));
-                                setAnswer(question._id, updated, question.type);
+                                setAnswer(question._id, updated, question.type, true);
                               }}
                               className="w-full sm:flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-[#F59E0B] transition-colors bg-white"
                             />
@@ -1899,7 +1949,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
                           type="text"
                           placeholder="Type the missing word or phrase..."
                           value={(getAnswer(question._id)?.answer as string) || ""}
-                          onChange={(e) => setAnswer(question._id, e.target.value, question.type)}
+                          onChange={(e) => setAnswer(question._id, e.target.value, question.type, true)}
                           className="w-full sm:flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-[#F59E0B] transition-colors bg-white"
                         />
                       </div>
@@ -2253,7 +2303,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             <button
               onClick={goPrev}
               disabled={isFirstQuestionOverall || (currentQ === 0 && !prevSectionTab)}
-              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl active:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl active:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer touch-manipulation"
             >
               <ChevronLeft className="w-4 h-4 shrink-0" />
               <span>Prev</span>
@@ -2262,7 +2312,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             {/* Skip Button */}
             <button
               onClick={handleSkip}
-              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl active:bg-gray-100 transition-colors cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl active:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
             >
               <span>Skip</span>
             </button>
@@ -2270,7 +2320,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             {/* Next / Save & Next Button */}
             <button
               onClick={handleSaveAndNext}
-              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors truncate cursor-pointer active:opacity-80"
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors truncate cursor-pointer active:opacity-80 touch-manipulation"
               style={{ backgroundColor: instituteThemeColor || "#324158" }}
             >
               <span className="truncate">
@@ -2286,7 +2336,7 @@ export default function ExamTakePage({ params }: { params: Promise<{ id: string 
             {/* Submit Button */}
             <button
               onClick={handleSubmitExam}
-              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer bg-[#324158] hover:bg-[#253245] active:bg-[#1a2432]"
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer bg-[#324158] hover:bg-[#253245] active:bg-[#1a2432] touch-manipulation"
               title="Submit Examination"
             >
               <CheckCircle2 className="w-4 h-4 shrink-0" />

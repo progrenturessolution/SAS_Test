@@ -29,8 +29,9 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
 
   useEffect(() => {
     if (typeof window !== "undefined" && isOpen) {
-      const x = Math.max(20, Math.min(window.innerWidth - 370, window.innerWidth / 2 - 180))
-      const y = Math.max(60, Math.min(window.innerHeight - 520, 100))
+      const calcWidth = Math.min(350, window.innerWidth - 16)
+      const x = Math.max(8, Math.min(window.innerWidth - calcWidth - 8, (window.innerWidth - calcWidth) / 2))
+      const y = Math.max(60, Math.min(window.innerHeight - 460, 84))
       setPosition({ x, y })
     }
   }, [isOpen])
@@ -323,7 +324,7 @@ export function ScientificCalculator({ isOpen, onClose }: ScientificCalculatorPr
   return (
     <div
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
-      className="fixed z-50 w-[330px] sm:w-[350px] bg-[#1E293B] text-white rounded-2xl shadow-2xl border border-slate-700/80 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150 font-sans"
+      className="fixed z-50 w-[min(330px,calc(100vw-16px))] sm:w-[350px] bg-[#1E293B] text-white rounded-2xl shadow-2xl border border-slate-700/80 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150 font-sans"
     >
       {/* Draggable Title Bar */}
       <div
